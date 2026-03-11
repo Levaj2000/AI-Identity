@@ -27,6 +27,4 @@ def get_key_prefix(plaintext_key: str, length: int = 12) -> str:
 
 def validate_key_format(key: str) -> bool:
     """Check that a key starts with the expected prefix."""
-    return key.startswith(settings.api_key_prefix) or key.startswith(
-        settings.admin_key_prefix
-    )
+    return key.startswith(settings.api_key_prefix) or key.startswith(settings.admin_key_prefix)

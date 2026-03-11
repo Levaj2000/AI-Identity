@@ -4,7 +4,7 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import cast, String
+from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
@@ -119,9 +119,7 @@ def list_agents(
 
     if capability:
         # Cross-compatible filter: works with both PostgreSQL JSONB and SQLite JSON
-        query = query.filter(
-            cast(Agent.capabilities, String).contains(f'"{capability}"')
-        )
+        query = query.filter(cast(Agent.capabilities, String).contains(f'"{capability}"'))
 
     total = query.count()
     agents = query.order_by(Agent.created_at.desc()).offset(offset).limit(limit).all()
@@ -254,9 +252,7 @@ def delete_agent(
     db.commit()
     db.refresh(agent)
 
-    logger.info(
-        "Agent revoked: %s (%s) — %d keys revoked", agent.name, agent.id, revoked_count
-    )
+    logger.info("Agent revoked: %s (%s) — %d keys revoked", agent.name, agent.id, revoked_count)
     return _agent_to_response(agent)
 
 
@@ -265,11 +261,7 @@ def delete_agent(
 
 def _get_user_agent(db: Session, user: User, agent_id: uuid.UUID) -> Agent:
     """Fetch an agent by ID, scoped to the current user. Raises 404 if not found."""
-    agent = (
-        db.query(Agent)
-        .filter(Agent.id == agent_id, Agent.user_id == user.id)
-        .first()
-    )
+    agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == user.id).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent

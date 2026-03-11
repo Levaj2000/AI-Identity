@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from common.models.base import Base
 
 
-class KeyStatus(str, enum.Enum):
+class KeyStatus(enum.StrEnum):
     """API key lifecycle status."""
 
     active = "active"
@@ -33,17 +33,13 @@ class AgentKey(Base):
     )
 
     # Key storage — only the hash is persisted, never the plaintext
-    key_hash: Mapped[str] = mapped_column(
-        String(64), nullable=False, unique=True, index=True
-    )
+    key_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     key_prefix: Mapped[str] = mapped_column(
         String(20), nullable=False
     )  # First 8 chars for identification, e.g. "aid_sk_a"
 
     # Lifecycle
-    status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=KeyStatus.active.value
-    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default=KeyStatus.active.value)
     expires_at: Mapped[datetime.datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

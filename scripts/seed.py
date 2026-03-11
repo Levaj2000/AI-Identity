@@ -9,16 +9,25 @@ Usage:
     DATABASE_URL=sqlite:///local.db python scripts/seed.py  # override DB
 """
 
-import sys
 import os
+import sys
 import uuid
 
 # Add project root to path so common/ is importable
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from common.models import Base, SessionLocal, engine, User, Agent, AgentStatus, AgentKey, KeyStatus  # noqa: E402
-from common.auth.keys import generate_api_key, hash_key, get_key_prefix  # noqa: E402
+from common.auth.keys import generate_api_key, get_key_prefix, hash_key  # noqa: E402
 from common.config.settings import settings  # noqa: E402
+from common.models import (  # noqa: E402
+    Agent,
+    AgentKey,
+    AgentStatus,
+    Base,
+    KeyStatus,
+    SessionLocal,
+    User,
+    engine,
+)
 
 # ── Seed Data ────────────────────────────────────────────────────────────
 
@@ -65,8 +74,8 @@ def _ensure_tables_exist():
     """Create tables if they don't exist (for local SQLite usage)."""
     if "sqlite" in settings.database_url:
         # SQLite needs type remapping for JSONB/UUID columns
+        from sqlalchemy import JSON, UUID, Uuid
         from sqlalchemy.dialects.postgresql import JSONB
-        from sqlalchemy import JSON, Uuid, UUID
 
         for table in Base.metadata.tables.values():
             for column in table.columns:
@@ -138,7 +147,7 @@ def _seed_agent(session, user: User, agent_data: dict) -> tuple:
 
 def main():
     """Seed the database with sample agents and keys."""
-    print(f"Seeding AI Identity database...")
+    print("Seeding AI Identity database...")
     print(f"  Database: {settings.database_url[:50]}...")
     print()
 

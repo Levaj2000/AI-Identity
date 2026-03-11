@@ -2,7 +2,7 @@
 
 import logging
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -30,11 +30,7 @@ ROTATION_GRACE_HOURS = 24
 
 def _get_user_agent(db: Session, user: User, agent_id: uuid.UUID) -> Agent:
     """Fetch an agent by ID, scoped to the current user. Raises 404 if not found."""
-    agent = (
-        db.query(Agent)
-        .filter(Agent.id == agent_id, Agent.user_id == user.id)
-        .first()
-    )
+    agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == user.id).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent
@@ -42,7 +38,7 @@ def _get_user_agent(db: Session, user: User, agent_id: uuid.UUID) -> Agent:
 
 def _revoke_expired_keys(db: Session, agent_id: uuid.UUID) -> int:
     """Revoke any rotated keys past their expiry. Returns count of revoked keys."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     count = (
         db.query(AgentKey)
         .filter(
@@ -213,7 +209,7 @@ def rotate_key(
 
     # Rotate: old key → rotated with grace period
     old_key.status = KeyStatus.rotated.value
-    old_key.expires_at = datetime.now(timezone.utc) + timedelta(hours=ROTATION_GRACE_HOURS)
+    old_key.expires_at = datetime.now(UTC) + timedelta(hours=ROTATION_GRACE_HOURS)
 
     # Generate the new key
     plaintext_key = generate_api_key()
@@ -230,7 +226,10 @@ def rotate_key(
 
     logger.info(
         "Key rotated for agent %s: old_key=%d → rotated (expires %s), new_key=%d",
-        agent.id, old_key.id, old_key.expires_at, new_key.id,
+        agent.id,
+        old_key.id,
+        old_key.expires_at,
+        new_key.id,
     )
 
     return AgentKeyRotateResponse(
@@ -267,11 +266,7 @@ def revoke_key(
     """
     agent = _get_user_agent(db, user, agent_id)
 
-    key = (
-        db.query(AgentKey)
-        .filter(AgentKey.id == key_id, AgentKey.agent_id == agent.id)
-        .first()
-    )
+    key = db.query(AgentKey).filter(AgentKey.id == key_id, AgentKey.agent_id == agent.id).first()
     if not key:
         raise HTTPException(status_code=404, detail="Key not found")
 

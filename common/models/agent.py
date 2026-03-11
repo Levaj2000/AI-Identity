@@ -11,7 +11,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from common.models.base import Base
 
 
-class AgentStatus(str, enum.Enum):
+class AgentStatus(enum.StrEnum):
     """Agent lifecycle status."""
 
     active = "active"
@@ -24,9 +24,7 @@ class Agent(Base):
 
     __tablename__ = "agents"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
@@ -53,8 +51,12 @@ class Agent(Base):
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="agents")  # noqa: F821
-    keys: Mapped[list["AgentKey"]] = relationship(back_populates="agent", cascade="all, delete-orphan")  # noqa: F821
-    policies: Mapped[list["Policy"]] = relationship(back_populates="agent", cascade="all, delete-orphan")  # noqa: F821
+    keys: Mapped[list["AgentKey"]] = relationship(  # noqa: F821
+        back_populates="agent", cascade="all, delete-orphan"
+    )
+    policies: Mapped[list["Policy"]] = relationship(  # noqa: F821
+        back_populates="agent", cascade="all, delete-orphan"
+    )
     audit_logs: Mapped[list["AuditLog"]] = relationship(  # noqa: F821
         back_populates="agent",
         primaryjoin="Agent.id == foreign(AuditLog.agent_id)",
