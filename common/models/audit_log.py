@@ -36,7 +36,17 @@ class AuditLog(Base):
     # Flexible request context
     request_metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 
-    # Timestamp
+    # HMAC integrity chain — links each entry to the previous one
+    entry_hash: Mapped[str] = mapped_column(
+        String(64), nullable=False, index=True,
+        comment="HMAC-SHA256 of this entry's canonical data + prev_hash",
+    )
+    prev_hash: Mapped[str] = mapped_column(
+        String(64), nullable=False,
+        comment="entry_hash of the preceding row; GENESIS for the first entry",
+    )
+
+    # Timestamp — server_default kept as fallback; writer sets explicitly for hash
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
