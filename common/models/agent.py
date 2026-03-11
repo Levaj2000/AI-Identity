@@ -55,4 +55,7 @@ class Agent(Base):
     user: Mapped["User"] = relationship(back_populates="agents")  # noqa: F821
     keys: Mapped[list["AgentKey"]] = relationship(back_populates="agent", cascade="all, delete-orphan")  # noqa: F821
     policies: Mapped[list["Policy"]] = relationship(back_populates="agent", cascade="all, delete-orphan")  # noqa: F821
-    audit_logs: Mapped[list["AuditLog"]] = relationship(back_populates="agent")  # noqa: F821
+    audit_logs: Mapped[list["AuditLog"]] = relationship(  # noqa: F821
+        back_populates="agent",
+        primaryjoin="Agent.id == foreign(AuditLog.agent_id)",
+    )

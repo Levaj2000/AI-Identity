@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 # ── User Schemas ─────────────────────────────────────────────────────────
 
+
 class UserCreate(BaseModel):
     """Request body for creating a new user."""
 
@@ -31,6 +32,7 @@ class UserResponse(BaseModel):
 
 # ── Agent Schemas ────────────────────────────────────────────────────────
 
+
 class AgentCreate(BaseModel):
     """Request body for creating a new agent."""
 
@@ -40,8 +42,18 @@ class AgentCreate(BaseModel):
     metadata: dict = Field(default_factory=dict)
 
 
+class AgentUpdate(BaseModel):
+    """Request body for updating an agent. All fields optional."""
+
+    name: str | None = Field(None, min_length=1, max_length=255)
+    description: str | None = None
+    capabilities: list | None = None
+    metadata: dict | None = None
+    status: str | None = Field(None, pattern="^(active|suspended)$")
+
+
 class AgentResponse(BaseModel):
-    """Response body for agent details."""
+    """Response body for a single agent."""
 
     id: uuid.UUID
     user_id: uuid.UUID
@@ -56,6 +68,15 @@ class AgentResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AgentListResponse(BaseModel):
+    """Paginated list of agents."""
+
+    items: list[AgentResponse]
+    total: int
+    limit: int
+    offset: int
+
+
 class AgentCreateResponse(BaseModel):
     """Response body for agent creation — includes the plaintext key (show-once)."""
 
@@ -66,6 +87,7 @@ class AgentCreateResponse(BaseModel):
 
 
 # ── Agent Key Schemas ────────────────────────────────────────────────────
+
 
 class AgentKeyResponse(BaseModel):
     """Response body for an agent key (hash never exposed)."""
@@ -81,6 +103,7 @@ class AgentKeyResponse(BaseModel):
 
 
 # ── Policy Schemas ───────────────────────────────────────────────────────
+
 
 class PolicyCreate(BaseModel):
     """Request body for creating a policy."""
@@ -103,6 +126,7 @@ class PolicyResponse(BaseModel):
 
 
 # ── Audit Log Schemas ────────────────────────────────────────────────────
+
 
 class AuditLogResponse(BaseModel):
     """Response body for an audit log entry."""
