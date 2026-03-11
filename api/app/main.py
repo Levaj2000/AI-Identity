@@ -11,10 +11,11 @@ import logging
 import time
 import uuid
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from common.auth.sanitizer import sanitize
 from common.config.logging import setup_logging
 from common.config.settings import settings
 
@@ -52,6 +53,11 @@ OPENAPI_TAGS = [
         "name": "keys",
         "description": "Manage API keys for agents — create, list, revoke, and rotate. "
         "Keys use SHA-256 hashing and are shown only once at creation time.",
+    },
+    {
+        "name": "audit",
+        "description": "Append-only audit log with HMAC integrity chain. "
+        "Read-only access and chain verification for SOC 2 compliance.",
     },
     {
         "name": "health",
@@ -132,11 +138,12 @@ class APIError(Exception):
 
 @app.exception_handler(APIError)
 async def api_error_handler(request: Request, exc: APIError):
-    """Return structured JSON for known API errors."""
+    """Return structured JSON for known API errors — sanitize messages."""
+    safe_message = sanitize(exc.message)
     logger.warning(
         "API error: %s — %s",
         exc.code,
-        exc.message,
+        safe_message,
         extra={"method": request.method, "path": request.url.path},
     )
     return JSONResponse(
@@ -144,7 +151,22 @@ async def api_error_handler(request: Request, exc: APIError):
         content={
             "error": {
                 "code": exc.code,
-                "message": exc.message,
+                "message": safe_message,
+            }
+        },
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """Handle FastAPI HTTPExceptions — sanitize detail to prevent key leakage."""
+    safe_detail = sanitize(str(exc.detail)) if exc.detail else "An error occurred"
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": {
+                "code": "http_error",
+                "message": safe_detail,
             }
         },
     )
@@ -152,12 +174,14 @@ async def api_error_handler(request: Request, exc: APIError):
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception):
-    """Catch-all for unhandled exceptions — return 500 with safe message."""
+    """Catch-all for unhandled exceptions — return safe 500, never leak internals."""
     logger.exception(
         "Unhandled exception on %s %s",
         request.method,
         request.url.path,
     )
+    # SECURITY: Never return exception details to the client.
+    # The logger.exception above logs the full sanitized traceback for debugging.
     return JSONResponse(
         status_code=500,
         content={
@@ -185,9 +209,11 @@ async def startup():
 # ── Routers ──────────────────────────────────────────────────────────────
 
 from api.app.routers.agents import router as agents_router  # noqa: E402
+from api.app.routers.audit import router as audit_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
 
 app.include_router(agents_router)
+app.include_router(audit_router)
 app.include_router(keys_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────

@@ -241,7 +241,7 @@ class PolicyResponse(BaseModel):
 
 
 class AuditLogResponse(BaseModel):
-    """Response body for an audit log entry."""
+    """Response body for an audit log entry with HMAC integrity fields."""
 
     id: int
     agent_id: uuid.UUID
@@ -251,6 +251,29 @@ class AuditLogResponse(BaseModel):
     cost_estimate_usd: float | None
     latency_ms: int | None
     request_metadata: dict
+    entry_hash: str = Field(description="HMAC-SHA256 of this entry's canonical data")
+    prev_hash: str = Field(description="entry_hash of the preceding entry (GENESIS for first)")
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AuditLogListResponse(BaseModel):
+    """Paginated list of audit log entries."""
+
+    items: list[AuditLogResponse] = Field(description="List of audit entries")
+    total: int = Field(description="Total number of matching entries")
+    limit: int = Field(description="Maximum items per page")
+    offset: int = Field(description="Number of items skipped")
+
+
+class AuditChainVerifyResponse(BaseModel):
+    """Result of audit chain integrity verification."""
+
+    valid: bool = Field(description="True if the entire chain is intact")
+    total_entries: int = Field(description="Total entries in the chain")
+    entries_verified: int = Field(description="Entries successfully verified")
+    first_broken_id: int | None = Field(
+        None, description="ID of the first entry with a broken hash (if any)"
+    )
+    message: str = Field(description="Human-readable verification result")

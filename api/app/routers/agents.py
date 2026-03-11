@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from api.app.auth import get_current_user
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
 from common.models import Agent, AgentKey, AgentStatus, KeyStatus, User, get_db
+from common.queries import get_user_agent
 from common.schemas.agent import (
     AgentCreate,
     AgentCreateResponse,
@@ -154,7 +155,7 @@ def get_agent(
     Returns the full agent record including capabilities and metadata.
     The agent must belong to the authenticated user.
     """
-    agent = _get_user_agent(db, user, agent_id)
+    agent = get_user_agent(db, user, agent_id)
     return _agent_to_response(agent)
 
 
@@ -184,7 +185,7 @@ def update_agent(
     Capabilities and metadata are replaced entirely (not merged).
     Revoked agents cannot be updated.
     """
-    agent = _get_user_agent(db, user, agent_id)
+    agent = get_user_agent(db, user, agent_id)
 
     if agent.status == AgentStatus.revoked.value:
         raise HTTPException(status_code=400, detail="Cannot update a revoked agent")
@@ -231,7 +232,7 @@ def delete_agent(
     The agent record is preserved for audit purposes but can no longer be
     updated or issued new keys.
     """
-    agent = _get_user_agent(db, user, agent_id)
+    agent = get_user_agent(db, user, agent_id)
 
     if agent.status == AgentStatus.revoked.value:
         raise HTTPException(status_code=400, detail="Agent is already revoked")
@@ -257,14 +258,6 @@ def delete_agent(
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
-
-
-def _get_user_agent(db: Session, user: User, agent_id: uuid.UUID) -> Agent:
-    """Fetch an agent by ID, scoped to the current user. Raises 404 if not found."""
-    agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == user.id).first()
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
-    return agent
 
 
 def _agent_to_response(agent: Agent) -> AgentResponse:

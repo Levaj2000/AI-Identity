@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
-from common.models import Agent, AgentKey, AgentStatus, KeyStatus, User, get_db
+from common.models import AgentKey, AgentStatus, KeyStatus, User, get_db
+from common.queries import get_user_agent
 from common.schemas.agent import (
     AgentKeyCreateResponse,
     AgentKeyListResponse,
@@ -26,14 +27,6 @@ ROTATION_GRACE_HOURS = 24
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
-
-
-def _get_user_agent(db: Session, user: User, agent_id: uuid.UUID) -> Agent:
-    """Fetch an agent by ID, scoped to the current user. Raises 404 if not found."""
-    agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == user.id).first()
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
-    return agent
 
 
 def _revoke_expired_keys(db: Session, agent_id: uuid.UUID) -> int:
@@ -81,7 +74,7 @@ def create_key(
 
     Cannot issue keys for revoked agents.
     """
-    agent = _get_user_agent(db, user, agent_id)
+    agent = get_user_agent(db, user, agent_id)
 
     if agent.status == AgentStatus.revoked.value:
         raise HTTPException(status_code=400, detail="Cannot issue key for a revoked agent")
@@ -139,7 +132,7 @@ def list_keys(
 
     Use `?status=active` to see only active keys.
     """
-    agent = _get_user_agent(db, user, agent_id)
+    agent = get_user_agent(db, user, agent_id)
 
     # Clean up expired rotated keys before listing
     _revoke_expired_keys(db, agent.id)
@@ -186,7 +179,7 @@ def rotate_key(
 
     The response includes the new plaintext key — **store it immediately**.
     """
-    agent = _get_user_agent(db, user, agent_id)
+    agent = get_user_agent(db, user, agent_id)
 
     if agent.status == AgentStatus.revoked.value:
         raise HTTPException(status_code=400, detail="Cannot rotate key for a revoked agent")
@@ -264,7 +257,7 @@ def revoke_key(
     The key record is preserved with `status=revoked` for audit purposes.
     This action cannot be undone — issue a new key if needed.
     """
-    agent = _get_user_agent(db, user, agent_id)
+    agent = get_user_agent(db, user, agent_id)
 
     key = db.query(AgentKey).filter(AgentKey.id == key_id, AgentKey.agent_id == agent.id).first()
     if not key:
