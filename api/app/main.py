@@ -142,8 +142,10 @@ async def startup():
 # ── Routers ──────────────────────────────────────────────────────────────
 
 from api.app.routers.agents import router as agents_router  # noqa: E402
+from api.app.routers.keys import router as keys_router  # noqa: E402
 
 app.include_router(agents_router)
+app.include_router(keys_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────
 
