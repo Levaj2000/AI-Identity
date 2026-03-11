@@ -1,5 +1,7 @@
 # AI Identity
 
+[![CI](https://github.com/Levaj2000/AI-Identity/actions/workflows/ci.yml/badge.svg)](https://github.com/Levaj2000/AI-Identity/actions/workflows/ci.yml)
+
 **Identity, permissions, and guardrails for AI agents.**
 
 AI Identity is an API proxy and dashboard that sits between AI agents and external APIs. Each agent gets its own identity, permissions, and guardrails — the Okta for AI agents.

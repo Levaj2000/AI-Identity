@@ -15,9 +15,7 @@ class User(Base):
 
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     org_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="owner")
@@ -34,4 +32,6 @@ class User(Base):
     )
 
     # Relationships
-    agents: Mapped[list["Agent"]] = relationship(back_populates="user", cascade="all, delete-orphan")  # noqa: F821
+    agents: Mapped[list["Agent"]] = relationship(  # noqa: F821
+        back_populates="user", cascade="all, delete-orphan"
+    )

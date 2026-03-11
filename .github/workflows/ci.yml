@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            api/requirements.txt
+            gateway/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install -r api/requirements.txt -r gateway/requirements.txt
+          pip install -e common/
+          pip install ruff
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Run tests
+        env:
+          DATABASE_URL: "sqlite:///test.db"
+          API_KEY_SECRET: "ci-test-secret"
+        run: pytest -v

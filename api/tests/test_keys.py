@@ -1,7 +1,7 @@
 """Tests for Agent Key management endpoints — create, list, revoke, rotate."""
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from common.auth.keys import hash_key
 from common.models import AgentKey, KeyStatus
@@ -137,13 +137,9 @@ class TestListKeys:
         agent_id, _ = _create_agent(client, auth_headers)
 
         # Create a second key then revoke it
-        create_resp = client.post(
-            f"/api/v1/agents/{agent_id}/keys", headers=auth_headers
-        )
+        create_resp = client.post(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers)
         key_id = create_resp.json()["key"]["id"]
-        client.delete(
-            f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers
-        )
+        client.delete(f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers)
 
         # Filter active — should be 1 (the initial key)
         resp = client.get(
@@ -179,9 +175,7 @@ class TestRevokeKey:
     def test_revoke_key_success(self, client, auth_headers):
         """Revoking a key sets status to revoked."""
         agent_id, _ = _create_agent(client, auth_headers)
-        create_resp = client.post(
-            f"/api/v1/agents/{agent_id}/keys", headers=auth_headers
-        )
+        create_resp = client.post(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers)
         key_id = create_resp.json()["key"]["id"]
 
         resp = client.delete(
@@ -194,19 +188,13 @@ class TestRevokeKey:
     def test_revoke_key_already_revoked(self, client, auth_headers):
         """Revoking an already-revoked key returns 400."""
         agent_id, _ = _create_agent(client, auth_headers)
-        create_resp = client.post(
-            f"/api/v1/agents/{agent_id}/keys", headers=auth_headers
-        )
+        create_resp = client.post(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers)
         key_id = create_resp.json()["key"]["id"]
 
         # Revoke once
-        client.delete(
-            f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers
-        )
+        client.delete(f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers)
         # Revoke again
-        resp = client.delete(
-            f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers
-        )
+        resp = client.delete(f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers)
         assert resp.status_code == 400
 
     def test_revoke_key_not_found(self, client, auth_headers):
@@ -222,9 +210,7 @@ class TestRevokeKey:
     def test_revoke_key_other_user(self, client, auth_headers, other_user):
         """Cannot revoke a key on another user's agent."""
         agent_id, _ = _create_agent(client, auth_headers)
-        create_resp = client.post(
-            f"/api/v1/agents/{agent_id}/keys", headers=auth_headers
-        )
+        create_resp = client.post(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers)
         key_id = create_resp.json()["key"]["id"]
 
         resp = client.delete(
@@ -241,24 +227,16 @@ class TestRevokedKeyAuth:
     def test_revoked_key_hash_not_active(self, client, auth_headers, db_session):
         """A revoked key's hash is still in DB but marked revoked — cannot be used for auth."""
         agent_id, _ = _create_agent(client, auth_headers)
-        create_resp = client.post(
-            f"/api/v1/agents/{agent_id}/keys", headers=auth_headers
-        )
+        create_resp = client.post(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers)
         plaintext_key = create_resp.json()["api_key"]
         key_id = create_resp.json()["key"]["id"]
 
         # Revoke the key
-        client.delete(
-            f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers
-        )
+        client.delete(f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers)
 
         # Verify: hash is in DB but status is revoked
         key_hash = hash_key(plaintext_key)
-        key_record = (
-            db_session.query(AgentKey)
-            .filter(AgentKey.key_hash == key_hash)
-            .first()
-        )
+        key_record = db_session.query(AgentKey).filter(AgentKey.key_hash == key_hash).first()
         assert key_record is not None
         assert key_record.status == KeyStatus.revoked.value
 
@@ -313,9 +291,7 @@ class TestRotateKey:
         agent_id, _ = _create_agent(client, auth_headers)
 
         # Create a second key — now we have 2 active keys
-        second_resp = client.post(
-            f"/api/v1/agents/{agent_id}/keys", headers=auth_headers
-        )
+        second_resp = client.post(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers)
         second_key_id = second_resp.json()["key"]["id"]
 
         # Before rotation: 2 active keys
@@ -358,7 +334,11 @@ class TestRotateKey:
         assert key_record.status == KeyStatus.rotated.value
         # SQLite stores naive datetimes, so compare naively
         now_naive = datetime.utcnow()
-        expires = key_record.expires_at.replace(tzinfo=None) if key_record.expires_at.tzinfo else key_record.expires_at
+        expires = (
+            key_record.expires_at.replace(tzinfo=None)
+            if key_record.expires_at.tzinfo
+            else key_record.expires_at
+        )
         assert expires > now_naive
 
     def test_rotate_key_expired_auto_revoked(self, client, auth_headers, db_session):
@@ -373,7 +353,7 @@ class TestRotateKey:
 
         # Simulate expiry: set expires_at to the past
         key_record = db_session.query(AgentKey).filter(AgentKey.id == old_key_id).first()
-        key_record.expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
+        key_record.expires_at = datetime.now(UTC) - timedelta(hours=1)
         db_session.commit()
 
         # Listing keys triggers cleanup
@@ -382,9 +362,7 @@ class TestRotateKey:
             headers=auth_headers,
         )
         # Find the old key in the list — should now be revoked
-        old_key_data = next(
-            k for k in list_resp.json()["items"] if k["id"] == old_key_id
-        )
+        old_key_data = next(k for k in list_resp.json()["items"] if k["id"] == old_key_id)
         assert old_key_data["status"] == "revoked"
 
     def test_rotate_key_revoked_agent(self, client, auth_headers):
@@ -403,13 +381,9 @@ class TestRotateKey:
         agent_id, _ = _create_agent(client, auth_headers)
 
         # Get the initial key and revoke it
-        keys_resp = client.get(
-            f"/api/v1/agents/{agent_id}/keys", headers=auth_headers
-        )
+        keys_resp = client.get(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers)
         key_id = keys_resp.json()["items"][0]["id"]
-        client.delete(
-            f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers
-        )
+        client.delete(f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers)
 
         resp = client.post(
             f"/api/v1/agents/{agent_id}/keys/rotate",

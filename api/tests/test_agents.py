@@ -2,8 +2,7 @@
 
 import uuid
 
-from common.models import Agent, AgentKey, AgentStatus, KeyStatus
-
+from common.models import AgentKey, KeyStatus
 
 # ── POST /api/v1/agents ─────────────────────────────────────────────────
 
@@ -81,9 +80,7 @@ class TestCreateAgent:
         agent_id = resp.json()["agent"]["id"]
 
         key_record = (
-            db_session.query(AgentKey)
-            .filter(AgentKey.agent_id == uuid.UUID(agent_id))
-            .first()
+            db_session.query(AgentKey).filter(AgentKey.agent_id == uuid.UUID(agent_id)).first()
         )
         assert key_record is not None
         assert key_record.key_hash != api_key  # Not stored plaintext
@@ -120,7 +117,7 @@ class TestListAgents:
     def test_list_agents_status_filter(self, client, auth_headers):
         """Filtering by status=active excludes revoked agents."""
         # Create and then revoke one
-        r1 = client.post("/api/v1/agents", json={"name": "Active"}, headers=auth_headers)
+        client.post("/api/v1/agents", json={"name": "Active"}, headers=auth_headers)
         r2 = client.post("/api/v1/agents", json={"name": "To Revoke"}, headers=auth_headers)
         revoke_id = r2.json()["agent"]["id"]
         client.delete(f"/api/v1/agents/{revoke_id}", headers=auth_headers)
@@ -183,9 +180,7 @@ class TestGetAgent:
 
     def test_get_agent_other_user(self, client, auth_headers, other_user):
         """Cannot get another user's agent — returns 404."""
-        create_resp = client.post(
-            "/api/v1/agents", json={"name": "Private"}, headers=auth_headers
-        )
+        create_resp = client.post("/api/v1/agents", json={"name": "Private"}, headers=auth_headers)
         agent_id = create_resp.json()["agent"]["id"]
 
         resp = client.get(
@@ -201,9 +196,7 @@ class TestGetAgent:
 class TestUpdateAgent:
     def test_update_agent_name(self, client, auth_headers):
         """Updating an agent's name works."""
-        create_resp = client.post(
-            "/api/v1/agents", json={"name": "Old Name"}, headers=auth_headers
-        )
+        create_resp = client.post("/api/v1/agents", json={"name": "Old Name"}, headers=auth_headers)
         agent_id = create_resp.json()["agent"]["id"]
 
         resp = client.put(
@@ -329,11 +322,7 @@ class TestDeleteAgent:
 
         client.delete(f"/api/v1/agents/{agent_id}", headers=auth_headers)
 
-        keys = (
-            db_session.query(AgentKey)
-            .filter(AgentKey.agent_id == uuid.UUID(agent_id))
-            .all()
-        )
+        keys = db_session.query(AgentKey).filter(AgentKey.agent_id == uuid.UUID(agent_id)).all()
         assert len(keys) == 1
         assert keys[0].status == KeyStatus.revoked.value
 
@@ -366,14 +355,22 @@ class TestCapabilitiesAndMetadata:
             json={
                 "name": "Full Agent",
                 "capabilities": ["chat_completion", "image_generation", "function_calling"],
-                "metadata": {"framework": "langchain", "environment": "production", "owner_team": "platform"},
+                "metadata": {
+                    "framework": "langchain",
+                    "environment": "production",
+                    "owner_team": "platform",
+                },
             },
             headers=auth_headers,
         )
         assert resp.status_code == 201
         agent = resp.json()["agent"]
         assert agent["capabilities"] == ["chat_completion", "image_generation", "function_calling"]
-        assert agent["metadata"] == {"framework": "langchain", "environment": "production", "owner_team": "platform"}
+        assert agent["metadata"] == {
+            "framework": "langchain",
+            "environment": "production",
+            "owner_team": "platform",
+        }
 
     def test_create_agent_defaults(self, client, auth_headers):
         """Capabilities default to [] and metadata defaults to {} when omitted."""
@@ -512,7 +509,7 @@ class TestCapabilitiesAndMetadata:
 
     def test_filter_by_capability_and_status(self, client, auth_headers):
         """Combining capability and status filters works."""
-        r1 = client.post(
+        client.post(
             "/api/v1/agents",
             json={"name": "Active Chat", "capabilities": ["chat"]},
             headers=auth_headers,
@@ -527,9 +524,7 @@ class TestCapabilitiesAndMetadata:
         client.delete(f"/api/v1/agents/{revoke_id}", headers=auth_headers)
 
         # Filter: capability=chat + status=active → only Active Chat
-        resp = client.get(
-            "/api/v1/agents?capability=chat&status=active", headers=auth_headers
-        )
+        resp = client.get("/api/v1/agents?capability=chat&status=active", headers=auth_headers)
         data = resp.json()
         assert data["total"] == 1
         assert data["items"][0]["name"] == "Active Chat"

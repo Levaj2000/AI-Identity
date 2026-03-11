@@ -27,14 +27,10 @@ class AuditLog(Base):
     method: Mapped[str] = mapped_column(String(10), nullable=False)
 
     # Decision
-    decision: Mapped[str] = mapped_column(
-        String(10), nullable=False
-    )  # allow, deny, error
+    decision: Mapped[str] = mapped_column(String(10), nullable=False)  # allow, deny, error
 
     # Metrics
-    cost_estimate_usd: Mapped[float | None] = mapped_column(
-        Numeric(10, 6), nullable=True
-    )
+    cost_estimate_usd: Mapped[float | None] = mapped_column(Numeric(10, 6), nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Flexible request context
@@ -52,6 +48,4 @@ class AuditLog(Base):
     )
 
     # Composite index for query performance: filter by agent + time range
-    __table_args__ = (
-        Index("ix_audit_log_agent_created", "agent_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_audit_log_agent_created", "agent_id", "created_at"),)
