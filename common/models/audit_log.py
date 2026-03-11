@@ -46,7 +46,10 @@ class AuditLog(Base):
     )
 
     # Relationships — soft FK (no CASCADE, audit logs survive agent deletion)
-    agent: Mapped["Agent"] = relationship(back_populates="audit_logs", foreign_keys=[agent_id])  # noqa: F821
+    agent: Mapped["Agent"] = relationship(  # noqa: F821
+        back_populates="audit_logs",
+        primaryjoin="Agent.id == foreign(AuditLog.agent_id)",
+    )
 
     # Composite index for query performance: filter by agent + time range
     __table_args__ = (
