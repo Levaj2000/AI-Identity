@@ -13,10 +13,17 @@ class Settings(BaseSettings):
     api_key_prefix: str = "aid_sk_"
     admin_key_prefix: str = "aid_admin_"
     key_rotation_grace_hours: int = 24
+    audit_hmac_key: str = "CHANGE-ME-IN-PRODUCTION"
 
     # Services
     api_port: int = 8001
     gateway_port: int = 8002
+
+    # Gateway — fail-closed enforcement
+    policy_eval_timeout_ms: int = 500
+    circuit_breaker_failure_threshold: int = 5
+    circuit_breaker_window_seconds: int = 60
+    circuit_breaker_recovery_seconds: int = 30
 
     # Environment
     environment: str = "development"
