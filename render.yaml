@@ -20,4 +20,6 @@ services:
       - key: CORS_ORIGINS
         value: https://ai-identity.co,http://localhost:5173
       - key: PYTHON_VERSION
-        value: "3.11"
+        value: "3.11.11"
+      - key: PYTHONPATH
+        value: /opt/render/project/src
