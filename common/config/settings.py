@@ -21,8 +21,20 @@ class Settings(BaseSettings):
     # Environment
     environment: str = "development"
     debug: bool = False
+    log_level: str = "INFO"
+
+    # CORS
+    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+
+    # App metadata
+    app_version: str = "0.1.0"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        """Parse comma-separated CORS origins into a list."""
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
 settings = Settings()
