@@ -1,7 +1,8 @@
-"""Agent Key management endpoints — create, list, revoke."""
+"""Agent Key management endpoints — create, list, revoke, rotate."""
 
 import logging
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -13,11 +14,15 @@ from common.schemas.agent import (
     AgentKeyCreateResponse,
     AgentKeyListResponse,
     AgentKeyResponse,
+    AgentKeyRotateResponse,
 )
 
 logger = logging.getLogger("ai_identity.api.keys")
 
 router = APIRouter(prefix="/api/v1/agents/{agent_id}/keys", tags=["keys"])
+
+# Grace period for rotated keys (hours)
+ROTATION_GRACE_HOURS = 24
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
@@ -35,6 +40,24 @@ def _get_user_agent(db: Session, user: User, agent_id: uuid.UUID) -> Agent:
     return agent
 
 
+def _revoke_expired_keys(db: Session, agent_id: uuid.UUID) -> int:
+    """Revoke any rotated keys past their expiry. Returns count of revoked keys."""
+    now = datetime.now(timezone.utc)
+    count = (
+        db.query(AgentKey)
+        .filter(
+            AgentKey.agent_id == agent_id,
+            AgentKey.status == KeyStatus.rotated.value,
+            AgentKey.expires_at <= now,
+        )
+        .update({"status": KeyStatus.revoked.value}, synchronize_session="fetch")
+    )
+    if count:
+        db.commit()
+        logger.info("Auto-revoked %d expired key(s) for agent %s", count, agent_id)
+    return count
+
+
 # ── POST /api/v1/agents/{agent_id}/keys ──────────────────────────────────
 
 
@@ -49,6 +72,9 @@ def create_key(
 
     if agent.status == AgentStatus.revoked.value:
         raise HTTPException(status_code=400, detail="Cannot issue key for a revoked agent")
+
+    # Clean up expired rotated keys
+    _revoke_expired_keys(db, agent.id)
 
     # Generate and store the key
     plaintext_key = generate_api_key()
@@ -83,6 +109,9 @@ def list_keys(
     """List keys for an agent — returns prefix + status only, never the full key."""
     agent = _get_user_agent(db, user, agent_id)
 
+    # Clean up expired rotated keys before listing
+    _revoke_expired_keys(db, agent.id)
+
     query = db.query(AgentKey).filter(AgentKey.agent_id == agent.id)
 
     if status:
@@ -94,6 +123,66 @@ def list_keys(
     return AgentKeyListResponse(
         items=[_key_to_response(k) for k in keys],
         total=total,
+    )
+
+
+# ── POST /api/v1/agents/{agent_id}/keys/rotate ──────────────────────────
+
+
+@router.post("/rotate", response_model=AgentKeyRotateResponse, status_code=201)
+def rotate_key(
+    agent_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Rotate the oldest active key: issue new key, set old to rotated with 24hr grace."""
+    agent = _get_user_agent(db, user, agent_id)
+
+    if agent.status == AgentStatus.revoked.value:
+        raise HTTPException(status_code=400, detail="Cannot rotate key for a revoked agent")
+
+    # Clean up any already-expired rotated keys
+    _revoke_expired_keys(db, agent.id)
+
+    # Find the oldest active key
+    old_key = (
+        db.query(AgentKey)
+        .filter(
+            AgentKey.agent_id == agent.id,
+            AgentKey.status == KeyStatus.active.value,
+        )
+        .order_by(AgentKey.created_at.asc())
+        .first()
+    )
+    if not old_key:
+        raise HTTPException(status_code=400, detail="No active key to rotate")
+
+    # Rotate: old key → rotated with grace period
+    old_key.status = KeyStatus.rotated.value
+    old_key.expires_at = datetime.now(timezone.utc) + timedelta(hours=ROTATION_GRACE_HOURS)
+
+    # Generate the new key
+    plaintext_key = generate_api_key()
+    new_key = AgentKey(
+        agent_id=agent.id,
+        key_hash=hash_key(plaintext_key),
+        key_prefix=get_key_prefix(plaintext_key),
+        status=KeyStatus.active.value,
+    )
+    db.add(new_key)
+    db.commit()
+    db.refresh(old_key)
+    db.refresh(new_key)
+
+    logger.info(
+        "Key rotated for agent %s: old_key=%d → rotated (expires %s), new_key=%d",
+        agent.id, old_key.id, old_key.expires_at, new_key.id,
+    )
+
+    return AgentKeyRotateResponse(
+        new_key=_key_to_response(new_key),
+        api_key=plaintext_key,
+        rotated_key=_key_to_response(old_key),
     )
 
 
