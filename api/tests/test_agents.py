@@ -353,3 +353,233 @@ class TestDeleteAgent:
         fake_id = str(uuid.uuid4())
         resp = client.delete(f"/api/v1/agents/{fake_id}", headers=auth_headers)
         assert resp.status_code == 404
+
+
+# ── Capabilities & Metadata ──────────────────────────────────────────────
+
+
+class TestCapabilitiesAndMetadata:
+    def test_create_agent_with_capabilities_and_metadata(self, client, auth_headers):
+        """Creating an agent with both capabilities and metadata stores them correctly."""
+        resp = client.post(
+            "/api/v1/agents",
+            json={
+                "name": "Full Agent",
+                "capabilities": ["chat_completion", "image_generation", "function_calling"],
+                "metadata": {"framework": "langchain", "environment": "production", "owner_team": "platform"},
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        agent = resp.json()["agent"]
+        assert agent["capabilities"] == ["chat_completion", "image_generation", "function_calling"]
+        assert agent["metadata"] == {"framework": "langchain", "environment": "production", "owner_team": "platform"}
+
+    def test_create_agent_defaults(self, client, auth_headers):
+        """Capabilities default to [] and metadata defaults to {} when omitted."""
+        resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Defaults Only"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        agent = resp.json()["agent"]
+        assert agent["capabilities"] == []
+        assert agent["metadata"] == {}
+
+    def test_get_agent_returns_capabilities_and_metadata(self, client, auth_headers):
+        """GET /agents/{id} returns capabilities and metadata."""
+        create_resp = client.post(
+            "/api/v1/agents",
+            json={
+                "name": "Detail Check",
+                "capabilities": ["embeddings"],
+                "metadata": {"version": "2.0"},
+            },
+            headers=auth_headers,
+        )
+        agent_id = create_resp.json()["agent"]["id"]
+
+        resp = client.get(f"/api/v1/agents/{agent_id}", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["capabilities"] == ["embeddings"]
+        assert resp.json()["metadata"] == {"version": "2.0"}
+
+    def test_list_agents_returns_capabilities_and_metadata(self, client, auth_headers):
+        """GET /agents list includes capabilities and metadata on each agent."""
+        client.post(
+            "/api/v1/agents",
+            json={
+                "name": "Listed Agent",
+                "capabilities": ["chat"],
+                "metadata": {"env": "staging"},
+            },
+            headers=auth_headers,
+        )
+
+        resp = client.get("/api/v1/agents", headers=auth_headers)
+        assert resp.status_code == 200
+        agent = resp.json()["items"][0]
+        assert agent["capabilities"] == ["chat"]
+        assert agent["metadata"] == {"env": "staging"}
+
+    def test_update_metadata(self, client, auth_headers):
+        """Updating metadata replaces the entire dict."""
+        create_resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Meta Agent", "metadata": {"old_key": "old_value"}},
+            headers=auth_headers,
+        )
+        agent_id = create_resp.json()["agent"]["id"]
+
+        resp = client.put(
+            f"/api/v1/agents/{agent_id}",
+            json={"metadata": {"new_key": "new_value", "env": "production"}},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["metadata"] == {"new_key": "new_value", "env": "production"}
+
+    def test_update_capabilities_and_metadata_together(self, client, auth_headers):
+        """Updating both capabilities and metadata in a single request works."""
+        create_resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Combo Agent"},
+            headers=auth_headers,
+        )
+        agent_id = create_resp.json()["agent"]["id"]
+
+        resp = client.put(
+            f"/api/v1/agents/{agent_id}",
+            json={
+                "capabilities": ["chat_completion", "function_calling"],
+                "metadata": {"framework": "crewai", "tier": "enterprise"},
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["capabilities"] == ["chat_completion", "function_calling"]
+        assert resp.json()["metadata"] == {"framework": "crewai", "tier": "enterprise"}
+
+    def test_filter_by_capability(self, client, auth_headers):
+        """Filtering agents by capability returns only matching agents."""
+        client.post(
+            "/api/v1/agents",
+            json={"name": "Chat Agent", "capabilities": ["chat_completion", "embeddings"]},
+            headers=auth_headers,
+        )
+        client.post(
+            "/api/v1/agents",
+            json={"name": "Image Agent", "capabilities": ["image_generation"]},
+            headers=auth_headers,
+        )
+        client.post(
+            "/api/v1/agents",
+            json={"name": "No Caps Agent"},
+            headers=auth_headers,
+        )
+
+        # Filter for chat_completion — only Chat Agent
+        resp = client.get("/api/v1/agents?capability=chat_completion", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["name"] == "Chat Agent"
+
+        # Filter for image_generation — only Image Agent
+        resp = client.get("/api/v1/agents?capability=image_generation", headers=auth_headers)
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["name"] == "Image Agent"
+
+        # Filter for embeddings — only Chat Agent
+        resp = client.get("/api/v1/agents?capability=embeddings", headers=auth_headers)
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["name"] == "Chat Agent"
+
+    def test_filter_by_capability_no_match(self, client, auth_headers):
+        """Filtering by a capability no agent has returns an empty list."""
+        client.post(
+            "/api/v1/agents",
+            json={"name": "Basic Agent", "capabilities": ["chat"]},
+            headers=auth_headers,
+        )
+
+        resp = client.get("/api/v1/agents?capability=nonexistent_capability", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 0
+
+    def test_filter_by_capability_and_status(self, client, auth_headers):
+        """Combining capability and status filters works."""
+        r1 = client.post(
+            "/api/v1/agents",
+            json={"name": "Active Chat", "capabilities": ["chat"]},
+            headers=auth_headers,
+        )
+        r2 = client.post(
+            "/api/v1/agents",
+            json={"name": "Revoked Chat", "capabilities": ["chat"]},
+            headers=auth_headers,
+        )
+        # Revoke the second one
+        revoke_id = r2.json()["agent"]["id"]
+        client.delete(f"/api/v1/agents/{revoke_id}", headers=auth_headers)
+
+        # Filter: capability=chat + status=active → only Active Chat
+        resp = client.get(
+            "/api/v1/agents?capability=chat&status=active", headers=auth_headers
+        )
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["items"][0]["name"] == "Active Chat"
+
+    def test_create_capabilities_invalid_type(self, client, auth_headers):
+        """Sending a string instead of a list for capabilities returns 422."""
+        resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Bad Caps", "capabilities": "not_a_list"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_create_metadata_invalid_type(self, client, auth_headers):
+        """Sending a string instead of a dict for metadata returns 422."""
+        resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Bad Meta", "metadata": "not_a_dict"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_update_capabilities_invalid_type(self, client, auth_headers):
+        """Sending a string instead of a list for capabilities in update returns 422."""
+        create_resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Bad Update Caps"},
+            headers=auth_headers,
+        )
+        agent_id = create_resp.json()["agent"]["id"]
+
+        resp = client.put(
+            f"/api/v1/agents/{agent_id}",
+            json={"capabilities": "not_a_list"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_update_metadata_invalid_type(self, client, auth_headers):
+        """Sending a string instead of a dict for metadata in update returns 422."""
+        create_resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Bad Update Meta"},
+            headers=auth_headers,
+        )
+        agent_id = create_resp.json()["agent"]["id"]
+
+        resp = client.put(
+            f"/api/v1/agents/{agent_id}",
+            json={"metadata": ["not", "a", "dict"]},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
