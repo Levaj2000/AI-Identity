@@ -118,6 +118,16 @@ class AgentKeyListResponse(BaseModel):
     total: int
 
 
+class AgentKeyRotateResponse(BaseModel):
+    """Response for key rotation — new key + rotated old key info."""
+
+    new_key: AgentKeyResponse
+    api_key: str = Field(
+        ..., description="Plaintext API key — only shown once at creation time"
+    )
+    rotated_key: AgentKeyResponse
+
+
 # ── Policy Schemas ───────────────────────────────────────────────────────
 
 

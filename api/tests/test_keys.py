@@ -1,6 +1,7 @@
-"""Tests for Agent Key management endpoints — create, list, revoke."""
+"""Tests for Agent Key management endpoints — create, list, revoke, rotate."""
 
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from common.auth.keys import hash_key
 from common.models import AgentKey, KeyStatus
@@ -271,3 +272,147 @@ class TestRevokedKeyAuth:
             .first()
         )
         assert active_key is None
+
+
+# ── POST /api/v1/agents/{id}/keys/rotate ─────────────────────────────────
+
+
+class TestRotateKey:
+    def test_rotate_key_success(self, client, auth_headers):
+        """Rotating returns 201 with new active key and old key set to rotated."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/rotate",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+
+        # New key
+        assert data["api_key"].startswith("aid_sk_")
+        assert data["new_key"]["status"] == "active"
+
+        # Old key
+        assert data["rotated_key"]["status"] == "rotated"
+        assert data["rotated_key"]["expires_at"] is not None
+
+    def test_rotate_key_new_key_differs(self, client, auth_headers):
+        """The new key prefix differs from the rotated key prefix."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/rotate",
+            headers=auth_headers,
+        )
+        data = resp.json()
+        assert data["new_key"]["key_prefix"] != data["rotated_key"]["key_prefix"]
+
+    def test_rotate_key_oldest_active_rotated(self, client, auth_headers):
+        """With multiple active keys, the oldest one gets rotated."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        # Create a second key — now we have 2 active keys
+        second_resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys", headers=auth_headers
+        )
+        second_key_id = second_resp.json()["key"]["id"]
+
+        # Before rotation: 2 active keys
+        keys_resp = client.get(
+            f"/api/v1/agents/{agent_id}/keys?status=active",
+            headers=auth_headers,
+        )
+        assert keys_resp.json()["total"] == 2
+
+        # Rotate — should rotate one key (the oldest by created_at ASC)
+        rotate_resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/rotate",
+            headers=auth_headers,
+        )
+        rotated_key_id = rotate_resp.json()["rotated_key"]["id"]
+        assert rotate_resp.json()["rotated_key"]["status"] == "rotated"
+
+        # After rotation: the second key and the new key should be active
+        # The rotated key should not be active
+        keys_after = client.get(
+            f"/api/v1/agents/{agent_id}/keys?status=active",
+            headers=auth_headers,
+        )
+        active_ids = [k["id"] for k in keys_after.json()["items"]]
+        assert second_key_id in active_ids
+        assert rotated_key_id not in active_ids
+
+    def test_rotate_key_grace_period(self, client, auth_headers, db_session):
+        """Old key still has status=rotated (not revoked) within grace period."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/rotate",
+            headers=auth_headers,
+        )
+        old_key_id = resp.json()["rotated_key"]["id"]
+
+        # Check DB: old key is rotated with future expiry
+        key_record = db_session.query(AgentKey).filter(AgentKey.id == old_key_id).first()
+        assert key_record.status == KeyStatus.rotated.value
+        # SQLite stores naive datetimes, so compare naively
+        now_naive = datetime.utcnow()
+        expires = key_record.expires_at.replace(tzinfo=None) if key_record.expires_at.tzinfo else key_record.expires_at
+        assert expires > now_naive
+
+    def test_rotate_key_expired_auto_revoked(self, client, auth_headers, db_session):
+        """After grace period expires, the rotated key is auto-revoked on next list call."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/rotate",
+            headers=auth_headers,
+        )
+        old_key_id = resp.json()["rotated_key"]["id"]
+
+        # Simulate expiry: set expires_at to the past
+        key_record = db_session.query(AgentKey).filter(AgentKey.id == old_key_id).first()
+        key_record.expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
+        db_session.commit()
+
+        # Listing keys triggers cleanup
+        list_resp = client.get(
+            f"/api/v1/agents/{agent_id}/keys",
+            headers=auth_headers,
+        )
+        # Find the old key in the list — should now be revoked
+        old_key_data = next(
+            k for k in list_resp.json()["items"] if k["id"] == old_key_id
+        )
+        assert old_key_data["status"] == "revoked"
+
+    def test_rotate_key_revoked_agent(self, client, auth_headers):
+        """Cannot rotate keys for a revoked agent."""
+        agent_id, _ = _create_agent(client, auth_headers)
+        client.delete(f"/api/v1/agents/{agent_id}", headers=auth_headers)
+
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/rotate",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 400
+
+    def test_rotate_key_no_active_key(self, client, auth_headers):
+        """Cannot rotate when there are no active keys."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        # Get the initial key and revoke it
+        keys_resp = client.get(
+            f"/api/v1/agents/{agent_id}/keys", headers=auth_headers
+        )
+        key_id = keys_resp.json()["items"][0]["id"]
+        client.delete(
+            f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers
+        )
+
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/rotate",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 400
