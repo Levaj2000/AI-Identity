@@ -1,0 +1,23 @@
+# Render Blueprint — AI Identity services
+# https://docs.render.com/blueprint-spec
+
+services:
+  - type: web
+    name: ai-identity-api
+    runtime: python
+    region: oregon
+    plan: starter
+    buildCommand: pip install -r api/requirements.txt && pip install -e common/
+    startCommand: uvicorn api.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: CORS_ORIGINS
+        value: https://ai-identity.co,http://localhost:5173
+      - key: PYTHON_VERSION
+        value: "3.11"
