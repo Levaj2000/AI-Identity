@@ -102,6 +102,22 @@ class AgentKeyResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AgentKeyCreateResponse(BaseModel):
+    """Response for key creation — includes the plaintext key (show-once)."""
+
+    key: AgentKeyResponse
+    api_key: str = Field(
+        ..., description="Plaintext API key — only shown once at creation time"
+    )
+
+
+class AgentKeyListResponse(BaseModel):
+    """List of agent keys."""
+
+    items: list[AgentKeyResponse]
+    total: int
+
+
 # ── Policy Schemas ───────────────────────────────────────────────────────
 
 
