@@ -26,13 +26,29 @@ router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
 # ── POST /api/v1/agents ─────────────────────────────────────────────────
 
 
-@router.post("", response_model=AgentCreateResponse, status_code=201)
+@router.post(
+    "",
+    response_model=AgentCreateResponse,
+    status_code=201,
+    summary="Create agent",
+    response_description="The created agent with a show-once API key",
+    responses={
+        422: {"description": "Validation error (e.g. missing name, invalid capabilities type)"},
+    },
+)
 def create_agent(
     body: AgentCreate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Create a new agent with an initial API key (show-once)."""
+    """Create a new AI agent with an initial API key.
+
+    The response includes a plaintext `api_key` that starts with `aid_sk_`.
+    **Store it immediately** — it is only shown once and cannot be retrieved later.
+
+    The agent starts with `status=active` and can optionally include
+    `capabilities` (list) and `metadata` (dict).
+    """
     agent = Agent(
         id=uuid.uuid4(),
         user_id=user.id,
@@ -68,16 +84,34 @@ def create_agent(
 # ── GET /api/v1/agents ──────────────────────────────────────────────────
 
 
-@router.get("", response_model=AgentListResponse)
+@router.get(
+    "",
+    response_model=AgentListResponse,
+    summary="List agents",
+    response_description="Paginated list of agents",
+)
 def list_agents(
-    status: str | None = Query(None, pattern="^(active|suspended|revoked)$"),
-    capability: str | None = Query(None, min_length=1, max_length=100),
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
+    status: str | None = Query(
+        None,
+        pattern="^(active|suspended|revoked)$",
+        description="Filter by agent status",
+    ),
+    capability: str | None = Query(
+        None,
+        min_length=1,
+        max_length=100,
+        description="Filter agents that have this capability (e.g. `chat_completion`)",
+    ),
+    limit: int = Query(20, ge=1, le=100, description="Max items per page"),
+    offset: int = Query(0, ge=0, description="Number of items to skip"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List agents for the current user, with optional status/capability filter and pagination."""
+    """List all agents belonging to the current user.
+
+    Supports filtering by `status` and/or `capability`, with pagination
+    via `limit` and `offset`. Results are ordered by creation date (newest first).
+    """
     query = db.query(Agent).filter(Agent.user_id == user.id)
 
     if status:
@@ -103,13 +137,25 @@ def list_agents(
 # ── GET /api/v1/agents/{agent_id} ───────────────────────────────────────
 
 
-@router.get("/{agent_id}", response_model=AgentResponse)
+@router.get(
+    "/{agent_id}",
+    response_model=AgentResponse,
+    summary="Get agent",
+    response_description="Full agent details",
+    responses={
+        404: {"description": "Agent not found or belongs to another user"},
+    },
+)
 def get_agent(
     agent_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Get a single agent by ID. Must belong to the current user."""
+    """Get a single agent by ID.
+
+    Returns the full agent record including capabilities and metadata.
+    The agent must belong to the authenticated user.
+    """
     agent = _get_user_agent(db, user, agent_id)
     return _agent_to_response(agent)
 
@@ -117,14 +163,29 @@ def get_agent(
 # ── PUT /api/v1/agents/{agent_id} ───────────────────────────────────────
 
 
-@router.put("/{agent_id}", response_model=AgentResponse)
+@router.put(
+    "/{agent_id}",
+    response_model=AgentResponse,
+    summary="Update agent",
+    response_description="The updated agent",
+    responses={
+        400: {"description": "Cannot update a revoked agent"},
+        404: {"description": "Agent not found or belongs to another user"},
+        422: {"description": "Validation error or no fields provided"},
+    },
+)
 def update_agent(
     agent_id: uuid.UUID,
     body: AgentUpdate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Update an agent's name, description, capabilities, metadata, or status."""
+    """Update an agent's name, description, capabilities, metadata, or status.
+
+    Only include the fields you want to change — omitted fields are left unchanged.
+    Capabilities and metadata are replaced entirely (not merged).
+    Revoked agents cannot be updated.
+    """
     agent = _get_user_agent(db, user, agent_id)
 
     if agent.status == AgentStatus.revoked.value:
@@ -151,13 +212,27 @@ def update_agent(
 # ── DELETE /api/v1/agents/{agent_id} ────────────────────────────────────
 
 
-@router.delete("/{agent_id}", response_model=AgentResponse)
+@router.delete(
+    "/{agent_id}",
+    response_model=AgentResponse,
+    summary="Revoke agent",
+    response_description="The revoked agent",
+    responses={
+        400: {"description": "Agent is already revoked"},
+        404: {"description": "Agent not found or belongs to another user"},
+    },
+)
 def delete_agent(
     agent_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Soft-delete an agent: set status=revoked and revoke all associated keys."""
+    """Soft-delete an agent by setting its status to revoked.
+
+    All active and rotated API keys for the agent are immediately revoked.
+    The agent record is preserved for audit purposes but can no longer be
+    updated or issued new keys.
+    """
     agent = _get_user_agent(db, user, agent_id)
 
     if agent.status == AgentStatus.revoked.value:

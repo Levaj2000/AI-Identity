@@ -61,13 +61,30 @@ def _revoke_expired_keys(db: Session, agent_id: uuid.UUID) -> int:
 # ── POST /api/v1/agents/{agent_id}/keys ──────────────────────────────────
 
 
-@router.post("", response_model=AgentKeyCreateResponse, status_code=201)
+@router.post(
+    "",
+    response_model=AgentKeyCreateResponse,
+    status_code=201,
+    summary="Create key",
+    response_description="The new key metadata with show-once plaintext key",
+    responses={
+        400: {"description": "Cannot issue key for a revoked agent"},
+        404: {"description": "Agent not found or belongs to another user"},
+    },
+)
 def create_key(
     agent_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Generate a new API key for an agent (show-once)."""
+    """Generate a new API key for an agent.
+
+    The response includes the plaintext key (`aid_sk_…`). **Store it immediately** —
+    it is only shown once. Subsequent calls to list keys will only show the
+    key prefix and status.
+
+    Cannot issue keys for revoked agents.
+    """
     agent = _get_user_agent(db, user, agent_id)
 
     if agent.status == AgentStatus.revoked.value:
@@ -99,14 +116,33 @@ def create_key(
 # ── GET /api/v1/agents/{agent_id}/keys ───────────────────────────────────
 
 
-@router.get("", response_model=AgentKeyListResponse)
+@router.get(
+    "",
+    response_model=AgentKeyListResponse,
+    summary="List keys",
+    response_description="List of keys with prefix and status (never the full key or hash)",
+    responses={
+        404: {"description": "Agent not found or belongs to another user"},
+    },
+)
 def list_keys(
     agent_id: uuid.UUID,
-    status: str | None = Query(None, pattern="^(active|rotated|revoked)$"),
+    status: str | None = Query(
+        None,
+        pattern="^(active|rotated|revoked)$",
+        description="Filter by key status: active, rotated, or revoked",
+    ),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List keys for an agent — returns prefix + status only, never the full key."""
+    """List all keys for an agent.
+
+    Returns key prefix and status for each key — the full key and hash
+    are never exposed. Expired rotated keys are automatically revoked
+    before results are returned.
+
+    Use `?status=active` to see only active keys.
+    """
     agent = _get_user_agent(db, user, agent_id)
 
     # Clean up expired rotated keys before listing
@@ -129,13 +165,31 @@ def list_keys(
 # ── POST /api/v1/agents/{agent_id}/keys/rotate ──────────────────────────
 
 
-@router.post("/rotate", response_model=AgentKeyRotateResponse, status_code=201)
+@router.post(
+    "/rotate",
+    response_model=AgentKeyRotateResponse,
+    status_code=201,
+    summary="Rotate key",
+    response_description="New active key + old key with 24hr grace period",
+    responses={
+        400: {"description": "Cannot rotate: agent is revoked or has no active keys"},
+        404: {"description": "Agent not found or belongs to another user"},
+    },
+)
 def rotate_key(
     agent_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Rotate the oldest active key: issue new key, set old to rotated with 24hr grace."""
+    """Rotate the oldest active key: issue a new key and set the old one to rotated.
+
+    The old key enters a **24-hour grace period** (`status=rotated`, `expires_at`
+    set to now + 24h). During this window both old and new keys are valid,
+    giving you time to update your configuration. After the grace period,
+    the old key is automatically revoked on the next API call.
+
+    The response includes the new plaintext key — **store it immediately**.
+    """
     agent = _get_user_agent(db, user, agent_id)
 
     if agent.status == AgentStatus.revoked.value:
@@ -189,14 +243,28 @@ def rotate_key(
 # ── DELETE /api/v1/agents/{agent_id}/keys/{key_id} ──────────────────────
 
 
-@router.delete("/{key_id}", response_model=AgentKeyResponse)
+@router.delete(
+    "/{key_id}",
+    response_model=AgentKeyResponse,
+    summary="Revoke key",
+    response_description="The revoked key",
+    responses={
+        400: {"description": "Key is already revoked"},
+        404: {"description": "Agent or key not found"},
+    },
+)
 def revoke_key(
     agent_id: uuid.UUID,
     key_id: int,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Revoke a specific API key for an agent."""
+    """Revoke a specific API key for an agent.
+
+    The key is immediately invalidated and cannot be used for authentication.
+    The key record is preserved with `status=revoked` for audit purposes.
+    This action cannot be undone — issue a new key if needed.
+    """
     agent = _get_user_agent(db, user, agent_id)
 
     key = (

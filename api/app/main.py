@@ -25,12 +25,55 @@ logger = logging.getLogger("ai_identity.api")
 
 # ── App ──────────────────────────────────────────────────────────────────
 
+API_DESCRIPTION = """\
+**AI Identity** is the identity layer for AI agents. It gives every agent a
+verifiable identity, cryptographic API keys, and (soon) policy-based guardrails.
+
+## Getting Started
+
+1. **Create an agent** — `POST /api/v1/agents` with a name and capabilities
+2. **Use the API key** — the response includes a show-once `api_key` (`aid_sk_…`)
+3. **Manage keys** — rotate, revoke, or issue additional keys without downtime
+
+## Authentication
+
+All endpoints require an `X-API-Key` header with a valid developer API key.
+Agent-scoped keys (`aid_sk_…`) are used by agents themselves; developer keys
+are used to manage agents via this admin API.
+"""
+
+OPENAPI_TAGS = [
+    {
+        "name": "agents",
+        "description": "Create, list, update, and delete AI agents. "
+        "Each agent gets a UUID identity and cryptographic API key at creation.",
+    },
+    {
+        "name": "keys",
+        "description": "Manage API keys for agents — create, list, revoke, and rotate. "
+        "Keys use SHA-256 hashing and are shown only once at creation time.",
+    },
+    {
+        "name": "health",
+        "description": "Service health and status endpoints.",
+    },
+]
+
 app = FastAPI(
-    title="AI Identity — API",
-    description="Identity service and admin API for AI agents",
+    title="AI Identity API",
+    summary="Identity and key management for AI agents",
+    description=API_DESCRIPTION,
     version=settings.app_version,
-    docs_url="/docs" if settings.environment != "production" else None,
-    redoc_url="/redoc" if settings.environment != "production" else None,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_tags=OPENAPI_TAGS,
+    contact={
+        "name": "AI Identity Team",
+        "url": "https://github.com/Levaj2000/AI-Identity",
+    },
+    license_info={
+        "name": "MIT",
+    },
 )
 
 # ── CORS ─────────────────────────────────────────────────────────────────
@@ -150,9 +193,9 @@ app.include_router(keys_router)
 # ── Routes ───────────────────────────────────────────────────────────────
 
 
-@app.get("/health")
+@app.get("/health", tags=["health"], summary="Health check")
 async def health():
-    """Health check endpoint — used by Render and uptime monitors."""
+    """Returns service status, version, and name. Used by Render and uptime monitors."""
     return {
         "status": "ok",
         "version": settings.app_version,
@@ -160,9 +203,9 @@ async def health():
     }
 
 
-@app.get("/")
+@app.get("/", tags=["health"], summary="Service info")
 async def root():
-    """Root endpoint — service info."""
+    """Returns basic service information and a link to the API docs."""
     return {
         "service": "ai-identity-api",
         "version": settings.app_version,
