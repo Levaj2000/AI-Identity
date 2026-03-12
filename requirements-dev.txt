@@ -1,0 +1,5 @@
+# Dev tooling — linters, formatters, pre-commit hooks
+# Install: pip install -r requirements-dev.txt
+ruff>=0.9.0
+pre-commit>=4.0
+mypy>=1.14

@@ -1,0 +1,47 @@
+# Pre-commit hooks — https://pre-commit.com
+# Install:  pip install pre-commit && pre-commit install
+# Run all:  pre-commit run --all-files
+
+repos:
+  # ── Housekeeping ──────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+        exclude: ^alembic/
+      - id: end-of-file-fixer
+        exclude: ^alembic/
+      - id: check-yaml
+      - id: check-json
+        exclude: ^dashboard/tsconfig.*\.json$
+      - id: check-added-large-files
+        args: [--maxkb=500]
+
+  # ── Python: ruff lint + format ────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.5
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  # ── TypeScript: ESLint (dashboard only) ───────────────────────────────
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (dashboard)
+        entry: bash -c 'cd dashboard && npx eslint .'
+        language: system
+        pass_filenames: false
+        files: ^dashboard/.*\.(ts|tsx)$
+
+  # ── TypeScript: Prettier (dashboard only) ─────────────────────────────
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier (dashboard)
+        entry: bash -c 'cd dashboard && npx prettier --check .'
+        language: system
+        pass_filenames: false
+        files: ^dashboard/.*\.(ts|tsx|json|css|html)$
