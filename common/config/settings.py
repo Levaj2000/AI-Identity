@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     # Upstream credential encryption (Fernet)
     credential_encryption_key: str = ""
 
+    # Internal service-to-service authentication (HMAC-SHA256)
+    # Generate with: python -c "import secrets; print(secrets.token_urlsafe(64))"
+    internal_service_key: str = ""
+
     # Services
     api_port: int = 8001
     gateway_port: int = 8002
