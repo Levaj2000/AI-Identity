@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     key_rotation_grace_hours: int = 24
     audit_hmac_key: str = "CHANGE-ME-IN-PRODUCTION"
 
+    # Upstream credential encryption (Fernet)
+    credential_encryption_key: str = ""
+
     # Services
     api_port: int = 8001
     gateway_port: int = 8002
