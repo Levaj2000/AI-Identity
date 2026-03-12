@@ -63,6 +63,23 @@ app = FastAPI(
 # on every DB session, activating the service_bypass RLS policy.
 app.dependency_overrides[get_db] = get_gateway_db
 
+# ── Internal Service Auth ────────────────────────────────────────────────
+# When adding gateway endpoints that should only be called by the API:
+#
+#   from fastapi import Depends
+#   from common.auth.internal import require_internal_auth
+#
+#   @router.post("/internal/gateway/invalidate-cache",
+#                dependencies=[Depends(require_internal_auth)])
+#   async def invalidate_cache(...): ...
+#
+# The API signs outbound requests with:
+#   from common.auth.internal import sign_request
+#   headers = sign_request("POST", "/internal/gateway/invalidate-cache", body)
+#   response = httpx.post(gateway_url + "/...", content=body, headers=headers)
+#
+# Both services must share the same INTERNAL_SERVICE_KEY env var.
+
 # ── CORS ─────────────────────────────────────────────────────────────────
 
 app.add_middleware(

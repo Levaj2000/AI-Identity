@@ -211,6 +211,23 @@ async def startup():
     )
 
 
+# ── Internal Service Auth ────────────────────────────────────────────────
+# When adding endpoints that should only be called by the Gateway:
+#
+#   from fastapi import Depends
+#   from common.auth.internal import require_internal_auth
+#
+#   @router.get("/internal/agents/lookup",
+#               dependencies=[Depends(require_internal_auth)])
+#   async def lookup_agent_for_gateway(...): ...
+#
+# The Gateway signs outbound requests with:
+#   from common.auth.internal import sign_request
+#   headers = sign_request("GET", "/internal/agents/lookup")
+#   response = httpx.get(api_url + "/internal/agents/lookup", headers=headers)
+#
+# Both services must share the same INTERNAL_SERVICE_KEY env var.
+
 # ── Routers ──────────────────────────────────────────────────────────────
 
 from api.app.routers.agents import router as agents_router  # noqa: E402
