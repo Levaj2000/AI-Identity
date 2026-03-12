@@ -29,17 +29,27 @@ MAX_ENDPOINT_LENGTH = 256
 
 # Recognized top-level keys in the rules dict.
 # Any key not in this set is rejected.
-ALLOWED_RULE_KEYS = frozenset({
-    "allowed_endpoints",
-    "denied_endpoints",
-    "allowed_methods",
-    "max_cost_usd",
-})
+ALLOWED_RULE_KEYS = frozenset(
+    {
+        "allowed_endpoints",
+        "denied_endpoints",
+        "allowed_methods",
+        "max_cost_usd",
+    }
+)
 
 # Valid HTTP methods (uppercase).
-VALID_HTTP_METHODS = frozenset({
-    "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS",
-})
+VALID_HTTP_METHODS = frozenset(
+    {
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS",
+    }
+)
 
 # Safe endpoint pattern: starts with / or *, contains only safe chars.
 # No backticks, no null bytes, no control characters, no query strings.
@@ -151,8 +161,7 @@ class PolicyValidator:
         if size > self.max_size_bytes:
             result.add_error(
                 "rules",
-                f"Rules payload too large: {size} bytes "
-                f"(max {self.max_size_bytes} bytes)",
+                f"Rules payload too large: {size} bytes (max {self.max_size_bytes} bytes)",
             )
 
     # ── Depth Check ───────────────────────────────────────────────
@@ -163,8 +172,7 @@ class PolicyValidator:
         if depth > self.max_depth:
             result.add_error(
                 "rules",
-                f"Rules nesting too deep: depth {depth} "
-                f"(max {self.max_depth})",
+                f"Rules nesting too deep: depth {depth} (max {self.max_depth})",
             )
 
     @staticmethod
@@ -178,17 +186,11 @@ class PolicyValidator:
         if isinstance(obj, dict):
             if not obj:
                 return current
-            return max(
-                PolicyValidator._measure_depth(v, current + 1)
-                for v in obj.values()
-            )
+            return max(PolicyValidator._measure_depth(v, current + 1) for v in obj.values())
         if isinstance(obj, list):
             if not obj:
                 return current
-            return max(
-                PolicyValidator._measure_depth(item, current + 1)
-                for item in obj
-            )
+            return max(PolicyValidator._measure_depth(item, current + 1) for item in obj)
         return current
 
     # ── Key Whitelist ─────────────────────────────────────────────
@@ -200,15 +202,12 @@ class PolicyValidator:
             for key in sorted(unknown):
                 result.add_error(
                     key,
-                    f"Unknown rule key '{key}'. "
-                    f"Allowed keys: {sorted(ALLOWED_RULE_KEYS)}",
+                    f"Unknown rule key '{key}'. Allowed keys: {sorted(ALLOWED_RULE_KEYS)}",
                 )
 
     # ── Endpoint Validation ───────────────────────────────────────
 
-    def _validate_endpoints(
-        self, rules: dict, field_name: str, result: ValidationResult
-    ) -> None:
+    def _validate_endpoints(self, rules: dict, field_name: str, result: ValidationResult) -> None:
         """Validate an endpoint list field (allowed_endpoints or denied_endpoints)."""
         if field_name not in rules:
             return
@@ -302,8 +301,7 @@ class PolicyValidator:
             if method.upper() not in VALID_HTTP_METHODS:
                 result.add_error(
                     f"allowed_methods[{i}]",
-                    f"Invalid HTTP method '{method}'. "
-                    f"Valid methods: {sorted(VALID_HTTP_METHODS)}",
+                    f"Invalid HTTP method '{method}'. Valid methods: {sorted(VALID_HTTP_METHODS)}",
                 )
 
     # ── Cost Validation ───────────────────────────────────────────

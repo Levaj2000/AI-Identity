@@ -201,9 +201,7 @@ class CircuitBreaker:
         Must be called with lock held.
         """
         cutoff = now - self._window_seconds
-        self._failure_timestamps = [
-            t for t in self._failure_timestamps if t >= cutoff
-        ]
+        self._failure_timestamps = [t for t in self._failure_timestamps if t >= cutoff]
 
     def _maybe_transition_to_half_open(self) -> None:
         """Check if an OPEN breaker should transition to HALF_OPEN.
@@ -219,7 +217,6 @@ class CircuitBreaker:
         if elapsed >= self._recovery_seconds:
             self._state = CircuitState.HALF_OPEN
             logger.info(
-                "Circuit breaker '%s' recovery period elapsed → HALF_OPEN "
-                "(allowing probe request)",
+                "Circuit breaker '%s' recovery period elapsed → HALF_OPEN (allowing probe request)",
                 self._name,
             )

@@ -126,9 +126,7 @@ class TestCheckKeyType:
 class TestEnforceKeyTypeSeparation:
     """Test key-type enforcement through the full enforce() flow."""
 
-    def test_runtime_key_denied_on_management_endpoint(
-        self, db_session, test_agent, test_policy
-    ):
+    def test_runtime_key_denied_on_management_endpoint(self, db_session, test_agent, test_policy):
         """CRITICAL: Runtime key returns 403 on management endpoints."""
         result = enforce(
             db_session,
@@ -141,9 +139,7 @@ class TestEnforceKeyTypeSeparation:
         assert result.status_code == 403
         assert result.deny_reason == DenyReason.RUNTIME_KEY_ON_MANAGEMENT
 
-    def test_admin_key_denied_on_proxy_endpoint(
-        self, db_session, test_agent, test_policy
-    ):
+    def test_admin_key_denied_on_proxy_endpoint(self, db_session, test_agent, test_policy):
         """CRITICAL: Admin key returns 403 on proxy endpoints."""
         result = enforce(
             db_session,
@@ -156,9 +152,7 @@ class TestEnforceKeyTypeSeparation:
         assert result.status_code == 403
         assert result.deny_reason == DenyReason.ADMIN_KEY_ON_RUNTIME
 
-    def test_runtime_key_allowed_on_proxy(
-        self, db_session, test_agent, test_policy
-    ):
+    def test_runtime_key_allowed_on_proxy(self, db_session, test_agent, test_policy):
         """Runtime key succeeds on proxy endpoints (when policy allows)."""
         result = enforce(
             db_session,
@@ -170,9 +164,7 @@ class TestEnforceKeyTypeSeparation:
         assert result.allowed
         assert result.status_code == 200
 
-    def test_admin_key_allowed_on_management(
-        self, db_session, test_agent, test_policy
-    ):
+    def test_admin_key_allowed_on_management(self, db_session, test_agent, test_policy):
         """Admin key proceeds to policy check on management endpoints.
 
         Note: May still be denied by policy if the policy doesn't cover
@@ -192,9 +184,7 @@ class TestEnforceKeyTypeSeparation:
         # It should be denied by policy, not by key type
         assert result.deny_reason == DenyReason.POLICY_DENIED
 
-    def test_no_key_type_still_works(
-        self, db_session, test_agent, test_policy
-    ):
+    def test_no_key_type_still_works(self, db_session, test_agent, test_policy):
         """Backward compat: no key_type = legacy behavior, no key-type gate."""
         result = enforce(
             db_session,
@@ -251,9 +241,7 @@ class TestKeyTypeCheckOrder:
 class TestKeyTypeDenialAudit:
     """Test that key-type denials are recorded in the audit log."""
 
-    def test_runtime_key_denial_creates_audit_entry(
-        self, db_session, test_agent
-    ):
+    def test_runtime_key_denial_creates_audit_entry(self, db_session, test_agent):
         """Key-type denial should write an audit log entry."""
         from common.models import AuditLog
 
@@ -279,9 +267,7 @@ class TestKeyTypeDenialAudit:
         assert entry.request_metadata.get("deny_reason") == "runtime_key_on_management_endpoint"
         assert entry.request_metadata.get("key_type") == "runtime"
 
-    def test_admin_key_denial_creates_audit_entry(
-        self, db_session, test_agent
-    ):
+    def test_admin_key_denial_creates_audit_entry(self, db_session, test_agent):
         """Admin key-type denial should write an audit log entry."""
         from common.models import AuditLog
 
@@ -312,9 +298,7 @@ class TestKeyTypeDenialAudit:
 class TestGatewayEnforceEndpointKeyType:
     """Test the POST /gateway/enforce endpoint with key_type param."""
 
-    def test_runtime_key_denied_on_management_via_http(
-        self, client, test_agent, test_policy
-    ):
+    def test_runtime_key_denied_on_management_via_http(self, client, test_agent, test_policy):
         resp = client.post(
             "/gateway/enforce",
             params={
@@ -328,9 +312,7 @@ class TestGatewayEnforceEndpointKeyType:
         data = resp.json()
         assert data["deny_reason"] == "runtime_key_on_management_endpoint"
 
-    def test_admin_key_denied_on_proxy_via_http(
-        self, client, test_agent, test_policy
-    ):
+    def test_admin_key_denied_on_proxy_via_http(self, client, test_agent, test_policy):
         resp = client.post(
             "/gateway/enforce",
             params={
@@ -344,9 +326,7 @@ class TestGatewayEnforceEndpointKeyType:
         data = resp.json()
         assert data["deny_reason"] == "admin_key_on_runtime_endpoint"
 
-    def test_runtime_key_allowed_on_proxy_via_http(
-        self, client, test_agent, test_policy
-    ):
+    def test_runtime_key_allowed_on_proxy_via_http(self, client, test_agent, test_policy):
         resp = client.post(
             "/gateway/enforce",
             params={
@@ -360,9 +340,7 @@ class TestGatewayEnforceEndpointKeyType:
         data = resp.json()
         assert data["decision"] == "allow"
 
-    def test_no_key_type_still_works_via_http(
-        self, client, test_agent, test_policy
-    ):
+    def test_no_key_type_still_works_via_http(self, client, test_agent, test_policy):
         """No key_type param = legacy behavior."""
         resp = client.post(
             "/gateway/enforce",

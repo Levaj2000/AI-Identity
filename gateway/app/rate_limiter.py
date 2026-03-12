@@ -69,9 +69,7 @@ class RateLimiter:
             per_key_limit if per_key_limit is not None else settings.rate_limit_per_key
         )
         self._window_seconds = (
-            window_seconds
-            if window_seconds is not None
-            else settings.rate_limit_window_seconds
+            window_seconds if window_seconds is not None else settings.rate_limit_window_seconds
         )
         self._cleanup_threshold = cleanup_threshold
 

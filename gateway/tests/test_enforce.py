@@ -287,9 +287,7 @@ class TestEnforcePolicyErrors:
         """Policy evaluation exceeding timeout = DENY + record failure."""
         from concurrent.futures import TimeoutError
 
-        with patch(
-            "gateway.app.enforce._policy_executor"
-        ) as mock_executor:
+        with patch("gateway.app.enforce._policy_executor") as mock_executor:
             mock_future = mock_executor.submit.return_value
             mock_future.result.side_effect = TimeoutError()
 
@@ -330,9 +328,7 @@ class TestEnforcePolicyErrors:
 class TestEnforceCircuitBreaker:
     """Verify circuit breaker trips after repeated failures and denies all."""
 
-    def test_circuit_breaker_trips_after_threshold(
-        self, db_session, test_agent, test_policy
-    ):
+    def test_circuit_breaker_trips_after_threshold(self, db_session, test_agent, test_policy):
         """5 consecutive policy failures trips the circuit breaker."""
         with patch(
             "gateway.app.enforce._load_and_evaluate_policy",
@@ -350,9 +346,7 @@ class TestEnforceCircuitBreaker:
         # Breaker should now be OPEN
         assert policy_circuit_breaker.state == CircuitState.OPEN
 
-    def test_open_breaker_denies_all_with_503(
-        self, db_session, test_agent, test_policy
-    ):
+    def test_open_breaker_denies_all_with_503(self, db_session, test_agent, test_policy):
         """When circuit breaker is OPEN, all requests get 503."""
         # Trip the breaker
         with patch(
@@ -410,13 +404,9 @@ class TestEnforceCircuitBreaker:
         entries = db_session.query(AuditLog).all()
         assert len(entries) == 1
         assert entries[0].decision == "error"
-        assert (
-            entries[0].request_metadata.get("deny_reason") == "circuit_breaker_open"
-        )
+        assert entries[0].request_metadata.get("deny_reason") == "circuit_breaker_open"
 
-    def test_successful_requests_dont_trip_breaker(
-        self, db_session, test_agent, test_policy
-    ):
+    def test_successful_requests_dont_trip_breaker(self, db_session, test_agent, test_policy):
         """Successful policy evaluations don't increment failure count."""
         # Make several successful requests
         for _ in range(10):

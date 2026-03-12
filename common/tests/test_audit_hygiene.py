@@ -110,13 +110,29 @@ class TestMetadataAllowlist:
 class TestPIIRejection:
     """Test that PII fields are blocked from the audit log."""
 
-    @pytest.mark.parametrize("field", [
-        "email", "phone", "ip_address", "user_agent", "name",
-        "authorization", "password", "ssn", "credit_card",
-        "body", "request_body", "response_body",
-        "headers", "request_headers", "response_headers",
-        "cookie", "session_id", "access_token",
-    ])
+    @pytest.mark.parametrize(
+        "field",
+        [
+            "email",
+            "phone",
+            "ip_address",
+            "user_agent",
+            "name",
+            "authorization",
+            "password",
+            "ssn",
+            "credit_card",
+            "body",
+            "request_body",
+            "response_body",
+            "headers",
+            "request_headers",
+            "response_headers",
+            "cookie",
+            "session_id",
+            "access_token",
+        ],
+    )
     def test_pii_fields_blocked(self, field):
         """Known PII fields are rejected from metadata."""
         metadata = {"status_code": 200, field: "sensitive-data"}
@@ -181,11 +197,21 @@ class TestPIIRejection:
     def test_body_content_fields_comprehensively_blocked(self):
         """ALL body-related field names are blocked."""
         body_fields = [
-            "body", "request_body", "response_body",
-            "payload", "request_payload", "response_payload",
-            "content", "request_content", "response_content",
-            "data", "request_data", "response_data",
-            "raw", "raw_request", "raw_response",
+            "body",
+            "request_body",
+            "response_body",
+            "payload",
+            "request_payload",
+            "response_payload",
+            "content",
+            "request_content",
+            "response_content",
+            "data",
+            "request_data",
+            "response_data",
+            "raw",
+            "raw_request",
+            "raw_response",
         ]
         for field in body_fields:
             assert is_pii_field(field), f"{field} should be PII-blocked"
@@ -238,10 +264,15 @@ class TestNoBodyContent:
 
         column_names = {c.name for c in AuditLog.__table__.columns}
         body_columns = {
-            "request_body", "response_body", "body",
-            "request_payload", "response_payload",
-            "request_content", "response_content",
-            "raw_request", "raw_response",
+            "request_body",
+            "response_body",
+            "body",
+            "request_payload",
+            "response_payload",
+            "request_content",
+            "response_content",
+            "raw_request",
+            "raw_response",
         }
         assert column_names.isdisjoint(body_columns), (
             f"AuditLog has body columns: {column_names & body_columns}"
@@ -311,9 +342,7 @@ class TestPIIScan:
 
         for entry in entries:
             for key in entry.request_metadata:
-                assert not is_pii_field(key), (
-                    f"PII field '{key}' in entry {entry.id}"
-                )
+                assert not is_pii_field(key), f"PII field '{key}' in entry {entry.id}"
 
 
 # ── PII Redaction (Debug Logging) ──────────────────────────────────────
@@ -458,9 +487,7 @@ class TestSanitizerIntegration:
             method=entry.method,
             decision=entry.decision,
             cost_estimate_usd=(
-                float(entry.cost_estimate_usd)
-                if entry.cost_estimate_usd is not None
-                else None
+                float(entry.cost_estimate_usd) if entry.cost_estimate_usd is not None else None
             ),
             latency_ms=entry.latency_ms,
             request_metadata=entry.request_metadata,  # sanitized

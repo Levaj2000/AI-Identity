@@ -273,9 +273,7 @@ def verify_chain(
                 method=entry.method,
                 decision=entry.decision,
                 cost_estimate_usd=(
-                    float(entry.cost_estimate_usd)
-                    if entry.cost_estimate_usd is not None
-                    else None
+                    float(entry.cost_estimate_usd) if entry.cost_estimate_usd is not None else None
                 ),
                 latency_ms=entry.latency_ms,
                 request_metadata=entry.request_metadata,
