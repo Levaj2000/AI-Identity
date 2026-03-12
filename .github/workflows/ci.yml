@@ -42,8 +42,8 @@ jobs:
           API_KEY_SECRET: "ci-test-secret"
         run: pytest -v
 
-  dashboard-lint:
-    name: Dashboard — Lint & Format
+  dashboard-lint-build:
+    name: Dashboard — Lint, Format & Build
     runs-on: ubuntu-latest
 
     defaults:
@@ -71,3 +71,8 @@ jobs:
 
       - name: TypeScript type check
         run: tsc -b --noEmit
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: https://ai-identity-api.onrender.com

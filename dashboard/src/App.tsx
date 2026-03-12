@@ -1,4 +1,6 @@
-const API_DOCS_URL = 'https://ai-identity-api.onrender.com/docs'
+import { API_BASE_URL } from './config/api'
+
+const API_DOCS_URL = `${API_BASE_URL}/docs`
 
 function App() {
   return (
