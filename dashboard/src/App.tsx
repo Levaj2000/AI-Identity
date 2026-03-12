@@ -5,9 +5,7 @@ function App() {
         <h1 className="text-4xl font-bold tracking-tight">
           <span className="text-amber-400">AI</span> Identity
         </h1>
-        <p className="text-slate-400 text-lg">
-          Agent management dashboard
-        </p>
+        <p className="text-slate-400 text-lg">Agent management dashboard</p>
         <div className="flex gap-3 justify-center text-sm text-slate-500">
           <span className="px-3 py-1 rounded-full bg-slate-800">React 19</span>
           <span className="px-3 py-1 rounded-full bg-slate-800">TypeScript</span>

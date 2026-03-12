@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Test & Lint
+  python-lint-test:
+    name: Python — Lint & Test
     runs-on: ubuntu-latest
 
     steps:
@@ -22,12 +22,13 @@ jobs:
           cache-dependency-path: |
             api/requirements.txt
             gateway/requirements.txt
+            requirements-dev.txt
 
       - name: Install dependencies
         run: |
           pip install -r api/requirements.txt -r gateway/requirements.txt
           pip install -e common/
-          pip install ruff
+          pip install -r requirements-dev.txt
 
       - name: Ruff lint
         run: ruff check .
@@ -40,3 +41,33 @@ jobs:
           DATABASE_URL: "sqlite:///test.db"
           API_KEY_SECRET: "ci-test-secret"
         run: pytest -v
+
+  dashboard-lint:
+    name: Dashboard — Lint & Format
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: dashboard
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier check
+        run: npm run format:check
+
+      - name: TypeScript type check
+        run: tsc -b --noEmit

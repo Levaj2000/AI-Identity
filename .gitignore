@@ -32,6 +32,9 @@ env/
 htmlcov/
 .mypy_cache/
 
+# Linting
+.ruff_cache/
+
 # Node / Dashboard
 dashboard/node_modules/
 dashboard/dist/
