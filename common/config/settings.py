@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     circuit_breaker_window_seconds: int = 60
     circuit_breaker_recovery_seconds: int = 30
 
+    # Audit debug logging — opt-in, PII-redacted, auto-expiring
+    audit_debug_logging: bool = False
+    audit_debug_ttl_hours: int = 24
+    audit_debug_log_dir: str = "/tmp/ai-identity/audit-debug"
+
     # Environment
     environment: str = "development"
     debug: bool = False
