@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from common.audit.sanitizer import sanitize_metadata
 from common.config.settings import settings
 from common.models.audit_log import AuditLog
 
@@ -132,13 +133,31 @@ def create_audit_entry(
 ) -> AuditLog:
     """Create a new audit log entry with HMAC integrity chain.
 
-    1. Gets the previous entry's hash (or GENESIS for the first entry)
-    2. Sets created_at explicitly in Python (included in hash)
-    3. Computes the HMAC-SHA256 entry_hash
-    4. INSERTs the row
-    5. Returns the committed AuditLog instance
+    1. Sanitizes request_metadata (allowlist-only, PII-blocked)
+    2. Gets the previous entry's hash (or GENESIS for the first entry)
+    3. Sets created_at explicitly in Python (included in hash)
+    4. Computes the HMAC-SHA256 entry_hash
+    5. INSERTs the row
+    6. Optionally writes a PII-redacted debug log entry
+    7. Returns the committed AuditLog instance
+
+    SECURITY: request_metadata is sanitized BEFORE hashing. Only allowed
+    metadata keys are stored. PII fields are rejected with a warning.
     """
-    metadata = request_metadata if request_metadata is not None else {}
+    # Sanitize metadata — allowlist only, PII blocked
+    metadata = sanitize_metadata(request_metadata)
+
+    # Opt-in debug logging (PII-redacted, separate from audit trail)
+    from common.audit.debug_log import write_debug_entry
+
+    write_debug_entry(
+        agent_id=str(agent_id),
+        endpoint=endpoint,
+        method=method,
+        decision=decision,
+        raw_metadata=request_metadata,
+    )
+
     now = datetime.now(UTC)
     prev_hash = _get_last_hash(db)
 
