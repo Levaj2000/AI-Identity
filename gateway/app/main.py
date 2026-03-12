@@ -164,6 +164,12 @@ def enforce_request(
     agent_id: uuid.UUID = Query(..., description="UUID of the requesting agent"),
     endpoint: str = Query(..., description="Target API endpoint (e.g., /v1/chat)"),
     method: str = Query("POST", description="HTTP method"),
+    key_type: str | None = Query(
+        None,
+        pattern="^(runtime|admin)$",
+        description="Key type: runtime (aid_sk_) or admin (aid_admin_). "
+        "Runtime keys are rejected on management endpoints; admin keys on proxy endpoints.",
+    ),
     db: Session = Depends(get_db),
 ):
     """Evaluate whether an agent's request should be allowed or denied.
@@ -172,6 +178,8 @@ def enforce_request(
     this endpoint before being forwarded to the upstream API.
 
     **Fail-closed guarantees:**
+    - Runtime key on management endpoint → 403 (denied)
+    - Admin key on proxy endpoint → 403 (denied)
     - Policy engine error → 503 (denied)
     - Policy evaluation timeout (>500ms) → 503 (denied)
     - No active policy → 403 (denied)
@@ -185,6 +193,7 @@ def enforce_request(
         agent_id=agent_id,
         endpoint=endpoint,
         method=method,
+        key_type=key_type,
     )
 
     response = {

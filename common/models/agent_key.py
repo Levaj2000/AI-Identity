@@ -11,6 +11,17 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from common.models.base import Base
 
 
+class KeyType(enum.StrEnum):
+    """API key type — determines which endpoints the key can access.
+
+    runtime: Agent runtime keys (aid_sk_) — can only hit proxy/runtime endpoints.
+    admin:   Management keys (aid_admin_) — can only hit identity/policy management API.
+    """
+
+    runtime = "runtime"
+    admin = "admin"
+
+
 class KeyStatus(enum.StrEnum):
     """API key lifecycle status."""
 
@@ -37,6 +48,11 @@ class AgentKey(Base):
     key_prefix: Mapped[str] = mapped_column(
         String(20), nullable=False
     )  # First 8 chars for identification, e.g. "aid_sk_a"
+
+    # Key type — runtime (aid_sk_) or admin (aid_admin_)
+    key_type: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=KeyType.runtime.value
+    )
 
     # Lifecycle
     status: Mapped[str] = mapped_column(String(20), nullable=False, default=KeyStatus.active.value)

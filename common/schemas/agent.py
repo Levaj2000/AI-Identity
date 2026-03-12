@@ -164,6 +164,10 @@ class AgentKeyResponse(BaseModel):
         description="First 12 characters of the key for identification",
         examples=["aid_sk_a1b2"],
     )
+    key_type: str = Field(
+        description="Key type: runtime (aid_sk_) for proxy endpoints, admin (aid_admin_) for management",
+        examples=["runtime"],
+    )
     status: str = Field(
         description="Key status: active, rotated, or revoked",
         examples=["active"],

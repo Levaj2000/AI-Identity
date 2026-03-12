@@ -60,6 +60,8 @@ class DenyReason(enum.StrEnum):
     POLICY_DENIED = "policy_denied"
     AGENT_NOT_FOUND = "agent_not_found"
     AGENT_INACTIVE = "agent_inactive"
+    RUNTIME_KEY_ON_MANAGEMENT = "runtime_key_on_management_endpoint"
+    ADMIN_KEY_ON_RUNTIME = "admin_key_on_runtime_endpoint"
 
 
 @dataclass
@@ -166,6 +168,62 @@ def _load_and_evaluate_policy(
     return _evaluate_policy_rules(policy.rules, endpoint, method)
 
 
+# ── Key-Type Endpoint Classification ─────────────────────────────────
+
+# Management endpoints — require aid_admin_ keys.
+# These are the identity/policy management API paths.
+MANAGEMENT_PREFIXES = (
+    "/api/v1/agents",
+    "/api/v1/policies",
+    "/api/v1/audit",
+    "/api/v1/users",
+)
+
+
+def _is_management_endpoint(endpoint: str) -> bool:
+    """Check if an endpoint is a management/admin endpoint.
+
+    Management endpoints include agent CRUD, key management,
+    policy management, audit log access, and user management.
+    """
+    return any(endpoint.startswith(prefix) for prefix in MANAGEMENT_PREFIXES)
+
+
+def _check_key_type(key_type: str | None, endpoint: str) -> EnforcementResult | None:
+    """Enforce key-type / endpoint separation.
+
+    Returns an EnforcementResult if the key type is forbidden for this
+    endpoint, or None if the key type is allowed.
+
+    Rules:
+      - runtime keys (aid_sk_) → ONLY runtime/proxy endpoints
+      - admin keys (aid_admin_) → ONLY management endpoints
+      - No key_type (legacy) → allowed everywhere (backward compat)
+    """
+    if key_type is None:
+        return None  # Legacy key — no restriction (backward compat)
+
+    is_mgmt = _is_management_endpoint(endpoint)
+
+    if key_type == "runtime" and is_mgmt:
+        return EnforcementResult(
+            decision=Decision.DENY,
+            deny_reason=DenyReason.RUNTIME_KEY_ON_MANAGEMENT,
+            status_code=403,
+            message="Runtime key (aid_sk_) cannot access management endpoints",
+        )
+
+    if key_type == "admin" and not is_mgmt:
+        return EnforcementResult(
+            decision=Decision.DENY,
+            deny_reason=DenyReason.ADMIN_KEY_ON_RUNTIME,
+            status_code=403,
+            message="Admin key (aid_admin_) cannot access runtime/proxy endpoints",
+        )
+
+    return None
+
+
 # ── Main Enforcement Function ────────────────────────────────────────
 
 
@@ -175,6 +233,7 @@ def enforce(
     agent_id: uuid.UUID,
     endpoint: str,
     method: str,
+    key_type: str | None = None,
     request_metadata: dict | None = None,
 ) -> EnforcementResult:
     """Evaluate whether an agent's request should be allowed or denied.
@@ -197,12 +256,21 @@ def enforce(
         agent_id: UUID of the requesting agent.
         endpoint: Target API endpoint (e.g., "/v1/chat").
         method: HTTP method (e.g., "POST").
+        key_type: "runtime" or "admin" — determines which endpoints are accessible.
         request_metadata: Optional context for the audit log.
 
     Returns:
         EnforcementResult with decision, status code, and message.
     """
     metadata = request_metadata if request_metadata is not None else {}
+
+    # ── 0. Key-type enforcement (checked FIRST, before circuit breaker) ──
+    key_type_result = _check_key_type(key_type, endpoint)
+    if key_type_result is not None:
+        key_type_result.agent_id = agent_id
+        metadata["key_type"] = key_type or "unknown"
+        _audit_decision(db, key_type_result, endpoint, method, metadata)
+        return key_type_result
 
     # ── 1. Circuit breaker check ──────────────────────────────────
     if not policy_circuit_breaker.can_execute():

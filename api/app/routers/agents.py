@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
-from common.models import Agent, AgentKey, AgentStatus, KeyStatus, User, get_db
+from common.models import Agent, AgentKey, AgentStatus, KeyStatus, KeyType, User, get_db
 from common.queries import get_user_agent
 from common.schemas.agent import (
     AgentCreate,
@@ -61,12 +61,13 @@ def create_agent(
     )
     db.add(agent)
 
-    # Generate the initial API key
-    plaintext_key = generate_api_key()
+    # Generate the initial API key (always runtime — admin keys must be created explicitly)
+    plaintext_key = generate_api_key(key_type=KeyType.runtime.value)
     agent_key = AgentKey(
         agent_id=agent.id,
         key_hash=hash_key(plaintext_key),
         key_prefix=get_key_prefix(plaintext_key),
+        key_type=KeyType.runtime.value,
         status=KeyStatus.active.value,
     )
     db.add(agent_key)
