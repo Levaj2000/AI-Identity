@@ -60,6 +60,11 @@ OPENAPI_TAGS = [
         "Read-only access and chain verification for SOC 2 compliance.",
     },
     {
+        "name": "credentials",
+        "description": "Manage encrypted upstream API credentials for agents. "
+        "Credentials are Fernet-encrypted at rest — plaintext keys never touch disk.",
+    },
+    {
         "name": "health",
         "description": "Service health and status endpoints.",
     },
@@ -210,10 +215,12 @@ async def startup():
 
 from api.app.routers.agents import router as agents_router  # noqa: E402
 from api.app.routers.audit import router as audit_router  # noqa: E402
+from api.app.routers.credentials import router as credentials_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
 
 app.include_router(agents_router)
 app.include_router(audit_router)
+app.include_router(credentials_router)
 app.include_router(keys_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────

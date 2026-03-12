@@ -61,3 +61,6 @@ class Agent(Base):
         back_populates="agent",
         primaryjoin="Agent.id == foreign(AuditLog.agent_id)",
     )
+    upstream_credentials: Mapped[list["UpstreamCredential"]] = relationship(  # noqa: F821
+        back_populates="agent", cascade="all, delete-orphan"
+    )

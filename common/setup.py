@@ -11,5 +11,6 @@ setup(
         "pydantic>=2.0",
         "pydantic-settings>=2.0",
         "python-dotenv>=1.0",
+        "cryptography>=44.0",
     ],
 )

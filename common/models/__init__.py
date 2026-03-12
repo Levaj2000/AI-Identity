@@ -5,6 +5,11 @@ from common.models.agent_key import AgentKey, KeyStatus, KeyType
 from common.models.audit_log import AuditLog
 from common.models.base import Base, SessionLocal, engine, get_db
 from common.models.policy import Policy
+from common.models.upstream_credential import (
+    CredentialStatus,
+    UpstreamCredential,
+    UpstreamProvider,
+)
 from common.models.user import User
 
 __all__ = [
@@ -20,4 +25,7 @@ __all__ = [
     "KeyType",
     "Policy",
     "AuditLog",
+    "UpstreamCredential",
+    "CredentialStatus",
+    "UpstreamProvider",
 ]
