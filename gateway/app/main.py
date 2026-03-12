@@ -11,6 +11,7 @@ Run: uvicorn gateway.app.main:app --reload --port 8002
 """
 
 import logging
+import math
 import time
 import uuid
 
@@ -25,6 +26,7 @@ from common.config.settings import settings
 from common.models import get_db
 from gateway.app.circuit_breaker import CircuitState
 from gateway.app.enforce import enforce, policy_circuit_breaker
+from gateway.app.rate_limiter import RateLimitResult, rate_limiter
 
 # ── Logging ──────────────────────────────────────────────────────────────
 
@@ -97,6 +99,120 @@ async def request_logging_middleware(request: Request, call_next):
     return response
 
 
+# ── Rate Limiting Middleware ────────────────────────────────────────────
+
+# Health/info/monitoring endpoints exempt from rate limiting
+_RATE_LIMIT_EXEMPT_PATHS = frozenset({"/health", "/", "/gateway/circuit-breaker"})
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    """Pre-policy rate limiter — runs before any route handler or DB access.
+
+    Enforces per-IP and per-agent_id sliding window limits.
+    Returns 429 with Retry-After header on breach.
+    Adds X-RateLimit-* headers to ALL responses.
+    """
+    # Skip if rate limiting is disabled
+    if not settings.rate_limit_enabled:
+        return await call_next(request)
+
+    # Exempt health/info/monitoring endpoints
+    if request.url.path in _RATE_LIMIT_EXEMPT_PATHS:
+        return await call_next(request)
+
+    # Extract client IP (handle reverse proxy)
+    client_ip = _get_client_ip(request)
+
+    # Per-IP check (always runs)
+    ip_result = rate_limiter.check_ip(client_ip)
+
+    if not ip_result.allowed:
+        logger.warning(
+            "Rate limit exceeded (per-IP) for %s on %s %s",
+            client_ip,
+            request.method,
+            request.url.path,
+        )
+        return _rate_limit_response(ip_result)
+
+    # Per-key check (only when agent_id is present)
+    agent_id = request.query_params.get("agent_id")
+    key_result: RateLimitResult | None = None
+
+    if agent_id:
+        key_result = rate_limiter.check_key(agent_id)
+
+        if not key_result.allowed:
+            logger.warning(
+                "Rate limit exceeded (per-key) for agent_id=%s from %s",
+                agent_id,
+                client_ip,
+            )
+            return _rate_limit_response(key_result)
+
+    # Both checks passed — forward to route handler
+    response = await call_next(request)
+
+    # Add rate limit headers to ALL responses (use the more restrictive result)
+    _add_rate_limit_headers(response, ip_result, key_result)
+
+    return response
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract client IP, respecting X-Forwarded-For for reverse proxies.
+
+    Takes the FIRST IP in X-Forwarded-For (the original client) if present.
+    Falls back to request.client.host for direct connections.
+    """
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limit_response(result: RateLimitResult) -> JSONResponse:
+    """Build a 429 response with rate limit headers and Retry-After."""
+    retry_after = math.ceil(result.retry_after) if result.retry_after else 1
+
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": {
+                "code": "rate_limit_exceeded",
+                "message": f"Rate limit exceeded. Try again in {retry_after} seconds.",
+            }
+        },
+        headers={
+            "Retry-After": str(retry_after),
+            "X-RateLimit-Limit": str(result.limit),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": str(math.ceil(result.reset_after)),
+        },
+    )
+
+
+def _add_rate_limit_headers(
+    response,
+    ip_result: RateLimitResult,
+    key_result: RateLimitResult | None,
+) -> None:
+    """Add X-RateLimit-* headers reflecting the most restrictive limit.
+
+    When both IP and key limits apply, report the one with fewer remaining.
+    This gives the caller the most useful information about their closest limit.
+    """
+    if key_result is not None and key_result.remaining < ip_result.remaining:
+        effective = key_result
+    else:
+        effective = ip_result
+
+    response.headers["X-RateLimit-Limit"] = str(effective.limit)
+    response.headers["X-RateLimit-Remaining"] = str(effective.remaining)
+    response.headers["X-RateLimit-Reset"] = str(math.ceil(effective.reset_after))
+
+
 # ── Error Handling ───────────────────────────────────────────────────────
 
 
@@ -142,12 +258,16 @@ async def startup():
     """Log service start with environment info and fail-closed config."""
     logger.info(
         "AI Identity Gateway starting — env=%s, version=%s, "
-        "policy_timeout=%dms, circuit_breaker=%d failures/%ds window",
+        "policy_timeout=%dms, circuit_breaker=%d failures/%ds window, "
+        "rate_limit=%s (ip=%d/s, key=%d/s)",
         settings.environment,
         settings.app_version,
         settings.policy_eval_timeout_ms,
         settings.circuit_breaker_failure_threshold,
         settings.circuit_breaker_window_seconds,
+        "enabled" if settings.rate_limit_enabled else "DISABLED",
+        settings.rate_limit_per_ip,
+        settings.rate_limit_per_key,
     )
 
 
