@@ -50,6 +50,10 @@ class Settings(BaseSettings):
 
     # CORS
     cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    # Regex pattern for dynamic CORS origins (e.g. Vercel preview deploys)
+    # Set to empty string to disable. Example:
+    #   CORS_ORIGIN_REGEX=https://dashboard-.*-jeff-levas-projects\.vercel\.app
+    cors_origin_regex: str = ""
 
     # App metadata
     app_version: str = "0.1.0"

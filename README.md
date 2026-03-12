@@ -6,6 +6,11 @@
 
 AI Identity is an API proxy and dashboard that sits between AI agents and external APIs. Each agent gets its own identity, permissions, and guardrails — the Okta for AI agents.
 
+| | URL |
+|---|---|
+| **Dashboard** | [ai-identity.co](https://ai-identity.co) |
+| **API Docs** | [ai-identity-api.onrender.com/docs](https://ai-identity-api.onrender.com/docs) |
+
 ## Architecture
 
 ```
@@ -27,13 +32,22 @@ ai-identity/
 
 ## Quick Start
 
-### Prerequisites
+### Docker (recommended)
 
-- Python 3.11+
-- Node.js 18+
-- PostgreSQL (or use the Docker setup)
+```bash
+git clone https://github.com/Levaj2000/AI-Identity.git
+cd AI-Identity
+make setup   # generates .env with security keys
+make up      # builds and starts api + gateway + postgres
+```
 
-### Local Development
+Services start at **localhost:8001** (API), **localhost:8002** (Gateway).
+
+Run `make help` to see all available commands (migrate, seed, logs, shell, etc.).
+
+### Manual Setup
+
+**Prerequisites:** Python 3.11+, Node.js 18+, PostgreSQL
 
 ```bash
 # 1. Create virtual environment
@@ -54,10 +68,17 @@ uvicorn api.app.main:app --reload --port 8001
 
 # 5. Start the gateway (port 8002) — in a separate terminal
 uvicorn gateway.app.main:app --reload --port 8002
-
-# 6. Start the dashboard
-cd dashboard && npm install && npm run dev
 ```
+
+### Dashboard
+
+```bash
+cd dashboard
+cp .env.example .env     # defaults to localhost:8001 API
+npm install && npm run dev
+```
+
+The dashboard is deployed to [ai-identity.co](https://ai-identity.co) via Vercel. PR preview deploys are automatic.
 
 ### Running Tests
 
