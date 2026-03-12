@@ -9,7 +9,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from common.models import Base, User, get_db
+from common.models import Agent, AgentKey, Base, KeyStatus, KeyType, User, get_db
 
 # In-memory SQLite for tests
 TEST_DATABASE_URL = "sqlite:///:memory:"
@@ -42,7 +42,37 @@ TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Fixed UUIDs for deterministic tests
 TEST_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
+TEST_AGENT_ID = uuid.UUID("00000000-0000-0000-0000-000000000010")
 TEST_API_KEY = "test-user-api-key-12345678"
+
+
+def _create_test_agent(db_session, user, agent_id=None, status="active"):
+    """Helper to create a test agent with an initial runtime key."""
+    from common.auth.keys import generate_api_key, get_key_prefix, hash_key
+
+    aid = agent_id or TEST_AGENT_ID
+    agent = Agent(
+        id=aid,
+        user_id=user.id,
+        name="Test Agent",
+        status=status,
+        capabilities=["chat_completion"],
+        metadata_={},
+    )
+    db_session.add(agent)
+
+    plaintext_key = generate_api_key(key_type="runtime")
+    key = AgentKey(
+        agent_id=aid,
+        key_hash=hash_key(plaintext_key),
+        key_prefix=get_key_prefix(plaintext_key),
+        key_type=KeyType.runtime.value,
+        status=KeyStatus.active.value,
+    )
+    db_session.add(key)
+    db_session.commit()
+    db_session.refresh(agent)
+    return agent
 
 
 @pytest.fixture(autouse=True)

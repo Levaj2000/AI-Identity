@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
-from common.models import AgentKey, AgentStatus, KeyStatus, User, get_db
+from common.models import AgentKey, AgentStatus, KeyStatus, KeyType, User, get_db
 from common.queries import get_user_agent
 from common.schemas.agent import (
     AgentKeyCreateResponse,
@@ -63,14 +63,24 @@ def _revoke_expired_keys(db: Session, agent_id: uuid.UUID) -> int:
 )
 def create_key(
     agent_id: uuid.UUID,
+    key_type: str = Query(
+        "runtime",
+        pattern="^(runtime|admin)$",
+        description="Key type: runtime (aid_sk_) for proxy endpoints, admin (aid_admin_) for management",
+    ),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Generate a new API key for an agent.
 
-    The response includes the plaintext key (`aid_sk_…`). **Store it immediately** —
-    it is only shown once. Subsequent calls to list keys will only show the
-    key prefix and status.
+    **Key types:**
+    - `runtime` (default) — Prefix `aid_sk_`. For proxy/runtime endpoints only.
+      The gateway will reject this key on management endpoints (403).
+    - `admin` — Prefix `aid_admin_`. For identity/policy management API only.
+      The gateway will reject this key on proxy endpoints (403).
+
+    The response includes the plaintext key — **store it immediately**, it is
+    only shown once.
 
     Cannot issue keys for revoked agents.
     """
@@ -82,12 +92,13 @@ def create_key(
     # Clean up expired rotated keys
     _revoke_expired_keys(db, agent.id)
 
-    # Generate and store the key
-    plaintext_key = generate_api_key()
+    # Generate and store the key with the correct prefix for its type
+    plaintext_key = generate_api_key(key_type=key_type)
     agent_key = AgentKey(
         agent_id=agent.id,
         key_hash=hash_key(plaintext_key),
         key_prefix=get_key_prefix(plaintext_key),
+        key_type=key_type,
         status=KeyStatus.active.value,
     )
     db.add(agent_key)
@@ -204,12 +215,14 @@ def rotate_key(
     old_key.status = KeyStatus.rotated.value
     old_key.expires_at = datetime.now(UTC) + timedelta(hours=ROTATION_GRACE_HOURS)
 
-    # Generate the new key
-    plaintext_key = generate_api_key()
+    # Generate the new key — preserves the same key_type as the rotated key
+    inherited_type = old_key.key_type if old_key.key_type else KeyType.runtime.value
+    plaintext_key = generate_api_key(key_type=inherited_type)
     new_key = AgentKey(
         agent_id=agent.id,
         key_hash=hash_key(plaintext_key),
         key_prefix=get_key_prefix(plaintext_key),
+        key_type=inherited_type,
         status=KeyStatus.active.value,
     )
     db.add(new_key)
@@ -283,6 +296,7 @@ def _key_to_response(key: AgentKey) -> AgentKeyResponse:
         id=key.id,
         agent_id=key.agent_id,
         key_prefix=key.key_prefix,
+        key_type=key.key_type if key.key_type else "runtime",
         status=key.status,
         expires_at=key.expires_at,
         created_at=key.created_at,
