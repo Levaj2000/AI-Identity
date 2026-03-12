@@ -153,6 +153,8 @@ def _load_and_evaluate_policy(
 
     Returns True if allowed, False if denied.
     """
+    from common.validation.policy import PolicyValidator
+
     # Load active policy for the agent
     policy = (
         db.query(Policy)
@@ -163,6 +165,20 @@ def _load_and_evaluate_policy(
 
     if policy is None:
         # No active policy = fail-closed = DENY
+        return False
+
+    # Defense-in-depth: validate rules even from the DB.
+    # Malformed rules that somehow bypassed creation validation
+    # must not be evaluated — fail-closed = DENY.
+    validation = PolicyValidator().validate(policy.rules)
+    if not validation.valid:
+        error_summary = "; ".join(f"{e.field}: {e.message}" for e in validation.errors)
+        logger.warning(
+            "Policy %d for agent %s has invalid rules — DENIED: %s",
+            policy.id,
+            agent_id,
+            error_summary,
+        )
         return False
 
     return _evaluate_policy_rules(policy.rules, endpoint, method)

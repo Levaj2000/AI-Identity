@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ── User Schemas ─────────────────────────────────────────────────────────
 
@@ -222,9 +222,27 @@ class AgentKeyRotateResponse(BaseModel):
 
 
 class PolicyCreate(BaseModel):
-    """Request body for creating a policy."""
+    """Request body for creating a policy.
+
+    Rules are validated against a strict schema: only recognized keys are
+    allowed, nesting is capped at depth 3, payload size at 10KB, and all
+    endpoint patterns and HTTP methods are checked.
+    """
 
     rules: dict = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_rules(self) -> "PolicyCreate":
+        """Run PolicyValidator on the rules dict at creation time."""
+        from common.validation.policy import PolicyValidator
+
+        validator = PolicyValidator()
+        result = validator.validate(self.rules)
+        if not result.valid:
+            errors = "; ".join(f"{e.field}: {e.message}" for e in result.errors)
+            msg = f"Invalid policy rules: {errors}"
+            raise ValueError(msg)
+        return self
 
 
 class PolicyResponse(BaseModel):
