@@ -1,0 +1,65 @@
+# AI Identity — Local Development Stack
+# Usage: make setup && make up   (or: docker compose up --build -d)
+
+services:
+  # ── PostgreSQL ────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ai_identity
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ai-identity-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  # ── API Server (port 8001) ────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      args:
+        SERVICE: api
+    ports:
+      - "8001:8001"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/ai_identity
+    volumes:
+      - ./api:/app/api
+      - ./common:/app/common
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini:ro
+      - ./scripts:/app/scripts
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn api.app.main:app --host 0.0.0.0 --port 8001 --reload"
+
+  # ── Gateway (port 8002) ──────────────────────────────────────────────
+  gateway:
+    build:
+      context: .
+      args:
+        SERVICE: gateway
+    ports:
+      - "8002:8002"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/ai_identity
+    volumes:
+      - ./gateway:/app/gateway
+      - ./common:/app/common
+    depends_on:
+      - api
+    command: uvicorn gateway.app.main:app --host 0.0.0.0 --port 8002 --reload
+
+volumes:
+  ai-identity-pgdata:
