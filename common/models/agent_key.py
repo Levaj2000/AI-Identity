@@ -50,9 +50,7 @@ class AgentKey(Base):
     )  # First 8 chars for identification, e.g. "aid_sk_a"
 
     # Key type — runtime (aid_sk_) or admin (aid_admin_)
-    key_type: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=KeyType.runtime.value
-    )
+    key_type: Mapped[str] = mapped_column(String(20), nullable=False, default=KeyType.runtime.value)
 
     # Lifecycle
     status: Mapped[str] = mapped_column(String(20), nullable=False, default=KeyStatus.active.value)

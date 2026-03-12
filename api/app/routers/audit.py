@@ -44,9 +44,7 @@ def list_audit_logs(
     Results are scoped to agents owned by the authenticated user.
     """
     # Get user's agent IDs for scoping
-    user_agent_ids = [
-        row[0] for row in db.query(Agent.id).filter(Agent.user_id == user.id).all()
-    ]
+    user_agent_ids = [row[0] for row in db.query(Agent.id).filter(Agent.user_id == user.id).all()]
 
     query = db.query(AuditLog).filter(AuditLog.agent_id.in_(user_agent_ids))
 
@@ -92,11 +90,7 @@ def verify_audit_chain(
     With agent_id: verifies hash integrity for that agent's entries only.
     """
     if agent_id:
-        agent = (
-            db.query(Agent)
-            .filter(Agent.id == agent_id, Agent.user_id == user.id)
-            .first()
-        )
+        agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == user.id).first()
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
 

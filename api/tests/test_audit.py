@@ -65,9 +65,7 @@ class TestCreateAuditEntry:
             method=entry.method,
             decision=entry.decision,
             cost_estimate_usd=(
-                float(entry.cost_estimate_usd)
-                if entry.cost_estimate_usd is not None
-                else None
+                float(entry.cost_estimate_usd) if entry.cost_estimate_usd is not None else None
             ),
             latency_ms=entry.latency_ms,
             request_metadata=entry.request_metadata,
@@ -138,9 +136,7 @@ class TestVerifyChain:
         _create_test_entry(db_session, endpoint="/v1/after-delete")
 
         # Delete middle entry directly (SQLite allows this)
-        db_session.execute(
-            AuditLog.__table__.delete().where(AuditLog.id == entry2.id)
-        )
+        db_session.execute(AuditLog.__table__.delete().where(AuditLog.id == entry2.id))
         db_session.commit()
 
         result = verify_chain(db_session)
@@ -169,9 +165,7 @@ class TestAuditEndpoints:
 
     def _create_agent(self, client, auth_headers, name="Audit Test Agent"):
         """Helper to create an agent and return its ID."""
-        resp = client.post(
-            "/api/v1/agents", headers=auth_headers, json={"name": name}
-        )
+        resp = client.post("/api/v1/agents", headers=auth_headers, json={"name": name})
         return resp.json()["agent"]["id"]
 
     def test_list_audit_logs(self, client, auth_headers, db_session):

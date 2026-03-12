@@ -42,19 +42,23 @@ class TestValidPolicies:
         assert result.valid
 
     def test_typical_policy(self, validator):
-        result = validator.validate({
-            "allowed_endpoints": ["/v1/*"],
-            "allowed_methods": ["POST", "GET"],
-        })
+        result = validator.validate(
+            {
+                "allowed_endpoints": ["/v1/*"],
+                "allowed_methods": ["POST", "GET"],
+            }
+        )
         assert result.valid
 
     def test_full_policy(self, validator):
-        result = validator.validate({
-            "allowed_endpoints": ["/v1/chat", "/v1/embeddings"],
-            "denied_endpoints": ["/v1/admin/*"],
-            "allowed_methods": ["POST"],
-            "max_cost_usd": 0.50,
-        })
+        result = validator.validate(
+            {
+                "allowed_endpoints": ["/v1/chat", "/v1/embeddings"],
+                "denied_endpoints": ["/v1/admin/*"],
+                "allowed_methods": ["POST"],
+                "max_cost_usd": 0.50,
+            }
+        )
         assert result.valid
 
     def test_wildcard_endpoint(self, validator):
@@ -66,10 +70,12 @@ class TestValidPolicies:
         assert result.valid
 
     def test_all_http_methods(self, validator):
-        result = validator.validate({
-            "allowed_endpoints": ["*"],
-            "allowed_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
-        })
+        result = validator.validate(
+            {
+                "allowed_endpoints": ["*"],
+                "allowed_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+            }
+        )
         assert result.valid
 
     def test_zero_cost(self, validator):
@@ -93,11 +99,13 @@ class TestUnknownKeys:
         assert any("Unknown rule key" in e.message for e in result.errors)
 
     def test_multiple_unknown_keys(self, validator):
-        result = validator.validate({
-            "allowed_endpoints": ["/v1/*"],
-            "inject_payload": True,
-            "admin_override": True,
-        })
+        result = validator.validate(
+            {
+                "allowed_endpoints": ["/v1/*"],
+                "inject_payload": True,
+                "admin_override": True,
+            }
+        )
         assert not result.valid
         assert len([e for e in result.errors if "Unknown" in e.message]) == 2
 
@@ -113,10 +121,12 @@ class TestUnknownKeys:
 
     def test_nested_unknown_key_in_valid_dict(self, validator):
         """Unknown keys rejected even alongside valid keys."""
-        result = validator.validate({
-            "allowed_endpoints": ["/v1/*"],
-            "secret_backdoor": True,
-        })
+        result = validator.validate(
+            {
+                "allowed_endpoints": ["/v1/*"],
+                "secret_backdoor": True,
+            }
+        )
         assert not result.valid
 
 
@@ -194,9 +204,11 @@ class TestEndpointValidation:
     """Test endpoint pattern validation."""
 
     def test_valid_endpoints(self, validator):
-        result = validator.validate({
-            "allowed_endpoints": ["/v1/chat", "/v1/*", "*", "/api/v1/agents"],
-        })
+        result = validator.validate(
+            {
+                "allowed_endpoints": ["/v1/chat", "/v1/*", "*", "/api/v1/agents"],
+            }
+        )
         assert result.valid
 
     def test_endpoint_must_start_with_slash_or_star(self, validator):
@@ -227,9 +239,11 @@ class TestEndpointValidation:
 
     def test_unsafe_characters_rejected(self, validator):
         """Endpoints with query strings, backticks, etc. are rejected."""
-        result = validator.validate({
-            "allowed_endpoints": ["/v1/chat?token=abc"],
-        })
+        result = validator.validate(
+            {
+                "allowed_endpoints": ["/v1/chat?token=abc"],
+            }
+        )
         assert not result.valid
         assert any("unsafe characters" in e.message for e in result.errors)
 
@@ -338,12 +352,14 @@ class TestMultipleErrors:
     """Test that multiple errors are reported in a single validation."""
 
     def test_several_issues_at_once(self, validator):
-        result = validator.validate({
-            "allowed_endpoints": "not-a-list",  # wrong type
-            "allowed_methods": ["HACK"],         # invalid method
-            "unknown_key": True,                  # unknown key
-            "max_cost_usd": -5,                  # negative
-        })
+        result = validator.validate(
+            {
+                "allowed_endpoints": "not-a-list",  # wrong type
+                "allowed_methods": ["HACK"],  # invalid method
+                "unknown_key": True,  # unknown key
+                "max_cost_usd": -5,  # negative
+            }
+        )
         assert not result.valid
         assert len(result.errors) >= 4
 

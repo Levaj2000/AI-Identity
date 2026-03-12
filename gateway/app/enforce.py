@@ -379,9 +379,7 @@ def enforce(
         # Policy explicitly denied or no active policy
         # Check if it was no-policy vs policy-denied
         policy = (
-            db.query(Policy)
-            .filter(Policy.agent_id == agent_id, Policy.is_active.is_(True))
-            .first()
+            db.query(Policy).filter(Policy.agent_id == agent_id, Policy.is_active.is_(True)).first()
         )
         if policy is None:
             deny_reason = DenyReason.NO_ACTIVE_POLICY

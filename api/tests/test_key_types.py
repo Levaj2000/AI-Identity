@@ -161,9 +161,7 @@ class TestKeyCreationAPI:
 class TestKeyRotationPreservesType:
     """Test that key rotation preserves the key_type of the old key."""
 
-    def test_rotate_runtime_key_stays_runtime(
-        self, client, auth_headers, test_user, db_session
-    ):
+    def test_rotate_runtime_key_stays_runtime(self, client, auth_headers, test_user, db_session):
         """Rotating a runtime key produces a new runtime key."""
         from api.tests.conftest import TEST_AGENT_ID, _create_test_agent
 
@@ -178,9 +176,7 @@ class TestKeyRotationPreservesType:
         assert data["new_key"]["key_type"] == "runtime"
         assert data["api_key"].startswith("aid_sk_")
 
-    def test_rotate_admin_key_stays_admin(
-        self, client, auth_headers, test_user, db_session
-    ):
+    def test_rotate_admin_key_stays_admin(self, client, auth_headers, test_user, db_session):
         """Rotating an admin key produces a new admin key."""
         from api.tests.conftest import TEST_AGENT_ID, _create_test_agent
 

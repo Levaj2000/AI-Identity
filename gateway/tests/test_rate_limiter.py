@@ -455,9 +455,7 @@ class TestXForwardedFor:
         )
         assert resp.status_code == 429
 
-    def test_different_forwarded_ip_is_independent(
-        self, client, test_agent, test_policy
-    ):
+    def test_different_forwarded_ip_is_independent(self, client, test_agent, test_policy):
         """Different X-Forwarded-For IPs are tracked independently."""
         # Use up some requests from IP-A
         for _ in range(50):
