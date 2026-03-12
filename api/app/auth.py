@@ -10,6 +10,7 @@ request to reduce friction during development.
 import uuid
 
 from fastapi import Depends, Header, HTTPException
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from common.models import User, get_db
@@ -31,6 +32,15 @@ async def get_current_user(
     user = db.query(User).filter(User.email == x_api_key).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid API key")
+
+    # Defense-in-depth: set RLS session variable for PostgreSQL.
+    # SET LOCAL is transaction-scoped — resets on commit/rollback.
+    # FastAPI dependency caching ensures the same session is used by
+    # both get_current_user and the route handler, so RLS will be active
+    # for all queries in the request.
+    dialect = db.bind.dialect.name if db.bind else "unknown"
+    if dialect == "postgresql":
+        db.execute(text("SET LOCAL app.current_user_id = :uid"), {"uid": str(user.id)})
 
     return user
 

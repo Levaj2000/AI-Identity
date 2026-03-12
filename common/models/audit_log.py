@@ -22,6 +22,15 @@ class AuditLog(Base):
         index=True,
     )
 
+    # Denormalized user_id for RLS tenant isolation (defense-in-depth).
+    # Nullable because orphaned entries (agent deleted) may lack a user_id.
+    # NOT included in the HMAC integrity chain — it's an access-control field.
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True,
+        index=True,
+    )
+
     # Request details
     endpoint: Mapped[str] = mapped_column(String(2048), nullable=False)
     method: Mapped[str] = mapped_column(String(10), nullable=False)
