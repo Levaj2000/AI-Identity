@@ -25,6 +25,7 @@ from common.config.logging import setup_logging
 from common.config.settings import settings
 from common.models import get_db
 from gateway.app.circuit_breaker import CircuitState
+from gateway.app.db import get_gateway_db
 from gateway.app.enforce import enforce, policy_circuit_breaker
 from gateway.app.rate_limiter import RateLimitResult, rate_limiter
 
@@ -56,6 +57,11 @@ app = FastAPI(
     version=settings.app_version,
     openapi_tags=OPENAPI_TAGS,
 )
+
+# ── RLS Service Bypass ───────────────────────────────────────────────────
+# Override the shared get_db so the gateway sets app.is_service = 'true'
+# on every DB session, activating the service_bypass RLS policy.
+app.dependency_overrides[get_db] = get_gateway_db
 
 # ── CORS ─────────────────────────────────────────────────────────────────
 

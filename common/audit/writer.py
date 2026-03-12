@@ -130,6 +130,7 @@ def create_audit_entry(
     cost_estimate_usd: float | None = None,
     latency_ms: int | None = None,
     request_metadata: dict | None = None,
+    user_id: uuid.UUID | None = None,
 ) -> AuditLog:
     """Create a new audit log entry with HMAC integrity chain.
 
@@ -146,6 +147,14 @@ def create_audit_entry(
     """
     # Sanitize metadata — allowlist only, PII blocked
     metadata = sanitize_metadata(request_metadata)
+
+    # Resolve user_id from agent if not provided (for RLS tenant isolation)
+    if user_id is None:
+        from common.models.agent import Agent
+
+        agent = db.query(Agent).filter(Agent.id == agent_id).first()
+        if agent:
+            user_id = agent.user_id
 
     # Opt-in debug logging (PII-redacted, separate from audit trail)
     from common.audit.debug_log import write_debug_entry
@@ -175,6 +184,7 @@ def create_audit_entry(
 
     entry = AuditLog(
         agent_id=agent_id,
+        user_id=user_id,
         endpoint=endpoint,
         method=method,
         decision=decision,

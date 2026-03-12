@@ -267,6 +267,7 @@ class AuditLogResponse(BaseModel):
 
     id: int
     agent_id: uuid.UUID
+    user_id: uuid.UUID | None = None
     endpoint: str
     method: str
     decision: str
