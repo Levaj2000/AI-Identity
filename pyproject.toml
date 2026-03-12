@@ -20,7 +20,7 @@ ignore = [
 quote-style = "double"
 
 [tool.pytest.ini_options]
-testpaths = ["api/tests", "gateway/tests"]
+testpaths = ["api/tests", "gateway/tests", "common/tests"]
 pythonpath = ["."]
 
 [tool.mypy]
