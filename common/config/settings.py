@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     circuit_breaker_window_seconds: int = 60
     circuit_breaker_recovery_seconds: int = 30
 
+    # Gateway — pre-policy rate limiting (in-memory sliding window)
+    rate_limit_per_ip: int = 100
+    rate_limit_per_key: int = 60
+    rate_limit_window_seconds: int = 1
+    rate_limit_enabled: bool = True
+
     # Audit debug logging — opt-in, PII-redacted, auto-expiring
     audit_debug_logging: bool = False
     audit_debug_ttl_hours: int = 24

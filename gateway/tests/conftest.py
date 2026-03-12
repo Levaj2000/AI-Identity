@@ -123,6 +123,19 @@ def suspended_agent(db_session, test_user):
     return agent
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Reset the module-level rate limiter between tests.
+
+    Prevents request counts from leaking between tests.
+    """
+    from gateway.app.rate_limiter import rate_limiter
+
+    rate_limiter.reset()
+    yield
+    rate_limiter.reset()
+
+
 @pytest.fixture
 def client(db_session):
     """FastAPI TestClient with DB override."""
