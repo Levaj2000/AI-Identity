@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiFetch } from '../lib/fetch'
-import { ENDPOINTS } from '../config/api'
+import { apiFetch } from '../services/api/client'
 import type { HealthResponse } from '../types/api'
 
 interface HealthState {
@@ -20,7 +19,7 @@ export function useHealthCheck(): HealthState {
   useEffect(() => {
     let cancelled = false
 
-    apiFetch<HealthResponse>(ENDPOINTS.HEALTH)
+    apiFetch<HealthResponse>('/health')
       .then((data) => {
         if (!cancelled) {
           setState({
