@@ -1,14 +1,9 @@
 import type { Agent } from '../types/api'
 import { relativeTime } from '../lib/time'
+import { AgentStatusBadge } from './AgentStatusBadge'
 
 interface RecentActivityProps {
   agents: Agent[]
-}
-
-const statusStyles: Record<string, string> = {
-  active: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
-  suspended: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
-  revoked: 'border-red-500/30 bg-red-500/10 text-red-400',
 }
 
 export function RecentActivity({ agents }: RecentActivityProps) {
@@ -34,11 +29,7 @@ export function RecentActivity({ agents }: RecentActivityProps) {
             </div>
 
             <div className="ml-4 flex shrink-0 items-center gap-3">
-              <span
-                className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${statusStyles[agent.status] ?? ''}`}
-              >
-                {agent.status}
-              </span>
+              <AgentStatusBadge status={agent.status} />
               <span className="text-xs text-gray-400 dark:text-slate-600">
                 {relativeTime(agent.updated_at)}
               </span>
