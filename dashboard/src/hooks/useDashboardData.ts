@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { apiFetch } from '../lib/fetch'
-import { ENDPOINTS } from '../config/api'
-import type { Agent, AgentListResponse, ApiError, DashboardStats } from '../types/api'
+import { listAgents } from '../services/api/agents'
+import { isApiError } from '../services/api/client'
+import type { Agent, ApiError, DashboardStats } from '../types/api'
 
 interface DashboardData {
   stats: DashboardStats
@@ -28,7 +28,7 @@ export function useDashboardData(): DashboardData {
   useEffect(() => {
     let cancelled = false
 
-    apiFetch<AgentListResponse>(`${ENDPOINTS.AGENTS}?limit=100`)
+    listAgents({ limit: 100 })
       .then((data) => {
         if (cancelled) return
 
@@ -46,9 +46,11 @@ export function useDashboardData(): DashboardData {
         setRecentAgents(sorted.slice(0, 5))
         setIsLoading(false)
       })
-      .catch((err: ApiError) => {
+      .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err)
+          setError(
+            isApiError(err) ? err : { status: 0, code: 'NETWORK_ERROR', message: String(err) },
+          )
           setIsLoading(false)
         }
       })
