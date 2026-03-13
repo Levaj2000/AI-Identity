@@ -18,12 +18,14 @@ import uuid
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from common.auth.sanitizer import sanitize
 from common.config.logging import setup_logging
 from common.config.settings import settings
 from common.models import get_db
+from common.models.base import SessionLocal
 from gateway.app.circuit_breaker import CircuitState
 from gateway.app.db import get_gateway_db
 from gateway.app.enforce import enforce, policy_circuit_breaker
@@ -391,14 +393,38 @@ def circuit_breaker_status():
 
 @app.get("/health", tags=["health"], summary="Health check")
 async def health():
-    """Returns service status, version, and circuit breaker state."""
+    """Returns service status, version, and circuit breaker state.
+
+    Includes a lightweight DB connectivity check: executes SELECT 1
+    to verify the database is reachable. Reports 'degraded' if the
+    circuit breaker is open OR the database is unreachable.
+    """
     breaker_state = policy_circuit_breaker.state
-    return {
-        "status": "ok" if breaker_state != CircuitState.OPEN else "degraded",
+    db_ok = False
+    db_error = None
+
+    try:
+        db: Session = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+            db_ok = True
+        finally:
+            db.close()
+    except Exception as exc:
+        db_error = type(exc).__name__
+        logger.warning("Health check DB probe failed: %s", exc)
+
+    is_healthy = db_ok and breaker_state != CircuitState.OPEN
+    result = {
+        "status": "ok" if is_healthy else "degraded",
         "version": settings.app_version,
         "service": "ai-identity-gateway",
         "circuit_breaker": breaker_state.value,
+        "database": "connected" if db_ok else "unreachable",
     }
+    if db_error:
+        result["db_error"] = db_error
+    return result
 
 
 @app.get("/", tags=["health"], summary="Service info")
