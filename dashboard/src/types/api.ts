@@ -113,6 +113,8 @@ export interface ApiError {
   status: number
   code: string
   message: string
+  /** Raw validation error items — only populated on 422 responses. */
+  validationErrors?: ValidationErrorItem[]
 }
 
 export interface ValidationErrorItem {

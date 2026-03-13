@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useAgentsList } from '../hooks/useAgentsList'
 import { AgentFilters } from '../components/agents/AgentFilters'
 import { AgentTable } from '../components/agents/AgentTable'
@@ -38,14 +39,20 @@ export function AgentsPage() {
             Manage your AI agent identities and permissions.
           </p>
         </div>
-        <button
-          disabled
-          className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg bg-indigo-600/50 px-4 py-2 text-sm font-semibold text-white/60"
-          title="Coming soon"
+        <Link
+          to="/agents/new"
+          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
         >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className="h-4 w-4"
+          >
+            <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+          </svg>
           New Agent
-          <span className="rounded-full bg-indigo-500/30 px-2 py-0.5 text-xs">Soon</span>
-        </button>
+        </Link>
       </div>
 
       {/* Filters */}
