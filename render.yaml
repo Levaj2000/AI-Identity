@@ -2,6 +2,7 @@
 # https://docs.render.com/blueprint-spec
 
 services:
+  # ── Identity API ─────────────────────────────────────────────────────
   - type: web
     name: ai-identity-api
     runtime: python
@@ -21,6 +22,43 @@ services:
         value: https://ai-identity.co,https://www.ai-identity.co,http://localhost:5173
       - key: CORS_ORIGIN_REGEX
         value: https://dashboard-.*-jeff-levas-projects\.vercel\.app
+      - key: AUDIT_HMAC_KEY
+        sync: false
+      - key: CREDENTIAL_ENCRYPTION_KEY
+        sync: false
+      - key: INTERNAL_SERVICE_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.11.11"
+      - key: PYTHONPATH
+        value: /opt/render/project/src
+
+  # ── Proxy Gateway ────────────────────────────────────────────────────
+  - type: web
+    name: ai-identity-gateway
+    runtime: python
+    region: oregon
+    plan: starter
+    buildCommand: pip install -r gateway/requirements.txt && pip install -e common/
+    startCommand: uvicorn gateway.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: CORS_ORIGINS
+        value: https://ai-identity.co,https://www.ai-identity.co,http://localhost:5173
+      - key: CORS_ORIGIN_REGEX
+        value: https://dashboard-.*-jeff-levas-projects\.vercel\.app
+      - key: AUDIT_HMAC_KEY
+        sync: false
+      - key: CREDENTIAL_ENCRYPTION_KEY
+        sync: false
+      - key: INTERNAL_SERVICE_KEY
+        sync: false
       - key: PYTHON_VERSION
         value: "3.11.11"
       - key: PYTHONPATH
