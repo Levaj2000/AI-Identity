@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import { DashboardLayout } from './layouts/DashboardLayout'
 import { OverviewPage } from './pages/OverviewPage'
 import { AgentsPage } from './pages/AgentsPage'
+import { CreateAgentPage } from './pages/CreateAgentPage'
 import { AgentDetailPage } from './pages/AgentDetailPage'
 import { AgentKeysPage } from './pages/AgentKeysPage'
 import { KeysPage } from './pages/KeysPage'
@@ -13,6 +14,7 @@ function App() {
       <Route element={<DashboardLayout />}>
         <Route index element={<OverviewPage />} />
         <Route path="agents" element={<AgentsPage />} />
+        <Route path="agents/new" element={<CreateAgentPage />} />
         <Route path="agents/:id" element={<AgentDetailPage />} />
         <Route path="agents/:id/keys" element={<AgentKeysPage />} />
         <Route path="keys" element={<KeysPage />} />

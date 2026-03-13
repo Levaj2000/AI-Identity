@@ -9,7 +9,7 @@
  * /health is public and skips auth.
  */
 
-import type { ApiError, ValidationErrorResponse } from '../../types/api'
+import type { ApiError, ValidationErrorItem, ValidationErrorResponse } from '../../types/api'
 
 // ─── Config ──────────────────────────────────────────────────────
 
@@ -49,15 +49,17 @@ export function isApiError(err: unknown): err is ApiError {
 export async function parseErrorResponse(response: Response): Promise<ApiError> {
   let message = response.statusText || 'Request failed'
   let code = 'UNKNOWN'
+  let validationErrors: ValidationErrorItem[] | undefined
 
   try {
     const body = await response.json()
 
-    // FastAPI validation errors → join messages
+    // FastAPI validation errors → join messages + preserve raw items
     if (Array.isArray(body.detail)) {
       const validation = body as ValidationErrorResponse
       message = validation.detail.map((e) => `${e.loc.join('.')}: ${e.msg}`).join('; ')
       code = 'VALIDATION_ERROR'
+      validationErrors = validation.detail
     } else if (typeof body.detail === 'string') {
       message = body.detail
       code = body.code || 'API_ERROR'
@@ -69,7 +71,7 @@ export async function parseErrorResponse(response: Response): Promise<ApiError> 
     // Response body wasn't JSON — keep defaults
   }
 
-  return { status: response.status, code, message }
+  return { status: response.status, code, message, validationErrors }
 }
 
 // ─── Core fetch ──────────────────────────────────────────────────
