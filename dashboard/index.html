@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -39,7 +39,7 @@
 
     <!-- Theme -->
     <meta name="theme-color" content="#0F172A" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -53,6 +53,13 @@
     <script defer src="/_vercel/insights/script.js"></script>
   </head>
   <body>
+    <script>
+      // Prevent FOUC: set dark class before first paint
+      ;(function () {
+        var t = localStorage.getItem('ai-identity-theme')
+        if (t === 'light') document.documentElement.classList.remove('dark')
+      })()
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
