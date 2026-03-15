@@ -48,13 +48,13 @@ export function TagInput({
 
   const borderColor = error
     ? 'border-red-500 dark:border-red-500'
-    : 'border-gray-300 dark:border-slate-700 focus-within:border-indigo-500 dark:focus-within:border-indigo-500'
+    : 'border-gray-300 dark:border-[#2a2a2d] focus-within:border-[#00FFC2] dark:focus-within:border-[#00FFC2]'
 
   return (
     <div>
       {/* Container styled as a single input field */}
       <div
-        className={`flex min-h-[2.5rem] flex-wrap items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 transition-colors dark:bg-slate-950 ${borderColor}`}
+        className={`flex min-h-[2.5rem] flex-wrap items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 transition-colors dark:bg-[#0A0A0B] ${borderColor}`}
         onClick={() => inputRef.current?.focus()}
       >
         {/* Tags */}
@@ -63,7 +63,7 @@ export function TagInput({
             <span
               key={tag}
               role="listitem"
-              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#a1a1aa]"
             >
               {tag}
               <button
@@ -72,7 +72,7 @@ export function TagInput({
                   e.stopPropagation()
                   removeTag(i)
                 }}
-                className="ml-0.5 text-gray-400 transition-colors hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400"
+                className="ml-0.5 text-gray-400 transition-colors hover:text-red-500 dark:text-[#71717a] dark:hover:text-red-400"
                 aria-label={`Remove ${tag}`}
               >
                 <svg
@@ -97,7 +97,7 @@ export function TagInput({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={tags.length === 0 ? placeholder : ''}
-          className="min-w-[120px] flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 dark:text-slate-100 dark:placeholder:text-slate-600"
+          className="min-w-[120px] flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 dark:text-[#e4e4e7] dark:placeholder:text-[#52525b]"
         />
       </div>
 

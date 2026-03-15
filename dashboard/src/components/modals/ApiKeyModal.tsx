@@ -59,7 +59,7 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
         aria-modal="true"
         aria-labelledby="api-key-modal-title"
         tabIndex={-1}
-        className="relative z-10 w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl outline-none dark:border-slate-700 dark:bg-slate-900"
+        className="relative z-10 w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl outline-none dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl"
       >
         {/* Header */}
         <div className="mb-5 flex items-center gap-3">
@@ -80,11 +80,11 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
           <div>
             <h2
               id="api-key-modal-title"
-              className="text-lg font-semibold text-gray-900 dark:text-slate-100"
+              className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]"
             >
               API Key Created
             </h2>
-            <p className="text-sm text-gray-500 dark:text-slate-400">for {agentName}</p>
+            <p className="text-sm text-gray-500 dark:text-[#a1a1aa]">for {agentName}</p>
           </div>
         </div>
 
@@ -112,8 +112,8 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
 
         {/* Key display + copy */}
         <div className="mb-5">
-          <div className="flex items-start gap-2 rounded-lg bg-gray-100 p-4 dark:bg-slate-800">
-            <code className="min-w-0 flex-1 break-all font-[JetBrains_Mono,monospace] text-sm text-gray-900 dark:text-slate-100">
+          <div className="flex items-start gap-2 rounded-lg bg-gray-100 p-4 dark:bg-[#1a1a1d]">
+            <code className="min-w-0 flex-1 break-all font-[JetBrains_Mono,monospace] text-sm text-gray-900 dark:text-[#e4e4e7]">
               {apiKey}
             </code>
             <button
@@ -122,7 +122,7 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 copied
                   ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-                  : 'bg-white text-gray-700 shadow-sm hover:bg-gray-50 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600'
+                  : 'bg-white text-gray-700 shadow-sm hover:bg-gray-50 dark:bg-[#2a2a2d] dark:text-[#e4e4e7] dark:hover:bg-[#3a3a3d]'
               }`}
             >
               {copied ? (
@@ -165,9 +165,9 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
             type="checkbox"
             checked={acknowledged}
             onChange={(e) => setAcknowledged(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800"
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#00FFC2] focus:ring-[#00FFC2] dark:border-[#3a3a3d] dark:bg-[#1a1a1d]"
           />
-          <span className="text-sm text-gray-700 dark:text-slate-300">
+          <span className="text-sm text-gray-700 dark:text-[#d4d4d8]">
             I have saved this API key in a secure location
           </span>
         </label>
@@ -177,7 +177,7 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
           type="button"
           onClick={onDismiss}
           disabled={!acknowledged}
-          className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-indigo-600"
+          className="w-full rounded-lg bg-[#00FFC2] px-4 py-2.5 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#00FFC2]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#00FFC2]"
         >
           Continue to Agent
         </button>

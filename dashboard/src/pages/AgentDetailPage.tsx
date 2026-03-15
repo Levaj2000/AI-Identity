@@ -224,40 +224,40 @@ export function AgentDetailPage() {
       <div className="space-y-6">
         {/* Breadcrumb skeleton */}
         <div className="flex items-center gap-2">
-          <div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-          <div className="h-4 w-4 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-          <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
+          <div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+          <div className="h-4 w-4 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+          <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
         </div>
         {/* Header skeleton */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
           <div className="flex items-center gap-4">
-            <div className="h-7 w-48 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-            <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-slate-800" />
+            <div className="h-7 w-48 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+            <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-[#1a1a1d]" />
           </div>
-          <div className="mt-2 h-4 w-64 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
+          <div className="mt-2 h-4 w-64 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
           <div className="mt-4 flex gap-3">
-            <div className="h-9 w-28 animate-pulse rounded-lg bg-gray-200 dark:bg-slate-800" />
-            <div className="h-9 w-24 animate-pulse rounded-lg bg-gray-200 dark:bg-slate-800" />
+            <div className="h-9 w-28 animate-pulse rounded-lg bg-gray-200 dark:bg-[#1a1a1d]" />
+            <div className="h-9 w-24 animate-pulse rounded-lg bg-gray-200 dark:bg-[#1a1a1d]" />
           </div>
         </div>
         {/* Details skeleton */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
           <div className="space-y-6">
             <div>
-              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-              <div className="h-4 w-full animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
+              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+              <div className="h-4 w-full animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
             </div>
             <div>
-              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
+              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
               <div className="flex gap-2">
-                <div className="h-6 w-16 animate-pulse rounded-md bg-gray-200 dark:bg-slate-800" />
-                <div className="h-6 w-20 animate-pulse rounded-md bg-gray-200 dark:bg-slate-800" />
-                <div className="h-6 w-24 animate-pulse rounded-md bg-gray-200 dark:bg-slate-800" />
+                <div className="h-6 w-16 animate-pulse rounded-md bg-gray-200 dark:bg-[#1a1a1d]" />
+                <div className="h-6 w-20 animate-pulse rounded-md bg-gray-200 dark:bg-[#1a1a1d]" />
+                <div className="h-6 w-24 animate-pulse rounded-md bg-gray-200 dark:bg-[#1a1a1d]" />
               </div>
             </div>
             <div>
-              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-              <div className="h-16 w-full animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
+              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+              <div className="h-16 w-full animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
             </div>
           </div>
         </div>
@@ -270,19 +270,19 @@ export function AgentDetailPage() {
   if (notFound) {
     return (
       <div className="space-y-6">
-        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
-          <Link to="/agents" className="hover:text-gray-700 dark:hover:text-slate-200">
+        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
+          <Link to="/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
             Agents
           </Link>
           <ChevronIcon />
-          <span className="text-gray-900 dark:text-slate-100">Not Found</span>
+          <span className="text-gray-900 dark:text-[#e4e4e7]">Not Found</span>
         </nav>
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-slate-700 dark:bg-slate-900/50">
+        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-[#2a2a2d] dark:bg-[#111113]/50">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
-            className="mx-auto h-10 w-10 text-gray-400 dark:text-slate-600"
+            className="mx-auto h-10 w-10 text-gray-400 dark:text-[#52525b]"
           >
             <path
               fillRule="evenodd"
@@ -290,16 +290,16 @@ export function AgentDetailPage() {
               clipRule="evenodd"
             />
           </svg>
-          <h2 className="mt-4 text-lg font-semibold text-gray-700 dark:text-slate-300">
+          <h2 className="mt-4 text-lg font-semibold text-gray-700 dark:text-[#d4d4d8]">
             Agent Not Found
           </h2>
-          <p className="mt-2 text-sm text-gray-500 dark:text-slate-500">
+          <p className="mt-2 text-sm text-gray-500 dark:text-[#71717a]">
             The agent you&apos;re looking for doesn&apos;t exist or has been removed.
           </p>
           <div className="mt-6">
             <Link
               to="/agents"
-              className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#00FFC2] hover:text-[#00FFC2] dark:text-[#00FFC2] dark:hover:text-[#00FFC2]"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -326,12 +326,12 @@ export function AgentDetailPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
-          <Link to="/agents" className="hover:text-gray-700 dark:hover:text-slate-200">
+        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
+          <Link to="/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
             Agents
           </Link>
           <ChevronIcon />
-          <span className="text-gray-900 dark:text-slate-100">{id}</span>
+          <span className="text-gray-900 dark:text-[#e4e4e7]">{id}</span>
         </nav>
         <div className="rounded-xl border border-red-300 bg-red-50 p-6 dark:border-red-500/20 dark:bg-red-500/10">
           <h2 className="mb-1 font-semibold text-red-600 dark:text-red-400">
@@ -352,12 +352,12 @@ export function AgentDetailPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
-        <Link to="/agents" className="hover:text-gray-700 dark:hover:text-slate-200">
+      <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
+        <Link to="/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
           Agents
         </Link>
         <ChevronIcon />
-        <span className="text-gray-900 dark:text-slate-100">{agent.name}</span>
+        <span className="text-gray-900 dark:text-[#e4e4e7]">{agent.name}</span>
       </nav>
 
       {/* Revoked banner */}
@@ -397,16 +397,16 @@ export function AgentDetailPage() {
       )}
 
       {/* Header card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <h1 className="truncate text-2xl font-bold text-gray-900 dark:text-slate-100">
+              <h1 className="truncate text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">
                 {agent.name}
               </h1>
               <AgentStatusBadge status={agent.status} />
             </div>
-            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+            <p className="mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">
               Created {relativeTime(agent.created_at)} · Updated {relativeTime(agent.updated_at)}
             </p>
           </div>
@@ -417,7 +417,7 @@ export function AgentDetailPage() {
           {/* Manage Keys */}
           <Link
             to={`/agents/${agent.id}/keys`}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -481,7 +481,7 @@ export function AgentDetailPage() {
                   type="button"
                   onClick={cancelEdit}
                   disabled={isSaving}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#2a2a2d] dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]"
                 >
                   Cancel
                 </button>
@@ -489,7 +489,7 @@ export function AgentDetailPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-indigo-600"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#00FFC2] px-3 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#00FFC2]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#00FFC2]"
                   aria-busy={isSaving}
                 >
                   {isSaving && (
@@ -521,7 +521,7 @@ export function AgentDetailPage() {
               <button
                 type="button"
                 onClick={enterEditMode}
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#00FFC2] px-3 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#00FFC2]/80"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -549,14 +549,14 @@ export function AgentDetailPage() {
       </div>
 
       {/* Details card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
         <div className="space-y-6">
           {/* Name (edit mode only — view mode shows in header) */}
           {isEditing && (
             <div>
               <label
                 htmlFor="edit-name"
-                className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-slate-300"
+                className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]"
               >
                 Name <span className="text-red-500">*</span>
               </label>
@@ -566,10 +566,10 @@ export function AgentDetailPage() {
                 type="text"
                 value={editForm.name}
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-600 ${
+                className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
                   fieldErrors.name
                     ? 'border-red-500 dark:border-red-500'
-                    : 'border-gray-300 focus:border-indigo-500 dark:border-slate-700 dark:focus:border-indigo-500'
+                    : 'border-gray-300 focus:border-[#00FFC2] dark:border-[#2a2a2d] dark:focus:border-[#00FFC2]'
                 }`}
                 aria-invalid={!!fieldErrors.name}
                 aria-describedby={fieldErrors.name ? 'edit-name-error' : undefined}
@@ -588,7 +588,7 @@ export function AgentDetailPage() {
 
           {/* Description */}
           <div>
-            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-slate-300">
+            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
               Description
             </h3>
             {isEditing ? (
@@ -599,10 +599,10 @@ export function AgentDetailPage() {
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                   placeholder="A brief description of what this agent does..."
                   rows={3}
-                  className={`w-full resize-none rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-600 ${
+                  className={`w-full resize-none rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
                     fieldErrors.description
                       ? 'border-red-500 dark:border-red-500'
-                      : 'border-gray-300 focus:border-indigo-500 dark:border-slate-700 dark:focus:border-indigo-500'
+                      : 'border-gray-300 focus:border-[#00FFC2] dark:border-[#2a2a2d] dark:focus:border-[#00FFC2]'
                   }`}
                 />
                 {fieldErrors.description && (
@@ -612,9 +612,9 @@ export function AgentDetailPage() {
                 )}
               </>
             ) : (
-              <p className="text-sm text-gray-600 dark:text-slate-400">
+              <p className="text-sm text-gray-600 dark:text-[#a1a1aa]">
                 {agent.description || (
-                  <span className="italic text-gray-400 dark:text-slate-600">No description</span>
+                  <span className="italic text-gray-400 dark:text-[#52525b]">No description</span>
                 )}
               </p>
             )}
@@ -622,7 +622,7 @@ export function AgentDetailPage() {
 
           {/* Capabilities */}
           <div>
-            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-slate-300">
+            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
               Capabilities
             </h3>
             {isEditing ? (
@@ -638,20 +638,20 @@ export function AgentDetailPage() {
                 {agent.capabilities.map((cap) => (
                   <span
                     key={cap}
-                    className="rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                    className="rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#a1a1aa]"
                   >
                     {cap}
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="text-sm italic text-gray-400 dark:text-slate-600">No capabilities</p>
+              <p className="text-sm italic text-gray-400 dark:text-[#52525b]">No capabilities</p>
             )}
           </div>
 
           {/* Metadata */}
           <div>
-            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-slate-300">
+            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
               Metadata
             </h3>
             {isEditing ? (
@@ -661,14 +661,14 @@ export function AgentDetailPage() {
                 error={fieldErrors.metadata}
               />
             ) : Object.keys(agent.metadata).length > 0 ? (
-              <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-slate-700">
+              <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-[#2a2a2d]">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50 dark:border-slate-700 dark:bg-slate-800/50">
-                      <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-slate-400">
+                    <tr className="border-b border-gray-200 bg-gray-50 dark:border-[#2a2a2d] dark:bg-[#1a1a1d]/50">
+                      <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-[#a1a1aa]">
                         Key
                       </th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-slate-400">
+                      <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-[#a1a1aa]">
                         Value
                       </th>
                     </tr>
@@ -677,12 +677,12 @@ export function AgentDetailPage() {
                     {Object.entries(agent.metadata).map(([key, value]) => (
                       <tr
                         key={key}
-                        className="border-b border-gray-100 last:border-0 dark:border-slate-800"
+                        className="border-b border-gray-100 last:border-0 dark:border-[#1a1a1d]"
                       >
-                        <td className="px-4 py-2 font-[JetBrains_Mono,monospace] text-xs text-gray-700 dark:text-slate-300">
+                        <td className="px-4 py-2 font-[JetBrains_Mono,monospace] text-xs text-gray-700 dark:text-[#d4d4d8]">
                           {key}
                         </td>
-                        <td className="px-4 py-2 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:text-slate-400">
+                        <td className="px-4 py-2 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:text-[#a1a1aa]">
                           {String(value)}
                         </td>
                       </tr>
@@ -691,16 +691,16 @@ export function AgentDetailPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-sm italic text-gray-400 dark:text-slate-600">No metadata</p>
+              <p className="text-sm italic text-gray-400 dark:text-[#52525b]">No metadata</p>
             )}
           </div>
 
           {/* Agent ID (always read-only) */}
           <div>
-            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-slate-300">
+            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
               Agent ID
             </h3>
-            <p className="font-[JetBrains_Mono,monospace] text-sm text-gray-600 dark:text-slate-400">
+            <p className="font-[JetBrains_Mono,monospace] text-sm text-gray-600 dark:text-[#a1a1aa]">
               {agent.id}
             </p>
           </div>
