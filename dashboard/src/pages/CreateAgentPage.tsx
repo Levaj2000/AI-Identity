@@ -131,8 +131,8 @@ export function CreateAgentPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
-        <Link to="/agents" className="hover:text-gray-700 dark:hover:text-slate-200">
+      <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
+        <Link to="/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
           Agents
         </Link>
         <svg
@@ -147,13 +147,13 @@ export function CreateAgentPage() {
             clipRule="evenodd"
           />
         </svg>
-        <span className="text-gray-900 dark:text-slate-100">New Agent</span>
+        <span className="text-gray-900 dark:text-[#e4e4e7]">New Agent</span>
       </nav>
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Create Agent</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">Create Agent</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">
           Register a new AI agent identity.
         </p>
       </div>
@@ -170,14 +170,14 @@ export function CreateAgentPage() {
       {/* Form card */}
       <form
         onSubmit={handleSubmit}
-        className="rounded-xl border border-gray-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900"
+        className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl"
       >
         <div className="space-y-6">
           {/* Name */}
           <div>
             <label
               htmlFor="agent-name"
-              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-slate-300"
+              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]"
             >
               Name <span className="text-red-500">*</span>
             </label>
@@ -189,10 +189,10 @@ export function CreateAgentPage() {
               onChange={(e) => dispatch({ type: 'SET_NAME', value: e.target.value })}
               placeholder="My AI Agent"
               autoFocus
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-600 ${
+              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
                 fieldErrors.name
                   ? 'border-red-500 dark:border-red-500'
-                  : 'border-gray-300 focus:border-indigo-500 dark:border-slate-700 dark:focus:border-indigo-500'
+                  : 'border-gray-300 focus:border-[#00FFC2] dark:border-[#2a2a2d] dark:focus:border-[#00FFC2]'
               }`}
               aria-invalid={!!fieldErrors.name}
               aria-describedby={fieldErrors.name ? 'name-error' : undefined}
@@ -212,7 +212,7 @@ export function CreateAgentPage() {
           <div>
             <label
               htmlFor="agent-description"
-              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-slate-300"
+              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]"
             >
               Description
             </label>
@@ -222,10 +222,10 @@ export function CreateAgentPage() {
               onChange={(e) => dispatch({ type: 'SET_DESCRIPTION', value: e.target.value })}
               placeholder="A brief description of what this agent does..."
               rows={3}
-              className={`w-full resize-none rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-600 ${
+              className={`w-full resize-none rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
                 fieldErrors.description
                   ? 'border-red-500 dark:border-red-500'
-                  : 'border-gray-300 focus:border-indigo-500 dark:border-slate-700 dark:focus:border-indigo-500'
+                  : 'border-gray-300 focus:border-[#00FFC2] dark:border-[#2a2a2d] dark:focus:border-[#00FFC2]'
               }`}
               aria-invalid={!!fieldErrors.description}
               aria-describedby={fieldErrors.description ? 'description-error' : undefined}
@@ -245,7 +245,7 @@ export function CreateAgentPage() {
           <div>
             <label
               htmlFor="agent-capabilities"
-              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-slate-300"
+              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]"
             >
               Capabilities
             </label>
@@ -260,7 +260,7 @@ export function CreateAgentPage() {
 
           {/* Metadata */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-slate-300">
+            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
               Metadata
             </label>
             <KeyValueEditor
@@ -272,17 +272,17 @@ export function CreateAgentPage() {
         </div>
 
         {/* Submit */}
-        <div className="mt-8 flex items-center justify-end gap-3 border-t border-gray-200 pt-6 dark:border-slate-800">
+        <div className="mt-8 flex items-center justify-end gap-3 border-t border-gray-200 pt-6 dark:border-[#1a1a1d]">
           <Link
             to="/agents"
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-indigo-600"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#00FFC2] px-5 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#00FFC2]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#00FFC2]"
             aria-busy={isSubmitting}
           >
             {isSubmitting && (
