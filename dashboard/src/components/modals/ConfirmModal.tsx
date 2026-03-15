@@ -47,7 +47,7 @@ export function ConfirmModal({
   const confirmClasses =
     confirmVariant === 'danger'
       ? 'bg-red-600 text-white hover:bg-red-500 disabled:hover:bg-red-600'
-      : 'bg-indigo-600 text-white hover:bg-indigo-500 disabled:hover:bg-indigo-600'
+      : 'bg-[#00FFC2] text-[#0A0A0B] hover:bg-[#00FFC2]/80 disabled:hover:bg-[#00FFC2]'
 
   const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -65,7 +65,7 @@ export function ConfirmModal({
         aria-modal="true"
         aria-labelledby="confirm-modal-title"
         tabIndex={-1}
-        className="relative z-10 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl outline-none dark:border-slate-700 dark:bg-slate-900"
+        className="relative z-10 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl outline-none dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl"
       >
         {/* Icon + Title */}
         <div className="mb-4 flex items-center gap-3">
@@ -73,7 +73,7 @@ export function ConfirmModal({
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
               confirmVariant === 'danger'
                 ? 'bg-red-100 dark:bg-red-500/10'
-                : 'bg-indigo-100 dark:bg-indigo-500/10'
+                : 'bg-[#00FFC2]/15 dark:bg-[#00FFC2]/10'
             }`}
           >
             {confirmVariant === 'danger' ? (
@@ -94,7 +94,7 @@ export function ConfirmModal({
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
                 fill="currentColor"
-                className="h-5 w-5 text-indigo-600 dark:text-indigo-400"
+                className="h-5 w-5 text-[#00FFC2] dark:text-[#00FFC2]"
               >
                 <path
                   fillRule="evenodd"
@@ -106,14 +106,14 @@ export function ConfirmModal({
           </div>
           <h2
             id="confirm-modal-title"
-            className="text-lg font-semibold text-gray-900 dark:text-slate-100"
+            className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]"
           >
             {title}
           </h2>
         </div>
 
         {/* Message */}
-        <p className="mb-6 text-sm text-gray-600 dark:text-slate-400">{message}</p>
+        <p className="mb-6 text-sm text-gray-600 dark:text-[#a1a1aa]">{message}</p>
 
         {/* Buttons */}
         <div className="flex justify-end gap-3">
@@ -121,7 +121,7 @@ export function ConfirmModal({
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#2a2a2d] dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]"
           >
             Cancel
           </button>

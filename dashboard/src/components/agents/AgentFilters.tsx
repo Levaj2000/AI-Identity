@@ -20,7 +20,7 @@ export function AgentFilters({
         value={status || ''}
         onChange={(e) => onStatusChange((e.target.value as AgentStatus) || undefined)}
         aria-label="Filter by status"
-        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 sm:w-44 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors focus:border-[#00FFC2] focus:outline-none focus:ring-2 focus:ring-[#00FFC2]/50 sm:w-44 dark:border-[#2a2a2d] dark:bg-[#111113] dark:text-[#e4e4e7]"
       >
         <option value="">All statuses</option>
         <option value="active">Active</option>
@@ -35,7 +35,7 @@ export function AgentFilters({
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-slate-500"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-[#71717a]"
         >
           <path
             fillRule="evenodd"
@@ -49,7 +49,7 @@ export function AgentFilters({
           onChange={(e) => onCapabilityChange(e.target.value)}
           placeholder="Filter by capability..."
           aria-label="Filter by capability"
-          className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 transition-colors focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:placeholder-slate-500"
+          className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 transition-colors focus:border-[#00FFC2] focus:outline-none focus:ring-2 focus:ring-[#00FFC2]/50 dark:border-[#2a2a2d] dark:bg-[#111113] dark:text-[#e4e4e7] dark:placeholder-[#71717a]"
         />
       </div>
     </div>

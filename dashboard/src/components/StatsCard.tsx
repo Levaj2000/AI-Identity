@@ -5,16 +5,39 @@ interface StatsCardProps {
   value: number
   icon: ReactNode
   accent?: string
+  glowColor?: string
 }
 
-export function StatsCard({ label, value, icon, accent = 'text-indigo-500' }: StatsCardProps) {
+export function StatsCard({
+  label,
+  value,
+  icon,
+  accent = 'text-[#00FFC2]',
+  glowColor = 'rgba(0,255,194,0.05)',
+}: StatsCardProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 transition-colors hover:border-gray-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
-      <div className={`mb-3 ${accent}`}>{icon}</div>
-      <p className="text-3xl font-bold text-gray-900 font-[JetBrains_Mono,monospace] dark:text-slate-100">
+    <div
+      className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6 transition-colors hover:border-gray-300 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl dark:hover:border-[#00FFC2]/25"
+      style={{
+        boxShadow: `0 0 15px ${glowColor}`,
+      }}
+    >
+      {/* Gradient overlay using accent color */}
+      <div
+        className="pointer-events-none absolute inset-0 hidden dark:block"
+        style={{
+          background: `linear-gradient(135deg, ${glowColor} 0%, transparent 60%)`,
+        }}
+      />
+      <div className={`relative mb-3 ${accent} drop-shadow-sm`}>
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-current/10">
+          {icon}
+        </div>
+      </div>
+      <p className="relative text-3xl font-bold text-gray-900 font-[JetBrains_Mono,monospace] dark:text-[#e4e4e7]">
         {value}
       </p>
-      <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">{label}</p>
+      <p className="relative mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">{label}</p>
     </div>
   )
 }

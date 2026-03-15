@@ -9,18 +9,23 @@ export function DashboardLayout() {
   const health = useHealthCheck()
 
   return (
-    <div className="flex h-screen bg-gray-50 font-[Inter,system-ui,sans-serif] text-gray-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="relative flex h-screen bg-gray-50 font-[Inter,system-ui,sans-serif] text-gray-900 dark:bg-[#0A0A0B] dark:text-[#e4e4e7]">
+      {/* Gradient accent line — dark mode only */}
+      <div className="hidden dark:block absolute top-0 left-0 right-0 z-50">
+        <div className="h-[2px] w-full bg-gradient-to-r from-[#00FFC2] via-[#00FFC2]/50 to-transparent" />
+      </div>
+
       {/* Sidebar */}
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar (mobile hamburger + health indicator) */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-950 lg:px-6">
+        <header className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 bg-white px-4 dark:border-[#1a1a1d] dark:bg-[#0A0A0B] lg:px-6">
           {/* Hamburger — mobile only */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-800 lg:hidden"
+            className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d] lg:hidden"
             aria-label="Open sidebar"
           >
             <svg
@@ -39,8 +44,8 @@ export function DashboardLayout() {
 
           {/* Brand visible on mobile (hidden on desktop since sidebar shows it) */}
           <h1 className="text-lg font-bold tracking-tight lg:hidden">
-            <span className="text-indigo-500">AI</span>{' '}
-            <span className="text-gray-900 dark:text-slate-100">Identity</span>
+            <span className="text-[#00FFC2]">AI</span>{' '}
+            <span className="text-gray-900 dark:text-[#e4e4e7]">Identity</span>
           </h1>
 
           {/* Health indicator — pushed to the right */}
