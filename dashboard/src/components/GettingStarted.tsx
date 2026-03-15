@@ -32,17 +32,17 @@ const steps = [
 
 export function GettingStarted() {
   return (
-    <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-8 dark:border-indigo-500/20 dark:bg-slate-900/50">
-      <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
+    <div className="rounded-xl border border-[#00FFC2]/20 bg-[#00FFC2]/5 p-8 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+      <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">
         Getting Started
       </h2>
-      <p className="mb-6 text-sm text-gray-500 dark:text-slate-400">
+      <p className="mb-6 text-sm text-gray-500 dark:text-[#a1a1aa]">
         Set up your first agent in three steps. See the{' '}
         <a
           href={`${API_BASE_URL}/docs`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-indigo-600 underline underline-offset-2 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+          className="text-[#00FFC2] underline underline-offset-2 hover:text-[#00FFC2] dark:text-[#00FFC2] dark:hover:text-[#00FFC2]"
         >
           API docs
         </a>{' '}
@@ -53,17 +53,17 @@ export function GettingStarted() {
         {steps.map((step) => (
           <div
             key={step.number}
-            className="rounded-lg border border-gray-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950/50"
+            className="rounded-lg border border-gray-200 bg-white p-5 dark:border-[#1a1a1d] dark:bg-[#0A0A0B]/50"
           >
             <div className="mb-2 flex items-center gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#00FFC2] text-xs font-bold text-[#0A0A0B]">
                 {step.number}
               </span>
-              <h3 className="font-medium text-gray-900 dark:text-slate-100">{step.title}</h3>
+              <h3 className="font-medium text-gray-900 dark:text-[#e4e4e7]">{step.title}</h3>
             </div>
-            <p className="mb-3 text-sm text-gray-500 dark:text-slate-400">{step.description}</p>
+            <p className="mb-3 text-sm text-gray-500 dark:text-[#a1a1aa]">{step.description}</p>
             {step.code && (
-              <pre className="overflow-x-auto rounded-lg bg-gray-100 p-4 font-[JetBrains_Mono,monospace] text-xs leading-relaxed text-gray-700 dark:bg-slate-800 dark:text-slate-300">
+              <pre className="overflow-x-auto rounded-lg bg-gray-100 p-4 font-[JetBrains_Mono,monospace] text-xs leading-relaxed text-gray-700 dark:bg-[#1a1a1d] dark:text-[#d4d4d8]">
                 {step.code}
               </pre>
             )}

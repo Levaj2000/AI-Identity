@@ -162,25 +162,25 @@ export function AgentKeysPage() {
       <div className="space-y-6">
         {/* Breadcrumb skeleton */}
         <div className="flex items-center gap-2">
-          <div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-          <div className="h-4 w-4 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-          <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-          <div className="h-4 w-4 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-          <div className="h-4 w-12 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
+          <div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+          <div className="h-4 w-4 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+          <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+          <div className="h-4 w-4 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+          <div className="h-4 w-12 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
         </div>
         {/* Header skeleton */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
           <div className="flex items-center gap-4">
-            <div className="h-6 w-40 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-            <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-slate-800" />
+            <div className="h-6 w-40 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+            <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-[#1a1a1d]" />
           </div>
         </div>
         {/* Table skeleton */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
           <div className="space-y-4">
-            <div className="h-8 w-full animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-            <div className="h-12 w-full animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-            <div className="h-12 w-full animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
+            <div className="h-8 w-full animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+            <div className="h-12 w-full animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+            <div className="h-12 w-full animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
           </div>
         </div>
       </div>
@@ -192,19 +192,19 @@ export function AgentKeysPage() {
   if (notFound) {
     return (
       <div className="space-y-6">
-        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
-          <Link to="/agents" className="hover:text-gray-700 dark:hover:text-slate-200">
+        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
+          <Link to="/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
             Agents
           </Link>
           <ChevronIcon />
-          <span className="text-gray-900 dark:text-slate-100">Not Found</span>
+          <span className="text-gray-900 dark:text-[#e4e4e7]">Not Found</span>
         </nav>
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-slate-700 dark:bg-slate-900/50">
+        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-[#2a2a2d] dark:bg-[#111113]/50">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
-            className="mx-auto h-10 w-10 text-gray-400 dark:text-slate-600"
+            className="mx-auto h-10 w-10 text-gray-400 dark:text-[#52525b]"
           >
             <path
               fillRule="evenodd"
@@ -212,16 +212,16 @@ export function AgentKeysPage() {
               clipRule="evenodd"
             />
           </svg>
-          <h2 className="mt-4 text-lg font-semibold text-gray-700 dark:text-slate-300">
+          <h2 className="mt-4 text-lg font-semibold text-gray-700 dark:text-[#d4d4d8]">
             Agent Not Found
           </h2>
-          <p className="mt-2 text-sm text-gray-500 dark:text-slate-500">
+          <p className="mt-2 text-sm text-gray-500 dark:text-[#71717a]">
             The agent you&apos;re looking for doesn&apos;t exist or has been removed.
           </p>
           <div className="mt-6">
             <Link
               to="/agents"
-              className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#00FFC2] hover:text-[#00FFC2] dark:text-[#00FFC2] dark:hover:text-[#00FFC2]"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -248,14 +248,14 @@ export function AgentKeysPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
-          <Link to="/agents" className="hover:text-gray-700 dark:hover:text-slate-200">
+        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
+          <Link to="/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
             Agents
           </Link>
           <ChevronIcon />
-          <span className="text-gray-900 dark:text-slate-100">{id}</span>
+          <span className="text-gray-900 dark:text-[#e4e4e7]">{id}</span>
           <ChevronIcon />
-          <span className="text-gray-900 dark:text-slate-100">Keys</span>
+          <span className="text-gray-900 dark:text-[#e4e4e7]">Keys</span>
         </nav>
         <div className="rounded-xl border border-red-300 bg-red-50 p-6 dark:border-red-500/20 dark:bg-red-500/10">
           <h2 className="mb-1 font-semibold text-red-600 dark:text-red-400">Unable to Load Keys</h2>
@@ -272,24 +272,24 @@ export function AgentKeysPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400">
-        <Link to="/agents" className="hover:text-gray-700 dark:hover:text-slate-200">
+      <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
+        <Link to="/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
           Agents
         </Link>
         <ChevronIcon />
-        <Link to={`/agents/${id}`} className="hover:text-gray-700 dark:hover:text-slate-200">
+        <Link to={`/agents/${id}`} className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
           {agent.name}
         </Link>
         <ChevronIcon />
-        <span className="text-gray-900 dark:text-slate-100">Keys</span>
+        <span className="text-gray-900 dark:text-[#e4e4e7]">Keys</span>
       </nav>
 
       {/* Agent mini-header */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{agent.name}</h1>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">{agent.name}</h1>
           <AgentStatusBadge status={agent.status} />
-          <span className="text-sm text-gray-500 dark:text-slate-500">&mdash; API Keys</span>
+          <span className="text-sm text-gray-500 dark:text-[#71717a]">&mdash; API Keys</span>
         </div>
       </div>
 
@@ -330,12 +330,12 @@ export function AgentKeysPage() {
 
       {/* Empty state — no keys at all */}
       {keys.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-slate-700 dark:bg-slate-900/50">
+        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-[#2a2a2d] dark:bg-[#111113]/50">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
-            className="mx-auto h-10 w-10 text-gray-400 dark:text-slate-600"
+            className="mx-auto h-10 w-10 text-gray-400 dark:text-[#52525b]"
           >
             <path
               fillRule="evenodd"
@@ -343,10 +343,10 @@ export function AgentKeysPage() {
               clipRule="evenodd"
             />
           </svg>
-          <h2 className="mt-4 text-lg font-semibold text-gray-700 dark:text-slate-300">
+          <h2 className="mt-4 text-lg font-semibold text-gray-700 dark:text-[#d4d4d8]">
             No API Keys Yet
           </h2>
-          <p className="mt-2 text-sm text-gray-500 dark:text-slate-500">
+          <p className="mt-2 text-sm text-gray-500 dark:text-[#71717a]">
             Create your first API key to start authenticating this agent.
           </p>
           {!isRevoked && (
@@ -355,7 +355,7 @@ export function AgentKeysPage() {
                 type="button"
                 onClick={handleCreate}
                 disabled={isCreating}
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#00FFC2] px-5 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#00FFC2]/80 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-busy={isCreating}
               >
                 {isCreating && <Spinner />}
@@ -369,7 +369,7 @@ export function AgentKeysPage() {
           {/* Action bar: filter tabs + buttons */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             {/* Filter tabs */}
-            <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-slate-700 dark:bg-slate-800/50">
+            <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 dark:border-[#2a2a2d] dark:bg-[#1a1a1d]/50">
               {FILTER_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
@@ -377,8 +377,8 @@ export function AgentKeysPage() {
                   onClick={() => setStatusFilter(opt.value)}
                   className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                     statusFilter === opt.value
-                      ? 'bg-white text-gray-900 shadow-sm dark:bg-slate-700 dark:text-slate-100'
-                      : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
+                      ? 'bg-white text-gray-900 shadow-sm dark:bg-[#2a2a2d] dark:text-[#e4e4e7]'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-[#a1a1aa] dark:hover:text-[#e4e4e7]'
                   }`}
                 >
                   {opt.label} ({counts[opt.value]})
@@ -392,7 +392,7 @@ export function AgentKeysPage() {
                 type="button"
                 onClick={handleRotate}
                 disabled={isRotating || isRevoked || !hasActiveKey}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#2a2a2d] dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]"
                 title={
                   isRevoked
                     ? 'Agent is revoked'
@@ -421,7 +421,7 @@ export function AgentKeysPage() {
                 type="button"
                 onClick={handleCreate}
                 disabled={isCreating || isRevoked}
-                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-indigo-600"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#00FFC2] px-4 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#00FFC2]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#00FFC2]"
                 title={isRevoked ? 'Agent is revoked' : 'Create a new API key'}
                 aria-busy={isCreating}
               >

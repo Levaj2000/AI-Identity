@@ -16,11 +16,11 @@ export function OverviewPage() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-slate-900"
+                className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-[#111113]"
               />
             ))}
           </div>
-          <div className="h-64 animate-pulse rounded-xl bg-gray-200 dark:bg-slate-900" />
+          <div className="h-64 animate-pulse rounded-xl bg-gray-200 dark:bg-[#111113]" />
         </div>
       )}
 
@@ -46,17 +46,17 @@ export function OverviewPage() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             disabled
-            className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-indigo-600/50 px-6 py-3 font-semibold text-white/60"
+            className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-[#00FFC2]/50 px-6 py-3 font-semibold text-[#0A0A0B]/60"
             title="Coming soon"
           >
             Create Agent
-            <span className="rounded-full bg-indigo-500/30 px-2 py-0.5 text-xs">Soon</span>
+            <span className="rounded-full bg-[#00FFC2]/30 px-2 py-0.5 text-xs">Soon</span>
           </button>
           <a
             href={ENDPOINTS.DOCS}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#e4e4e7] dark:hover:bg-[#2a2a2d]"
           >
             API Documentation
             <span aria-hidden="true">&rarr;</span>
@@ -65,7 +65,7 @@ export function OverviewPage() {
             href={ENDPOINTS.GITHUB}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#e4e4e7] dark:hover:bg-[#2a2a2d]"
           >
             GitHub
           </a>

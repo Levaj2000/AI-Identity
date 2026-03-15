@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { ThemeToggle } from './ThemeToggle'
+import { AIIdentityLogo5 } from '../components/AIIdentityLogo'
 
 interface SidebarProps {
   open: boolean
@@ -75,16 +76,13 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       {/* Sidebar panel */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out dark:border-slate-800 dark:bg-slate-950 lg:static lg:z-auto lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out dark:border-[#1a1a1d] dark:bg-[#0A0A0B] lg:static lg:z-auto lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand */}
-        <div className="flex h-16 shrink-0 items-center gap-2 border-b border-gray-200 px-6 dark:border-slate-800">
-          <h1 className="text-xl font-bold tracking-tight">
-            <span className="text-indigo-500">AI</span>{' '}
-            <span className="text-gray-900 dark:text-slate-100">Identity</span>
-          </h1>
+        <div className="flex h-16 shrink-0 items-center gap-2 border-b border-gray-200 px-6 dark:border-[#1a1a1d]">
+          <AIIdentityLogo5 className="h-[28px] w-auto" variant="primary" />
         </div>
 
         {/* Navigation */}
@@ -98,8 +96,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+                    ? 'bg-[#00FFC2]/10 text-[#00FFC2] dark:bg-[#00FFC2]/10 dark:text-[#00FFC2]'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d] dark:hover:text-[#e4e4e7]'
                 }`
               }
             >
@@ -110,9 +108,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-4 py-4 dark:border-slate-800">
+        <div className="border-t border-gray-200 px-4 py-4 dark:border-[#1a1a1d]">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-500 dark:text-slate-600">
+            <p className="text-xs text-gray-500 dark:text-[#52525b]">
               &copy; {new Date().getFullYear()} AI Identity
             </p>
             <ThemeToggle />

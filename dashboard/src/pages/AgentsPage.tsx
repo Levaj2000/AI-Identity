@@ -34,14 +34,14 @@ export function AgentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Agents</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">Agents</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">
             Manage your AI agent identities and permissions.
           </p>
         </div>
         <Link
           to="/agents/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#00FFC2] px-4 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#00FFC2]/80"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -68,21 +68,21 @@ export function AgentsPage() {
         <>
           {/* Desktop skeleton: table rows */}
           <div className="hidden space-y-0 md:block">
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
               {/* Header row */}
-              <div className="border-b border-gray-200 px-6 py-3 dark:border-slate-800">
-                <div className="h-3 w-48 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
+              <div className="border-b border-gray-200 px-6 py-3 dark:border-[#1a1a1d]">
+                <div className="h-3 w-48 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
               </div>
               {/* Body rows */}
               {Array.from({ length: 5 }).map((_, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-6 border-b border-gray-100 px-6 py-4 last:border-0 dark:border-slate-800/50"
+                  className="flex items-center gap-6 border-b border-gray-100 px-6 py-4 last:border-0 dark:border-[#1a1a1d]/50"
                 >
-                  <div className="h-4 w-40 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-                  <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-slate-800" />
-                  <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
-                  <div className="h-4 w-20 animate-pulse rounded bg-gray-200 dark:bg-slate-800" />
+                  <div className="h-4 w-40 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+                  <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-[#1a1a1d]" />
+                  <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+                  <div className="h-4 w-20 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
                 </div>
               ))}
             </div>
@@ -92,7 +92,7 @@ export function AgentsPage() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-slate-900"
+                className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-[#111113]"
               />
             ))}
           </div>

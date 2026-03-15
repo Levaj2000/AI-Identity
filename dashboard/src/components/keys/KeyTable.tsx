@@ -19,33 +19,33 @@ interface KeyTableProps {
 export function KeyTable({ keys, isAgentRevoked, onRevoke }: KeyTableProps) {
   if (keys.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center dark:border-slate-700 dark:bg-slate-900/50">
-        <p className="text-sm text-gray-500 dark:text-slate-500">No keys match this filter.</p>
+      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center dark:border-[#2a2a2d] dark:bg-[#111113]/50">
+        <p className="text-sm text-gray-500 dark:text-[#71717a]">No keys match this filter.</p>
       </div>
     )
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-slate-800">
+    <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-[#1a1a1d]">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-50 dark:border-slate-700 dark:bg-slate-800/50">
-            <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-400">
+          <tr className="border-b border-gray-200 bg-gray-50 dark:border-[#2a2a2d] dark:bg-[#1a1a1d]/50">
+            <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-[#a1a1aa]">
               Key Prefix
             </th>
-            <th className="hidden px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-400 sm:table-cell">
+            <th className="hidden px-4 py-3 text-left font-medium text-gray-600 dark:text-[#a1a1aa] sm:table-cell">
               Type
             </th>
-            <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-400">
+            <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-[#a1a1aa]">
               Status
             </th>
-            <th className="hidden px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-400 md:table-cell">
+            <th className="hidden px-4 py-3 text-left font-medium text-gray-600 dark:text-[#a1a1aa] md:table-cell">
               Created
             </th>
-            <th className="hidden px-4 py-3 text-left font-medium text-gray-600 dark:text-slate-400 sm:table-cell">
+            <th className="hidden px-4 py-3 text-left font-medium text-gray-600 dark:text-[#a1a1aa] sm:table-cell">
               Expires
             </th>
-            <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-slate-400">
+            <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-[#a1a1aa]">
               Actions
             </th>
           </tr>
@@ -88,11 +88,11 @@ function KeyRow({ agentKey, isAgentRevoked, onRevoke }: KeyRowProps) {
   const canRevoke = !isRevoked && !isAgentRevoked
 
   return (
-    <tr className={`border-b border-gray-100 last:border-b-0 dark:border-slate-800 ${rowClass}`}>
+    <tr className={`border-b border-gray-100 last:border-b-0 dark:border-[#1a1a1d] ${rowClass}`}>
       {/* Key Prefix */}
       <td className="px-4 py-3">
         <code
-          className={`font-[JetBrains_Mono,monospace] text-xs text-gray-900 dark:text-slate-100 ${
+          className={`font-[JetBrains_Mono,monospace] text-xs text-gray-900 dark:text-[#e4e4e7] ${
             isRevoked ? 'line-through' : ''
           }`}
         >
@@ -102,7 +102,7 @@ function KeyRow({ agentKey, isAgentRevoked, onRevoke }: KeyRowProps) {
 
       {/* Type */}
       <td className="hidden px-4 py-3 sm:table-cell">
-        <span className="text-xs capitalize text-gray-600 dark:text-slate-400">
+        <span className="text-xs capitalize text-gray-600 dark:text-[#a1a1aa]">
           {agentKey.key_type}
         </span>
       </td>
@@ -113,7 +113,7 @@ function KeyRow({ agentKey, isAgentRevoked, onRevoke }: KeyRowProps) {
       </td>
 
       {/* Created */}
-      <td className="hidden px-4 py-3 text-gray-600 dark:text-slate-400 md:table-cell">
+      <td className="hidden px-4 py-3 text-gray-600 dark:text-[#a1a1aa] md:table-cell">
         {relativeTime(agentKey.created_at)}
       </td>
 
@@ -124,7 +124,7 @@ function KeyRow({ agentKey, isAgentRevoked, onRevoke }: KeyRowProps) {
             {formatCountdown(agentKey.expires_at)}
           </span>
         ) : (
-          <span className="text-gray-400 dark:text-slate-600">&mdash;</span>
+          <span className="text-gray-400 dark:text-[#52525b]">&mdash;</span>
         )}
       </td>
 
@@ -139,9 +139,9 @@ function KeyRow({ agentKey, isAgentRevoked, onRevoke }: KeyRowProps) {
             Revoke
           </button>
         ) : isRevoked ? (
-          <span className="text-xs text-gray-400 dark:text-slate-600">Revoked</span>
+          <span className="text-xs text-gray-400 dark:text-[#52525b]">Revoked</span>
         ) : (
-          <span className="text-xs text-gray-400 dark:text-slate-600">&mdash;</span>
+          <span className="text-xs text-gray-400 dark:text-[#52525b]">&mdash;</span>
         )}
       </td>
     </tr>
