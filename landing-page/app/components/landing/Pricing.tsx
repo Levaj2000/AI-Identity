@@ -5,7 +5,12 @@ const tiers = [
     name: "Free",
     price: "$0",
     period: "/mo",
-    features: ["5 agents", "1,000 requests/day", "Community support", "Basic audit logs"],
+    features: [
+      "5 agents",
+      "1,000 requests/day",
+      "Community support",
+      "Basic audit logs",
+    ],
     cta: "Get Started Free",
     featured: false,
   },
@@ -122,15 +127,16 @@ export default function Pricing() {
                 ))}
               </ul>
 
-              <button
-                className={`mt-8 w-full py-3 rounded-lg text-sm font-semibold transition-colors ${
+              <a
+                href="https://dashboard.ai-identity.co"
+                className={`mt-8 w-full py-3 rounded-lg text-sm font-semibold transition-colors text-center block ${
                   tier.featured
-                    ? "bg-[#F59E0B] text-[#0A0A0B] hover:bg-[#F59E0B/80]"
+                    ? "bg-[#F59E0B] text-[#0A0A0B] hover:bg-[#F59E0B]/80"
                     : "border border-white/20 text-white hover:border-[#F59E0B]/40 hover:bg-white/5"
                 }`}
               >
                 {tier.cta}
-              </button>
+              </a>
             </motion.div>
           ))}
         </motion.div>

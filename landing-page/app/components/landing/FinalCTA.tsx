@@ -17,8 +17,8 @@ export default function FinalCTA() {
           Start free. Scale when you're ready.
         </p>
         <a
-          href="#pricing"
-          className="inline-block mt-10 px-10 py-4 bg-[#F59E0B] text-[#0A0A0B] font-semibold rounded-lg hover:bg-[#F59E0B/80] transition-colors text-base"
+          href="https://dashboard.ai-identity.co"
+          className="inline-block mt-10 px-10 py-4 bg-[#F59E0B] text-[#0A0A0B] font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors text-base"
         >
           Get Started Free &rarr;
         </a>
