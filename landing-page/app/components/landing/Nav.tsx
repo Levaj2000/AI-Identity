@@ -147,7 +147,13 @@ export default function Nav() {
         </div>
 
         {/* CTA */}
-        <div className="hidden md:block">
+        <div className="hidden md:flex items-center gap-4">
+          <a
+            href="https://dashboard.ai-identity.co"
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Dashboard
+          </a>
           <a
             href="#pricing"
             onClick={(e) => handleClick(e, "#pricing")}
@@ -196,6 +202,12 @@ export default function Nav() {
               {link.label}
             </a>
           ))}
+          <a
+            href="https://dashboard.ai-identity.co"
+            className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Dashboard
+          </a>
           <a
             href="#pricing"
             onClick={(e) => handleClick(e, "#pricing")}
