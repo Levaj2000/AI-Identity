@@ -5,6 +5,7 @@ const productLinks = [
   { label: "Integrations", href: "#integrations" },
   { label: "Security", href: "#security" },
   { label: "Pricing", href: "#pricing" },
+  { label: "Dashboard", href: "https://dashboard.ai-identity.co" },
   { label: "Documentation", href: "#" },
 ];
 
@@ -39,10 +40,39 @@ export default function Footer() {
           {/* Brand + Subscribe */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2.5 mb-6">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#F59E0B]">
-                <rect x="3" y="12" width="4" height="8" rx="1" fill="currentColor" opacity="0.6" />
-                <rect x="10" y="8" width="4" height="12" rx="1" fill="currentColor" opacity="0.8" />
-                <rect x="17" y="4" width="4" height="16" rx="1" fill="currentColor" />
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="text-[#F59E0B]"
+              >
+                <rect
+                  x="3"
+                  y="12"
+                  width="4"
+                  height="8"
+                  rx="1"
+                  fill="currentColor"
+                  opacity="0.6"
+                />
+                <rect
+                  x="10"
+                  y="8"
+                  width="4"
+                  height="12"
+                  rx="1"
+                  fill="currentColor"
+                  opacity="0.8"
+                />
+                <rect
+                  x="17"
+                  y="4"
+                  width="4"
+                  height="16"
+                  rx="1"
+                  fill="currentColor"
+                />
               </svg>
               <span className="text-base font-semibold text-[#F59E0B]">
                 AI Identity

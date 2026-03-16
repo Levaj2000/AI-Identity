@@ -33,8 +33,8 @@ export default function Hero() {
         {/* Buttons */}
         <div className="mt-10 flex flex-col sm:flex-row gap-4">
           <a
-            href="#pricing"
-            className="px-8 py-3.5 bg-[#F59E0B] text-[#0A0A0B] font-semibold rounded-lg hover:bg-[#F59E0B/80] transition-colors text-sm"
+            href="https://dashboard.ai-identity.co"
+            className="px-8 py-3.5 bg-[#F59E0B] text-[#0A0A0B] font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors text-sm"
           >
             Get Started Free &rarr;
           </a>
