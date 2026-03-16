@@ -2,7 +2,7 @@ interface AgentHealthItem {
   id: string
   name: string
   status: string
-  description?: string
+  description?: string | null
 }
 
 interface AgentHealthGridProps {
