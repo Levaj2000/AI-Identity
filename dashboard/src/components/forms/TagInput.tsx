@@ -48,7 +48,7 @@ export function TagInput({
 
   const borderColor = error
     ? 'border-red-500 dark:border-red-500'
-    : 'border-gray-300 dark:border-[#2a2a2d] focus-within:border-[#00FFC2] dark:focus-within:border-[#00FFC2]'
+    : 'border-gray-300 dark:border-[#2a2a2d] focus-within:border-[#F59E0B] dark:focus-within:border-[#F59E0B]'
 
   return (
     <div>

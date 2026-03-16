@@ -3,6 +3,10 @@ import { useDashboardData } from '../hooks/useDashboardData'
 import { StatsGrid } from '../components/StatsGrid'
 import { RecentActivity } from '../components/RecentActivity'
 import { GettingStarted } from '../components/GettingStarted'
+import { SystemStatusBanner } from '../components/SystemStatusBanner'
+import { RequestVolumeChart } from '../components/RequestVolumeChart'
+import { AgentHealthGrid } from '../components/AgentHealthGrid'
+import { QuickStartBar } from '../components/QuickStartBar'
 
 export function OverviewPage() {
   const { stats, recentAgents, isLoading, error, isEmpty } = useDashboardData()
@@ -46,11 +50,11 @@ export function OverviewPage() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
             disabled
-            className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-[#00FFC2]/50 px-6 py-3 font-semibold text-[#0A0A0B]/60"
+            className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-[#F59E0B]/50 px-6 py-3 font-semibold text-[#0A0A0B]/60"
             title="Coming soon"
           >
             Create Agent
-            <span className="rounded-full bg-[#00FFC2]/30 px-2 py-0.5 text-xs">Soon</span>
+            <span className="rounded-full bg-[#F59E0B]/30 px-2 py-0.5 text-xs">Soon</span>
           </button>
           <a
             href={ENDPOINTS.DOCS}
@@ -72,9 +76,27 @@ export function OverviewPage() {
         </div>
       )}
 
-      {/* Content: onboarding or activity */}
+      {/* Onboarding for empty state */}
       {!isLoading && !error && isEmpty && <GettingStarted />}
-      {!isLoading && !error && !isEmpty && <RecentActivity agents={recentAgents} />}
+
+      {/* System status banner */}
+      {!isLoading && !error && !isEmpty && <SystemStatusBanner />}
+
+      {/* Activity + Request Volume row */}
+      {!isLoading && !error && !isEmpty && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <RecentActivity agents={recentAgents} />
+          <RequestVolumeChart />
+        </div>
+      )}
+
+      {/* Agent Health + Quick Start row */}
+      {!isLoading && !error && !isEmpty && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <AgentHealthGrid agents={recentAgents} />
+          <QuickStartBar />
+        </div>
+      )}
     </div>
   )
 }

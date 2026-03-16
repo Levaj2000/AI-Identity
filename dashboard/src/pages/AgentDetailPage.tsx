@@ -229,7 +229,7 @@ export function AgentDetailPage() {
           <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
         </div>
         {/* Header skeleton */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
           <div className="flex items-center gap-4">
             <div className="h-7 w-48 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
             <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-[#1a1a1d]" />
@@ -241,7 +241,7 @@ export function AgentDetailPage() {
           </div>
         </div>
         {/* Details skeleton */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
           <div className="space-y-6">
             <div>
               <div className="mb-2 h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
@@ -299,7 +299,7 @@ export function AgentDetailPage() {
           <div className="mt-6">
             <Link
               to="/agents"
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#00FFC2] hover:text-[#00FFC2] dark:text-[#00FFC2] dark:hover:text-[#00FFC2]"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#F59E0B] hover:text-[#F59E0B] dark:text-[#F59E0B] dark:hover:text-[#F59E0B]"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -397,7 +397,7 @@ export function AgentDetailPage() {
       )}
 
       {/* Header card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
@@ -489,7 +489,7 @@ export function AgentDetailPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#00FFC2] px-3 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#00FFC2]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#00FFC2]"
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#F59E0B] px-3 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#F59E0B]"
                   aria-busy={isSaving}
                 >
                   {isSaving && (
@@ -521,7 +521,7 @@ export function AgentDetailPage() {
               <button
                 type="button"
                 onClick={enterEditMode}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#00FFC2] px-3 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#00FFC2]/80"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#F59E0B] px-3 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -549,7 +549,7 @@ export function AgentDetailPage() {
       </div>
 
       {/* Details card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
         <div className="space-y-6">
           {/* Name (edit mode only — view mode shows in header) */}
           {isEditing && (
@@ -569,7 +569,7 @@ export function AgentDetailPage() {
                 className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
                   fieldErrors.name
                     ? 'border-red-500 dark:border-red-500'
-                    : 'border-gray-300 focus:border-[#00FFC2] dark:border-[#2a2a2d] dark:focus:border-[#00FFC2]'
+                    : 'border-gray-300 focus:border-[#F59E0B] dark:border-[#2a2a2d] dark:focus:border-[#F59E0B]'
                 }`}
                 aria-invalid={!!fieldErrors.name}
                 aria-describedby={fieldErrors.name ? 'edit-name-error' : undefined}
@@ -602,7 +602,7 @@ export function AgentDetailPage() {
                   className={`w-full resize-none rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
                     fieldErrors.description
                       ? 'border-red-500 dark:border-red-500'
-                      : 'border-gray-300 focus:border-[#00FFC2] dark:border-[#2a2a2d] dark:focus:border-[#00FFC2]'
+                      : 'border-gray-300 focus:border-[#F59E0B] dark:border-[#2a2a2d] dark:focus:border-[#F59E0B]'
                   }`}
                 />
                 {fieldErrors.description && (
