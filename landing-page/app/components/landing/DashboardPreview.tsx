@@ -43,22 +43,12 @@ export default function DashboardPreview() {
                 </span>
               </div>
             </div>
-            {/* Content placeholder */}
-            <div className="flex items-center justify-center h-[400px] md:h-[500px] bg-gradient-to-br from-[#111113] to-[#0A0A0B]">
-              <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-[#F59E0B]/10 flex items-center justify-center">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7" height="7" />
-                    <rect x="14" y="3" width="7" height="7" />
-                    <rect x="14" y="14" width="7" height="7" />
-                    <rect x="3" y="14" width="7" height="7" />
-                  </svg>
-                </div>
-                <p className="text-gray-500 text-sm">
-                  Dashboard Preview — Screenshot Coming Soon
-                </p>
-              </div>
-            </div>
+            {/* Dashboard screenshot */}
+            <img
+              src="/images/dashboard-preview.jpg"
+              alt="AI Identity Dashboard — agent management, request volume, and system health"
+              className="w-full"
+            />
           </div>
         </motion.div>
       </div>
