@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom'
 export function NotFoundPage() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      <p className="text-6xl font-bold text-[#F59E0B] font-[JetBrains_Mono,monospace]">404</p>
-      <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">Page not found</h1>
-      <p className="mt-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
+      <p className="text-6xl font-bold text-indigo-500 font-[JetBrains_Mono,monospace]">404</p>
+      <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-slate-100">Page not found</h1>
+      <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">
         The page you&apos;re looking for doesn&apos;t exist or has been moved.
       </p>
       <Link
-        to="/"
-        className="mt-8 inline-flex items-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80"
+        to="/app"
+        className="mt-8 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

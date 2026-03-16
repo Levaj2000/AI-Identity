@@ -1,5 +1,6 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { DashboardLayout } from './layouts/DashboardLayout'
+import { LandingPage } from './pages/LandingPage'
 import { OverviewPage } from './pages/OverviewPage'
 import { AgentsPage } from './pages/AgentsPage'
 import { CreateAgentPage } from './pages/CreateAgentPage'
@@ -11,7 +12,11 @@ import { NotFoundPage } from './pages/NotFoundPage'
 function App() {
   return (
     <Routes>
-      <Route element={<DashboardLayout />}>
+      {/* Marketing landing page — public, no layout wrapper */}
+      <Route index element={<LandingPage />} />
+
+      {/* Dashboard — wrapped in sidebar + header layout */}
+      <Route path="app" element={<DashboardLayout />}>
         <Route index element={<OverviewPage />} />
         <Route path="agents" element={<AgentsPage />} />
         <Route path="agents/new" element={<CreateAgentPage />} />
@@ -20,6 +25,13 @@ function App() {
         <Route path="keys" element={<KeysPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
+
+      {/* Redirects — old dashboard routes → /app/* */}
+      <Route path="agents/*" element={<Navigate to="/app/agents" replace />} />
+      <Route path="keys" element={<Navigate to="/app/keys" replace />} />
+
+      {/* Catch-all */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }
