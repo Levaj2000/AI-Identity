@@ -11,7 +11,7 @@ export function AgentTable({ agents }: AgentTableProps) {
   const navigate = useNavigate()
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
       <table className="w-full">
         <thead>
           <tr className="border-b border-gray-200 dark:border-[#1a1a1d]">

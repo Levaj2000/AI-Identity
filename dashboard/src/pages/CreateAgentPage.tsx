@@ -170,7 +170,7 @@ export function CreateAgentPage() {
       {/* Form card */}
       <form
         onSubmit={handleSubmit}
-        className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl"
+        className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl"
       >
         <div className="space-y-6">
           {/* Name */}
@@ -192,7 +192,7 @@ export function CreateAgentPage() {
               className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
                 fieldErrors.name
                   ? 'border-red-500 dark:border-red-500'
-                  : 'border-gray-300 focus:border-[#00FFC2] dark:border-[#2a2a2d] dark:focus:border-[#00FFC2]'
+                  : 'border-gray-300 focus:border-[#F59E0B] dark:border-[#2a2a2d] dark:focus:border-[#F59E0B]'
               }`}
               aria-invalid={!!fieldErrors.name}
               aria-describedby={fieldErrors.name ? 'name-error' : undefined}
@@ -225,7 +225,7 @@ export function CreateAgentPage() {
               className={`w-full resize-none rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
                 fieldErrors.description
                   ? 'border-red-500 dark:border-red-500'
-                  : 'border-gray-300 focus:border-[#00FFC2] dark:border-[#2a2a2d] dark:focus:border-[#00FFC2]'
+                  : 'border-gray-300 focus:border-[#F59E0B] dark:border-[#2a2a2d] dark:focus:border-[#F59E0B]'
               }`}
               aria-invalid={!!fieldErrors.description}
               aria-describedby={fieldErrors.description ? 'description-error' : undefined}
@@ -282,7 +282,7 @@ export function CreateAgentPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#00FFC2] px-5 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#00FFC2]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#00FFC2]"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#F59E0B] px-5 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#F59E0B]"
             aria-busy={isSubmitting}
           >
             {isSubmitting && (

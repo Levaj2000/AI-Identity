@@ -8,7 +8,7 @@ export function AIIdentityLogo5({ className = '', variant = 'primary' }: LogoPro
   const colors = {
     light: '#FFFFFF',
     dark: '#0A0A0B',
-    primary: '#00FFC2',
+    primary: '#F59E0B',
   }
 
   const fillColor = colors[variant]
