@@ -7,19 +7,26 @@ import { AgentDetailPage } from './pages/AgentDetailPage'
 import { AgentKeysPage } from './pages/AgentKeysPage'
 import { KeysPage } from './pages/KeysPage'
 import { NotFoundPage } from './pages/NotFoundPage'
+import { LoginPage } from './pages/LoginPage'
 
 function App() {
   return (
     <Routes>
-      <Route element={<DashboardLayout />}>
+      {/* Public login/signup gate */}
+      <Route index element={<LoginPage />} />
+      <Route path="login" element={<LoginPage />} />
+
+      {/* Dashboard (will require auth later) */}
+      <Route path="dashboard" element={<DashboardLayout />}>
         <Route index element={<OverviewPage />} />
         <Route path="agents" element={<AgentsPage />} />
         <Route path="agents/new" element={<CreateAgentPage />} />
         <Route path="agents/:id" element={<AgentDetailPage />} />
         <Route path="agents/:id/keys" element={<AgentKeysPage />} />
         <Route path="keys" element={<KeysPage />} />
-        <Route path="*" element={<NotFoundPage />} />
       </Route>
+
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }

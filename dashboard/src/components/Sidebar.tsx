@@ -10,7 +10,7 @@ interface SidebarProps {
 const navItems = [
   {
     label: 'Overview',
-    to: '/',
+    to: '/dashboard',
     icon: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -29,7 +29,7 @@ const navItems = [
   },
   {
     label: 'Agents',
-    to: '/agents',
+    to: '/dashboard/agents',
     icon: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -44,7 +44,7 @@ const navItems = [
   },
   {
     label: 'Keys',
-    to: '/keys',
+    to: '/dashboard/keys',
     icon: (
       <svg
         xmlns="http://www.w3.org/2000/svg"
