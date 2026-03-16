@@ -2,3 +2,268 @@
 
 /* Enable class-based dark mode (toggle via .dark on <html>) */
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Smooth scrolling for anchor links ─────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Landing page animations ───────────────────────────────────── */
+
+@keyframes node-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes line-dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+@keyframes drift-1 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(6px, -4px);
+  }
+  66% {
+    transform: translate(-3px, 5px);
+  }
+}
+
+@keyframes drift-2 {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(-5px, 3px);
+  }
+  66% {
+    transform: translate(4px, -6px);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes request-dot {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px rgba(79, 70, 229, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(79, 70, 229, 0.6));
+  }
+}
+
+/* ── Typewriter cursor blink ──────────────────────────────────── */
+
+@keyframes cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ── CTA floating orbs ───────────────────────────────────────── */
+
+@keyframes float-orb-1 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(30px, -40px) scale(1.05);
+  }
+  50% {
+    transform: translate(-20px, -60px) scale(0.95);
+  }
+  75% {
+    transform: translate(40px, -20px) scale(1.02);
+  }
+}
+
+@keyframes float-orb-2 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-40px, 30px) scale(1.08);
+  }
+  66% {
+    transform: translate(30px, -50px) scale(0.96);
+  }
+}
+
+@keyframes float-orb-3 {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  20% {
+    transform: translate(50px, 20px) scale(0.94);
+  }
+  40% {
+    transform: translate(-30px, 50px) scale(1.06);
+  }
+  60% {
+    transform: translate(20px, -30px) scale(1.02);
+  }
+  80% {
+    transform: translate(-40px, -10px) scale(0.98);
+  }
+}
+
+/* ── CTA gradient animation ──────────────────────────────────── */
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ── Hero headline glow flash ────────────────────────────────── */
+
+@keyframes text-glow {
+  0% {
+    text-shadow: 0 0 0 transparent;
+  }
+  50% {
+    text-shadow:
+      0 0 30px rgba(99, 102, 241, 0.5),
+      0 0 60px rgba(99, 102, 241, 0.2);
+  }
+  100% {
+    text-shadow: 0 0 0 transparent;
+  }
+}
+
+/* ── Architecture connection line draw-in ────────────────────── */
+
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ── Nav progress bar shimmer ────────────────────────────────── */
+
+@keyframes progress-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ── 3D perspective container for card tilt ───────────────────── */
+
+.perspective-container {
+  perspective: 800px;
+}
+
+/* ── Gradient border glow on hover ───────────────────────────── */
+
+.card-glow {
+  position: relative;
+}
+
+.card-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 0deg,
+    rgba(99, 102, 241, 0.3),
+    rgba(245, 158, 11, 0.2),
+    rgba(99, 102, 241, 0.3),
+    rgba(16, 185, 129, 0.2),
+    rgba(99, 102, 241, 0.3)
+  );
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.card-glow:hover::before {
+  opacity: 1;
+}
+
+/* ── Cursor spotlight overlay ────────────────────────────────── */
+
+.cursor-spotlight {
+  --spot-x: 50%;
+  --spot-y: 50%;
+  background: radial-gradient(
+    600px circle at var(--spot-x) var(--spot-y),
+    rgba(99, 102, 241, 0.06),
+    transparent 50%
+  );
+}
+
+/* ── Accessibility: respect reduced motion preference ─────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
