@@ -32,7 +32,7 @@ const steps = [
 
 export function GettingStarted() {
   return (
-    <div className="rounded-xl border border-[#00FFC2]/20 bg-[#00FFC2]/5 p-8 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+    <div className="rounded-xl border border-[#F59E0B]/20 bg-[#F59E0B]/5 p-8 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
       <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">
         Getting Started
       </h2>
@@ -42,7 +42,7 @@ export function GettingStarted() {
           href={`${API_BASE_URL}/docs`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#00FFC2] underline underline-offset-2 hover:text-[#00FFC2] dark:text-[#00FFC2] dark:hover:text-[#00FFC2]"
+          className="text-[#F59E0B] underline underline-offset-2 hover:text-[#F59E0B] dark:text-[#F59E0B] dark:hover:text-[#F59E0B]"
         >
           API docs
         </a>{' '}
@@ -56,7 +56,7 @@ export function GettingStarted() {
             className="rounded-lg border border-gray-200 bg-white p-5 dark:border-[#1a1a1d] dark:bg-[#0A0A0B]/50"
           >
             <div className="mb-2 flex items-center gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#00FFC2] text-xs font-bold text-[#0A0A0B]">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F59E0B] text-xs font-bold text-[#0A0A0B]">
                 {step.number}
               </span>
               <h3 className="font-medium text-gray-900 dark:text-[#e4e4e7]">{step.title}</h3>

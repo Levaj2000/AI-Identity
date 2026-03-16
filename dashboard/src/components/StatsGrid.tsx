@@ -68,8 +68,8 @@ export function StatsGrid({ stats }: StatsGridProps) {
         label="Total Agents"
         value={stats.totalAgents}
         icon={icons.grid}
-        accent="text-[#00FFC2]"
-        glowColor="rgba(0,255,194,0.05)"
+        accent="text-[#F59E0B]"
+        glowColor="rgba(245,158,11,0.05)"
       />
       <StatsCard
         label="Active"

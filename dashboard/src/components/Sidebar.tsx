@@ -96,7 +96,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-[#00FFC2]/10 text-[#00FFC2] dark:bg-[#00FFC2]/10 dark:text-[#00FFC2]'
+                    ? 'bg-[#F59E0B]/10 text-[#F59E0B] dark:bg-[#F59E0B]/10 dark:text-[#F59E0B]'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d] dark:hover:text-[#e4e4e7]'
                 }`
               }

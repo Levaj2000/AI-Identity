@@ -12,7 +12,7 @@ export function DashboardLayout() {
     <div className="relative flex h-screen bg-gray-50 font-[Inter,system-ui,sans-serif] text-gray-900 dark:bg-[#0A0A0B] dark:text-[#e4e4e7]">
       {/* Gradient accent line — dark mode only */}
       <div className="hidden dark:block absolute top-0 left-0 right-0 z-50">
-        <div className="h-[2px] w-full bg-gradient-to-r from-[#00FFC2] via-[#00FFC2]/50 to-transparent" />
+        <div className="h-[2px] w-full bg-gradient-to-r from-[#F59E0B] via-[#F59E0B]/50 to-transparent" />
       </div>
 
       {/* Sidebar */}
@@ -44,7 +44,7 @@ export function DashboardLayout() {
 
           {/* Brand visible on mobile (hidden on desktop since sidebar shows it) */}
           <h1 className="text-lg font-bold tracking-tight lg:hidden">
-            <span className="text-[#00FFC2]">AI</span>{' '}
+            <span className="text-[#F59E0B]">AI</span>{' '}
             <span className="text-gray-900 dark:text-[#e4e4e7]">Identity</span>
           </h1>
 

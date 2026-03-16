@@ -40,14 +40,14 @@ export function KeyValueEditor({ entries, onChange, error }: KeyValueEditorProps
                 value={entry.key}
                 onChange={(e) => updateRow(i, 'key', e.target.value)}
                 placeholder="Key"
-                className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[#00FFC2] dark:border-[#2a2a2d] dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] dark:focus:border-[#00FFC2]"
+                className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[#F59E0B] dark:border-[#2a2a2d] dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] dark:focus:border-[#F59E0B]"
               />
               <input
                 type="text"
                 value={entry.value}
                 onChange={(e) => updateRow(i, 'value', e.target.value)}
                 placeholder="Value"
-                className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[#00FFC2] dark:border-[#2a2a2d] dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] dark:focus:border-[#00FFC2]"
+                className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[#F59E0B] dark:border-[#2a2a2d] dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] dark:focus:border-[#F59E0B]"
               />
               <button
                 type="button"
@@ -77,7 +77,7 @@ export function KeyValueEditor({ entries, onChange, error }: KeyValueEditorProps
       <button
         type="button"
         onClick={addRow}
-        className={`inline-flex items-center gap-1.5 text-sm font-medium text-[#00FFC2] transition-colors hover:text-[#00FFC2] dark:text-[#00FFC2] dark:hover:text-[#00FFC2] ${entries.length > 0 ? 'mt-3' : ''}`}
+        className={`inline-flex items-center gap-1.5 text-sm font-medium text-[#F59E0B] transition-colors hover:text-[#F59E0B] dark:text-[#F59E0B] dark:hover:text-[#F59E0B] ${entries.length > 0 ? 'mt-3' : ''}`}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
