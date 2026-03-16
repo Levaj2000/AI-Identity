@@ -78,7 +78,7 @@ function StatusIcon({ status }: { status: string }) {
 
 export function RecentActivity({ agents }: RecentActivityProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#00FFC2]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
       <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">
         Recent Activity
       </h2>
@@ -87,7 +87,7 @@ export function RecentActivity({ agents }: RecentActivityProps) {
         {agents.map((agent) => (
           <div
             key={agent.id}
-            className="flex items-center justify-between rounded-lg border border-l-2 border-transparent border-gray-200 bg-gray-50 px-4 py-3 transition-all duration-200 hover:border-l-[#00FFC2] dark:border-[#1a1a1d] dark:border-l-transparent dark:bg-[#0A0A0B]/50 dark:hover:border-l-[#00FFC2] dark:hover:bg-[#00FFC2]/5"
+            className="flex items-center justify-between rounded-lg border border-l-2 border-transparent border-gray-200 bg-gray-50 px-4 py-3 transition-all duration-200 hover:border-l-[#F59E0B] dark:border-[#1a1a1d] dark:border-l-transparent dark:bg-[#0A0A0B]/50 dark:hover:border-l-[#F59E0B] dark:hover:bg-[#F59E0B]/5"
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <StatusIcon status={agent.status} />

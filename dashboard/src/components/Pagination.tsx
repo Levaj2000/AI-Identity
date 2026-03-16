@@ -80,7 +80,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange }: 
               aria-label={`Go to page ${p}`}
               className={`min-w-[2.25rem] rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 p === page
-                  ? 'bg-[#00FFC2] text-[#0A0A0B]'
+                  ? 'bg-[#F59E0B] text-[#0A0A0B]'
                   : 'text-gray-700 hover:bg-gray-100 dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]'
               }`}
             >
