@@ -19,7 +19,7 @@ services:
       - key: LOG_LEVEL
         value: INFO
       - key: CORS_ORIGINS
-        value: https://ai-identity.co,https://www.ai-identity.co,http://localhost:5173
+        value: https://ai-identity.co,https://www.ai-identity.co,https://dashboard.ai-identity.co,http://localhost:5173
       - key: CORS_ORIGIN_REGEX
         value: https://dashboard-.*-jeff-levas-projects\.vercel\.app
       - key: AUDIT_HMAC_KEY
@@ -50,7 +50,7 @@ services:
       - key: LOG_LEVEL
         value: INFO
       - key: CORS_ORIGINS
-        value: https://ai-identity.co,https://www.ai-identity.co,http://localhost:5173
+        value: https://ai-identity.co,https://www.ai-identity.co,https://dashboard.ai-identity.co,http://localhost:5173
       - key: CORS_ORIGIN_REGEX
         value: https://dashboard-.*-jeff-levas-projects\.vercel\.app
       - key: AUDIT_HMAC_KEY
