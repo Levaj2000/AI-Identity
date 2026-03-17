@@ -32,7 +32,7 @@ export function KeysPage() {
           pages.
         </p>
         <Link
-          to="/agents"
+          to="/dashboard/agents"
           className="mt-6 inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#d4d4d8] dark:hover:bg-[#2a2a2d]"
         >
           View Agents

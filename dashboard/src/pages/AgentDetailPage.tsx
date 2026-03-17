@@ -271,7 +271,7 @@ export function AgentDetailPage() {
     return (
       <div className="space-y-6">
         <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
-          <Link to="/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
+          <Link to="/dashboard/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
             Agents
           </Link>
           <ChevronIcon />
@@ -298,7 +298,7 @@ export function AgentDetailPage() {
           </p>
           <div className="mt-6">
             <Link
-              to="/agents"
+              to="/dashboard/agents"
               className="inline-flex items-center gap-2 text-sm font-medium text-[#F59E0B] hover:text-[#F59E0B] dark:text-[#F59E0B] dark:hover:text-[#F59E0B]"
             >
               <svg
@@ -327,7 +327,7 @@ export function AgentDetailPage() {
     return (
       <div className="space-y-6">
         <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
-          <Link to="/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
+          <Link to="/dashboard/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
             Agents
           </Link>
           <ChevronIcon />
@@ -353,7 +353,7 @@ export function AgentDetailPage() {
     <div className="space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
-        <Link to="/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
+        <Link to="/dashboard/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
           Agents
         </Link>
         <ChevronIcon />

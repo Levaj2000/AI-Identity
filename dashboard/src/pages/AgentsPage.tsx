@@ -40,7 +40,7 @@ export function AgentsPage() {
           </p>
         </div>
         <Link
-          to="/agents/new"
+          to="/dashboard/agents/new"
           className="inline-flex items-center gap-2 rounded-lg bg-[#F59E0B] px-4 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80"
         >
           <svg
