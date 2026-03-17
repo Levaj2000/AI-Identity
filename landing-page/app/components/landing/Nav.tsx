@@ -149,6 +149,12 @@ export default function Nav() {
         {/* CTA */}
         <div className="hidden md:flex items-center gap-4">
           <a
+            href="https://dashboard.ai-identity.co/demo"
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Live Demo
+          </a>
+          <a
             href="https://dashboard.ai-identity.co"
             className="text-sm text-gray-400 hover:text-white transition-colors"
           >
@@ -202,6 +208,12 @@ export default function Nav() {
               {link.label}
             </a>
           ))}
+          <a
+            href="https://dashboard.ai-identity.co/demo"
+            className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Live Demo
+          </a>
           <a
             href="https://dashboard.ai-identity.co"
             className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
