@@ -315,6 +315,32 @@ if [ -n "$CEO_KEY" ]; then
     -d "{\"title\": \"QA Smoke Test — $RUN_DATE\", \"body\": \"$BODY\", \"mood\": \"$MOOD\", \"author\": \"pm\", \"tags\": [\"qa\", \"automated\"], \"pinned\": false}" > /dev/null 2>&1 && \
     echo "📊 Results posted to CEO Dashboard" || \
     echo "⚠️  Could not post to CEO Dashboard (is it running?)"
+
+  # ── Auto-file Ops Issue on failure ──────────────────────────────────
+  if [ "$FAIL" -gt 0 ]; then
+    # Build description with failed steps
+    ISSUE_DESC="Automated QA smoke test detected $FAIL failure(s) on $RUN_DATE.\\n\\nFailed steps:\\n"
+    for r in "${RESULTS[@]}"; do
+      if echo "$r" | grep -q "FAIL"; then
+        ISSUE_DESC="${ISSUE_DESC}- ${r}\\n"
+      fi
+    done
+    ISSUE_DESC="${ISSUE_DESC}\\nTotal: $PASS passed, $FAIL failed out of $((PASS + FAIL))."
+
+    # Determine severity: P1 if >50% fail, P2 otherwise
+    HALF=$(( (PASS + FAIL) / 2 ))
+    SEVERITY="P2"
+    [ "$FAIL" -gt "$HALF" ] && SEVERITY="P1"
+
+    curl -sf -X POST "$CEO_API/ops/issues" \
+      -H "X-API-Key: $CEO_KEY" \
+      -H "Content-Type: application/json" \
+      -d "{\"title\": \"QA Smoke Test Failure — $FAIL step(s) failed ($RUN_DATE)\", \"description\": \"$ISSUE_DESC\", \"severity\": \"$SEVERITY\", \"status\": \"open\", \"company_slug\": \"ai-identity\"}" > /dev/null 2>&1 && \
+      echo "🚨 Ops issue filed to CEO Dashboard" || \
+      echo "⚠️  Could not file ops issue"
+  else
+    echo "✅ No failures — no ops issue filed"
+  fi
 fi
 
 # Exit with failure if any steps failed
