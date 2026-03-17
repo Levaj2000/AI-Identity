@@ -10,6 +10,7 @@ Run on Render: uvicorn api.app.main:app --host 0.0.0.0 --port $PORT
 import logging
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -70,6 +71,18 @@ OPENAPI_TAGS = [
     },
 ]
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup/shutdown lifecycle — replaces deprecated on_event."""
+    logger.info(
+        "AI Identity API starting — env=%s, version=%s",
+        settings.environment,
+        settings.app_version,
+    )
+    yield
+
+
 app = FastAPI(
     title="AI Identity API",
     summary="Identity and key management for AI agents",
@@ -85,6 +98,7 @@ app = FastAPI(
     license_info={
         "name": "MIT",
     },
+    lifespan=lifespan,
 )
 
 # ── CORS ─────────────────────────────────────────────────────────────────
@@ -196,19 +210,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
                 "message": "An unexpected error occurred",
             }
         },
-    )
-
-
-# ── Startup / Shutdown ───────────────────────────────────────────────────
-
-
-@app.on_event("startup")
-async def startup():
-    """Log service start with environment info."""
-    logger.info(
-        "AI Identity API starting — env=%s, version=%s",
-        settings.environment,
-        settings.app_version,
     )
 
 

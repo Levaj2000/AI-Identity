@@ -14,6 +14,7 @@ import logging
 import math
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,6 +50,26 @@ OPENAPI_TAGS = [
     },
 ]
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup/shutdown lifecycle — replaces deprecated on_event."""
+    logger.info(
+        "AI Identity Gateway starting — env=%s, version=%s, "
+        "policy_timeout=%dms, circuit_breaker=%d failures/%ds window, "
+        "rate_limit=%s (ip=%d/s, key=%d/s)",
+        settings.environment,
+        settings.app_version,
+        settings.policy_eval_timeout_ms,
+        settings.circuit_breaker_failure_threshold,
+        settings.circuit_breaker_window_seconds,
+        "enabled" if settings.rate_limit_enabled else "DISABLED",
+        settings.rate_limit_per_ip,
+        settings.rate_limit_per_key,
+    )
+    yield
+
+
 app = FastAPI(
     title="AI Identity — Gateway",
     description=(
@@ -58,6 +79,7 @@ app = FastAPI(
     ),
     version=settings.app_version,
     openapi_tags=OPENAPI_TAGS,
+    lifespan=lifespan,
 )
 
 # ── RLS Service Bypass ───────────────────────────────────────────────────
@@ -272,27 +294,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
                 "message": "An unexpected error occurred",
             }
         },
-    )
-
-
-# ── Startup ──────────────────────────────────────────────────────────────
-
-
-@app.on_event("startup")
-async def startup():
-    """Log service start with environment info and fail-closed config."""
-    logger.info(
-        "AI Identity Gateway starting — env=%s, version=%s, "
-        "policy_timeout=%dms, circuit_breaker=%d failures/%ds window, "
-        "rate_limit=%s (ip=%d/s, key=%d/s)",
-        settings.environment,
-        settings.app_version,
-        settings.policy_eval_timeout_ms,
-        settings.circuit_breaker_failure_threshold,
-        settings.circuit_breaker_window_seconds,
-        "enabled" if settings.rate_limit_enabled else "DISABLED",
-        settings.rate_limit_per_ip,
-        settings.rate_limit_per_key,
     )
 
 
