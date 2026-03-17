@@ -66,6 +66,12 @@ OPENAPI_TAGS = [
         "Credentials are Fernet-encrypted at rest — plaintext keys never touch disk.",
     },
     {
+        "name": "compliance",
+        "description": "Compliance assessment engine — run checks against NIST AI RMF, "
+        "EU AI Act, SOC 2, and internal best practices. Automated evaluation "
+        "of agent policies, key hygiene, audit integrity, and credential security.",
+    },
+    {
         "name": "health",
         "description": "Service health and status endpoints.",
     },
@@ -80,6 +86,33 @@ async def lifespan(app: FastAPI):
         settings.environment,
         settings.app_version,
     )
+
+    # Auto-create compliance tables and seed frameworks
+    try:
+        from common.models.base import Base, engine
+        from common.models.compliance import ComplianceFramework  # noqa: F811
+
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables ensured (including compliance)")
+
+        # Seed compliance frameworks if empty
+        from common.models.base import SessionLocal
+
+        db = SessionLocal()
+        try:
+            count = db.query(ComplianceFramework).count()
+            if count == 0:
+                logger.info("Seeding compliance frameworks...")
+                from scripts.seed_compliance import seed
+
+                seed()
+            else:
+                logger.info("Compliance frameworks already seeded (%d found)", count)
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning("Compliance auto-seed skipped: %s", e)
+
     yield
 
 
@@ -234,11 +267,13 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 from api.app.routers.agents import router as agents_router  # noqa: E402
 from api.app.routers.audit import router as audit_router  # noqa: E402
+from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
 
 app.include_router(agents_router)
 app.include_router(audit_router)
+app.include_router(compliance_router)
 app.include_router(credentials_router)
 app.include_router(keys_router)
 
