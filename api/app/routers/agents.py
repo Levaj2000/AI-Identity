@@ -8,6 +8,7 @@ from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
+from api.app.quota import check_agent_quota
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
 from common.models import Agent, AgentKey, AgentStatus, KeyStatus, KeyType, User, get_db
 from common.queries import get_user_agent
@@ -50,6 +51,9 @@ def create_agent(
     The agent starts with `status=active` and can optionally include
     `capabilities` (list) and `metadata` (dict).
     """
+    # Enforce tier quota on agent creation
+    check_agent_quota(db, user)
+
     agent = Agent(
         id=uuid.uuid4(),
         user_id=user.id,
