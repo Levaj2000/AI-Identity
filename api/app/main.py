@@ -72,6 +72,11 @@ OPENAPI_TAGS = [
         "of agent policies, key hygiene, audit integrity, and credential security.",
     },
     {
+        "name": "usage",
+        "description": "Account usage and quota management — check resource utilization "
+        "against your tier limits and view available plans.",
+    },
+    {
         "name": "health",
         "description": "Service health and status endpoints.",
     },
@@ -270,12 +275,14 @@ from api.app.routers.audit import router as audit_router  # noqa: E402
 from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
+from api.app.routers.usage import router as usage_router  # noqa: E402
 
 app.include_router(agents_router)
 app.include_router(audit_router)
 app.include_router(compliance_router)
 app.include_router(credentials_router)
 app.include_router(keys_router)
+app.include_router(usage_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────
 
