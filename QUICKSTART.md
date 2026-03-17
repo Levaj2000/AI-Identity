@@ -2,7 +2,7 @@
 
 **Zero to first agent identity + gateway-proxied request in 15 minutes.**
 
-> Prefer an interactive walkthrough? Try the [Live Demo](https://ai-identity.co/demo) — it runs these same steps against the real API.
+> Prefer an interactive walkthrough? Try the [Live Demo](https://dashboard.ai-identity.co/demo) — it runs these same steps against the real API.
 
 ---
 
@@ -432,7 +432,7 @@ curl -s -X DELETE $AI_API/api/v1/agents/$AGENT_ID/keys/{key_id} \
 - **Swagger UI**: `$AI_API/docs`
 - **ReDoc**: `$AI_API/redoc`
 - **OpenAPI spec**: `$AI_API/openapi.json`
-- **Live Demo**: [ai-identity.co/demo](https://ai-identity.co/demo)
+- **Live Demo**: [ai-identity.co/demo](https://dashboard.ai-identity.co/demo)
 
 ## Local Development
 
