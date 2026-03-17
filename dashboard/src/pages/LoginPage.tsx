@@ -180,8 +180,14 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Contact Sales */}
-      <div className="mt-8 text-center">
+      {/* Try Demo + Contact Sales */}
+      <div className="mt-8 text-center space-y-2">
+        <p className="text-gray-500 text-sm">
+          Want to see it in action?{' '}
+          <a href="/demo" className="text-[#F59E0B] hover:underline font-medium">
+            Try the Live Demo &rarr;
+          </a>
+        </p>
         <p className="text-gray-500 text-sm">
           Need an enterprise plan?{' '}
           <a
