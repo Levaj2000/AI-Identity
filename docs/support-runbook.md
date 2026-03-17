@@ -164,24 +164,36 @@ Partner reports issue
 | **CEO Dashboard** | Sprint tracking, briefings, insights | ✅ Active |
 | **QA Smoke Test** | Weekly automated 15-step production test | ✅ Active (GitHub Actions) |
 
+| **UptimeRobot** | External uptime monitoring, alerting, public status page | ✅ Active |
+| **CEO Dashboard Ops** | Live service health, triage reference, incident checklists | ✅ Active (ceo.corethread.tech/ops) |
+
 ### Recommended Additions (Design Partner Phase)
 
 | Tool | Purpose | Priority | Cost |
 |------|---------|----------|------|
-| **UptimeRobot** (or Betteruptime) | Monitor API + Gateway uptime, alert on downtime | P1 | Free tier covers 5 monitors |
 | **Sentry** | Error tracking with stack traces, auto-grouping | P2 | Free tier covers 5K events/mo |
 | **Render Cron** or **GitHub Actions ping** | Keep-alive ping to prevent cold starts | P2 | Free |
-| **Simple status page** | Public page showing service health for partners | P3 | Free (Betteruptime, Instatus) |
 
-### Setting Up UptimeRobot (recommended first)
+### UptimeRobot Setup
 
-1. Sign up at uptimerobot.com (free)
-2. Add monitors:
-   - `https://ai-identity-api.onrender.com/health` (HTTP, 5 min interval)
-   - `https://ai-identity-gateway.onrender.com/health` (HTTP, 5 min interval)
-   - `https://dashboard.ai-identity.co` (HTTP, 5 min interval)
-3. Set alert contacts: your email + phone (for P0)
-4. Enable the public status page (share URL with partners)
+Monitors are provisioned via `scripts/setup-uptimerobot.sh`. Services monitored (5-min checks):
+
+| Monitor | URL |
+|---------|-----|
+| AI Identity API | `https://ai-identity-api.onrender.com/health` |
+| AI Identity Gateway | `https://ai-identity-gateway.onrender.com/health` |
+| AI Identity Dashboard | `https://dashboard.ai-identity.co` |
+| AI Identity Landing | `https://ai-identity.co` |
+| CEO Dashboard | `https://ceo.corethread.tech` |
+
+**Public Status Page**: Share with design partners for transparency.
+**Alerts**: Email on all downtime, SMS for P0.
+
+To re-run setup or add monitors:
+```bash
+export UPTIMEROBOT_API_KEY="ur_your_key_here"
+./scripts/setup-uptimerobot.sh
+```
 
 ---
 
