@@ -1,0 +1,88 @@
+name: QA Smoke Test
+
+on:
+  schedule:
+    # Every Monday at 2pm UTC (8am MT)
+    - cron: '0 14 * * 1'
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run QA Smoke Test
+        id: smoke
+        env:
+          AI_IDENTITY_QA_KEY: ${{ secrets.AI_IDENTITY_QA_KEY }}
+          # CEO Dashboard posting is optional — skip if secret not set
+          CEO_API_KEY: ${{ secrets.CEO_API_KEY }}
+          CEO_DASHBOARD_API: ${{ secrets.CEO_DASHBOARD_API }}
+        run: |
+          chmod +x scripts/qa-smoke-test.sh
+          # Capture output for the summary
+          set +e
+          scripts/qa-smoke-test.sh 2>&1 | tee qa-results.txt
+          EXIT_CODE=$?
+          set -e
+
+          # Write results to GitHub step summary
+          echo "## QA Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat qa-results.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+          exit $EXIT_CODE
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-results-${{ github.run_number }}
+          path: qa-results.txt
+          retention-days: 90
+
+      - name: Create issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const results = fs.readFileSync('qa-results.txt', 'utf8');
+
+            // Check if there's already an open QA failure issue
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'qa-failure',
+              state: 'open',
+            });
+
+            if (issues.data.length > 0) {
+              // Comment on existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                body: `## QA Smoke Test Failed Again — ${new Date().toISOString().slice(0, 10)}\n\n\`\`\`\n${results}\n\`\`\`\n\n[Workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              });
+            } else {
+              // Create new issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `QA Smoke Test Failure — ${new Date().toISOString().slice(0, 10)}`,
+                body: `The weekly QA smoke test failed.\n\n\`\`\`\n${results}\n\`\`\`\n\n[Workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+                labels: ['qa-failure', 'bug'],
+              });
+            }
