@@ -52,7 +52,7 @@ jobs:
           path: qa-results.txt
           retention-days: 90
 
-      - name: Create issue on failure
+      - name: Create GitHub issue on failure
         if: failure()
         uses: actions/github-script@v7
         with:
@@ -86,3 +86,30 @@ jobs:
                 labels: ['qa-failure', 'bug'],
               });
             }
+
+      - name: File Ops issue on CEO Dashboard
+        if: failure()
+        env:
+          CEO_API_KEY: ${{ secrets.CEO_API_KEY }}
+          CEO_DASHBOARD_API: ${{ secrets.CEO_DASHBOARD_API }}
+        run: |
+          if [ -n "$CEO_API_KEY" ] && [ -n "$CEO_DASHBOARD_API" ]; then
+            RESULTS=$(cat qa-results.txt)
+            FAIL_COUNT=$(echo "$RESULTS" | grep -c "FAIL" || echo "0")
+            DATE=$(date '+%Y-%m-%d %H:%M UTC')
+
+            # P1 if many failures, P2 if few
+            SEVERITY="P2"
+            [ "$FAIL_COUNT" -gt 5 ] && SEVERITY="P1"
+
+            curl -sf -X POST "$CEO_DASHBOARD_API/ops/issues" \
+              -H "X-API-Key: $CEO_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"title\": \"QA Smoke Test Failure — $FAIL_COUNT step(s) failed ($DATE)\",
+                \"description\": \"Automated weekly QA detected failures. See GitHub Actions run #${{ github.run_number }} for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+                \"severity\": \"$SEVERITY\",
+                \"status\": \"open\",
+                \"company_slug\": \"ai-identity\"
+              }" && echo "Ops issue filed" || echo "Could not file ops issue"
+          fi
