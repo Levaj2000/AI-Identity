@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
 const API_BASE = 'https://ai-identity-api.onrender.com'
+const GATEWAY_BASE = 'https://ai-identity-gateway.onrender.com'
 
 interface TerminalLine {
   type: 'command' | 'response' | 'info' | 'error' | 'success'
@@ -193,7 +194,83 @@ export function DemoPage() {
     setLoading(false)
   }
 
-  // Step 4: View audit log
+  // Step 4: Gateway enforce — allowed request
+  const runGatewayAllow = async () => {
+    if (!agent) return
+    setLoading(true)
+    typeCommand(
+      `curl -X POST "${GATEWAY_BASE}/gateway/enforce?agent_id=${agent.id}&endpoint=/v1/chat/completions&method=POST"`,
+    )
+    addLines([
+      {
+        type: 'info',
+        text: '# Sending request through the gateway enforcement engine...',
+      },
+    ])
+    try {
+      const res = await fetch(
+        `${GATEWAY_BASE}/gateway/enforce?agent_id=${agent.id}&endpoint=/v1/chat/completions&method=POST`,
+        { method: 'POST' },
+      )
+      const data = await res.json()
+      addLines([
+        { type: 'response', text: JSON.stringify(data, null, 2) },
+        {
+          type: data.decision === 'allow' ? 'success' : 'info',
+          text:
+            data.decision === 'allow'
+              ? '✓ Gateway ALLOWED — request passed policy enforcement'
+              : `ℹ Gateway decision: ${data.decision} — ${data.deny_reason || data.message}`,
+        },
+        { type: 'info', text: '' },
+      ])
+    } catch {
+      addLines([{ type: 'error', text: '✗ Gateway unreachable' }])
+    }
+    setLoading(false)
+
+    // Now fire a denied request (management endpoint with runtime key concept)
+    setTimeout(async () => {
+      setLoading(true)
+      typeCommand(
+        `curl -X POST "${GATEWAY_BASE}/gateway/enforce?agent_id=${agent.id}&endpoint=/api/v1/agents&method=GET&key_type=runtime"`,
+      )
+      addLines([
+        {
+          type: 'info',
+          text: '# Attempting to access management endpoint with a runtime key...',
+        },
+      ])
+      try {
+        const res2 = await fetch(
+          `${GATEWAY_BASE}/gateway/enforce?agent_id=${agent.id}&endpoint=/api/v1/agents&method=GET&key_type=runtime`,
+          { method: 'POST' },
+        )
+        const data2 = await res2.json()
+        addLines([
+          { type: 'response', text: JSON.stringify(data2, null, 2) },
+          {
+            type: data2.decision === 'deny' ? 'error' : 'success',
+            text:
+              data2.decision === 'deny'
+                ? `✗ Gateway DENIED — ${data2.deny_reason || 'runtime key cannot access management endpoints'}`
+                : `✓ Gateway decision: ${data2.decision}`,
+          },
+          {
+            type: 'info',
+            text: '# ↑ This is key separation in action: runtime keys are blocked from admin endpoints.',
+          },
+          { type: 'info', text: '' },
+        ])
+      } catch {
+        addLines([{ type: 'error', text: '✗ Gateway unreachable' }])
+      }
+      setLoading(false)
+      setStep(4)
+    }, 500)
+  }
+
+  // Step 5: View audit log
   const runAuditLog = async () => {
     setLoading(true)
     const url = agent
@@ -217,7 +294,7 @@ export function DemoPage() {
           },
           { type: 'info', text: '' },
         ])
-        setStep(4)
+        setStep(5)
       } else {
         addLines([
           { type: 'response', text: JSON.stringify(data, null, 2) },
@@ -230,7 +307,7 @@ export function DemoPage() {
     setLoading(false)
   }
 
-  // Step 5: Verify audit chain
+  // Step 6: Verify audit chain
   const runVerifyChain = async () => {
     setLoading(true)
     typeCommand(
@@ -261,7 +338,7 @@ export function DemoPage() {
             text: '# Register agents → Authenticate with scoped keys → Audit everything.',
           },
         ])
-        setStep(5)
+        setStep(6)
       } else {
         addLines([
           { type: 'response', text: JSON.stringify(data, null, 2) },
@@ -330,16 +407,22 @@ export function DemoPage() {
       active: step === 2,
     },
     {
-      label: '4. Audit Log',
-      description: 'View the tamper-proof audit trail',
-      action: runAuditLog,
+      label: '4. Gateway Enforce',
+      description: 'Test allow + deny through the policy engine',
+      action: runGatewayAllow,
       active: step === 3,
     },
     {
-      label: '5. Verify Chain',
+      label: '5. Audit Log',
+      description: 'View the tamper-proof audit trail',
+      action: runAuditLog,
+      active: step === 4,
+    },
+    {
+      label: '6. Verify Chain',
       description: 'Cryptographically verify audit integrity',
       action: runVerifyChain,
-      active: step === 4,
+      active: step === 5,
     },
   ]
 
@@ -474,7 +557,7 @@ export function DemoPage() {
             ))}
 
             {/* Cleanup button */}
-            {agent && step >= 5 && (
+            {agent && step >= 6 && (
               <button
                 onClick={runCleanup}
                 disabled={loading}
