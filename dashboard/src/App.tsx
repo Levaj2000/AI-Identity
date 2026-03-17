@@ -9,6 +9,7 @@ import { KeysPage } from './pages/KeysPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { LoginPage } from './pages/LoginPage'
 import { DemoPage } from './pages/DemoPage'
+import { CompliancePage } from './pages/CompliancePage'
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
         <Route path="agents/:id" element={<AgentDetailPage />} />
         <Route path="agents/:id/keys" element={<AgentKeysPage />} />
         <Route path="keys" element={<KeysPage />} />
+        <Route path="compliance" element={<CompliancePage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
