@@ -8,6 +8,7 @@ import { AgentKeysPage } from './pages/AgentKeysPage'
 import { KeysPage } from './pages/KeysPage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { LoginPage } from './pages/LoginPage'
+import { DemoPage } from './pages/DemoPage'
 
 function App() {
   return (
@@ -15,6 +16,9 @@ function App() {
       {/* Public login/signup gate */}
       <Route index element={<LoginPage />} />
       <Route path="login" element={<LoginPage />} />
+
+      {/* Public interactive demo */}
+      <Route path="demo" element={<DemoPage />} />
 
       {/* Dashboard (will require auth later) */}
       <Route path="dashboard" element={<DashboardLayout />}>
