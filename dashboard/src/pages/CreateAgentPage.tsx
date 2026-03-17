@@ -132,7 +132,7 @@ export function CreateAgentPage() {
     <div className="space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
-        <Link to="/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
+        <Link to="/dashboard/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
           Agents
         </Link>
         <svg
@@ -274,7 +274,7 @@ export function CreateAgentPage() {
         {/* Submit */}
         <div className="mt-8 flex items-center justify-end gap-3 border-t border-gray-200 pt-6 dark:border-[#1a1a1d]">
           <Link
-            to="/agents"
+            to="/dashboard/agents"
             className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]"
           >
             Cancel
