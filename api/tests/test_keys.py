@@ -333,7 +333,7 @@ class TestRotateKey:
         key_record = db_session.query(AgentKey).filter(AgentKey.id == old_key_id).first()
         assert key_record.status == KeyStatus.rotated.value
         # SQLite stores naive datetimes, so compare naively
-        now_naive = datetime.utcnow()
+        now_naive = datetime.now(UTC).replace(tzinfo=None)
         expires = (
             key_record.expires_at.replace(tzinfo=None)
             if key_record.expires_at.tzinfo
