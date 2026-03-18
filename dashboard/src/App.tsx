@@ -10,6 +10,7 @@ import { NotFoundPage } from './pages/NotFoundPage'
 import { LoginPage } from './pages/LoginPage'
 import { DemoPage } from './pages/DemoPage'
 import { CompliancePage } from './pages/CompliancePage'
+import { UsageBillingPage } from './pages/UsageBillingPage'
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
         <Route path="agents/:id" element={<AgentDetailPage />} />
         <Route path="agents/:id/keys" element={<AgentKeysPage />} />
         <Route path="keys" element={<KeysPage />} />
+        <Route path="usage" element={<UsageBillingPage />} />
         <Route path="compliance" element={<CompliancePage />} />
       </Route>
 
