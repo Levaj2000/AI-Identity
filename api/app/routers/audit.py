@@ -33,7 +33,7 @@ router = APIRouter(prefix="/api/v1/audit", tags=["audit"])
 )
 def list_audit_logs(
     agent_id: uuid.UUID | None = Query(None, description="Filter by agent ID"),
-    decision: str | None = Query(None, pattern="^(allow|deny|error)$"),
+    decision: str | None = Query(None, pattern="^(allowed|denied|error)$"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),
