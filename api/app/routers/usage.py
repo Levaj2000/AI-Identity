@@ -1,4 +1,4 @@
-"""Usage & quota endpoints — check limits, view usage, list tiers."""
+"""Usage & quota endpoints — check limits, view usage, list tiers, aggregation."""
 
 import logging
 
@@ -7,10 +7,12 @@ from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
 from api.app.quota import get_usage_summary
+from api.app.usage_aggregation import get_full_aggregation
 from common.models import TIER_QUOTAS, User, get_db
 from common.schemas.quota import (
     TierInfoResponse,
     TierListResponse,
+    UsageAggregationResponse,
     UsageSummaryResponse,
 )
 
@@ -38,6 +40,34 @@ def get_usage(
     """
     summary = get_usage_summary(db, user)
     return UsageSummaryResponse(**summary)
+
+
+# ── GET /api/v1/usage/aggregation ─────────────────────────────────────
+
+
+@router.get(
+    "/aggregation",
+    response_model=UsageAggregationResponse,
+    summary="Get usage aggregation",
+)
+def get_aggregation(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Get detailed usage aggregation for the current billing period.
+
+    Returns:
+    - **billing_period**: Current period summary (total requests, allowed/denied/errors,
+      active agents, peak/avg daily)
+    - **previous_period**: Previous period for comparison (null if no data)
+    - **daily**: Time-series of daily request counts (zero-filled)
+    - **by_agent**: Per-agent breakdown sorted by total requests (desc)
+
+    The billing period is calculated from the user's `usage_reset_day`
+    (defaults to the 1st of each month).
+    """
+    data = get_full_aggregation(db, user)
+    return UsageAggregationResponse(**data)
 
 
 # ── GET /api/v1/usage/tiers ───────────────────────────────────────────
