@@ -37,6 +37,15 @@ ALLOWED_METADATA_KEYS: frozenset[str] = frozenset(
         "request_category",
         "policy_version",
         "circuit_breaker_state",
+        # Management operations (set by agent/key CRUD endpoints)
+        "action_type",
+        "resource_type",
+        "agent_name",
+        "old_status",
+        "new_status",
+        "key_prefix",
+        "keys_revoked",
+        "grace_hours",
     }
 )
 
