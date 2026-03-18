@@ -1,14 +1,9 @@
 """Admin API schemas — platform stats, user management, system health."""
 
-from __future__ import annotations
-
+import datetime
 import enum
-from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
-
-if TYPE_CHECKING:
-    import datetime
 
 
 class AdminTierEnum(enum.StrEnum):
