@@ -46,6 +46,11 @@ are used to manage agents via this admin API.
 
 OPENAPI_TAGS = [
     {
+        "name": "admin",
+        "description": "Admin-only endpoints — platform stats, user management, "
+        "tier overrides, and system health. Requires role=admin.",
+    },
+    {
         "name": "agents",
         "description": "Create, list, update, and delete AI agents. "
         "Each agent gets a UUID identity and cryptographic API key at creation.",
@@ -276,6 +281,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 # ── Routers ──────────────────────────────────────────────────────────────
 
+from api.app.routers.admin import router as admin_router  # noqa: E402
 from api.app.routers.agents import router as agents_router  # noqa: E402
 from api.app.routers.audit import router as audit_router  # noqa: E402
 from api.app.routers.billing import router as billing_router  # noqa: E402
@@ -284,6 +290,7 @@ from api.app.routers.credentials import router as credentials_router  # noqa: E4
 from api.app.routers.keys import router as keys_router  # noqa: E402
 from api.app.routers.usage import router as usage_router  # noqa: E402
 
+app.include_router(admin_router)
 app.include_router(agents_router)
 app.include_router(audit_router)
 app.include_router(billing_router)
