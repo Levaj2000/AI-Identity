@@ -11,6 +11,7 @@ import { LoginPage } from './pages/LoginPage'
 import { DemoPage } from './pages/DemoPage'
 import { CompliancePage } from './pages/CompliancePage'
 import { UsageBillingPage } from './pages/UsageBillingPage'
+import { AdminPage } from './pages/AdminPage'
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
         <Route path="keys" element={<KeysPage />} />
         <Route path="usage" element={<UsageBillingPage />} />
         <Route path="compliance" element={<CompliancePage />} />
+        <Route path="admin" element={<AdminPage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
