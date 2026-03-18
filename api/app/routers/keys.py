@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
+from api.app.quota import check_key_quota
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
 from common.models import AgentKey, AgentStatus, KeyStatus, KeyType, User, get_db
 from common.queries import get_user_agent
@@ -88,6 +89,9 @@ def create_key(
 
     if agent.status == AgentStatus.revoked.value:
         raise HTTPException(status_code=400, detail="Cannot issue key for a revoked agent")
+
+    # Enforce tier quota on key creation
+    check_key_quota(db, user, agent.id)
 
     # Clean up expired rotated keys
     _revoke_expired_keys(db, agent.id)

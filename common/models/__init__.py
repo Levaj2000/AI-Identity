@@ -16,7 +16,7 @@ from common.models.upstream_credential import (
     UpstreamCredential,
     UpstreamProvider,
 )
-from common.models.user import User
+from common.models.user import TIER_QUOTAS, User, UserTier
 
 __all__ = [
     "Base",
@@ -38,4 +38,6 @@ __all__ = [
     "ComplianceCheck",
     "ComplianceReport",
     "ComplianceResult",
+    "UserTier",
+    "TIER_QUOTAS",
 ]
