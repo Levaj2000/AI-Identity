@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { ENDPOINTS } from '../config/api'
 import { useDashboardData } from '../hooks/useDashboardData'
 import { StatsGrid } from '../components/StatsGrid'
@@ -48,14 +49,13 @@ export function OverviewPage() {
       {/* Quick actions */}
       {!isLoading && !error && (
         <div className="flex flex-col gap-3 sm:flex-row">
-          <button
-            disabled
-            className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-[#F59E0B]/50 px-6 py-3 font-semibold text-[#0A0A0B]/60"
-            title="Coming soon"
+          <Link
+            to="/dashboard/agents/new"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/90"
           >
             Create Agent
-            <span className="rounded-full bg-[#F59E0B]/30 px-2 py-0.5 text-xs">Soon</span>
-          </button>
+            <span aria-hidden="true">+</span>
+          </Link>
           <a
             href={ENDPOINTS.DOCS}
             target="_blank"
