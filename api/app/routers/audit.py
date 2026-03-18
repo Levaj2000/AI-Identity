@@ -11,7 +11,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from api.app.auth import get_current_user
+from api.app.auth import get_current_user, require_admin
 from common.audit import verify_chain
 from common.models import Agent, AuditLog, User, get_db
 from common.schemas.agent import (
@@ -109,4 +109,54 @@ def verify_audit_chain(
         entries_verified=result.entries_verified,
         first_broken_id=result.first_broken_id,
         message=result.message,
+    )
+
+
+# ── Admin Audit Endpoints ────────────────────────────────────────────
+
+
+@router.get(
+    "/admin",
+    response_model=AuditLogListResponse,
+    summary="[Admin] List all audit entries system-wide",
+    response_description="Paginated audit log (all users, all agents)",
+)
+def admin_list_audit_logs(
+    agent_id: uuid.UUID | None = Query(None, description="Filter by agent ID"),
+    user_id: uuid.UUID | None = Query(None, description="Filter by user ID"),
+    decision: str | None = Query(None, pattern="^(allowed|denied|error)$"),
+    action_type: str | None = Query(
+        None,
+        description="Filter by action_type in metadata (e.g. agent_created, key_rotated)",
+    ),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Admin-only: list all audit log entries system-wide.
+
+    No user-scoping — returns entries for all users and agents.
+    Supports filtering by agent_id, user_id, decision, and action_type.
+    """
+    query = db.query(AuditLog)
+
+    if agent_id:
+        query = query.filter(AuditLog.agent_id == agent_id)
+    if user_id:
+        query = query.filter(AuditLog.user_id == user_id)
+    if decision:
+        query = query.filter(AuditLog.decision == decision)
+    if action_type:
+        # Filter by action_type inside JSONB request_metadata
+        query = query.filter(AuditLog.request_metadata["action_type"].astext == action_type)
+
+    total = query.count()
+    entries = query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit).all()
+
+    return AuditLogListResponse(
+        items=[AuditLogResponse.model_validate(e) for e in entries],
+        total=total,
+        limit=limit,
+        offset=offset,
     )
