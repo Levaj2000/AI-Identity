@@ -357,6 +357,47 @@ def enforce_request(
             content=response,
         )
 
+    # ── Post-policy quota check ──────────────────────────────────────
+    # Only count requests that pass policy enforcement.
+    try:
+        from common.models import Agent, User
+        from common.models.user import TIER_QUOTAS
+
+        agent = db.query(Agent).filter(Agent.id == agent_id).first()
+        if agent:
+            user = db.query(User).filter(User.id == agent.user_id).first()
+            if user:
+                quotas = TIER_QUOTAS.get(user.tier, TIER_QUOTAS["free"])
+                max_req = quotas["max_requests_per_month"]
+
+                if max_req != -1 and (user.requests_this_month or 0) >= max_req:
+                    return JSONResponse(
+                        status_code=429,
+                        content={
+                            "decision": "deny",
+                            "status_code": 429,
+                            "message": (
+                                f"Monthly request quota exceeded ({max_req} requests). "
+                                f"Upgrade at https://ai-identity.co/#pricing"
+                            ),
+                            "deny_reason": "quota_exceeded",
+                        },
+                    )
+
+                # Increment counter
+                user.requests_this_month = (user.requests_this_month or 0) + 1
+                db.commit()
+
+                # Add quota headers to response
+                response["quota"] = {
+                    "tier": user.tier,
+                    "requests_used": user.requests_this_month,
+                    "requests_limit": max_req if max_req != -1 else None,
+                }
+    except Exception as e:
+        # Quota check is non-blocking — log and allow
+        logger.warning("Quota check failed (allowing request): %s", e)
+
     return response
 
 
