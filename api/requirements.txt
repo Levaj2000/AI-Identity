@@ -9,6 +9,7 @@ python-dotenv>=1.0
 alembic>=1.14
 
 cryptography>=44.0
+stripe>=11.0
 
 # Dev / testing
 pytest>=8.0

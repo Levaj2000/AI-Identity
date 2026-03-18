@@ -43,6 +43,16 @@ class Settings(BaseSettings):
     audit_debug_ttl_hours: int = 24
     audit_debug_log_dir: str = "/tmp/ai-identity/audit-debug"
 
+    # Stripe billing
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_id_pro: str = ""  # Stripe Price ID for the Pro plan ($49/mo)
+    stripe_price_id_enterprise: str = ""  # Stripe Price ID for Enterprise (custom)
+    stripe_success_url: str = (
+        "https://dashboard.ai-identity.co/settings?session_id={CHECKOUT_SESSION_ID}"
+    )
+    stripe_cancel_url: str = "https://dashboard.ai-identity.co/settings"
+
     # Environment
     environment: str = "development"
     debug: bool = False

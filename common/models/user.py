@@ -67,6 +67,14 @@ class User(Base):
         Integer, nullable=False, default=1
     )  # Day of month to reset usage counter
 
+    # Stripe billing
+    stripe_customer_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True, index=True
+    )
+    stripe_subscription_id: Mapped[str | None] = mapped_column(
+        String(255), nullable=True, unique=True, index=True
+    )
+
     # Timestamps
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
