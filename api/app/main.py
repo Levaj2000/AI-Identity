@@ -77,6 +77,12 @@ OPENAPI_TAGS = [
         "against your tier limits and view available plans.",
     },
     {
+        "name": "billing",
+        "description": "Stripe billing integration — create checkout sessions, "
+        "manage subscriptions via customer portal, and handle webhook events "
+        "for automatic tier synchronization.",
+    },
+    {
         "name": "health",
         "description": "Service health and status endpoints.",
     },
@@ -272,6 +278,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 
 from api.app.routers.agents import router as agents_router  # noqa: E402
 from api.app.routers.audit import router as audit_router  # noqa: E402
+from api.app.routers.billing import router as billing_router  # noqa: E402
 from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
@@ -279,6 +286,7 @@ from api.app.routers.usage import router as usage_router  # noqa: E402
 
 app.include_router(agents_router)
 app.include_router(audit_router)
+app.include_router(billing_router)
 app.include_router(compliance_router)
 app.include_router(credentials_router)
 app.include_router(keys_router)
