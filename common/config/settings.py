@@ -59,7 +59,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # CORS
-    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    cors_origins: str = (
+        "http://localhost:5173,http://localhost:3000,https://dashboard.ai-identity.co"
+    )
     # Regex pattern for dynamic CORS origins (e.g. Vercel preview deploys)
     # Set to empty string to disable. Example:
     #   CORS_ORIGIN_REGEX=https://dashboard-.*-jeff-levas-projects\.vercel\.app
