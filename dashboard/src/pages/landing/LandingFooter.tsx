@@ -8,8 +8,8 @@ const footerLinks = {
     { label: 'Dashboard', href: '/app' },
   ],
   Company: [
-    { label: 'About', href: '#' },
-    { label: 'Blog', href: '#' },
+    { label: 'About', href: 'https://ai-identity.co' },
+    { label: 'Blog', href: 'https://ai-identity.co' },
     {
       label: 'Design Partners',
       href: 'mailto:jeff@ai-identity.co?subject=Design%20Partner%20Interest',
@@ -17,10 +17,10 @@ const footerLinks = {
     { label: 'Contact', href: 'mailto:jeff@ai-identity.co' },
   ],
   Developers: [
-    { label: 'Quickstart', href: '#' },
-    { label: 'API Reference', href: 'https://api.ai-identity.co/redoc' },
+    { label: 'Quickstart', href: 'https://ai-identity-api.onrender.com/docs' },
+    { label: 'API Reference', href: 'https://ai-identity-api.onrender.com/redoc' },
     { label: 'GitHub', href: 'https://github.com/Levaj2000/AI-Identity' },
-    { label: 'Status', href: '#' },
+    { label: 'Status', href: 'https://ai-identity-api.onrender.com/health' },
   ],
 }
 
@@ -68,13 +68,24 @@ export function LandingFooter() {
             &copy; {new Date().getFullYear()} AI Identity. All rights reserved.
           </p>
           <div className="flex gap-6 text-xs text-gray-400 dark:text-slate-500">
-            <a href="#" className="hover:text-gray-600 dark:hover:text-slate-300">
+            <a
+              href="mailto:jeff@ai-identity.co?subject=Privacy%20Inquiry"
+              className="hover:text-gray-600 dark:hover:text-slate-300"
+            >
               Privacy
             </a>
-            <a href="#" className="hover:text-gray-600 dark:hover:text-slate-300">
+            <a
+              href="mailto:jeff@ai-identity.co?subject=Terms%20Inquiry"
+              className="hover:text-gray-600 dark:hover:text-slate-300"
+            >
               Terms
             </a>
-            <a href="#" className="hover:text-gray-600 dark:hover:text-slate-300">
+            <a
+              href="https://ai-identity-api.onrender.com/docs#security"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-600 dark:hover:text-slate-300"
+            >
               Security
             </a>
           </div>
