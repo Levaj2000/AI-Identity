@@ -81,7 +81,10 @@ export function LoginPage() {
             </button>
 
             <div className="mt-4 text-center">
-              <a href="#" className="text-sm text-[#F59E0B] hover:underline">
+              <a
+                href="mailto:jeff@ai-identity.co?subject=Password%20Reset"
+                className="text-sm text-[#F59E0B] hover:underline"
+              >
                 Forgot password?
               </a>
             </div>
@@ -130,11 +133,17 @@ export function LoginPage() {
 
             <p className="mt-4 text-center text-xs text-gray-500">
               By signing up, you agree to our{' '}
-              <a href="#" className="text-[#F59E0B] hover:underline">
+              <a
+                href="mailto:jeff@ai-identity.co?subject=Terms%20Inquiry"
+                className="text-[#F59E0B] hover:underline"
+              >
                 Terms
               </a>{' '}
               and{' '}
-              <a href="#" className="text-[#F59E0B] hover:underline">
+              <a
+                href="mailto:jeff@ai-identity.co?subject=Privacy%20Inquiry"
+                className="text-[#F59E0B] hover:underline"
+              >
                 Privacy Policy
               </a>
             </p>
