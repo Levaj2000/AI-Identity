@@ -284,6 +284,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 from api.app.routers.admin import router as admin_router  # noqa: E402
 from api.app.routers.agents import router as agents_router  # noqa: E402
 from api.app.routers.audit import router as audit_router  # noqa: E402
+from api.app.routers.auth import router as auth_router  # noqa: E402
 from api.app.routers.billing import router as billing_router  # noqa: E402
 from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
@@ -293,6 +294,7 @@ from api.app.routers.usage import router as usage_router  # noqa: E402
 app.include_router(admin_router)
 app.include_router(agents_router)
 app.include_router(audit_router)
+app.include_router(auth_router)
 app.include_router(billing_router)
 app.include_router(compliance_router)
 app.include_router(credentials_router)
