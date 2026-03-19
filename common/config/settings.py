@@ -1,6 +1,10 @@
 """Application settings loaded from environment variables."""
 
+import logging
+
 from pydantic_settings import BaseSettings
+
+_logger = logging.getLogger("ai_identity.config")
 
 
 class Settings(BaseSettings):
@@ -79,3 +83,15 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Warn loudly if critical secrets are using default/empty values in production
+if settings.environment != "development":
+    if settings.audit_hmac_key == "CHANGE-ME-IN-PRODUCTION":
+        _logger.critical(
+            "AUDIT_HMAC_KEY is using the default value! "
+            "Set a strong random key via environment variable."
+        )
+    if not settings.credential_encryption_key:
+        _logger.warning(
+            "CREDENTIAL_ENCRYPTION_KEY is empty — credential storage will fail until configured."
+        )
