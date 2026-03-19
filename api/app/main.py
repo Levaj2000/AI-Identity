@@ -161,6 +161,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Security Headers Middleware ─────────────────────────────────────────
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """Add standard security headers to every response."""
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
+
+
 # ── Request Logging Middleware ───────────────────────────────────────────
 
 
