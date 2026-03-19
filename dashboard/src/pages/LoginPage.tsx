@@ -1,7 +1,45 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 
 export function LoginPage() {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login')
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const { login, user } = useAuth()
+  const navigate = useNavigate()
+
+  // If already authenticated, redirect to dashboard
+  if (user) {
+    navigate('/dashboard', { replace: true })
+    return null
+  }
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+
+    if (!email.trim()) {
+      setError('Please enter your email')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await login(email.trim().toLowerCase())
+      navigate('/dashboard', { replace: true })
+    } catch {
+      setError('Invalid credentials. Please check your email and try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSignup(e: React.FormEvent) {
+    e.preventDefault()
+    setError('Sign up is not yet available. Please contact sales@ai-identity.co for access.')
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0B] flex flex-col items-center justify-center px-4 font-[Inter,system-ui,sans-serif]">
@@ -25,7 +63,10 @@ export function LoginPage() {
         {/* Tabs */}
         <div className="flex bg-[#0A0A0B] rounded-lg p-1 mb-8">
           <button
-            onClick={() => setActiveTab('login')}
+            onClick={() => {
+              setActiveTab('login')
+              setError('')
+            }}
             className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
               activeTab === 'login'
                 ? 'bg-[#F59E0B] text-[#0A0A0B]'
@@ -35,7 +76,10 @@ export function LoginPage() {
             Log In
           </button>
           <button
-            onClick={() => setActiveTab('signup')}
+            onClick={() => {
+              setActiveTab('signup')
+              setError('')
+            }}
             className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
               activeTab === 'signup'
                 ? 'bg-[#F59E0B] text-[#0A0A0B]'
@@ -46,20 +90,25 @@ export function LoginPage() {
           </button>
         </div>
 
+        {/* Error message */}
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            {error}
+          </div>
+        )}
+
         {activeTab === 'login' ? (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              // TODO: integrate real auth
-              window.location.href = '/dashboard'
-            }}
-          >
+          <form onSubmit={handleLogin}>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Email</label>
                 <input
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@company.com"
+                  autoComplete="email"
+                  autoFocus
                   className="w-full px-4 py-3 bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg text-white placeholder:text-gray-600 focus:outline-none focus:border-[#F59E0B]/50 transition-colors"
                 />
               </div>
@@ -68,16 +117,28 @@ export function LoginPage() {
                 <input
                   type="password"
                   placeholder="••••••••"
+                  autoComplete="current-password"
                   className="w-full px-4 py-3 bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg text-white placeholder:text-gray-600 focus:outline-none focus:border-[#F59E0B]/50 transition-colors"
                 />
+                <p className="mt-1 text-xs text-gray-600">
+                  Password auth coming soon. For now, just enter your registered email.
+                </p>
               </div>
             </div>
 
             <button
               type="submit"
-              className="w-full mt-6 py-3 bg-[#F59E0B] text-[#0A0A0B] font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors"
+              disabled={loading}
+              className="w-full mt-6 py-3 bg-[#F59E0B] text-[#0A0A0B] font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Log In
+              {loading ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#0A0A0B] border-t-transparent" />
+                  Verifying...
+                </>
+              ) : (
+                'Log In'
+              )}
             </button>
 
             <div className="mt-4 text-center">
@@ -90,13 +151,7 @@ export function LoginPage() {
             </div>
           </form>
         ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              // TODO: integrate real auth
-              window.location.href = '/dashboard'
-            }}
-          >
+          <form onSubmit={handleSignup}>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-1.5">Full Name</label>
