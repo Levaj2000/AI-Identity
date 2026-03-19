@@ -1,6 +1,7 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { ThemeToggle } from './ThemeToggle'
 import { AIIdentityLogo5 } from '../components/AIIdentityLogo'
+import { useAuth } from '../hooks/useAuth'
 
 interface SidebarProps {
   open: boolean
@@ -117,6 +118,14 @@ const navItems = [
 ]
 
 export function Sidebar({ open, onClose }: SidebarProps) {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    logout()
+    navigate('/login')
+  }
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -189,8 +198,43 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </NavLink>
         </nav>
 
-        {/* Footer */}
+        {/* Footer — user info + logout */}
         <div className="border-t border-gray-200 px-4 py-4 dark:border-[#1a1a1d]">
+          {user && (
+            <div className="mb-3 flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-gray-700 dark:text-[#e4e4e7]">
+                  {user.email}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-[#52525b]">
+                  {user.role} &middot; {user.tier}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="ml-2 rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-[#1a1a1d] dark:hover:text-[#e4e4e7]"
+                title="Log out"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z"
+                    clipRule="evenodd"
+                  />
+                  <path
+                    fillRule="evenodd"
+                    d="M19 10a.75.75 0 00-.75-.75H8.704l1.048-.943a.75.75 0 10-1.004-1.114l-2.5 2.25a.75.75 0 000 1.114l2.5 2.25a.75.75 0 101.004-1.114l-1.048-.943h9.546A.75.75 0 0019 10z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-500 dark:text-[#52525b]">
               &copy; {new Date().getFullYear()} AI Identity
