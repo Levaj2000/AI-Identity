@@ -38,7 +38,7 @@ export function LoginPage() {
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
-    setError('Sign up is not yet available. Please contact sales@ai-identity.co for access.')
+    setError('Sign up is not yet available. Please contact jeff@ai-identity.co for access.')
   }
 
   return (
@@ -261,7 +261,7 @@ export function LoginPage() {
         <p className="text-gray-500 text-sm">
           Need an enterprise plan?{' '}
           <a
-            href="mailto:sales@ai-identity.co"
+            href="mailto:jeff@ai-identity.co?subject=Enterprise%20Plan%20Inquiry"
             className="text-[#F59E0B] hover:underline font-medium"
           >
             Contact Sales
