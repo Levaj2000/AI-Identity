@@ -17,13 +17,13 @@ const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || ''
 
 const STORAGE_KEY = 'ai-identity-api-key'
 
-/** Read API key from localStorage, fall back to env var. */
+/** Read API key from localStorage only — no env var fallback.
+ *  Users must log in via the login page to set the key. */
 export function getApiKey(): string {
   if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) return stored
+    return localStorage.getItem(STORAGE_KEY) || ''
   }
-  return import.meta.env.VITE_API_KEY || ''
+  return ''
 }
 
 /** Persist API key to localStorage (used by settings/onboarding). */
