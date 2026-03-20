@@ -8,6 +8,8 @@ from sqlalchemy import String, cast
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
+from api.app.quota import check_agent_quota
+from common.audit.writer import create_audit_entry
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
 from common.models import Agent, AgentKey, AgentStatus, KeyStatus, KeyType, User, get_db
 from common.queries import get_user_agent
@@ -50,6 +52,9 @@ def create_agent(
     The agent starts with `status=active` and can optionally include
     `capabilities` (list) and `metadata` (dict).
     """
+    # Enforce tier quota on agent creation
+    check_agent_quota(db, user)
+
     agent = Agent(
         id=uuid.uuid4(),
         user_id=user.id,
@@ -76,6 +81,20 @@ def create_agent(
     db.refresh(agent)
 
     logger.info("Agent created: %s (%s) by user %s", agent.name, agent.id, user.id)
+
+    create_audit_entry(
+        db,
+        agent_id=agent.id,
+        endpoint="/api/v1/agents",
+        method="POST",
+        decision="allowed",
+        user_id=user.id,
+        request_metadata={
+            "action_type": "agent_created",
+            "resource_type": "agent",
+            "agent_name": agent.name,
+        },
+    )
 
     return AgentCreateResponse(
         agent=_agent_to_response(agent),
@@ -206,6 +225,21 @@ def update_agent(
     db.refresh(agent)
 
     logger.info("Agent updated: %s (%s)", agent.name, agent.id)
+
+    create_audit_entry(
+        db,
+        agent_id=agent.id,
+        endpoint=f"/api/v1/agents/{agent.id}",
+        method="PUT",
+        decision="allowed",
+        user_id=user.id,
+        request_metadata={
+            "action_type": "agent_updated",
+            "resource_type": "agent",
+            "agent_name": agent.name,
+        },
+    )
+
     return _agent_to_response(agent)
 
 
@@ -255,6 +289,24 @@ def delete_agent(
     db.refresh(agent)
 
     logger.info("Agent revoked: %s (%s) — %d keys revoked", agent.name, agent.id, revoked_count)
+
+    create_audit_entry(
+        db,
+        agent_id=agent.id,
+        endpoint=f"/api/v1/agents/{agent.id}",
+        method="DELETE",
+        decision="allowed",
+        user_id=user.id,
+        request_metadata={
+            "action_type": "agent_revoked",
+            "resource_type": "agent",
+            "agent_name": agent.name,
+            "old_status": "active",
+            "new_status": "revoked",
+            "keys_revoked": str(revoked_count),
+        },
+    )
+
     return _agent_to_response(agent)
 
 

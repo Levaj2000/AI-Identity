@@ -10,6 +10,7 @@ Run on Render: uvicorn api.app.main:app --host 0.0.0.0 --port $PORT
 import logging
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,6 +46,11 @@ are used to manage agents via this admin API.
 
 OPENAPI_TAGS = [
     {
+        "name": "admin",
+        "description": "Admin-only endpoints — platform stats, user management, "
+        "tier overrides, and system health. Requires role=admin.",
+    },
+    {
         "name": "agents",
         "description": "Create, list, update, and delete AI agents. "
         "Each agent gets a UUID identity and cryptographic API key at creation.",
@@ -70,10 +76,66 @@ OPENAPI_TAGS = [
         "Credentials are Fernet-encrypted at rest — plaintext keys never touch disk.",
     },
     {
+        "name": "compliance",
+        "description": "Compliance assessment engine — run checks against NIST AI RMF, "
+        "EU AI Act, SOC 2, and internal best practices. Automated evaluation "
+        "of agent policies, key hygiene, audit integrity, and credential security.",
+    },
+    {
+        "name": "usage",
+        "description": "Account usage and quota management — check resource utilization "
+        "against your tier limits and view available plans.",
+    },
+    {
+        "name": "billing",
+        "description": "Stripe billing integration — create checkout sessions, "
+        "manage subscriptions via customer portal, and handle webhook events "
+        "for automatic tier synchronization.",
+    },
+    {
         "name": "health",
         "description": "Service health and status endpoints.",
     },
 ]
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup/shutdown lifecycle — replaces deprecated on_event."""
+    logger.info(
+        "AI Identity API starting — env=%s, version=%s",
+        settings.environment,
+        settings.app_version,
+    )
+
+    # Auto-create compliance tables and seed frameworks
+    try:
+        from common.models.base import Base, engine
+        from common.models.compliance import ComplianceFramework  # noqa: F811
+
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables ensured (including compliance)")
+
+        # Seed compliance frameworks if empty
+        from common.models.base import SessionLocal
+
+        db = SessionLocal()
+        try:
+            count = db.query(ComplianceFramework).count()
+            if count == 0:
+                logger.info("Seeding compliance frameworks...")
+                from scripts.seed_compliance import seed
+
+                seed()
+            else:
+                logger.info("Compliance frameworks already seeded (%d found)", count)
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning("Compliance auto-seed skipped: %s", e)
+
+    yield
+
 
 app = FastAPI(
     title="AI Identity API",
@@ -90,6 +152,7 @@ app = FastAPI(
     license_info={
         "name": "MIT",
     },
+    lifespan=lifespan,
 )
 
 # ── CORS ─────────────────────────────────────────────────────────────────
@@ -102,6 +165,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Security Headers Middleware ─────────────────────────────────────────
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """Add standard security headers to every response."""
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
+
 
 # ── Request Logging Middleware ───────────────────────────────────────────
 
@@ -204,19 +282,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 
 
-# ── Startup / Shutdown ───────────────────────────────────────────────────
-
-
-@app.on_event("startup")
-async def startup():
-    """Log service start with environment info."""
-    logger.info(
-        "AI Identity API starting — env=%s, version=%s",
-        settings.environment,
-        settings.app_version,
-    )
-
-
 # ── Internal Service Auth ────────────────────────────────────────────────
 # When adding endpoints that should only be called by the Gateway:
 #
@@ -236,17 +301,27 @@ async def startup():
 
 # ── Routers ──────────────────────────────────────────────────────────────
 
+from api.app.routers.admin import router as admin_router  # noqa: E402
 from api.app.routers.agents import router as agents_router  # noqa: E402
 from api.app.routers.audit import router as audit_router  # noqa: E402
+from api.app.routers.auth import router as auth_router  # noqa: E402
+from api.app.routers.billing import router as billing_router  # noqa: E402
+from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
 from api.app.routers.policies import router as policies_router  # noqa: E402
+from api.app.routers.usage import router as usage_router  # noqa: E402
 
+app.include_router(admin_router)
 app.include_router(agents_router)
 app.include_router(audit_router)
+app.include_router(auth_router)
+app.include_router(billing_router)
+app.include_router(compliance_router)
 app.include_router(credentials_router)
 app.include_router(keys_router)
 app.include_router(policies_router)
+app.include_router(usage_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────
 

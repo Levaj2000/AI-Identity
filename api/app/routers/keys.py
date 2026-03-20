@@ -8,6 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
+from api.app.quota import check_key_quota
+from common.audit.writer import create_audit_entry
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
 from common.models import AgentKey, AgentStatus, KeyStatus, KeyType, User, get_db
 from common.queries import get_user_agent
@@ -89,6 +91,9 @@ def create_key(
     if agent.status == AgentStatus.revoked.value:
         raise HTTPException(status_code=400, detail="Cannot issue key for a revoked agent")
 
+    # Enforce tier quota on key creation
+    check_key_quota(db, user, agent.id)
+
     # Clean up expired rotated keys
     _revoke_expired_keys(db, agent.id)
 
@@ -106,6 +111,21 @@ def create_key(
     db.refresh(agent_key)
 
     logger.info("Key created for agent %s (key_id=%d)", agent.id, agent_key.id)
+
+    create_audit_entry(
+        db,
+        agent_id=agent.id,
+        endpoint=f"/api/v1/agents/{agent.id}/keys",
+        method="POST",
+        decision="allowed",
+        user_id=user.id,
+        request_metadata={
+            "action_type": "key_created",
+            "resource_type": "api_key",
+            "key_type": key_type,
+            "key_prefix": agent_key.key_prefix,
+        },
+    )
 
     return AgentKeyCreateResponse(
         key=_key_to_response(agent_key),
@@ -238,6 +258,22 @@ def rotate_key(
         new_key.id,
     )
 
+    create_audit_entry(
+        db,
+        agent_id=agent.id,
+        endpoint=f"/api/v1/agents/{agent.id}/keys/rotate",
+        method="POST",
+        decision="allowed",
+        user_id=user.id,
+        request_metadata={
+            "action_type": "key_rotated",
+            "resource_type": "api_key",
+            "key_type": inherited_type,
+            "key_prefix": new_key.key_prefix,
+            "grace_hours": str(ROTATION_GRACE_HOURS),
+        },
+    )
+
     return AgentKeyRotateResponse(
         new_key=_key_to_response(new_key),
         api_key=plaintext_key,
@@ -284,6 +320,23 @@ def revoke_key(
     db.refresh(key)
 
     logger.info("Key revoked: key_id=%d for agent %s", key.id, agent.id)
+
+    create_audit_entry(
+        db,
+        agent_id=agent.id,
+        endpoint=f"/api/v1/agents/{agent.id}/keys/{key.id}",
+        method="DELETE",
+        decision="allowed",
+        user_id=user.id,
+        request_metadata={
+            "action_type": "key_revoked",
+            "resource_type": "api_key",
+            "key_prefix": key.key_prefix,
+            "old_status": "active",
+            "new_status": "revoked",
+        },
+    )
+
     return _key_to_response(key)
 
 

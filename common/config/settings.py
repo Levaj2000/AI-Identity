@@ -1,6 +1,10 @@
 """Application settings loaded from environment variables."""
 
+import logging
+
 from pydantic_settings import BaseSettings
+
+_logger = logging.getLogger("ai_identity.config")
 
 
 class Settings(BaseSettings):
@@ -43,13 +47,25 @@ class Settings(BaseSettings):
     audit_debug_ttl_hours: int = 24
     audit_debug_log_dir: str = "/tmp/ai-identity/audit-debug"
 
+    # Stripe billing
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_price_id_pro: str = ""  # Stripe Price ID for the Pro plan ($49/mo)
+    stripe_price_id_enterprise: str = ""  # Stripe Price ID for Enterprise (custom)
+    stripe_success_url: str = (
+        "https://dashboard.ai-identity.co/settings?session_id={CHECKOUT_SESSION_ID}"
+    )
+    stripe_cancel_url: str = "https://dashboard.ai-identity.co/settings"
+
     # Environment
     environment: str = "development"
     debug: bool = False
     log_level: str = "INFO"
 
     # CORS
-    cors_origins: str = "http://localhost:5173,http://localhost:3000"
+    cors_origins: str = (
+        "http://localhost:5173,http://localhost:3000,https://dashboard.ai-identity.co"
+    )
     # Regex pattern for dynamic CORS origins (e.g. Vercel preview deploys)
     # Set to empty string to disable. Example:
     #   CORS_ORIGIN_REGEX=https://dashboard-.*-jeff-levas-projects\.vercel\.app
@@ -67,3 +83,15 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Warn loudly if critical secrets are using default/empty values in production
+if settings.environment != "development":
+    if settings.audit_hmac_key == "CHANGE-ME-IN-PRODUCTION":
+        _logger.critical(
+            "AUDIT_HMAC_KEY is using the default value! "
+            "Set a strong random key via environment variable."
+        )
+    if not settings.credential_encryption_key:
+        _logger.warning(
+            "CREDENTIAL_ENCRYPTION_KEY is empty — credential storage will fail until configured."
+        )

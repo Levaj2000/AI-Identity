@@ -9,7 +9,7 @@ interface AuditEntry {
   user_id: string | null
   endpoint: string
   method: string
-  decision: 'allow' | 'deny' | 'error'
+  decision: 'allowed' | 'denied' | 'error'
   cost_estimate_usd: number | null
   latency_ms: number | null
   request_metadata: Record<string, unknown>
@@ -47,9 +47,9 @@ function formatDate(iso: string): string {
 
 function decisionBadge(d: string) {
   switch (d) {
-    case 'allow':
+    case 'allowed':
       return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-    case 'deny':
+    case 'denied':
       return 'bg-red-500/10 text-red-400 border-red-500/20'
     default:
       return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
@@ -122,8 +122,8 @@ export function CompliancePage() {
       try {
         const [all, allows, denies, errors] = await Promise.all([
           apiFetch<AuditListResponse>('/api/v1/audit?limit=1'),
-          apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=allow'),
-          apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=deny'),
+          apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=allowed'),
+          apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=denied'),
           apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=error'),
         ])
         setStats({
@@ -490,8 +490,8 @@ export function CompliancePage() {
           className="rounded-lg border border-[#1a1a1d] bg-[#111113] px-3 py-2 text-sm text-gray-300 focus:border-[#F59E0B]/50 focus:outline-none"
         >
           <option value="">All decisions</option>
-          <option value="allow">Allow</option>
-          <option value="deny">Deny</option>
+          <option value="allowed">Allowed</option>
+          <option value="denied">Denied</option>
           <option value="error">Error</option>
         </select>
 
@@ -655,9 +655,9 @@ export function CompliancePage() {
               <div key={entry.id} className="flex items-center gap-2 shrink-0">
                 <div
                   className={`rounded-lg border px-3 py-2 text-center ${
-                    entry.decision === 'allow'
+                    entry.decision === 'allowed'
                       ? 'border-emerald-500/20 bg-emerald-500/5'
-                      : entry.decision === 'deny'
+                      : entry.decision === 'denied'
                         ? 'border-red-500/20 bg-red-500/5'
                         : 'border-yellow-500/20 bg-yellow-500/5'
                   }`}
@@ -665,9 +665,9 @@ export function CompliancePage() {
                   <p className="font-mono text-[10px] text-gray-500">#{entry.id}</p>
                   <p
                     className={`text-xs font-medium ${
-                      entry.decision === 'allow'
+                      entry.decision === 'allowed'
                         ? 'text-emerald-400'
-                        : entry.decision === 'deny'
+                        : entry.decision === 'denied'
                           ? 'text-red-400'
                           : 'text-yellow-400'
                     }`}

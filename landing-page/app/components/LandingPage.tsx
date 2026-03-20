@@ -5,6 +5,7 @@ import SocialProof from "./landing/SocialProof";
 import HowItWorksSection from "./landing/HowItWorksSection";
 import Features from "./landing/Features";
 import DashboardPreview from "./landing/DashboardPreview";
+import ComplianceSection from "./landing/ComplianceSection";
 import SecuritySection from "./landing/SecuritySection";
 import IntegrationsSection from "./landing/IntegrationsSection";
 import Pricing from "./landing/Pricing";
@@ -20,6 +21,7 @@ export default function LandingPage() {
       <HowItWorksSection />
       <Features />
       <DashboardPreview />
+      <ComplianceSection />
       <SecuritySection />
       <IntegrationsSection />
       <Pricing />

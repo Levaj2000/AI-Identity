@@ -94,6 +94,7 @@ def test_user(db_session):
         id=TEST_USER_ID,
         email=TEST_API_KEY,
         role="owner",
+        tier="enterprise",  # Tests need unlimited quotas
     )
     db_session.add(user)
     db_session.commit()
@@ -131,6 +132,7 @@ def other_user(db_session):
         id=uuid.UUID("00000000-0000-0000-0000-000000000002"),
         email="other-user-api-key-87654321",
         role="owner",
+        tier="enterprise",  # Tests need unlimited quotas
     )
     db_session.add(user)
     db_session.commit()

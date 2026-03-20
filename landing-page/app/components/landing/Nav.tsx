@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 const navLinks = [
   { label: "Home", href: "#", sectionId: "" },
   { label: "How It Works", href: "#how-it-works", sectionId: "how-it-works" },
+  { label: "Compliance", href: "#compliance", sectionId: "compliance" },
   { label: "Security", href: "#security", sectionId: "security" },
   { label: "Integrations", href: "#integrations", sectionId: "integrations" },
   { label: "Pricing", href: "#pricing", sectionId: "pricing" },
@@ -149,6 +150,12 @@ export default function Nav() {
         {/* CTA */}
         <div className="hidden md:flex items-center gap-4">
           <a
+            href="https://dashboard.ai-identity.co/demo"
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Live Demo
+          </a>
+          <a
             href="https://dashboard.ai-identity.co"
             className="text-sm text-gray-400 hover:text-white transition-colors"
           >
@@ -202,6 +209,12 @@ export default function Nav() {
               {link.label}
             </a>
           ))}
+          <a
+            href="https://dashboard.ai-identity.co/demo"
+            className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Live Demo
+          </a>
           <a
             href="https://dashboard.ai-identity.co"
             className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
