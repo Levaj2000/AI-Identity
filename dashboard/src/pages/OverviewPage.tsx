@@ -37,7 +37,7 @@ export function OverviewPage() {
           </h2>
           <p className="text-sm text-red-500 dark:text-red-400/80">
             {error.status === 401
-              ? 'Check your API key configuration. Set VITE_API_KEY in your .env file.'
+              ? 'Your session may have expired. Try signing out and back in.'
               : error.message}
           </p>
         </div>
