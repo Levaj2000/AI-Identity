@@ -36,9 +36,9 @@ export function AgentTable({ agents }: AgentTableProps) {
           {agents.map((agent) => (
             <tr
               key={agent.id}
-              onClick={() => navigate(`/agents/${agent.id}`)}
+              onClick={() => navigate(`/dashboard/agents/${agent.id}`)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') navigate(`/agents/${agent.id}`)
+                if (e.key === 'Enter') navigate(`/dashboard/agents/${agent.id}`)
               }}
               role="link"
               tabIndex={0}
