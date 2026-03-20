@@ -1,6 +1,7 @@
 """QA Checklist endpoints — run, list, and sign off on E2E QA runs."""
 
 import logging
+import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -30,6 +31,7 @@ class QARunResponse(BaseModel):
     failed_count: int
     total_count: int
     results: dict
+    mode: str | None = None
     customer_signoff_by: str | None = None
     customer_signoff_at: datetime | None = None
     customer_signoff_note: str | None = None
@@ -90,6 +92,7 @@ async def trigger_qa_run(
         failed_count=result.failed,
         total_count=result.total,
         results=result.to_dict(),
+        mode="admin",
     )
     db.add(qa_run)
     db.commit()
@@ -99,6 +102,86 @@ async def trigger_qa_run(
         "QA run #%d by %s: %d/%d passed (%s)",
         qa_run.id,
         user.email,
+        result.passed,
+        result.total,
+        "PASS" if result.all_passed else "FAIL",
+    )
+
+    return qa_run
+
+
+# ── POST /api/v1/qa/run/onboarding — simulate client onboarding ──────
+
+
+@router.post(
+    "/run/onboarding",
+    response_model=QARunResponse,
+    status_code=201,
+    summary="Simulate client onboarding",
+    response_description="QA run executed as a fresh test client",
+)
+async def trigger_onboarding_run(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Simulate a full client onboarding flow.
+
+    Creates a temporary test user account, runs all 15 QA checks as
+    that user (fresh account, zero agents, zero history), then cleans
+    up the test account. This validates the exact experience a new
+    design partner will have.
+    """
+    # Determine environment URLs
+    if settings.environment == "production":
+        api_url = "https://ai-identity-api.onrender.com"
+        gateway_url = "https://ai-identity-gateway.onrender.com"
+    else:
+        api_url = f"http://localhost:{settings.api_port}"
+        gateway_url = settings.gateway_url
+
+    # Create a temporary test user
+    test_email = f"qa-client-{uuid.uuid4().hex[:8]}@test.ai-identity.co"
+    test_user = User(
+        id=uuid.uuid4(),
+        email=test_email,
+        role="owner",
+        tier="free",
+    )
+    db.add(test_user)
+    db.commit()
+    db.refresh(test_user)
+
+    logger.info("Onboarding QA: created test user %s", test_email)
+
+    try:
+        result = await run_qa_checks(api_url, gateway_url, test_email)
+    finally:
+        # Clean up test user and any agents/resources they created
+        # (cascade delete handles agents, keys, policies, audit entries)
+        db.delete(test_user)
+        db.commit()
+        logger.info("Onboarding QA: cleaned up test user %s", test_email)
+
+    qa_run = QARun(
+        status="passed" if result.all_passed else "failed",
+        run_by=user.email,
+        environment=settings.environment,
+        duration_ms=result.duration_ms,
+        passed_count=result.passed,
+        failed_count=result.failed,
+        total_count=result.total,
+        results=result.to_dict(),
+        mode="onboarding",
+    )
+    db.add(qa_run)
+    db.commit()
+    db.refresh(qa_run)
+
+    logger.info(
+        "Onboarding QA run #%d by %s (as %s): %d/%d passed (%s)",
+        qa_run.id,
+        user.email,
+        test_email,
         result.passed,
         result.total,
         "PASS" if result.all_passed else "FAIL",

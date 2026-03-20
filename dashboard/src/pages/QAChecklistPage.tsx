@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import {
   triggerQARun,
+  triggerOnboardingRun,
   listQARuns,
   signoffQARun,
   type QARun,
@@ -132,7 +133,21 @@ function RunDetail({
       {/* Summary header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">QA Run #{run.id}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              QA Run #{run.id}
+            </h3>
+            {run.mode === 'onboarding' && (
+              <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                Client Onboarding
+              </span>
+            )}
+            {run.mode === 'admin' && (
+              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-[#1a1a1d] dark:text-[#71717a]">
+                Admin Check
+              </span>
+            )}
+          </div>
           <p className="text-sm text-gray-500 dark:text-[#71717a]">
             {new Date(run.created_at).toLocaleString()} &middot; {run.run_by} &middot;{' '}
             {run.environment} &middot; {(run.duration_ms / 1000).toFixed(1)}s
@@ -252,11 +267,11 @@ export function QAChecklistPage() {
     }
   }
 
-  async function handleRunQA() {
+  async function handleRunQA(mode: 'admin' | 'onboarding' = 'admin') {
     setRunning(true)
     setError(null)
     try {
-      const run = await triggerQARun()
+      const run = mode === 'onboarding' ? await triggerOnboardingRun() : await triggerQARun()
       setSelectedRun(run)
       setRuns((prev) => [run, ...prev])
     } catch (e) {
@@ -290,48 +305,71 @@ export function QAChecklistPage() {
             15-step E2E production validation for design partner onboarding
           </p>
         </div>
-        <button
-          onClick={handleRunQA}
-          disabled={running}
-          className="flex items-center gap-2 rounded-lg bg-[#F59E0B] px-5 py-2.5 text-sm font-medium text-black hover:bg-[#D97706] disabled:opacity-50 transition-colors"
-        >
-          {running ? (
-            <>
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => handleRunQA('onboarding')}
+            disabled={running}
+            className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {running ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                Simulating...
+              </>
+            ) : (
+              <>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
                   fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              Running checks...
-            </>
-          ) : (
-            <>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className="h-4 w-4"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Run QA Checklist
-            </>
-          )}
-        </button>
+                  className="h-4 w-4"
+                >
+                  <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
+                </svg>
+                Simulate Client Onboarding
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => handleRunQA('admin')}
+            disabled={running}
+            className="flex items-center gap-2 rounded-lg border border-[#F59E0B] px-5 py-2.5 text-sm font-medium text-[#F59E0B] hover:bg-[#F59E0B]/10 disabled:opacity-50 transition-colors"
+          >
+            {running ? (
+              'Running...'
+            ) : (
+              <>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm6.39-2.908a.75.75 0 01.766.027l3.5 2.25a.75.75 0 010 1.262l-3.5 2.25A.75.75 0 018 12.25v-4.5a.75.75 0 01.39-.658z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Admin Check
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -383,6 +421,9 @@ export function QAChecklistPage() {
                       <span className="text-xs text-gray-400 dark:text-[#52525b]">
                         {new Date(run.created_at).toLocaleDateString()}
                       </span>
+                      {run.mode === 'onboarding' && (
+                        <span className="text-xs text-blue-500 dark:text-blue-400">Onboarding</span>
+                      )}
                       {fullySignedOff && <span className="text-xs text-[#F59E0B]">Validated</span>}
                     </div>
                   </button>
