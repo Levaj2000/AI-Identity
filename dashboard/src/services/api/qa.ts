@@ -37,6 +37,7 @@ export interface QARun {
   failed_count: number
   total_count: number
   results: QARunResults
+  mode: string | null
   customer_signoff_by: string | null
   customer_signoff_at: string | null
   customer_signoff_note: string | null
@@ -55,6 +56,10 @@ export interface QARunListResponse {
 
 export function triggerQARun(): Promise<QARun> {
   return apiFetch<QARun>(`${BASE}/run`, { method: 'POST' })
+}
+
+export function triggerOnboardingRun(): Promise<QARun> {
+  return apiFetch<QARun>(`${BASE}/run/onboarding`, { method: 'POST' })
 }
 
 export function listQARuns(limit = 20, offset = 0): Promise<QARunListResponse> {
