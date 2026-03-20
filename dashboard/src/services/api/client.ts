@@ -1,11 +1,8 @@
 /**
- * Base API client — typed fetch wrapper with X-API-Key auth.
+ * Base API client — typed fetch wrapper with Clerk JWT auth.
  *
- * Auth priority:
- *   1. localStorage key "ai-identity-api-key" (set by dashboard UI)
- *   2. VITE_API_KEY env var (dev fallback)
- *
- * All /api/* requests get the X-API-Key header automatically.
+ * Auth: Uses Clerk session tokens sent as Bearer authorization.
+ * All /api/* requests get the Authorization header automatically.
  * /health is public and skips auth.
  */
 
@@ -15,10 +12,25 @@ import type { ApiError, ValidationErrorItem, ValidationErrorResponse } from '../
 
 const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || ''
 
+// ─── Session token management ────────────────────────────────────
+
+/** Function that returns a Clerk session token (set by AuthProvider). */
+let getSessionToken: (() => Promise<string | null>) | null = null
+
+/** Register the Clerk session token getter. Called by AuthProvider. */
+export function setSessionTokenGetter(getter: () => Promise<string | null>): void {
+  getSessionToken = getter
+}
+
+/** Clear the session token getter (on logout). */
+export function clearSessionTokenGetter(): void {
+  getSessionToken = null
+}
+
+// ─── Legacy API key support (for backward compat during migration) ──
+
 const STORAGE_KEY = 'ai-identity-api-key'
 
-/** Read API key from localStorage only — no env var fallback.
- *  Users must log in via the login page to set the key. */
 export function getApiKey(): string {
   if (typeof window !== 'undefined') {
     return localStorage.getItem(STORAGE_KEY) || ''
@@ -26,12 +38,10 @@ export function getApiKey(): string {
   return ''
 }
 
-/** Persist API key to localStorage (used by settings/onboarding). */
 export function setApiKey(key: string): void {
   localStorage.setItem(STORAGE_KEY, key)
 }
 
-/** Clear stored API key. */
 export function clearApiKey(): void {
   localStorage.removeItem(STORAGE_KEY)
 }
@@ -80,7 +90,8 @@ export async function parseErrorResponse(response: Response): Promise<ApiError> 
  * Typed fetch wrapper.
  *
  * - Prepends API_BASE_URL
- * - Injects X-API-Key for /api/* routes
+ * - Injects Authorization: Bearer <token> for /api/* routes (Clerk JWT)
+ * - Falls back to X-API-Key if no Clerk session (backward compat)
  * - Sets Content-Type: application/json for requests with body
  * - Parses JSON response
  * - Throws typed ApiError on non-2xx
@@ -99,9 +110,20 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   // Inject auth for API routes (skip for /health which is public)
   if (path.startsWith('/api/')) {
-    const key = getApiKey()
-    if (key) {
-      headers['X-API-Key'] = key
+    // Try Clerk session token first (preferred)
+    if (getSessionToken) {
+      const token = await getSessionToken()
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+    }
+
+    // Fall back to legacy X-API-Key if no Bearer token
+    if (!headers['Authorization']) {
+      const key = getApiKey()
+      if (key) {
+        headers['X-API-Key'] = key
+      }
     }
   }
 

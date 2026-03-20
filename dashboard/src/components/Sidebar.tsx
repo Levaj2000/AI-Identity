@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useClerk } from '@clerk/react'
 import { ThemeToggle } from './ThemeToggle'
 import { AIIdentityLogo5 } from '../components/AIIdentityLogo'
 import { useAuth } from '../hooks/useAuth'
@@ -137,12 +138,12 @@ const navItems = [
 ]
 
 export function Sidebar({ open, onClose }: SidebarProps) {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
+  const { signOut } = useClerk()
   const navigate = useNavigate()
 
   function handleLogout() {
-    logout()
-    navigate('/login')
+    signOut(() => navigate('/login'))
   }
 
   return (

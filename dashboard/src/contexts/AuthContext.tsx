@@ -1,51 +1,58 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useUser, useSession } from '@clerk/react'
 import { AuthContext } from './auth'
 import type { AuthUser } from './auth'
-import { apiFetch, setApiKey, clearApiKey, getApiKey } from '../services/api/client'
+import { apiFetch, setSessionTokenGetter, clearSessionTokenGetter } from '../services/api/client'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const { user: clerkUser, isLoaded: isUserLoaded } = useUser()
+  const { session } = useSession()
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // On mount, check if we have a stored API key and validate it
+  // When Clerk session is available, register the token getter for API calls
   useEffect(() => {
-    async function validateSession() {
-      const key = getApiKey()
-      if (!key) {
-        setLoading(false)
-        return
-      }
+    if (session) {
+      setSessionTokenGetter(() => session.getToken())
+    } else {
+      clearSessionTokenGetter()
+    }
+  }, [session])
 
+  // When Clerk user is loaded and signed in, sync with our API
+  useEffect(() => {
+    if (!isUserLoaded) return
+
+    if (!clerkUser || !session) {
+      setUser(null)
+      setLoading(false)
+      return
+    }
+
+    async function syncUser() {
       try {
         const profile = await apiFetch<AuthUser>('/api/v1/auth/me')
         setUser(profile)
       } catch {
-        // Stored key is invalid — clear it
-        clearApiKey()
+        // User exists in Clerk but not in our API — will be auto-provisioned
+        setUser(null)
       } finally {
         setLoading(false)
       }
     }
 
-    validateSession()
-  }, [])
+    syncUser()
+  }, [clerkUser, session, isUserLoaded])
 
-  const login = useCallback(async (email: string) => {
-    // Call login endpoint (no auth header needed — email is in body)
-    const profile = await apiFetch<AuthUser>('/api/v1/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    })
+  // login/logout are now handled by Clerk — these are stubs for interface compat
+  const login = async () => {
+    // Clerk handles login via its SignIn component
+  }
 
-    // Store the email as the API key (MVP auth)
-    setApiKey(email)
-    setUser(profile)
-  }, [])
-
-  const logout = useCallback(() => {
-    clearApiKey()
+  const logout = () => {
+    clearSessionTokenGetter()
     setUser(null)
-  }, [])
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
