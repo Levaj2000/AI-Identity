@@ -61,6 +61,11 @@ OPENAPI_TAGS = [
         "Keys use SHA-256 hashing and are shown only once at creation time.",
     },
     {
+        "name": "policies",
+        "description": "Create and manage policies that control what endpoints "
+        "an agent can access through the gateway.",
+    },
+    {
         "name": "audit",
         "description": "Append-only audit log with HMAC integrity chain. "
         "Read-only access and chain verification for SOC 2 compliance.",
@@ -304,6 +309,7 @@ from api.app.routers.billing import router as billing_router  # noqa: E402
 from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
+from api.app.routers.policies import router as policies_router  # noqa: E402
 from api.app.routers.usage import router as usage_router  # noqa: E402
 
 app.include_router(admin_router)
@@ -314,6 +320,7 @@ app.include_router(billing_router)
 app.include_router(compliance_router)
 app.include_router(credentials_router)
 app.include_router(keys_router)
+app.include_router(policies_router)
 app.include_router(usage_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────
