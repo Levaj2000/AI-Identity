@@ -39,8 +39,7 @@ export function LoginPage() {
           },
         }}
         routing="hash"
-        afterSignInUrl="/dashboard"
-        afterSignUpUrl="/dashboard"
+        forceRedirectUrl="/dashboard"
       />
 
       {/* Try Demo + Contact Sales */}
