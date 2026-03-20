@@ -1,43 +1,158 @@
-"""MVP auth — X-API-Key header resolves to a user.
+"""Authentication — Clerk JWT verification + legacy X-API-Key fallback.
 
-For MVP, the API key is a simple shared secret per user stored in the
-users table. This will be replaced with proper agent key auth later.
-The key is matched against users.email for simplicity (or a dedicated
-api_key column when we add one). For now, we auto-create users on first
-request to reduce friction during development.
+Primary auth: Clerk JWT tokens sent as Authorization: Bearer <token>.
+The JWT is verified against Clerk's JWKS endpoint. The user is matched
+by email from the JWT claims to the local users table.
+
+Legacy fallback: X-API-Key header matched against users.email.
+This will be removed once all clients migrate to Clerk auth.
 """
 
+import logging
 import uuid
 
-from fastapi import Depends, Header, HTTPException
+import jwt
+from fastapi import Depends, Header, HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from common.config.settings import settings
 from common.models import User, get_db
+
+logger = logging.getLogger("ai_identity.api.auth")
+
+# ── Clerk JWKS cache ────────────────────────────────────────────────
+
+_jwks_cache: dict | None = None
+_jwks_client: jwt.PyJWKClient | None = None
+
+
+def _get_jwks_client() -> jwt.PyJWKClient | None:
+    """Lazy-initialize the JWKS client for Clerk JWT verification."""
+    global _jwks_client
+    if _jwks_client is not None:
+        return _jwks_client
+
+    clerk_issuer = getattr(settings, "clerk_issuer", None)
+    if not clerk_issuer:
+        logger.warning("CLERK_ISSUER not set — Clerk JWT auth disabled")
+        return None
+
+    jwks_url = f"{clerk_issuer.rstrip('/')}/.well-known/jwks.json"
+    _jwks_client = jwt.PyJWKClient(jwks_url, cache_keys=True)
+    logger.info("Clerk JWKS client initialized: %s", jwks_url)
+    return _jwks_client
+
+
+def _verify_clerk_jwt(token: str) -> dict | None:
+    """Verify a Clerk JWT and return the decoded claims, or None on failure."""
+    client = _get_jwks_client()
+    if not client:
+        return None
+
+    try:
+        signing_key = client.get_signing_key_from_jwt(token)
+        decoded = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            options={"verify_aud": False},  # Clerk doesn't set aud by default
+        )
+        return decoded
+    except jwt.ExpiredSignatureError:
+        logger.warning("Clerk JWT expired")
+        return None
+    except jwt.InvalidTokenError as e:
+        logger.warning("Clerk JWT invalid: %s", e)
+        return None
+    except Exception as e:
+        logger.warning("Clerk JWT verification failed: %s", e)
+        return None
+
+
+def _extract_email_from_clerk_claims(claims: dict) -> str | None:
+    """Extract email from Clerk JWT claims.
+
+    Clerk stores email in different places depending on session config:
+    - claims.get("email") — if email is in the session token template
+    - claims.get("email_addresses", [{}])[0].get("email_address")
+    - claims.get("unsafe_metadata", {}).get("email")
+    """
+    # Direct email claim (most common with custom session token template)
+    if claims.get("email"):
+        return claims["email"]
+
+    # Primary email address from Clerk's default claims
+    email_addresses = claims.get("email_addresses", [])
+    if email_addresses and isinstance(email_addresses, list):
+        first = email_addresses[0]
+        if isinstance(first, dict) and first.get("email_address"):
+            return first["email_address"]
+        if isinstance(first, str):
+            return first
+
+    # Fallback: check sub claim (Clerk user ID) — won't help for email lookup
+    return None
+
+
+# ── Main auth dependency ────────────────────────────────────────────
 
 
 async def get_current_user(
-    x_api_key: str = Header(..., description="User API key for authentication"),
+    request: Request,
+    x_api_key: str | None = Header(None, description="Legacy API key (email)"),
     db: Session = Depends(get_db),
 ) -> User:
-    """Resolve X-API-Key header to a User.
+    """Resolve the authenticated user from Clerk JWT or legacy X-API-Key.
 
-    MVP behavior: treat the key as a user identifier.
-    If user doesn't exist, return 401.
+    Auth priority:
+    1. Authorization: Bearer <clerk-jwt> — verified against Clerk JWKS
+    2. X-API-Key header — legacy email-as-key (will be removed)
     """
-    if not x_api_key or len(x_api_key) < 8:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+    user: User | None = None
 
-    # Look up user by API key — for MVP we store the key directly
-    user = db.query(User).filter(User.email == x_api_key).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+    # ── Try Bearer token first (Clerk JWT) ──────────────────────
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        claims = _verify_clerk_jwt(token)
+        if claims is None:
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    # Defense-in-depth: set RLS session variable for PostgreSQL.
-    # SET LOCAL is transaction-scoped — resets on commit/rollback.
-    # FastAPI dependency caching ensures the same session is used by
-    # both get_current_user and the route handler, so RLS will be active
-    # for all queries in the request.
+        email = _extract_email_from_clerk_claims(claims)
+        clerk_user_id = claims.get("sub")
+
+        if email:
+            user = db.query(User).filter(User.email == email).first()
+
+        # Auto-provision: if Clerk user exists but no local User, create one
+        if user is None and email:
+            user = User(
+                id=uuid.uuid4(),
+                email=email,
+                role="owner",
+                tier="free",
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            logger.info("Auto-provisioned user from Clerk: %s (clerk_id=%s)", email, clerk_user_id)
+
+        if user is None:
+            raise HTTPException(
+                status_code=401,
+                detail="Could not resolve user from token. Ensure email is included in Clerk session claims.",
+            )
+
+    # ── Fall back to legacy X-API-Key ───────────────────────────
+    elif x_api_key and len(x_api_key) >= 8:
+        user = db.query(User).filter(User.email == x_api_key).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid API key")
+    else:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    # Defense-in-depth: set RLS session variable for PostgreSQL
     dialect = db.bind.dialect.name if db.bind else "unknown"
     if dialect == "postgresql":
         db.execute(text("SET LOCAL app.current_user_id = :uid"), {"uid": str(user.id)})
