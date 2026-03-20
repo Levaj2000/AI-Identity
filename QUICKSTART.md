@@ -172,7 +172,69 @@ print(f"Credential stored: {cred['provider']} ({cred['key_prefix']}...)")
 
 ---
 
-## Step 4: Send a Request Through the Gateway (~3 min)
+## Step 4: Attach a Policy (~2 min)
+
+Without a policy, the gateway denies every request (fail-closed). Attach a policy that defines what endpoints your agent can access:
+
+```bash
+curl -s -X POST $AI_API/api/v1/agents/$AGENT_ID/policies \
+  -H "X-API-Key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "rules": {
+      "allowed_endpoints": ["/v1/chat/*", "/v1/embeddings"],
+      "allowed_methods": ["POST", "GET"]
+    }
+  }' | jq
+```
+
+```json
+{
+  "id": 1,
+  "agent_id": "550e8400-e29b-41d4-a716-446655440000",
+  "rules": {
+    "allowed_endpoints": ["/v1/chat/*", "/v1/embeddings"],
+    "allowed_methods": ["POST", "GET"]
+  },
+  "version": 1,
+  "is_active": true,
+  "created_at": "2026-03-17T10:00:30Z"
+}
+```
+
+Creating a new policy automatically deactivates any previous policy for that agent.
+
+<details>
+<summary>Python</summary>
+
+```python
+r = requests.post(
+    f"{API}/api/v1/agents/{agent_id}/policies",
+    headers=headers,
+    json={
+        "rules": {
+            "allowed_endpoints": ["/v1/chat/*", "/v1/embeddings"],
+            "allowed_methods": ["POST", "GET"],
+        }
+    },
+)
+policy = r.json()
+print(f"Policy v{policy['version']} attached (active: {policy['is_active']})")
+```
+</details>
+
+**Policy rules reference:**
+
+| Field | Description |
+|-------|-------------|
+| `allowed_endpoints` | Endpoint patterns the agent can access (`/v1/*`, `*`, exact) |
+| `denied_endpoints` | Explicitly blocked patterns (checked first) |
+| `allowed_methods` | HTTP methods allowed (`GET`, `POST`, etc.) |
+| `max_cost_usd` | Optional per-request cost cap |
+
+---
+
+## Step 5: Send a Request Through the Gateway (~3 min)
 
 The gateway enforces per-agent policy before any request hits the upstream provider. Send a chat completion request through the proxy:
 
@@ -233,7 +295,7 @@ print(r.json())  # {"decision": "deny", "deny_reason": "runtime_key_on_managemen
 
 ---
 
-## Step 5: View the Audit Log (~2 min)
+## Step 6: View the Audit Log (~2 min)
 
 Every gateway decision is recorded in a tamper-proof, HMAC-chained audit log:
 
@@ -324,12 +386,12 @@ In 15 minutes, you set up a complete agent identity system:
 ```
 ┌─────────────┐     ┌──────────────┐     ┌──────────────┐
 │  Your Agent  │────▸│   Gateway    │────▸│  Upstream AI  │
-│  (Step 2)    │     │  (Step 4)    │     │   Provider    │
+│  (Step 2)    │     │  (Step 6)    │     │   Provider    │
 └─────────────┘     └──────┬───────┘     └──────────────┘
                            │
                     ┌──────▼───────┐
                     │  Audit Log   │
-                    │  (Step 5)    │
+                    │  (Step 6)    │
                     └──────────────┘
 ```
 
@@ -410,6 +472,9 @@ curl -s -X DELETE $AI_API/api/v1/agents/$AGENT_ID/keys/{key_id} \
 | `GET` | `/api/v1/agents/{id}/keys` | List keys (prefix + status) |
 | `POST` | `/api/v1/agents/{id}/keys/rotate` | Rotate key (24hr grace) |
 | `DELETE` | `/api/v1/agents/{id}/keys/{key_id}` | Revoke key |
+| `POST` | `/api/v1/agents/{id}/policies` | Create policy (deactivates previous) |
+| `GET` | `/api/v1/agents/{id}/policies` | List all policies |
+| `GET` | `/api/v1/agents/{id}/policies/active` | Get active policy |
 | `POST` | `/api/v1/agents/{id}/credentials` | Store upstream credential |
 | `GET` | `/api/v1/agents/{id}/credentials` | List credentials |
 | `PUT` | `/api/v1/agents/{id}/credentials/{cred_id}/rotate` | Rotate upstream key |
