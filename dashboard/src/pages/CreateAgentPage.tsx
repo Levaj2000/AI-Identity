@@ -124,7 +124,7 @@ export function CreateAgentPage() {
 
   function handleModalDismiss() {
     if (result) {
-      navigate(`/agents/${result.agent.id}`)
+      navigate(`/dashboard/agents/${result.agent.id}`)
     }
   }
 
