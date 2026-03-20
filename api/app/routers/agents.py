@@ -133,7 +133,9 @@ def list_agents(
     Supports filtering by `status` and/or `capability`, with pagination
     via `limit` and `offset`. Results are ordered by creation date (newest first).
     """
-    query = db.query(Agent).filter(Agent.user_id == user.id)
+    query = db.query(Agent)
+    if user.role != "admin":
+        query = query.filter(Agent.user_id == user.id)
 
     if status:
         query = query.filter(Agent.status == status)
