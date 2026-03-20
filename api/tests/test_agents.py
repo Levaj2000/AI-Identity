@@ -47,9 +47,9 @@ class TestCreateAgent:
         assert agent["capabilities"] == []
 
     def test_create_agent_no_auth(self, client):
-        """Creating an agent without auth returns 422 (missing header)."""
+        """Creating an agent without auth returns 401 (no credentials)."""
         resp = client.post("/api/v1/agents", json={"name": "No Auth"})
-        assert resp.status_code == 422
+        assert resp.status_code == 401
 
     def test_create_agent_bad_auth(self, client):
         """Creating an agent with invalid API key returns 401."""
