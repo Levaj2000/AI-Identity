@@ -57,6 +57,12 @@ class Settings(BaseSettings):
     )
     stripe_cancel_url: str = "https://dashboard.ai-identity.co/settings"
 
+    # Clerk authentication
+    # CLERK_ISSUER is the Clerk instance URL (e.g. https://your-app.clerk.accounts.dev)
+    # Used to fetch JWKS for JWT verification. If empty, Clerk auth is disabled
+    # and legacy X-API-Key auth is used.
+    clerk_issuer: str = ""
+
     # Gateway URL (for QA runner — API needs to reach gateway)
     gateway_url: str = "http://localhost:8002"
 

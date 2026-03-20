@@ -1,14 +1,14 @@
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
+import { useUser } from '@clerk/react'
 
 /**
- * Route guard — redirects to /login if not authenticated.
- * Shows a loading spinner while checking stored credentials.
+ * Route guard — redirects to /login if not authenticated via Clerk.
+ * Shows a loading spinner while Clerk checks the session.
  */
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
+  const { isSignedIn, isLoaded } = useUser()
 
-  if (loading) {
+  if (!isLoaded) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#0A0A0B]">
         <div className="flex flex-col items-center gap-4">
@@ -19,7 +19,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!user) {
+  if (!isSignedIn) {
     return <Navigate to="/login" replace />
   }
 
