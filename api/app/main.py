@@ -113,13 +113,28 @@ async def lifespan(app: FastAPI):
         settings.app_version,
     )
 
-    # Auto-create compliance tables and seed frameworks
+    # Auto-create tables and ensure schema is up to date
     try:
+        from sqlalchemy import inspect, text
+
         from common.models.base import Base, engine
         from common.models.compliance import ComplianceFramework  # noqa: F811
 
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables ensured (including compliance)")
+
+        # Defensive column migration — add columns that create_all misses
+        # on existing tables. This handles the qa_runs.mode column addition.
+        inspector = inspect(engine)
+        if "qa_runs" in inspector.get_table_names():
+            existing_cols = {c["name"] for c in inspector.get_columns("qa_runs")}
+            if "mode" not in existing_cols:
+                with engine.begin() as conn:
+                    conn.execute(
+                        text("ALTER TABLE qa_runs ADD COLUMN mode VARCHAR(20) DEFAULT 'admin'")
+                    )
+                    conn.execute(text("UPDATE qa_runs SET mode = 'admin' WHERE mode IS NULL"))
+                logger.info("Added 'mode' column to qa_runs table")
 
         # Seed compliance frameworks if empty
         from common.models.base import SessionLocal
