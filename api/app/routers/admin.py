@@ -5,8 +5,10 @@ All endpoints require admin role (user.role == "admin").
 
 import logging
 import time
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
@@ -118,6 +120,62 @@ async def list_users(
     ]
 
     return AdminUserListResponse(items=items, total=total, limit=limit, offset=offset)
+
+
+class CreateUserRequest(BaseModel):
+    """Request body for creating a new user."""
+
+    email: str
+    role: str = "owner"
+    tier: str = "free"
+
+
+@router.post(
+    "/users",
+    response_model=AdminUserSummary,
+    status_code=201,
+    summary="Create a new user (admin)",
+)
+async def create_user(
+    body: CreateUserRequest,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminUserSummary:
+    """Provision a new user account.
+
+    Used to onboard design partners and create test accounts.
+    The user's email serves as their API key (MVP auth).
+    """
+    email = body.email.strip().lower()
+
+    # Check if user already exists
+    existing = db.query(User).filter(User.email == email).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="User with this email already exists")
+
+    user = User(
+        id=uuid.uuid4(),
+        email=email,
+        role=body.role,
+        tier=body.tier,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    logger.info("Admin created user: %s (%s, tier=%s)", email, user.id, body.tier)
+
+    return AdminUserSummary(
+        id=str(user.id),
+        email=user.email,
+        role=user.role,
+        tier=user.tier,
+        requests_this_month=0,
+        agent_count=0,
+        has_subscription=False,
+        stripe_customer_id=None,
+        created_at=user.created_at,
+    )
 
 
 @router.patch(
