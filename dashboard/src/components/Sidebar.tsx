@@ -1,6 +1,7 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { ThemeToggle } from './ThemeToggle'
 import { AIIdentityLogo5 } from '../components/AIIdentityLogo'
+import { useAuth } from '../hooks/useAuth'
 
 interface SidebarProps {
   open: boolean
@@ -62,6 +63,40 @@ const navItems = [
     end: false,
   },
   {
+    label: 'Demo',
+    to: '/demo',
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        className="h-5 w-5"
+      >
+        <path
+          fillRule="evenodd"
+          d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v8.5A2.25 2.25 0 0115.75 15h-3.105a3.501 3.501 0 001.1 1.677A.75.75 0 0113.26 18H6.74a.75.75 0 01-.484-1.323A3.501 3.501 0 007.355 15H4.25A2.25 2.25 0 012 12.75v-8.5zm1.5 0a.75.75 0 01.75-.75h11.5a.75.75 0 01.75.75v7.5a.75.75 0 01-.75.75H4.25a.75.75 0 01-.75-.75v-7.5z"
+          clipRule="evenodd"
+        />
+      </svg>
+    ),
+    end: true,
+  },
+  {
+    label: 'Usage & Billing',
+    to: '/dashboard/usage',
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        className="h-5 w-5"
+      >
+        <path d="M1 4.75C1 3.784 1.784 3 2.75 3h14.5c.966 0 1.75.784 1.75 1.75v10.515a1.75 1.75 0 01-1.75 1.75h-1.5c-.078 0-.155-.005-.23-.015H4.48c-.075.01-.152.015-.23.015h-1.5A1.75 1.75 0 011 15.265V4.75zm16.5 7.385V11.01a.25.25 0 00-.25-.25h-1.5a.25.25 0 00-.25.25v1.125c0 .138.112.25.25.25h1.5a.25.25 0 00.25-.25zm0-3.162V7.848a.25.25 0 00-.25-.25h-1.5a.25.25 0 00-.25.25v1.125c0 .138.112.25.25.25h1.5a.25.25 0 00.25-.25zm-15 1.014v1.126c0 .138.112.25.25.25h1.5a.25.25 0 00.25-.25V9.987a.25.25 0 00-.25-.25h-1.5a.25.25 0 00-.25.25zM2.75 12.5a.25.25 0 00-.25.25v1.125c0 .138.112.25.25.25h1.5a.25.25 0 00.25-.25V12.75a.25.25 0 00-.25-.25h-1.5zM2.5 7.848v1.125c0 .138.112.25.25.25h1.5a.25.25 0 00.25-.25V7.848a.25.25 0 00-.25-.25h-1.5a.25.25 0 00-.25.25zM6.5 7.848v1.125c0 .138.112.25.25.25h6.5a.25.25 0 00.25-.25V7.848a.25.25 0 00-.25-.25h-6.5a.25.25 0 00-.25.25zm0 2.139v1.126c0 .138.112.25.25.25h6.5a.25.25 0 00.25-.25V9.987a.25.25 0 00-.25-.25h-6.5a.25.25 0 00-.25.25zm.25 2.513a.25.25 0 00-.25.25v1.125c0 .138.112.25.25.25h6.5a.25.25 0 00.25-.25V12.75a.25.25 0 00-.25-.25h-6.5z" />
+      </svg>
+    ),
+    end: false,
+  },
+  {
     label: 'Compliance',
     to: '/dashboard/compliance',
     icon: (
@@ -83,6 +118,14 @@ const navItems = [
 ]
 
 export function Sidebar({ open, onClose }: SidebarProps) {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    logout()
+    navigate('/login')
+  }
+
   return (
     <>
       {/* Mobile backdrop */}
@@ -124,10 +167,74 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               {item.label}
             </NavLink>
           ))}
+
+          {/* Admin separator */}
+          <div className="my-3 border-t border-gray-200 dark:border-[#1a1a1d]" />
+
+          <NavLink
+            to="/dashboard/admin"
+            onClick={onClose}
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-[#F59E0B]/10 text-[#F59E0B] dark:bg-[#F59E0B]/10 dark:text-[#F59E0B]'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d] dark:hover:text-[#e4e4e7]'
+              }`
+            }
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="h-5 w-5"
+            >
+              <path
+                fillRule="evenodd"
+                d="M7.84 1.804A1 1 0 018.82 1h2.36a1 1 0 01.98.804l.331 1.652a6.993 6.993 0 011.929 1.115l1.598-.54a1 1 0 011.186.447l1.18 2.044a1 1 0 01-.205 1.251l-1.267 1.113a7.047 7.047 0 010 2.228l1.267 1.113a1 1 0 01.206 1.25l-1.18 2.045a1 1 0 01-1.187.447l-1.598-.54a6.993 6.993 0 01-1.929 1.115l-.33 1.652a1 1 0 01-.98.804H8.82a1 1 0 01-.98-.804l-.331-1.652a6.993 6.993 0 01-1.929-1.115l-1.598.54a1 1 0 01-1.186-.447l-1.18-2.044a1 1 0 01.205-1.251l1.267-1.114a7.05 7.05 0 010-2.227L1.821 7.773a1 1 0 01-.206-1.25l1.18-2.045a1 1 0 011.187-.447l1.598.54A6.993 6.993 0 017.51 3.456l.33-1.652zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Admin
+          </NavLink>
         </nav>
 
-        {/* Footer */}
+        {/* Footer — user info + logout */}
         <div className="border-t border-gray-200 px-4 py-4 dark:border-[#1a1a1d]">
+          {user && (
+            <div className="mb-3 flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-gray-700 dark:text-[#e4e4e7]">
+                  {user.email}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-[#52525b]">
+                  {user.role} &middot; {user.tier}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="ml-2 rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-[#1a1a1d] dark:hover:text-[#e4e4e7]"
+                title="Log out"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z"
+                    clipRule="evenodd"
+                  />
+                  <path
+                    fillRule="evenodd"
+                    d="M19 10a.75.75 0 00-.75-.75H8.704l1.048-.943a.75.75 0 10-1.004-1.114l-2.5 2.25a.75.75 0 000 1.114l2.5 2.25a.75.75 0 101.004-1.114l-1.048-.943h9.546A.75.75 0 0019 10z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-500 dark:text-[#52525b]">
               &copy; {new Date().getFullYear()} AI Identity

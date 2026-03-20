@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
+from api.app.quota import check_credential_quota
 from common.config.settings import settings
 from common.crypto.exceptions import DecryptionError, EncryptionError
 from common.crypto.fernet import encrypt_credential, re_encrypt_credential, validate_master_key
@@ -80,6 +81,9 @@ def create_credential(
     is stored alongside the ciphertext for identification purposes.
     """
     agent = get_user_agent(db, user, agent_id)
+
+    # Enforce tier quota on credential creation
+    check_credential_quota(db, user)
 
     try:
         encrypted = encrypt_credential(body.api_key, settings.credential_encryption_key)

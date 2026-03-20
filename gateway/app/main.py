@@ -14,6 +14,7 @@ import logging
 import math
 import time
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,6 +50,26 @@ OPENAPI_TAGS = [
     },
 ]
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup/shutdown lifecycle — replaces deprecated on_event."""
+    logger.info(
+        "AI Identity Gateway starting — env=%s, version=%s, "
+        "policy_timeout=%dms, circuit_breaker=%d failures/%ds window, "
+        "rate_limit=%s (ip=%d/s, key=%d/s)",
+        settings.environment,
+        settings.app_version,
+        settings.policy_eval_timeout_ms,
+        settings.circuit_breaker_failure_threshold,
+        settings.circuit_breaker_window_seconds,
+        "enabled" if settings.rate_limit_enabled else "DISABLED",
+        settings.rate_limit_per_ip,
+        settings.rate_limit_per_key,
+    )
+    yield
+
+
 app = FastAPI(
     title="AI Identity — Gateway",
     description=(
@@ -58,6 +79,7 @@ app = FastAPI(
     ),
     version=settings.app_version,
     openapi_tags=OPENAPI_TAGS,
+    lifespan=lifespan,
 )
 
 # ── RLS Service Bypass ───────────────────────────────────────────────────
@@ -275,27 +297,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 
 
-# ── Startup ──────────────────────────────────────────────────────────────
-
-
-@app.on_event("startup")
-async def startup():
-    """Log service start with environment info and fail-closed config."""
-    logger.info(
-        "AI Identity Gateway starting — env=%s, version=%s, "
-        "policy_timeout=%dms, circuit_breaker=%d failures/%ds window, "
-        "rate_limit=%s (ip=%d/s, key=%d/s)",
-        settings.environment,
-        settings.app_version,
-        settings.policy_eval_timeout_ms,
-        settings.circuit_breaker_failure_threshold,
-        settings.circuit_breaker_window_seconds,
-        "enabled" if settings.rate_limit_enabled else "DISABLED",
-        settings.rate_limit_per_ip,
-        settings.rate_limit_per_key,
-    )
-
-
 # ── Enforcement Endpoint ────────────────────────────────────────────────
 
 
@@ -355,6 +356,47 @@ def enforce_request(
             status_code=result.status_code,
             content=response,
         )
+
+    # ── Post-policy quota check ──────────────────────────────────────
+    # Only count requests that pass policy enforcement.
+    try:
+        from common.models import Agent, User
+        from common.models.user import TIER_QUOTAS
+
+        agent = db.query(Agent).filter(Agent.id == agent_id).first()
+        if agent:
+            user = db.query(User).filter(User.id == agent.user_id).first()
+            if user:
+                quotas = TIER_QUOTAS.get(user.tier, TIER_QUOTAS["free"])
+                max_req = quotas["max_requests_per_month"]
+
+                if max_req != -1 and (user.requests_this_month or 0) >= max_req:
+                    return JSONResponse(
+                        status_code=429,
+                        content={
+                            "decision": "deny",
+                            "status_code": 429,
+                            "message": (
+                                f"Monthly request quota exceeded ({max_req} requests). "
+                                f"Upgrade at https://ai-identity.co/#pricing"
+                            ),
+                            "deny_reason": "quota_exceeded",
+                        },
+                    )
+
+                # Increment counter
+                user.requests_this_month = (user.requests_this_month or 0) + 1
+                db.commit()
+
+                # Add quota headers to response
+                response["quota"] = {
+                    "tier": user.tier,
+                    "requests_used": user.requests_this_month,
+                    "requests_limit": max_req if max_req != -1 else None,
+                }
+    except Exception as e:
+        # Quota check is non-blocking — log and allow
+        logger.warning("Quota check failed (allowing request): %s", e)
 
     return response
 

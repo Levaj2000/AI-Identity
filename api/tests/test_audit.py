@@ -192,8 +192,9 @@ class TestAuditEndpoints:
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data["total"] == 2
-        assert len(data["items"]) == 2
+        # 2 manual entries + 1 from agent creation audit trail
+        assert data["total"] == 3
+        assert len(data["items"]) == 3
         # Check integrity fields are present
         assert "entry_hash" in data["items"][0]
         assert "prev_hash" in data["items"][0]
@@ -217,5 +218,6 @@ class TestAuditEndpoints:
         assert resp.status_code == 200
         data = resp.json()
         assert data["valid"] is True
-        assert data["total_entries"] == 3
-        assert data["entries_verified"] == 3
+        # 3 manual entries + 1 from agent creation audit trail
+        assert data["total_entries"] == 4
+        assert data["entries_verified"] == 4

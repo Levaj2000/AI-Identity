@@ -14,6 +14,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends gcc libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user
+RUN useradd -m -u 1000 appuser
+
 # Install shared library first (changes less often → better layer cache)
 COPY common/ common/
 RUN pip install --no-cache-dir -e common/
@@ -29,3 +32,6 @@ COPY alembic/ alembic/
 # Copy service code + helper scripts
 COPY ${SERVICE}/ ${SERVICE}/
 COPY scripts/ scripts/
+
+# Run as non-root user
+USER appuser
