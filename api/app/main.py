@@ -93,6 +93,11 @@ OPENAPI_TAGS = [
         "for automatic tier synchronization.",
     },
     {
+        "name": "qa",
+        "description": "Automated QA checklist — run 15-step E2E production validation, "
+        "track results, and collect customer + staff sign-offs for onboarding.",
+    },
+    {
         "name": "health",
         "description": "Service health and status endpoints.",
     },
@@ -310,6 +315,7 @@ from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
 from api.app.routers.policies import router as policies_router  # noqa: E402
+from api.app.routers.qa import router as qa_router  # noqa: E402
 from api.app.routers.usage import router as usage_router  # noqa: E402
 
 app.include_router(admin_router)
@@ -321,6 +327,7 @@ app.include_router(compliance_router)
 app.include_router(credentials_router)
 app.include_router(keys_router)
 app.include_router(policies_router)
+app.include_router(qa_router)
 app.include_router(usage_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────
