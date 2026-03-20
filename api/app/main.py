@@ -165,6 +165,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=OPENAPI_TAGS,
+    lifespan=lifespan,
     contact={
         "name": "AI Identity Team",
         "url": "https://github.com/Levaj2000/AI-Identity",
@@ -172,7 +173,6 @@ app = FastAPI(
     license_info={
         "name": "MIT",
     },
-    lifespan=lifespan,
 )
 
 # ── CORS ─────────────────────────────────────────────────────────────────
