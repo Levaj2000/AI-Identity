@@ -25,6 +25,9 @@ class QARun(Base):
     failed_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
+    # Run mode: "admin" (existing account) or "onboarding" (fresh test client)
+    mode: Mapped[str | None] = mapped_column(String(20), nullable=True, default="admin")
+
     # Full check results (JSONB array of check objects)
     results: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 
