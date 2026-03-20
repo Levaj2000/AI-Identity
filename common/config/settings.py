@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     )
     stripe_cancel_url: str = "https://dashboard.ai-identity.co/settings"
 
+    # Gateway URL (for QA runner — API needs to reach gateway)
+    gateway_url: str = "http://localhost:8002"
+
     # Environment
     environment: str = "development"
     debug: bool = False
