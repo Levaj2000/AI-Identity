@@ -28,6 +28,8 @@ services:
         sync: false
       - key: INTERNAL_SERVICE_KEY
         sync: false
+      - key: CLERK_ISSUER
+        sync: false
       - key: GATEWAY_URL
         value: https://ai-identity-gateway.onrender.com
       - key: PYTHON_VERSION
