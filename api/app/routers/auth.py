@@ -2,10 +2,11 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from api.app.auth import get_current_user
 from common.models import User, get_db
 
 logger = logging.getLogger("ai_identity.api.auth")
@@ -53,23 +54,15 @@ def _user_profile(user: User) -> UserProfile:
 
 
 @router.get("/me", response_model=UserProfile, summary="Get current user profile")
-def get_me(
-    x_api_key: str = Header(..., description="User API key"),
-    db: Session = Depends(get_db),
+async def get_me(
+    current_user: User = Depends(get_current_user),
 ):
-    """Validate API key and return the authenticated user's profile.
+    """Return the authenticated user's profile.
 
-    Used by the dashboard to verify the stored API key is still valid
-    and to load user info (role, tier, etc.) on page load.
+    Supports both Clerk JWT (Authorization: Bearer) and legacy X-API-Key auth.
+    Used by the dashboard to load user info on page load.
     """
-    if not x_api_key or len(x_api_key) < 8:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-
-    user = db.query(User).filter(User.email == x_api_key).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-
-    return _user_profile(user)
+    return _user_profile(current_user)
 
 
 @router.post("/login", response_model=UserProfile, summary="Validate credentials")
