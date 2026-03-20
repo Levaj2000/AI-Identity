@@ -277,7 +277,10 @@ export function AgentKeysPage() {
           Agents
         </Link>
         <ChevronIcon />
-        <Link to={`/agents/${id}`} className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
+        <Link
+          to={`/dashboard/agents/${id}`}
+          className="hover:text-gray-700 dark:hover:text-[#e4e4e7]"
+        >
           {agent.name}
         </Link>
         <ChevronIcon />

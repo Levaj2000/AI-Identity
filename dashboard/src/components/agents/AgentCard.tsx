@@ -10,7 +10,7 @@ interface AgentCardProps {
 export function AgentCard({ agent }: AgentCardProps) {
   return (
     <Link
-      to={`/agents/${agent.id}`}
+      to={`/dashboard/agents/${agent.id}`}
       className="block rounded-xl border border-gray-200 bg-white p-5 transition-colors hover:border-gray-300 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl dark:hover:border-[#F59E0B]/25"
     >
       {/* Top row: name + status */}
