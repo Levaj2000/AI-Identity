@@ -11,6 +11,7 @@ from common.models.compliance import (
     ComplianceResult,
 )
 from common.models.policy import Policy
+from common.models.qa_run import QARun
 from common.models.upstream_credential import (
     CredentialStatus,
     UpstreamCredential,
@@ -40,4 +41,5 @@ __all__ = [
     "ComplianceResult",
     "UserTier",
     "TIER_QUOTAS",
+    "QARun",
 ]
