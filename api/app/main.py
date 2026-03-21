@@ -148,6 +148,14 @@ async def lifespan(app: FastAPI):
                     conn.execute(text("UPDATE qa_runs SET mode = 'admin' WHERE mode IS NULL"))
                 logger.info("Added 'mode' column to qa_runs table")
 
+            if "user_id" not in existing_cols:
+                with engine.begin() as conn:
+                    conn.execute(
+                        text("ALTER TABLE qa_runs ADD COLUMN user_id UUID REFERENCES users(id)")
+                    )
+                    conn.execute(text("CREATE INDEX ix_qa_runs_user_id ON qa_runs (user_id)"))
+                logger.info("Added 'user_id' column to qa_runs table")
+
         # Seed compliance frameworks if empty
         from common.models.base import SessionLocal
 

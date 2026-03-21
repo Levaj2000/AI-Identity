@@ -111,6 +111,7 @@ async def trigger_qa_run(
         total_count=result.total,
         results=result.to_dict(),
         mode="admin",
+        user_id=user.id,
     )
     db.add(qa_run)
     db.commit()
@@ -192,6 +193,7 @@ async def trigger_onboarding_run(
         total_count=result.total,
         results=result.to_dict(),
         mode="onboarding",
+        user_id=user.id,
     )
     db.add(qa_run)
     db.commit()
@@ -224,9 +226,12 @@ def list_qa_runs(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """List all QA runs, newest first."""
-    total = db.query(QARun).count()
-    runs = db.query(QARun).order_by(QARun.created_at.desc()).offset(offset).limit(limit).all()
+    """List all QA runs, newest first. Non-admin users only see their own runs."""
+    query = db.query(QARun)
+    if user.role != "admin":
+        query = query.filter(QARun.user_id == user.id)
+    total = query.count()
+    runs = query.order_by(QARun.created_at.desc()).offset(offset).limit(limit).all()
     return QARunListResponse(items=runs, total=total)
 
 
@@ -244,7 +249,10 @@ def get_qa_run(
     db: Session = Depends(get_db),
 ):
     """Get a single QA run with full check results."""
-    run = db.query(QARun).filter(QARun.run_id == run_id).first()
+    query = db.query(QARun).filter(QARun.run_id == run_id)
+    if user.role != "admin":
+        query = query.filter(QARun.user_id == user.id)
+    run = query.first()
     if not run:
         raise HTTPException(status_code=404, detail="QA run not found")
     return run
@@ -268,7 +276,10 @@ def signoff_qa_run(
 
     Both customer and staff sign-offs are required for full validation.
     """
-    run = db.query(QARun).filter(QARun.run_id == run_id).first()
+    query = db.query(QARun).filter(QARun.run_id == run_id)
+    if user.role != "admin":
+        query = query.filter(QARun.user_id == user.id)
+    run = query.first()
     if not run:
         raise HTTPException(status_code=404, detail="QA run not found")
 

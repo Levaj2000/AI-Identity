@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { listAgents } from '../services/api/agents'
 import { isApiError } from '../services/api/client'
+import { useAuth } from './useAuth'
 import type { Agent, ApiError, DashboardStats } from '../types/api'
 
 interface DashboardData {
@@ -20,12 +21,16 @@ const EMPTY_STATS: DashboardStats = {
 
 /** Fetches agents and computes dashboard stats client-side. */
 export function useDashboardData(): DashboardData {
+  const { user } = useAuth()
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS)
   const [recentAgents, setRecentAgents] = useState<Agent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<ApiError | null>(null)
 
   useEffect(() => {
+    // Wait for auth to be ready before fetching
+    if (!user) return
+
     let cancelled = false
 
     listAgents({ limit: 100 })
@@ -58,7 +63,7 @@ export function useDashboardData(): DashboardData {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [user])
 
   return {
     stats,
