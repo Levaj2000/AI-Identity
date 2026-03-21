@@ -1,5 +1,8 @@
 import { useState } from "react";
 
+const BUTTONDOWN_URL =
+  "https://buttondown.com/api/emails/embed-subscribe/ai-identity";
+
 const productLinks = [
   { label: "How It Works", href: "#how-it-works" },
   { label: "Integrations", href: "#integrations" },
@@ -10,7 +13,7 @@ const productLinks = [
 ];
 
 const companyLinks = [
-  { label: "Blog", href: "#" },
+  { label: "Blog", href: "/blog" },
   { label: "Careers", href: "#" },
   { label: "Contact", href: "/contact" },
   { label: "Legal", href: "/terms" },
@@ -32,6 +35,31 @@ function SocialIcon({ d, label }: { d: string; label: string }) {
 
 export default function Footer() {
   const [email, setEmail] = useState("");
+  const [subscribeStatus, setSubscribeStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+
+    setSubscribeStatus("loading");
+    try {
+      const res = await fetch(BUTTONDOWN_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ email }),
+      });
+      if (res.ok || res.status === 201) {
+        setSubscribeStatus("success");
+        setEmail("");
+      } else {
+        setSubscribeStatus("error");
+      }
+    } catch {
+      setSubscribeStatus("error");
+    }
+  };
 
   return (
     <footer className="bg-[#0A0A0B] border-t border-white/5">
@@ -81,18 +109,37 @@ export default function Footer() {
             <p className="text-sm text-gray-400 mb-6 leading-relaxed">
               Get updates on new features and product releases.
             </p>
-            <div className="flex gap-2 max-w-[260px]">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@email.com"
-                className="min-w-0 flex-1 px-3 py-2 bg-[#111113] border border-white/10 rounded-lg text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#F59E0B]/40"
-              />
-              <button className="px-3 py-2 bg-[#F59E0B] text-[#0A0A0B] text-xs font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors shrink-0">
-                Subscribe
-              </button>
-            </div>
+            {subscribeStatus === "success" ? (
+              <p className="text-sm text-[#F59E0B] font-medium">
+                ✓ Subscribed! Check your email to confirm.
+              </p>
+            ) : (
+              <form
+                onSubmit={handleSubscribe}
+                className="flex gap-2 max-w-[260px]"
+              >
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@email.com"
+                  required
+                  className="min-w-0 flex-1 px-3 py-2 bg-[#111113] border border-white/10 rounded-lg text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#F59E0B]/40"
+                />
+                <button
+                  type="submit"
+                  disabled={subscribeStatus === "loading"}
+                  className="px-3 py-2 bg-[#F59E0B] text-[#0A0A0B] text-xs font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors shrink-0 disabled:opacity-50"
+                >
+                  {subscribeStatus === "loading" ? "..." : "Subscribe"}
+                </button>
+              </form>
+            )}
+            {subscribeStatus === "error" && (
+              <p className="text-xs text-red-400 mt-2">
+                Something went wrong. Try again or email us directly.
+              </p>
+            )}
           </div>
 
           {/* Product */}
