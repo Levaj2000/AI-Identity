@@ -12,6 +12,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -19,6 +20,17 @@ from fastapi.responses import JSONResponse
 from common.auth.sanitizer import sanitize
 from common.config.logging import setup_logging
 from common.config.settings import settings
+
+# ── Sentry ───────────────────────────────────────────────────────────────
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.environment,
+        release=f"ai-identity-api@{settings.app_version}",
+        traces_sample_rate=0.2 if settings.environment == "production" else 1.0,
+        send_default_pii=False,
+    )
 
 # ── Logging ──────────────────────────────────────────────────────────────
 
@@ -297,6 +309,18 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         request.method,
         request.url.path,
     )
+
+    # Attach request context to Sentry event
+    if settings.sentry_dsn:
+        sentry_sdk.set_context(
+            "request_info",
+            {
+                "method": request.method,
+                "path": request.url.path,
+                "request_id": getattr(request.state, "request_id", None),
+            },
+        )
+
     # SECURITY: Never return exception details to the client.
     # The logger.exception above logs the full sanitized traceback for debugging.
     return JSONResponse(

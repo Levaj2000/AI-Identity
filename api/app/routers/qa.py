@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
@@ -18,11 +19,26 @@ logger = logging.getLogger("ai_identity.api.qa")
 router = APIRouter(prefix="/api/v1/qa", tags=["qa"])
 
 
+# ── Helpers ──────────────────────────────────────────────────────────────
+
+
+def _generate_run_id(db: Session) -> str:
+    """Generate a date-based QA run ID like QA-20260321-003."""
+    today = datetime.now(UTC)
+    date_str = today.strftime("%Y%m%d")
+    prefix = f"QA-{date_str}-"
+
+    # Count how many runs exist today
+    count = db.query(sa_func.count(QARun.id)).filter(QARun.run_id.like(f"{prefix}%")).scalar()
+    return f"{prefix}{(count + 1):03d}"
+
+
 # ── Schemas ─────────────────────────────────────────────────────────────
 
 
 class QARunResponse(BaseModel):
     id: int
+    run_id: str
     status: str
     run_by: str
     environment: str
@@ -83,7 +99,9 @@ async def trigger_qa_run(
 
     result = await run_qa_checks(api_url, gateway_url, user.email)
 
+    run_id = _generate_run_id(db)
     qa_run = QARun(
+        run_id=run_id,
         status="passed" if result.all_passed else "failed",
         run_by=user.email,
         environment=settings.environment,
@@ -100,8 +118,8 @@ async def trigger_qa_run(
     db.refresh(qa_run)
 
     logger.info(
-        "QA run #%d by %s: %d/%d passed (%s)",
-        qa_run.id,
+        "QA run %s by %s: %d/%d passed (%s)",
+        qa_run.run_id,
         user.email,
         result.passed,
         result.total,
@@ -163,7 +181,9 @@ async def trigger_onboarding_run(
         db.commit()
         logger.info("Onboarding QA: cleaned up test user %s", test_email)
 
+    run_id = _generate_run_id(db)
     qa_run = QARun(
+        run_id=run_id,
         status="passed" if result.all_passed else "failed",
         run_by=user.email,
         environment=settings.environment,
@@ -180,8 +200,8 @@ async def trigger_onboarding_run(
     db.refresh(qa_run)
 
     logger.info(
-        "Onboarding QA run #%d by %s (as %s): %d/%d passed (%s)",
-        qa_run.id,
+        "Onboarding QA run %s by %s (as %s): %d/%d passed (%s)",
+        qa_run.run_id,
         user.email,
         test_email,
         result.passed,
@@ -224,12 +244,12 @@ def list_qa_runs(
     summary="Get QA run details",
 )
 def get_qa_run(
-    run_id: int,
+    run_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Get a single QA run with full check results."""
-    query = db.query(QARun).filter(QARun.id == run_id)
+    query = db.query(QARun).filter(QARun.run_id == run_id)
     if user.role != "admin":
         query = query.filter(QARun.user_id == user.id)
     run = query.first()
@@ -247,7 +267,7 @@ def get_qa_run(
     summary="Sign off on a QA run",
 )
 def signoff_qa_run(
-    run_id: int,
+    run_id: str,
     body: SignoffRequest,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -256,7 +276,7 @@ def signoff_qa_run(
 
     Both customer and staff sign-offs are required for full validation.
     """
-    query = db.query(QARun).filter(QARun.id == run_id)
+    query = db.query(QARun).filter(QARun.run_id == run_id)
     if user.role != "admin":
         query = query.filter(QARun.user_id == user.id)
     run = query.first()
@@ -277,6 +297,6 @@ def signoff_qa_run(
     db.commit()
     db.refresh(run)
 
-    logger.info("QA run #%d signed off by %s (%s)", run_id, user.email, body.role)
+    logger.info("QA run %s signed off by %s (%s)", run_id, user.email, body.role)
 
     return run

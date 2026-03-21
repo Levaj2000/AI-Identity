@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     # Gateway URL (for QA runner — API needs to reach gateway)
     gateway_url: str = "http://localhost:8002"
 
+    # Sentry error monitoring (leave empty to disable)
+    sentry_dsn: str = ""
+
     # Environment
     environment: str = "development"
     debug: bool = False
