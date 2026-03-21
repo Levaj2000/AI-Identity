@@ -14,7 +14,7 @@ const productLinks = [
 
 const companyLinks = [
   { label: "Blog", href: "/blog" },
-  { label: "Careers", href: "#" },
+  { label: "Careers", href: "/careers" },
   { label: "Contact", href: "/contact" },
   { label: "Legal", href: "/terms" },
 ];
