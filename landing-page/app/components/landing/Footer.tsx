@@ -12,8 +12,8 @@ const productLinks = [
 const companyLinks = [
   { label: "Blog", href: "#" },
   { label: "Careers", href: "#" },
-  { label: "Contact", href: "#" },
-  { label: "Legal", href: "#" },
+  { label: "Contact", href: "/contact" },
+  { label: "Legal", href: "/terms" },
 ];
 
 function SocialIcon({ d, label }: { d: string; label: string }) {
@@ -169,10 +169,10 @@ export default function Footer() {
             &copy; 2026 AI Identity. All rights reserved.
           </p>
           <div className="flex items-center gap-6 text-sm text-gray-500">
-            <a href="#" className="hover:text-gray-400 transition-colors">
+            <a href="/privacy" className="hover:text-gray-400 transition-colors">
               Privacy Policy
             </a>
-            <a href="#" className="hover:text-gray-400 transition-colors">
+            <a href="/terms" className="hover:text-gray-400 transition-colors">
               Terms of Service
             </a>
             <button className="hover:text-gray-400 transition-colors">
