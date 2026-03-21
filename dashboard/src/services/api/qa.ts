@@ -29,6 +29,7 @@ export interface QARunResults {
 
 export interface QARun {
   id: number
+  run_id: string
   status: string
   run_by: string
   environment: string
@@ -66,12 +67,12 @@ export function listQARuns(limit = 20, offset = 0): Promise<QARunListResponse> {
   return apiFetch<QARunListResponse>(`${BASE}/runs?limit=${limit}&offset=${offset}`)
 }
 
-export function getQARun(runId: number): Promise<QARun> {
+export function getQARun(runId: string): Promise<QARun> {
   return apiFetch<QARun>(`${BASE}/runs/${runId}`)
 }
 
 export function signoffQARun(
-  runId: number,
+  runId: string,
   role: 'customer' | 'staff',
   note?: string,
 ): Promise<QARun> {
