@@ -8,6 +8,7 @@ import Contact from "./pages/Contact";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Blog from "./pages/Blog";
+import Careers from "./pages/Careers";
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +24,7 @@ export const router = createBrowserRouter([
       { path: "terms", Component: Terms },
       { path: "blog", Component: Blog },
       { path: "blog/:slug", Component: Blog },
+      { path: "careers", Component: Careers },
     ],
   },
 ]);
