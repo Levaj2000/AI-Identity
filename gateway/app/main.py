@@ -457,7 +457,7 @@ def circuit_breaker_status():
 # ── Health ───────────────────────────────────────────────────────────────
 
 
-@app.get("/health", tags=["health"], summary="Health check")
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["health"], summary="Health check")
 async def health():
     """Returns service status, version, and circuit breaker state.
 
