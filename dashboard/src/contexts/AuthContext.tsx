@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useUser, useSession } from '@clerk/react'
+import * as Sentry from '@sentry/react'
 import { AuthContext } from './auth'
 import type { AuthUser } from './auth'
 import { apiFetch, setSessionTokenGetter, clearSessionTokenGetter } from '../services/api/client'
@@ -33,6 +34,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const profile = await apiFetch<AuthUser>('/api/v1/auth/me')
         setUser(profile)
+
+        // Set Sentry user context for error attribution
+        Sentry.setUser({ id: profile.id, email: profile.email })
       } catch {
         // User exists in Clerk but not in our API — will be auto-provisioned
         setUser(null)
@@ -52,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     clearSessionTokenGetter()
     setUser(null)
+    Sentry.setUser(null)
   }
 
   return (

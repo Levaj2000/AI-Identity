@@ -16,6 +16,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
+import sentry_sdk
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -31,6 +32,17 @@ from gateway.app.circuit_breaker import CircuitState
 from gateway.app.db import get_gateway_db
 from gateway.app.enforce import enforce, policy_circuit_breaker
 from gateway.app.rate_limiter import RateLimitResult, rate_limiter
+
+# ── Sentry ───────────────────────────────────────────────────────────────
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.environment,
+        release=f"ai-identity-gateway@{settings.app_version}",
+        traces_sample_rate=0.2 if settings.environment == "production" else 1.0,
+        send_default_pii=False,
+    )
 
 # ── Logging ──────────────────────────────────────────────────────────────
 
@@ -286,6 +298,18 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         request.method,
         request.url.path,
     )
+
+    if settings.sentry_dsn:
+        sentry_sdk.set_context(
+            "request_info",
+            {
+                "method": request.method,
+                "path": request.url.path,
+                "request_id": getattr(request.state, "request_id", None),
+                "agent_id": request.query_params.get("agent_id"),
+            },
+        )
+
     return JSONResponse(
         status_code=500,
         content={
