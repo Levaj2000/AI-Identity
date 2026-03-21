@@ -13,6 +13,7 @@ alembic==1.18.4
 cryptography==46.0.5
 PyJWT==2.10.1
 stripe==14.4.1
+sentry-sdk[fastapi]==2.22.0
 
 # Dev / testing
 pytest==9.0.2
