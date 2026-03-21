@@ -134,9 +134,7 @@ function RunDetail({
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              QA Run #{run.id}
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{run.run_id}</h3>
             {run.mode === 'onboarding' && (
               <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
                 Client Onboarding
@@ -285,7 +283,7 @@ export function QAChecklistPage() {
     if (!selectedRun) return
     setSigningOff(true)
     try {
-      const updated = await signoffQARun(selectedRun.id, role)
+      const updated = await signoffQARun(selectedRun.run_id, role)
       setSelectedRun(updated)
       setRuns((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
     } catch {
@@ -405,7 +403,7 @@ export function QAChecklistPage() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-700 dark:text-[#e4e4e7]">
-                        Run #{run.id}
+                        {run.run_id}
                       </span>
                       <span
                         className={`text-xs font-medium ${

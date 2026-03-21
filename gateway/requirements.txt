@@ -11,6 +11,7 @@ pydantic-settings==2.13.1
 python-dotenv==1.2.2
 
 cryptography==46.0.5
+sentry-sdk[fastapi]==2.22.0
 
 # Dev / testing
 pytest==9.0.2

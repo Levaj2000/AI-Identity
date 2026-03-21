@@ -17,6 +17,9 @@ class QARun(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
+    # Human-readable date-based identifier (e.g. QA-20260321-003)
+    run_id: Mapped[str] = mapped_column(String(20), unique=True, index=True, nullable=False)
+
     # Run metadata
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="passed")
     run_by: Mapped[str] = mapped_column(String(255), nullable=False)
