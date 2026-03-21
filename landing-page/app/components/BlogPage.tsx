@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import Nav from "./landing/Nav";
 import Footer from "./landing/Footer";
 import { blogPosts } from "../data/blog-posts";

@@ -14,7 +14,10 @@ def get_user_agent(db: Session, user: User, agent_id: uuid.UUID) -> Agent:
     Raises:
         HTTPException(404): If the agent does not exist or belongs to another user.
     """
-    agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == user.id).first()
+    query = db.query(Agent).filter(Agent.id == agent_id)
+    if user.role != "admin":
+        query = query.filter(Agent.user_id == user.id)
+    agent = query.first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     return agent

@@ -1,8 +1,9 @@
 """QA Run model — persists automated QA checklist results and sign-offs."""
 
 import datetime
+import uuid
 
-from sqlalchemy import DateTime, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -30,6 +31,11 @@ class QARun(Base):
 
     # Run mode: "admin" (existing account) or "onboarding" (fresh test client)
     mode: Mapped[str | None] = mapped_column(String(20), nullable=True, default="admin")
+
+    # Tenant scoping — links run to the user who triggered it
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
 
     # Full check results (JSONB array of check objects)
     results: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
