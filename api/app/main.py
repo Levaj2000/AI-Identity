@@ -380,7 +380,7 @@ app.include_router(usage_router)
 # ── Routes ───────────────────────────────────────────────────────────────
 
 
-@app.get("/health", tags=["health"], summary="Health check")
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["health"], summary="Health check")
 async def health():
     """Returns service status, version, and name. Used by Render and uptime monitors."""
     return {
