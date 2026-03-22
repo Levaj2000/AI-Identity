@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { GATEWAY_URL } from '../../config/api'
 
 interface ApiKeyModalProps {
   apiKey: string
@@ -157,6 +158,20 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
               )}
             </button>
           </div>
+        </div>
+
+        {/* Gateway URL + Quick Start */}
+        <div className="mb-5 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-[#2a2a2d] dark:bg-[#1a1a1d]">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#71717a]">
+            Gateway URL
+          </p>
+          <code className="block break-all font-[JetBrains_Mono,monospace] text-sm text-gray-900 dark:text-[#e4e4e7]">
+            {GATEWAY_URL}
+          </code>
+          <p className="mt-3 text-xs text-gray-500 dark:text-[#a1a1aa]">
+            Point your agent&rsquo;s base URL here instead of calling OpenAI directly. Use your API
+            key above as the <code className="text-[#F59E0B]">X-API-Key</code> header.
+          </p>
         </div>
 
         {/* Acknowledge checkbox */}
