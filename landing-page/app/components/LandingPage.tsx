@@ -6,6 +6,7 @@ import HowItWorksSection from "./landing/HowItWorksSection";
 import Features from "./landing/Features";
 import DashboardPreview from "./landing/DashboardPreview";
 import ComplianceSection from "./landing/ComplianceSection";
+import ForensicsSection from "./landing/ForensicsSection";
 import SecuritySection from "./landing/SecuritySection";
 import IntegrationsSection from "./landing/IntegrationsSection";
 import Pricing from "./landing/Pricing";
@@ -22,6 +23,7 @@ export default function LandingPage() {
       <Features />
       <DashboardPreview />
       <ComplianceSection />
+      <ForensicsSection />
       <SecuritySection />
       <IntegrationsSection />
       <Pricing />

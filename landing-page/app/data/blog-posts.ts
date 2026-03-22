@@ -10,6 +10,55 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: "introducing-ai-forensics",
+    title: "Introducing AI Forensics: The Missing Layer in Agent Governance",
+    date: "March 22, 2026",
+    readTime: "7 min read",
+    excerpt:
+      "Identity tells you who an agent is. Policy tells you what it can do. Compliance proves the rules were followed. But when something goes wrong, you need forensics — the ability to reconstruct exactly what happened, with cryptographic proof.",
+    tags: ["AI Forensics", "Security", "Governance", "Compliance"],
+    sections: [
+      {
+        heading: "Beyond Monitoring: Why AI Agents Need Forensics",
+        content: [
+          "When a production incident hits a traditional software system, the playbook is well-established. You check the logs, trace the request, identify the root cause, and fix it. The tooling is mature — APM dashboards, distributed tracing, log aggregation. Decades of engineering have made incident response a solved problem.",
+          "AI agents break this playbook. An agent doesn't follow a predetermined code path. It makes decisions, chains actions, and interacts with other agents and systems in ways that are difficult to predict and harder to reconstruct after the fact. When an agent makes a bad decision at 3 AM — approving a transaction it shouldn't have, accessing data outside its scope, or cascading a failure across dependent systems — the question isn't just what happened. It's can you prove what happened?",
+          "This is the gap that AI Forensics fills. Not monitoring, not alerting, not compliance checklists — forensics. The ability to reconstruct an agent's complete decision chain with tamper-evident proof that the evidence hasn't been altered.",
+        ],
+      },
+      {
+        heading: "What AI Forensics Actually Means",
+        content: [
+          "AI Forensics is the practice of capturing, preserving, and analyzing the complete behavioral record of AI agents in production. It borrows from digital forensics — the discipline used in cybersecurity incident response and legal proceedings — and applies it to autonomous AI systems.",
+          "A forensic-ready system needs four capabilities. First, tamper-evident capture: every action an agent takes must be logged in a way that makes any alteration detectable. At AI Identity, we use HMAC-SHA256 hash chains where each audit entry includes the hash of the previous entry, creating a cryptographic chain that breaks if any record is modified or deleted.",
+          "Second, incident replay: given a time range and an agent, you should be able to reconstruct every request, every policy evaluation, and every outcome — in order, with full context. This is fundamentally different from searching through logs. It's a complete reconstruction of the agent's behavior.",
+          "Third, chain verification: an auditor or incident responder should be able to independently verify that the forensic record is complete and unaltered. One API call should confirm the integrity of the entire chain.",
+          "Fourth, forensic export: the evidence needs to be exportable in formats that compliance teams, legal counsel, and external auditors can work with. Forensics that live only in a dashboard aren't forensics — they're monitoring with a better name.",
+        ],
+      },
+      {
+        heading: "The Four Pillars of Agent Governance",
+        content: [
+          "AI Forensics completes the governance model that enterprises need to deploy agents with confidence. We think about it as four pillars.",
+          "Identity answers the question: who is this agent? Every agent gets a unique, verifiable identity with scoped API keys and lifecycle management. Without identity, there is no accountability.",
+          "Policy answers: what is this agent allowed to do? A fail-closed gateway evaluates every request against the agent's policy before it proceeds. No policy evaluation, no access — no exceptions.",
+          "Compliance answers: can we prove the rules were followed? Automated compliance evaluators map agent behavior to frameworks like SOC 2, NIST AI RMF, and the EU AI Act. Evidence is generated continuously, not assembled retroactively before an audit.",
+          "Forensics answers: what happened, and can we reconstruct it? When an incident occurs, forensics provides the complete, verifiable record. Not what you think happened based on dashboards — what actually happened, backed by cryptographic proof.",
+          "Each pillar depends on the others. Identity without policy is authentication without authorization. Policy without compliance is enforcement without evidence. And compliance without forensics is a paper trail that can't withstand scrutiny.",
+        ],
+      },
+      {
+        heading: "Why Now",
+        content: [
+          "Three forces are converging to make AI Forensics essential. The first is regulatory pressure. The EU AI Act, NIST AI RMF, and evolving SOC 2 guidance all point toward requirements for explainability, auditability, and incident reconstruction for AI systems. Companies deploying agents in regulated industries will need forensic capabilities — not eventually, but soon.",
+          "The second is the scale of agent deployments. When you have three agents in production, you can investigate incidents manually. When you have three hundred, you need automated forensic tooling. The companies deploying agents today are the ones who will need this infrastructure tomorrow.",
+          "The third is the trust gap. Enterprises are hesitant to give AI agents more autonomy because they can't verify what agents did after the fact. Forensics closes this gap. When you can prove exactly what an agent did — and prove the evidence hasn't been tampered with — you can confidently expand what agents are allowed to do.",
+          "The companies that build forensic capabilities into their agent infrastructure now won't just be compliant. They'll be the ones that enterprises trust to handle their most sensitive workloads.",
+        ],
+      },
+    ],
+  },
+  {
     slug: "why-ai-agents-need-identity",
     title: "Why AI Agents Need Identity",
     date: "March 21, 2026",
