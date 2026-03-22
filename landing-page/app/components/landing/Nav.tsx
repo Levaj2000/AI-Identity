@@ -54,12 +54,27 @@ export default function Nav() {
     e: React.MouseEvent<HTMLAnchorElement>,
     href: string,
   ) => {
+    const isHome = window.location.pathname === "/";
+
     if (href === "#") {
       e.preventDefault();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (isHome) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        window.location.href = "/";
+      }
       setMobileOpen(false);
       return;
     }
+
+    // If not on home page, navigate to home with hash
+    if (!isHome) {
+      e.preventDefault();
+      window.location.href = "/" + href;
+      setMobileOpen(false);
+      return;
+    }
+
     e.preventDefault();
     const el = document.querySelector(href);
     if (el) {
