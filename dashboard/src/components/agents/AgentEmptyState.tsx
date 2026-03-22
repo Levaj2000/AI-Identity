@@ -53,17 +53,25 @@ export function AgentEmptyState({ hasFilters, onClearFilters }: AgentEmptyStateP
         No agents yet
       </h3>
       <p className="mb-6 text-sm text-gray-500 dark:text-[#a1a1aa]">
-        Create your first agent via the API to get started.
+        Create your first agent to get started with identity, policy, compliance, and forensics.
       </p>
-      <a
-        href={ENDPOINTS.DOCS}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80"
-      >
-        API Documentation
-        <span aria-hidden="true">&rarr;</span>
-      </a>
+      <div className="flex items-center justify-center gap-3">
+        <a
+          href="/dashboard/agents/new"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80"
+        >
+          Create Agent
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+        <a
+          href={ENDPOINTS.DOCS}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#e4e4e7] dark:hover:bg-[#2a2a2d]"
+        >
+          API Docs
+        </a>
+      </div>
     </div>
   )
 }

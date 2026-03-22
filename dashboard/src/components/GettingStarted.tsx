@@ -22,11 +22,21 @@ const steps = [
   },
   {
     number: 3,
-    title: 'Manage Keys & Permissions',
+    title: 'Set a Policy & Run Compliance',
     description:
-      'Rotate keys with zero downtime (24-hour grace period), revoke compromised keys instantly, and scope agent capabilities.',
-    code: `curl -s -X POST ${API_BASE_URL}/api/v1/agents/{agent_id}/keys/rotate \\
-  -H "X-API-Key: YOUR_KEY"`,
+      'Define what your agent can do with scoped permissions, then run an automated compliance check to verify your governance posture.',
+    code: `curl -s -X POST ${API_BASE_URL}/api/v1/agents/{agent_id}/policies \\
+  -H "X-API-Key: YOUR_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"rules": {"allowed_endpoints": ["/v1/chat"]}}'`,
+  },
+  {
+    number: 4,
+    title: 'Explore AI Forensics',
+    description:
+      'Every gateway decision is logged in a tamper-evident HMAC chain. Use the Forensics dashboard to investigate incidents, reconstruct agent behavior, and export chain-of-custody reports.',
+    code: null,
+    link: { href: '/dashboard/forensics', label: 'Open Forensics Dashboard' },
   },
 ]
 
@@ -37,7 +47,7 @@ export function GettingStarted() {
         Getting Started
       </h2>
       <p className="mb-6 text-sm text-gray-500 dark:text-[#a1a1aa]">
-        Set up your first agent in three steps. See the{' '}
+        Set up your first agent in four steps — identity, policy, compliance, and forensics. See the{' '}
         <a
           href={`${API_BASE_URL}/docs`}
           target="_blank"
@@ -66,6 +76,15 @@ export function GettingStarted() {
               <pre className="overflow-x-auto rounded-lg bg-gray-100 p-4 font-[JetBrains_Mono,monospace] text-xs leading-relaxed text-gray-700 dark:bg-[#1a1a1d] dark:text-[#d4d4d8]">
                 {step.code}
               </pre>
+            )}
+            {step.link && (
+              <a
+                href={step.link.href}
+                className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-[#F59E0B] hover:underline"
+              >
+                {step.link.label}
+                <span aria-hidden="true">&rarr;</span>
+              </a>
             )}
           </div>
         ))}
