@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config/api'
+import { API_BASE_URL, GATEWAY_URL } from '../config/api'
 
 const steps = [
   {
@@ -15,10 +15,13 @@ const steps = [
   },
   {
     number: 2,
-    title: 'Store Your API Key',
+    title: 'Point Your Agent at the Gateway',
     description:
-      "The agent's API key (aid_sk_...) is shown only once at creation. Store it securely — it cannot be retrieved later.",
-    code: null,
+      "Store your API key (aid_sk_...) securely — it's shown only once. Then point your agent's base URL at our gateway instead of calling OpenAI directly.",
+    code: `# Instead of: https://api.openai.com/v1/chat/completions
+# Point to:  ${GATEWAY_URL}/v1/chat/completions
+#
+# Add your API key as the X-API-Key header`,
   },
   {
     number: 3,
