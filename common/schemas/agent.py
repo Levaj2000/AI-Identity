@@ -300,3 +300,53 @@ class AuditChainVerifyResponse(BaseModel):
         None, description="ID of the first entry with a broken hash (if any)"
     )
     message: str = Field(description="Human-readable verification result")
+
+
+# ── Forensics Schemas ────────────────────────────────────────────────────
+
+
+class TopEndpoint(BaseModel):
+    """An endpoint with its request count."""
+
+    endpoint: str
+    count: int
+
+
+class AuditStatsResponse(BaseModel):
+    """Aggregated statistics for audit log entries over a time window."""
+
+    total_events: int = Field(description="Total audit entries in window")
+    allowed_count: int = Field(description="Number of allowed requests")
+    denied_count: int = Field(description="Number of denied requests")
+    error_count: int = Field(description="Number of error requests")
+    total_cost_usd: float = Field(description="Sum of cost_estimate_usd")
+    avg_latency_ms: float | None = Field(description="Average latency in ms")
+    top_endpoints: list[TopEndpoint] = Field(description="Top 10 endpoints by request count")
+
+
+class AuditReconstructResponse(BaseModel):
+    """Incident reconstruction: events + context for a time window."""
+
+    agent_id: uuid.UUID
+    agent_name: str | None = None
+    start_date: datetime
+    end_date: datetime
+    events: list[AuditLogResponse] = Field(description="All events in window")
+    chain_verification: AuditChainVerifyResponse
+    active_policy: PolicyResponse | None = Field(
+        None, description="Active policy at time of investigation"
+    )
+    stats: AuditStatsResponse
+
+
+class ForensicsReportResponse(BaseModel):
+    """Exportable forensics report with chain-of-custody certificate."""
+
+    report_id: str = Field(description="Unique report identifier")
+    generated_at: datetime
+    agent: dict = Field(description="Agent details")
+    time_window: dict = Field(description="Start and end timestamps")
+    events: list[AuditLogResponse]
+    chain_verification: AuditChainVerifyResponse
+    active_policy: PolicyResponse | None = None
+    stats: AuditStatsResponse

@@ -221,3 +221,179 @@ class TestAuditEndpoints:
         # 3 manual entries + 1 from agent creation audit trail
         assert data["total_entries"] == 4
         assert data["entries_verified"] == 4
+
+
+# ── Forensics Endpoints ─────────────────────────────────────────────────
+
+
+class TestForensicsEndpoints:
+    """Verify the AI Forensics API endpoints."""
+
+    def _create_agent(self, client, auth_headers, name="Forensics Test Agent"):
+        """Helper to create an agent and return its ID."""
+        resp = client.post("/api/v1/agents", headers=auth_headers, json={"name": name})
+        return resp.json()["agent"]["id"]
+
+    def _seed_entries(self, db_session, agent_id, count=5):
+        """Create a mix of audit entries for testing."""
+        decisions = ["allow", "allow", "deny", "allow", "error"]
+        endpoints = ["/v1/chat", "/v1/embeddings", "/v1/chat", "/v1/completions", "/v1/chat"]
+        for i in range(count):
+            create_audit_entry(
+                db_session,
+                agent_id=uuid.UUID(agent_id),
+                endpoint=endpoints[i % len(endpoints)],
+                method="POST",
+                decision=decisions[i % len(decisions)],
+                cost_estimate_usd=0.01 * (i + 1),
+                latency_ms=50 + i * 10,
+            )
+
+    def test_audit_stats(self, client, auth_headers, db_session):
+        """GET /api/v1/audit/stats returns correct aggregated counts."""
+        agent_id = self._create_agent(client, auth_headers)
+        self._seed_entries(db_session, agent_id)
+
+        resp = client.get("/api/v1/audit/stats", headers=auth_headers)
+
+        assert resp.status_code == 200
+        data = resp.json()
+        # 5 manual + 1 from agent creation = 6 total
+        assert data["total_events"] == 6
+        assert data["allowed_count"] >= 3
+        assert data["denied_count"] >= 1
+        assert data["total_cost_usd"] > 0
+        assert len(data["top_endpoints"]) > 0
+
+    def test_audit_stats_filtered_by_agent(self, client, auth_headers, db_session):
+        """GET /api/v1/audit/stats scopes to specific agent."""
+        agent_id = self._create_agent(client, auth_headers)
+        self._seed_entries(db_session, agent_id)
+
+        resp = client.get(
+            f"/api/v1/audit/stats?agent_id={agent_id}",
+            headers=auth_headers,
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total_events"] == 6  # 5 manual + 1 creation
+
+    def test_audit_stats_wrong_agent(self, client, auth_headers):
+        """GET /api/v1/audit/stats returns 404 for non-owned agent."""
+        fake_id = uuid.uuid4()
+        resp = client.get(
+            f"/api/v1/audit/stats?agent_id={fake_id}",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 404
+
+    def test_audit_reconstruct(self, client, auth_headers, db_session):
+        """GET /api/v1/audit/reconstruct returns events + chain + policy."""
+        agent_id = self._create_agent(client, auth_headers)
+        self._seed_entries(db_session, agent_id)
+
+        # Create a policy for the agent
+        client.post(
+            f"/api/v1/agents/{agent_id}/policies",
+            headers=auth_headers,
+            json={"rules": {"allowed_endpoints": ["/v1/chat"]}},
+        )
+
+        resp = client.get(
+            f"/api/v1/audit/reconstruct?agent_id={agent_id}"
+            "&start_date=2020-01-01T00:00:00"
+            "&end_date=2030-01-01T00:00:00",
+            headers=auth_headers,
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["agent_id"] == agent_id
+        assert len(data["events"]) >= 5
+        assert data["chain_verification"]["valid"] is True
+        assert data["active_policy"] is not None
+        assert data["stats"]["total_events"] >= 5
+
+    def test_audit_reconstruct_wrong_agent(self, client, auth_headers):
+        """GET /api/v1/audit/reconstruct returns 404 for non-owned agent."""
+        fake_id = uuid.uuid4()
+        resp = client.get(
+            f"/api/v1/audit/reconstruct?agent_id={fake_id}"
+            "&start_date=2020-01-01T00:00:00"
+            "&end_date=2030-01-01T00:00:00",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 404
+
+    def test_audit_report_json(self, client, auth_headers, db_session):
+        """GET /api/v1/audit/report returns JSON forensics report."""
+        agent_id = self._create_agent(client, auth_headers)
+        self._seed_entries(db_session, agent_id)
+
+        resp = client.get(
+            f"/api/v1/audit/report?agent_id={agent_id}"
+            "&start_date=2020-01-01T00:00:00"
+            "&end_date=2030-01-01T00:00:00"
+            "&format=json",
+            headers=auth_headers,
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "report_id" in data
+        assert data["agent"]["id"] == agent_id
+        assert len(data["events"]) >= 5
+        assert data["chain_verification"]["valid"] is True
+        assert data["stats"]["total_events"] >= 5
+
+    def test_audit_report_csv(self, client, auth_headers, db_session):
+        """GET /api/v1/audit/report?format=csv returns CSV download."""
+        agent_id = self._create_agent(client, auth_headers)
+        self._seed_entries(db_session, agent_id)
+
+        resp = client.get(
+            f"/api/v1/audit/report?agent_id={agent_id}"
+            "&start_date=2020-01-01T00:00:00"
+            "&end_date=2030-01-01T00:00:00"
+            "&format=csv",
+            headers=auth_headers,
+        )
+
+        assert resp.status_code == 200
+        assert "text/csv" in resp.headers["content-type"]
+        content = resp.text
+        assert "id,agent_id,endpoint" in content
+        assert "Chain Verification Certificate" in content
+
+    def test_list_audit_logs_date_filter(self, client, auth_headers, db_session):
+        """GET /api/v1/audit with start_date/end_date filters by time."""
+        agent_id = self._create_agent(client, auth_headers)
+        self._seed_entries(db_session, agent_id)
+
+        # Future date should return no manual entries
+        resp = client.get(
+            "/api/v1/audit?start_date=2030-01-01T00:00:00",
+            headers=auth_headers,
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 0
+
+    def test_list_audit_logs_endpoint_filter(self, client, auth_headers, db_session):
+        """GET /api/v1/audit with endpoint filter does partial match."""
+        agent_id = self._create_agent(client, auth_headers)
+        self._seed_entries(db_session, agent_id)
+
+        resp = client.get(
+            "/api/v1/audit?endpoint=chat",
+            headers=auth_headers,
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        # Should find entries with /v1/chat endpoint
+        assert data["total"] >= 1
+        for item in data["items"]:
+            assert "chat" in item["endpoint"]
