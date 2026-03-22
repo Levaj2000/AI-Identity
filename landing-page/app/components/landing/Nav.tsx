@@ -54,12 +54,27 @@ export default function Nav() {
     e: React.MouseEvent<HTMLAnchorElement>,
     href: string,
   ) => {
+    const isHome = window.location.pathname === "/";
+
     if (href === "#") {
       e.preventDefault();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (isHome) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        window.location.href = "/";
+      }
       setMobileOpen(false);
       return;
     }
+
+    // If not on home page, navigate to home with hash
+    if (!isHome) {
+      e.preventDefault();
+      window.location.href = "/" + href;
+      setMobileOpen(false);
+      return;
+    }
+
     e.preventDefault();
     const el = document.querySelector(href);
     if (el) {
@@ -157,6 +172,12 @@ export default function Nav() {
             Live Demo
           </a>
           <a
+            href="/blog"
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Blog
+          </a>
+          <a
             href="https://dashboard.ai-identity.co"
             className="text-sm text-gray-400 hover:text-white transition-colors"
           >
@@ -215,6 +236,12 @@ export default function Nav() {
             className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
           >
             Live Demo
+          </a>
+          <a
+            href="/blog"
+            className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Blog
           </a>
           <a
             href="https://dashboard.ai-identity.co"
