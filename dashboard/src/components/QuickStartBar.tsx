@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { GATEWAY_URL } from '../config/api'
 
 const curlCommand = `curl -X POST https://api.ai-identity.co/v1/agents \\
   -H "Authorization: Bearer aid_sk_..." \\
@@ -59,6 +60,20 @@ export function QuickStartBar() {
         >
           {copied ? 'Copied!' : 'Copy'}
         </button>
+      </div>
+
+      {/* Gateway URL */}
+      <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-[#2a2a2d] dark:bg-[#1a1a1d]">
+        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#71717a]">
+          Gateway URL &mdash; point your agents here
+        </p>
+        <code className="text-sm font-[JetBrains_Mono,monospace] text-[#F59E0B]">
+          {GATEWAY_URL}
+        </code>
+        <p className="mt-1.5 text-xs text-gray-500 dark:text-[#a1a1aa]">
+          Swap your OpenAI base URL for this. Add your <code>aid_sk_</code> key as the{' '}
+          <code className="text-[#F59E0B]">X-API-Key</code> header.
+        </p>
       </div>
 
       <div className="mt-4 flex items-center gap-6 text-sm">
