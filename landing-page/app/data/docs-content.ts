@@ -33,7 +33,7 @@ export const docSections: DocSection[] = [
   -d '{
     "name": "support-bot",
     "description": "Customer support assistant",
-    "allowed_models": ["gpt-4o", "claude-sonnet-4-20250514"]
+    "allowed_models": ["gpt-4o", "claude-sonnet-4-20250514", "gemini-2.5-pro"]
   }'`,
           },
           {
@@ -54,19 +54,21 @@ export const docSections: DocSection[] = [
             title: "3. Point Your Gateway",
             description:
               "Replace your LLM provider base URL with the AI Identity gateway. All requests are transparently proxied with identity headers injected.",
-            code: `# Instead of calling OpenAI directly:
+            code: `# Instead of calling your LLM provider directly:
 # POST https://api.openai.com/v1/chat/completions
+# POST https://api.anthropic.com/v1/messages
 
-# Point to the AI Identity gateway:
+# Point ALL providers to the AI Identity gateway:
 curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
   -H "Authorization: Bearer aid_sk_your_agent_key" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "model": "gpt-4o",
+    "model": "claude-sonnet-4-20250514",
     "messages": [
       {"role": "user", "content": "Hello, world!"}
     ]
-  }'`,
+  }'
+# Works with gpt-4o, claude-sonnet-4-20250514, gemini-2.5-pro, etc.`,
           },
           {
             title: "4. Explore Forensics",
@@ -133,7 +135,7 @@ curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
         type: "code",
         language: "text",
         title: "Request flow",
-        body: `Your App  \u2192  AI Identity Gateway  \u2192  LLM Provider (OpenAI, Anthropic, etc.)
+        body: `Your App  \u2192  AI Identity Gateway  \u2192  LLM Provider (OpenAI, Anthropic, Gemini, Cohere, Mistral, etc.)
                      \u2502
                      \u251c\u2500 Validate agent identity
                      \u251c\u2500 Check policy (rate limit, model access, budget)
@@ -143,12 +145,12 @@ curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
       },
       {
         type: "text",
-        body: "The gateway is a drop-in replacement for any OpenAI-compatible API. Simply change your base URL and use your AI Identity agent key instead of a provider key.",
+        body: "The gateway works with any LLM provider — OpenAI, Anthropic, Google Gemini, Cohere, Mistral, or any custom REST API. Simply change your base URL and use your AI Identity agent key instead of a provider key. The gateway routes to the correct upstream provider based on the model specified in the request.",
       },
       {
         type: "code",
         language: "python",
-        title: "Python \u2014 using the OpenAI SDK with AI Identity",
+        title: "Python — OpenAI models via the gateway",
         body: `from openai import OpenAI
 
 # Point the OpenAI client at the AI Identity gateway
@@ -165,8 +167,26 @@ print(response.choices[0].message.content)`,
       },
       {
         type: "code",
+        language: "python",
+        title: "Python — Anthropic models via the gateway",
+        body: `from openai import OpenAI
+
+# Same gateway, different model — Anthropic Claude
+client = OpenAI(
+    base_url="https://ai-identity-gateway.onrender.com/v1",
+    api_key="aid_sk_your_agent_key",
+)
+
+response = client.chat.completions.create(
+    model="claude-sonnet-4-20250514",
+    messages=[{"role": "user", "content": "Explain quantum computing"}],
+)
+print(response.choices[0].message.content)`,
+      },
+      {
+        type: "code",
         language: "typescript",
-        title: "TypeScript \u2014 using the OpenAI SDK with AI Identity",
+        title: "TypeScript — any model via the gateway",
         body: `import OpenAI from "openai";
 
 const client = new OpenAI({
@@ -174,8 +194,9 @@ const client = new OpenAI({
   apiKey: "aid_sk_your_agent_key",
 });
 
+// Works with any supported model — OpenAI, Anthropic, Gemini, etc.
 const response = await client.chat.completions.create({
-  model: "gpt-4o",
+  model: "gemini-2.5-pro",  // or "gpt-4o", "claude-sonnet-4-20250514", etc.
   messages: [{ role: "user", content: "Summarize today's news" }],
 });
 console.log(response.choices[0].message.content);`,
@@ -188,7 +209,7 @@ console.log(response.choices[0].message.content);`,
     content: [
       {
         type: "text",
-        body: "AI Identity works with all major agent frameworks. Because the gateway is OpenAI-compatible, integration usually requires changing just one line \u2014 the base URL.",
+        body: "AI Identity works with all major agent frameworks and LLM providers — OpenAI, Anthropic, Google Gemini, Cohere, Mistral, and more. Because the gateway uses the OpenAI-compatible API format, integration usually requires changing just one line — the base URL.",
       },
       {
         type: "code",
@@ -267,12 +288,12 @@ user_proxy.initiate_chat(
 curl https://ai-identity-gateway.onrender.com/v1/agents \\
   -H "Authorization: Bearer YOUR_API_KEY"
 
-# Create a chat completion through the gateway
+# Create a chat completion through the gateway (any provider)
 curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
   -H "Authorization: Bearer aid_sk_your_agent_key" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "model": "gpt-4o",
+    "model": "gemini-2.5-pro",
     "messages": [{"role": "user", "content": "Hello!"}]
   }'
 
@@ -319,7 +340,7 @@ curl https://ai-identity-gateway.onrender.com/v1/agents \\
 curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
   -H "Authorization: Bearer aid_sk_your_agent_key" \\
   -H "Content-Type: application/json" \\
-  -d '{"model": "gpt-4o", "messages": [{"role": "user", "content": "Hi"}]}'`,
+  -d '{"model": "claude-sonnet-4-20250514", "messages": [{"role": "user", "content": "Hi"}]}'`,
       },
     ],
   },
