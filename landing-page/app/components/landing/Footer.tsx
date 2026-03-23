@@ -9,7 +9,7 @@ const productLinks = [
   { label: "Security", href: "#security" },
   { label: "Pricing", href: "#pricing" },
   { label: "Dashboard", href: "https://dashboard.ai-identity.co" },
-  { label: "Documentation", href: "#" },
+  { label: "Documentation", href: "/docs" },
 ];
 
 const companyLinks = [
