@@ -39,7 +39,7 @@ export default function Hero() {
             Get Started Free &rarr;
           </a>
           <a
-            href="#integrations"
+            href="/docs"
             className="px-8 py-3.5 border border-white/20 text-white font-medium rounded-lg hover:border-white/40 hover:bg-white/5 transition-all text-sm"
           >
             View API Docs

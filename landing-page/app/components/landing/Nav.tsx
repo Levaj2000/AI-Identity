@@ -172,6 +172,12 @@ export default function Nav() {
             Live Demo
           </a>
           <a
+            href="/docs"
+            className="text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Docs
+          </a>
+          <a
             href="/blog"
             className="text-sm text-gray-400 hover:text-white transition-colors"
           >
@@ -236,6 +242,12 @@ export default function Nav() {
             className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
           >
             Live Demo
+          </a>
+          <a
+            href="/docs"
+            className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
+          >
+            Docs
           </a>
           <a
             href="/blog"

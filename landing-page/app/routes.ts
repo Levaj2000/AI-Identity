@@ -9,6 +9,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Blog from "./pages/Blog";
 import Careers from "./pages/Careers";
+import Docs from "./pages/Docs";
 
 export const router = createBrowserRouter([
   {
@@ -25,6 +26,7 @@ export const router = createBrowserRouter([
       { path: "blog", Component: Blog },
       { path: "blog/:slug", Component: Blog },
       { path: "careers", Component: Careers },
+      { path: "docs", Component: Docs },
     ],
   },
 ]);
