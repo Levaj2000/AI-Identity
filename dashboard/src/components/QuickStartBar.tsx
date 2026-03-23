@@ -78,12 +78,20 @@ export function QuickStartBar() {
 
       <div className="mt-4 flex items-center gap-6 text-sm">
         <a
-          href="https://ai-identity-api.onrender.com/docs"
+          href="https://ai-identity.co/docs"
           target="_blank"
           rel="noopener noreferrer"
           className="text-gray-500 transition-colors hover:text-[#F59E0B] dark:text-[#71717a] dark:hover:text-[#F59E0B]"
         >
-          Full API Docs &rarr;
+          Documentation &rarr;
+        </a>
+        <a
+          href="https://api.ai-identity.co/redoc"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-500 transition-colors hover:text-[#F59E0B] dark:text-[#71717a] dark:hover:text-[#F59E0B]"
+        >
+          API Reference &rarr;
         </a>
         <a
           href="https://github.com/Levaj2000/AI-Identity#python-sdk"
