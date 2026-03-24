@@ -10,6 +10,72 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: "ai-forensics-vs-observability",
+    title:
+      "AI Forensics vs. Observability: Why Monitoring Your Agents Isn't Enough",
+    date: "March 24, 2026",
+    readTime: "8 min read",
+    excerpt:
+      "Your APM dashboard shows an agent made 2,000 API calls last Tuesday. But can you prove which calls were authorized, reconstruct the decision chain, and hand an auditor evidence that hasn't been tampered with? That's the line between observability and forensics.",
+    tags: ["AI Forensics", "Observability", "Security", "DevOps"],
+    sections: [
+      {
+        heading: "You Already Monitor Everything. It's Not Enough.",
+        content: [
+          "If you're running AI agents in production, you probably have observability covered. Datadog, Grafana, New Relic, OpenTelemetry — the modern stack gives you metrics, traces, and logs for every request your agents make. You can see latency spikes, error rates, and throughput in real time. You've built dashboards. You've set alerts.",
+          "And none of it will help you when an auditor asks: which agent accessed customer PII on March 12th, was that access authorized by policy at the time of the request, and can you prove this evidence hasn't been altered since the incident?",
+          "This isn't a failure of observability tooling. It's a category mismatch. Observability answers \"what is happening right now?\" Forensics answers \"what exactly happened, and can you prove it?\" They're complementary, but they're not interchangeable — and the gap between them is where agent governance falls apart.",
+        ],
+      },
+      {
+        heading: "What Observability Gets Right",
+        content: [
+          "Let's be clear: observability tools are essential. They solve real problems that forensics doesn't try to address.",
+          "Performance monitoring tells you that your agent's p99 latency spiked to 3 seconds and you need to investigate. Distributed tracing shows you the path a request took through your system so you can identify bottlenecks. Log aggregation lets you search through millions of events to find the ones that matter. Alerting wakes you up at 3 AM when an error rate crosses a threshold.",
+          "For traditional software systems — web servers, microservices, data pipelines — this is sufficient. The code is deterministic. If you know what happened, you know why it happened, because the same input always produces the same output.",
+          "AI agents break this model. An agent choosing between three API calls based on an LLM's interpretation of a user request is not deterministic. Knowing that the agent made a specific call doesn't tell you why it made that call, whether it was authorized to, or what decision chain led to that action. Observability gives you the what. Forensics gives you the why, the whether, and the proof.",
+        ],
+      },
+      {
+        heading: "Five Things Observability Can't Do for AI Agents",
+        content: [
+          "The limitations become clear when you look at the specific questions that agent governance requires you to answer.",
+          "First, observability can't prove evidence integrity. Logs can be modified, rotated, or deleted. An observability platform stores events, but it doesn't create a cryptographic chain that makes tampering detectable. AI Identity's forensic layer uses HMAC-SHA256 hash chains where each audit entry includes the hash of the previous entry. Alter one record and the entire chain breaks — and that break is independently verifiable.",
+          "Second, observability can't enforce policy at the request level. Your APM tool can tell you an agent made an unauthorized API call after the fact. A forensic-ready gateway evaluates policy before the request proceeds. Every request is authenticated against the agent's identity, checked against its scoped permissions, and logged with the policy evaluation result — before it touches the downstream API.",
+          "Third, observability can't reconstruct decision chains. When an agent chains together five API calls to complete a task, a trace shows you five spans. Forensics reconstructs the complete decision sequence: what the agent was trying to do, what policy governed each step, which steps succeeded or failed, and how each step influenced the next. This is the difference between seeing a timeline and understanding a narrative.",
+          "Fourth, observability can't attribute actions to specific agents. If three agents share an API key — which, based on our research, 45.6% of organizations still do — your observability platform logs three agents' actions under one identity. Forensics requires per-agent identity. Every action is tied to a specific agent with a unique cryptographic fingerprint, regardless of how your infrastructure is configured.",
+          "Fifth, observability can't produce audit-ready evidence. A Grafana dashboard isn't evidence. A Datadog log search isn't a forensic report. Compliance teams, legal counsel, and external auditors need exportable, verifiable, tamper-evident records. Forensics produces exactly this — complete incident reconstructions that can withstand legal and regulatory scrutiny.",
+        ],
+      },
+      {
+        heading: "Where They Work Together",
+        content: [
+          "The point isn't to replace your observability stack — it's to layer forensics on top of it. The two systems serve different audiences and answer different questions.",
+          "Your SRE team uses observability to keep agents running. They care about uptime, latency, error rates, and resource utilization. When an agent is slow, they need to know why so they can fix it. Observability is the right tool for this job.",
+          "Your security team uses forensics to investigate incidents. When an agent accessed data it shouldn't have, they need to reconstruct exactly what happened, verify the evidence chain, and produce a report. Forensics is the right tool for this job.",
+          "Your compliance team uses forensics to prove governance. When an auditor asks for evidence that your agents operate within defined policies, they need tamper-proof records with cryptographic verification. Forensics is the right tool for this job.",
+          "The architecture is straightforward: AI Identity sits as a gateway between your agents and the APIs they call. Every request passes through the gateway, which handles identity verification, policy enforcement, and forensic logging. Your observability tools continue to monitor the infrastructure. The two systems share an event stream but serve fundamentally different purposes.",
+        ],
+      },
+      {
+        heading: "The Compliance Forcing Function",
+        content: [
+          "If the technical argument doesn't convince you, the regulatory landscape will. SOC 2 Type II audits increasingly ask about AI system controls. The EU AI Act mandates transparency and traceability for high-risk AI systems. NIST AI RMF calls for \"documentation of AI system provenance and lineage.\"",
+          "None of these frameworks are satisfied by observability dashboards. They require evidence — specifically, evidence that is complete, tamper-evident, and independently verifiable. This is forensics by definition.",
+          "The companies deploying agents in regulated industries — fintech, healthcare, legal, government — will hit this wall first. But as AI agents become standard enterprise infrastructure, every company will face the same requirements. The question isn't whether you'll need forensics. It's whether you'll have it in place when you do.",
+        ],
+      },
+      {
+        heading: "Getting Started",
+        content: [
+          "If you're already running agents in production with observability in place, adding forensics is a 15-minute integration. AI Identity's gateway proxies your existing API calls, adding per-agent identity, policy enforcement, and forensic logging without changing your agent code.",
+          "Start by registering your agents — each gets a unique identity with scoped permissions. Route their API calls through the AI Identity gateway. Every action is now authenticated, policy-checked, and logged to a tamper-evident audit trail. Your observability stack keeps doing what it does. Forensics fills the gaps it was never designed to cover.",
+          "Read our [introduction to the AI Forensics framework](/blog/introducing-ai-forensics) to understand the four pillars of agent governance, or check out the [API documentation](https://ai-identity-api.onrender.com/docs) to start integrating today.",
+        ],
+      },
+    ],
+  },
+  {
     slug: "introducing-ai-forensics",
     title: "Introducing AI Forensics: The Missing Layer in Agent Governance",
     date: "March 22, 2026",
