@@ -3,6 +3,43 @@ import Nav from "./landing/Nav";
 import Footer from "./landing/Footer";
 import { blogPosts } from "../data/blog-posts";
 
+/**
+ * Renders paragraph text with support for markdown-style inline links.
+ * Converts [text](url) into styled <a> tags.
+ */
+function renderParagraph(text: string) {
+  const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = linkRegex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const isExternal = match[2].startsWith("http");
+    parts.push(
+      <a
+        key={match.index}
+        href={match[2]}
+        className="text-[#F59E0B] hover:underline"
+        {...(isExternal
+          ? { target: "_blank", rel: "noopener noreferrer" }
+          : {})}
+      >
+        {match[1]}
+      </a>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+}
+
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
   const post = blogPosts.find((p) => p.slug === slug);
@@ -90,7 +127,7 @@ export default function BlogPost() {
                       key={j}
                       className="text-[15px] text-gray-300 leading-[1.8]"
                     >
-                      {paragraph}
+                      {renderParagraph(paragraph)}
                     </p>
                   ))}
                 </div>
