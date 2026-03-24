@@ -233,24 +233,29 @@ function UsageEstimator() {
       className="mt-16 max-w-2xl mx-auto"
     >
       <div className="rounded-2xl border border-white/10 bg-[#111113]/80 backdrop-blur-xl p-8">
-        <div className="flex items-center gap-2 mb-6">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#F59E0B"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            <line x1="12" y1="17" x2="12" y2="21" />
-          </svg>
-          <h3 className="text-lg font-semibold text-white">
-            Estimate your usage
-          </h3>
+        <div className="mb-6">
+          <div className="flex items-center gap-2">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#F59E0B"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+              <line x1="8" y1="21" x2="16" y2="21" />
+              <line x1="12" y1="17" x2="12" y2="21" />
+            </svg>
+            <h3 className="text-lg font-semibold text-white">
+              How much will it cost?
+            </h3>
+          </div>
+          <p className="mt-1.5 text-sm text-gray-500 ml-[26px]">
+            See your projected usage in real time.
+          </p>
         </div>
 
         <div className="space-y-6">
@@ -370,14 +375,12 @@ export default function Pricing() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-bold text-white">
-            Simple, transparent pricing
+            Simple, transparent pricing for AI agents
           </h2>
           <p className="mt-4 text-lg text-gray-400 max-w-2xl mx-auto">
-            Start free. Scale as your agents grow. Every plan includes the
-            tamper-proof audit chain.
-          </p>
-          <p className="mt-2 text-sm text-gray-500">
-            Prices are draft &mdash; we&apos;re validating with design partners.
+            Start free. Scale securely as your agents go into production. Every
+            plan includes the tamper-proof audit chain and deny-by-default
+            gateway.
           </p>
         </motion.div>
 
