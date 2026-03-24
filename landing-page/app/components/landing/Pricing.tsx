@@ -199,6 +199,160 @@ function CellValue({ value }: { value: string | boolean }) {
   return <span className="text-sm text-gray-300">{value}</span>;
 }
 
+// ── Usage Estimator ─────────────────────────────────────────────────
+
+const tierThresholds = [
+  { name: "Free", maxAgents: 5, maxRequests: 2_000, price: "$0/mo" },
+  { name: "Pro", maxAgents: 50, maxRequests: 75_000, price: "$79/mo" },
+  { name: "Business", maxAgents: 200, maxRequests: 500_000, price: "$299/mo" },
+  { name: "Enterprise", maxAgents: Infinity, maxRequests: Infinity, price: "Custom" },
+];
+
+function UsageEstimator() {
+  const [agents, setAgents] = useState(10);
+  const [reqPerAgent, setReqPerAgent] = useState(3000);
+
+  const totalRequests = agents * reqPerAgent;
+  const recommended = tierThresholds.find(
+    (t) => agents <= t.maxAgents && totalRequests <= t.maxRequests,
+  ) ?? tierThresholds[tierThresholds.length - 1];
+
+  const tierColorMap: Record<string, string> = {
+    Free: "text-gray-400",
+    Pro: "text-[#F59E0B]",
+    Business: "text-blue-400",
+    Enterprise: "text-purple-400",
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6, delay: 0.15 }}
+      className="mt-16 max-w-2xl mx-auto"
+    >
+      <div className="rounded-2xl border border-white/10 bg-[#111113]/80 backdrop-blur-xl p-8">
+        <div className="flex items-center gap-2 mb-6">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#F59E0B"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
+          <h3 className="text-lg font-semibold text-white">
+            Estimate your usage
+          </h3>
+        </div>
+
+        <div className="space-y-6">
+          {/* Agents slider */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm text-gray-400">Active agents</label>
+              <span className="text-sm font-mono font-semibold text-white">
+                {agents}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={1}
+              max={250}
+              value={agents}
+              onChange={(e) => setAgents(Number(e.target.value))}
+              className="w-full h-1.5 rounded-full bg-[#1a1a1d] appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#F59E0B]"
+            />
+            <div className="flex justify-between mt-1 text-[10px] text-gray-600">
+              <span>1</span>
+              <span>50</span>
+              <span>100</span>
+              <span>200</span>
+              <span>250</span>
+            </div>
+          </div>
+
+          {/* Requests per agent slider */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm text-gray-400">
+                Requests per agent / month
+              </label>
+              <span className="text-sm font-mono font-semibold text-white">
+                {reqPerAgent.toLocaleString()}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={100}
+              max={10000}
+              step={100}
+              value={reqPerAgent}
+              onChange={(e) => setReqPerAgent(Number(e.target.value))}
+              className="w-full h-1.5 rounded-full bg-[#1a1a1d] appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#F59E0B]"
+            />
+            <div className="flex justify-between mt-1 text-[10px] text-gray-600">
+              <span>100</span>
+              <span>2.5k</span>
+              <span>5k</span>
+              <span>7.5k</span>
+              <span>10k</span>
+            </div>
+          </div>
+
+          {/* Result */}
+          <div className="rounded-xl bg-white/[0.03] border border-white/5 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider">
+                  Estimated monthly volume
+                </p>
+                <p className="mt-1 text-xl font-bold text-white">
+                  {totalRequests.toLocaleString()}{" "}
+                  <span className="text-sm font-normal text-gray-500">
+                    requests/mo
+                  </span>
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500 uppercase tracking-wider">
+                  Recommended plan
+                </p>
+                <p
+                  className={`mt-1 text-xl font-bold ${tierColorMap[recommended.name] ?? "text-white"}`}
+                >
+                  {recommended.name}
+                </p>
+                <p className="text-sm text-gray-500">{recommended.price}</p>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-600 leading-relaxed">
+            Most teams with 10–20 active agents stay under 75k requests/mo.
+            Heavy QA or forensics runs? Overages billed at ~$1 per 1k extra
+            requests.{" "}
+            <a
+              href="https://dashboard.ai-identity.co"
+              className="text-[#F59E0B] hover:underline"
+            >
+              Try the dashboard
+            </a>{" "}
+            to simulate your exact volume.
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ── Component ───────────────────────────────────────────────────────
 
 export default function Pricing() {
@@ -289,6 +443,9 @@ export default function Pricing() {
             </motion.div>
           ))}
         </motion.div>
+
+        {/* ── Usage Estimator ────────────────────────────────────────── */}
+        <UsageEstimator />
 
         {/* ── Feature Comparison Grid ──────────────────────────────── */}
         <motion.div
