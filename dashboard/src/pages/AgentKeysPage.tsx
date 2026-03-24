@@ -315,9 +315,29 @@ export function AgentKeysPage() {
                 clipRule="evenodd"
               />
             </svg>
-            <p className="text-sm font-medium text-red-600 dark:text-red-400">
-              This agent has been revoked. Key creation and rotation are disabled.
-            </p>
+            <div>
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                This agent has been permanently revoked. Key creation and rotation are disabled.
+              </p>
+              <p className="mt-1 text-sm text-red-500/70 dark:text-red-400/60">
+                Revocation is permanent and cannot be undone. To continue, create a new agent with
+                fresh credentials.
+              </p>
+              <a
+                href="/dashboard/agents"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-3.5 w-3.5"
+                >
+                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                </svg>
+                Create New Agent
+              </a>
+            </div>
           </div>
         </div>
       )}
