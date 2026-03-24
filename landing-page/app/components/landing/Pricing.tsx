@@ -6,8 +6,8 @@ import { useState } from "react";
 const tiers = [
   {
     name: "Free",
-    price: "$0",
-    period: "/mo",
+    monthlyPrice: 0,
+    annualPrice: 0,
     description: "Perfect for prototyping and solo projects.",
     features: [
       "5 agents",
@@ -22,8 +22,8 @@ const tiers = [
   },
   {
     name: "Pro",
-    price: "$79",
-    period: "/mo",
+    monthlyPrice: 79,
+    annualPrice: 67, // ~15% off ($804/yr vs $948/yr)
     description: "For teams shipping agents to production.",
     features: [
       "50 agents",
@@ -41,8 +41,8 @@ const tiers = [
   },
   {
     name: "Business",
-    price: "$299",
-    period: "/mo",
+    monthlyPrice: 299,
+    annualPrice: 254, // ~15% off ($3,048/yr vs $3,588/yr)
     description: "For scaling teams with advanced requirements.",
     features: [
       "200 agents",
@@ -60,8 +60,8 @@ const tiers = [
   },
   {
     name: "Enterprise",
-    price: "Custom",
-    period: "",
+    monthlyPrice: -1, // custom
+    annualPrice: -1,
     description: "For organizations with compliance requirements.",
     features: [
       "Unlimited agents",
@@ -362,6 +362,7 @@ function UsageEstimator() {
 
 export default function Pricing() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [annual, setAnnual] = useState(false);
 
   return (
     <section id="pricing" className="py-24 px-6 bg-[#111113]">
@@ -382,6 +383,34 @@ export default function Pricing() {
             plan includes the tamper-proof audit chain and deny-by-default
             gateway.
           </p>
+
+          {/* Billing toggle */}
+          <div className="mt-8 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2">
+            <span
+              className={`text-sm font-medium transition-colors ${!annual ? "text-white" : "text-gray-500"}`}
+            >
+              Monthly
+            </span>
+            <button
+              onClick={() => setAnnual(!annual)}
+              className={`relative h-6 w-11 rounded-full transition-colors ${annual ? "bg-[#F59E0B]" : "bg-[#2a2a2d]"}`}
+              aria-label="Toggle annual billing"
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${annual ? "translate-x-5" : ""}`}
+              />
+            </button>
+            <span
+              className={`text-sm font-medium transition-colors ${annual ? "text-white" : "text-gray-500"}`}
+            >
+              Annual
+            </span>
+            {annual && (
+              <span className="ml-1 rounded-full bg-[#F59E0B]/10 border border-[#F59E0B]/20 px-2 py-0.5 text-xs font-semibold text-[#F59E0B]">
+                Save 15%
+              </span>
+            )}
+          </div>
         </motion.div>
 
         {/* ── Pricing Cards ────────────────────────────────────────── */}
@@ -392,7 +421,16 @@ export default function Pricing() {
           viewport={{ once: true }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto"
         >
-          {tiers.map((tier) => (
+          {tiers.map((tier) => {
+            const isCustom = tier.monthlyPrice < 0;
+            const displayPrice = isCustom
+              ? "Custom"
+              : tier.monthlyPrice === 0
+                ? "$0"
+                : `$${annual ? tier.annualPrice : tier.monthlyPrice}`;
+            const period = isCustom ? "" : "/mo";
+
+            return (
             <motion.div
               key={tier.name}
               variants={cardVariant}
@@ -412,12 +450,21 @@ export default function Pricing() {
               <p className="mt-1 text-sm text-gray-500">{tier.description}</p>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="text-4xl font-bold text-white">
-                  {tier.price}
+                  {displayPrice}
                 </span>
-                {tier.period && (
-                  <span className="text-gray-500 text-sm">{tier.period}</span>
+                {period && (
+                  <span className="text-gray-500 text-sm">{period}</span>
                 )}
               </div>
+              {annual && !isCustom && tier.monthlyPrice > 0 && (
+                <p className="mt-1 text-xs text-gray-600">
+                  <span className="line-through">${tier.monthlyPrice}/mo</span>
+                  {" "}
+                  <span className="text-[#F59E0B]">
+                    billed ${tier.annualPrice * 12}/yr
+                  </span>
+                </p>
+              )}
 
               <ul className="mt-8 flex-1 space-y-3">
                 {tier.features.map((f) => (
@@ -444,7 +491,8 @@ export default function Pricing() {
                 {tier.cta}
               </a>
             </motion.div>
-          ))}
+            );
+          })}
         </motion.div>
 
         {/* ── Usage Estimator ────────────────────────────────────────── */}
