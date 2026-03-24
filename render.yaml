@@ -44,7 +44,7 @@ services:
     name: ai-identity-keepalive
     runtime: python
     region: oregon
-    plan: free
+    plan: starter
     schedule: "*/10 * * * *"
     buildCommand: pip install httpx
     startCommand: python scripts/keepalive_cron.py
