@@ -16,29 +16,38 @@ class UserTier(enum.StrEnum):
 
     free = "free"
     pro = "pro"
+    business = "business"
     enterprise = "enterprise"
 
 
 # ── Per-tier quota defaults ──────────────────────────────────────────
 # Aligned with landing page pricing:
-#   Free: 3 agents, 5K req/mo, 1 credential
-#   Pro:  25 agents, 100K req/mo, 10 credentials
+#   Free:       5 agents,   2K req/mo,   1 credential,  30-day retention
+#   Pro ($79):  50 agents,  75K req/mo,  10 credentials, 90-day retention
+#   Business ($299): 200 agents, 500K req/mo, 50 credentials, 365-day retention
 #   Enterprise: unlimited (represented as -1)
 
 TIER_QUOTAS: dict[str, dict[str, int]] = {
     "free": {
-        "max_agents": 3,
+        "max_agents": 5,
         "max_keys_per_agent": 2,
-        "max_requests_per_month": 5_000,
+        "max_requests_per_month": 2_000,
         "max_credentials": 1,
-        "audit_retention_days": 7,
+        "audit_retention_days": 30,
     },
     "pro": {
-        "max_agents": 25,
+        "max_agents": 50,
         "max_keys_per_agent": 10,
-        "max_requests_per_month": 100_000,
+        "max_requests_per_month": 75_000,
         "max_credentials": 10,
         "audit_retention_days": 90,
+    },
+    "business": {
+        "max_agents": 200,
+        "max_keys_per_agent": 25,
+        "max_requests_per_month": 500_000,
+        "max_credentials": 50,
+        "audit_retention_days": 365,
     },
     "enterprise": {
         "max_agents": -1,  # unlimited

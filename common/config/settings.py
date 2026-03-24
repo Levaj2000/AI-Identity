@@ -50,7 +50,8 @@ class Settings(BaseSettings):
     # Stripe billing
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
-    stripe_price_id_pro: str = ""  # Stripe Price ID for the Pro plan ($49/mo)
+    stripe_price_id_pro: str = ""  # Stripe Price ID for the Pro plan ($79/mo)
+    stripe_price_id_business: str = ""  # Stripe Price ID for the Business plan ($299/mo)
     stripe_price_id_enterprise: str = ""  # Stripe Price ID for Enterprise (custom)
     stripe_success_url: str = (
         "https://dashboard.ai-identity.co/settings?session_id={CHECKOUT_SESSION_ID}"

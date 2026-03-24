@@ -28,6 +28,8 @@ stripe.api_key = settings.stripe_secret_key
 PRICE_TO_TIER: dict[str, str] = {}
 if settings.stripe_price_id_pro:
     PRICE_TO_TIER[settings.stripe_price_id_pro] = "pro"
+if settings.stripe_price_id_business:
+    PRICE_TO_TIER[settings.stripe_price_id_business] = "business"
 if settings.stripe_price_id_enterprise:
     PRICE_TO_TIER[settings.stripe_price_id_enterprise] = "enterprise"
 
@@ -108,9 +110,12 @@ def create_checkout_session(
     if not settings.stripe_secret_key:
         raise HTTPException(status_code=503, detail="Stripe billing is not configured")
 
-    price_id = (
-        settings.stripe_price_id_pro if plan == "pro" else settings.stripe_price_id_enterprise
-    )
+    price_map = {
+        "pro": settings.stripe_price_id_pro,
+        "business": settings.stripe_price_id_business,
+        "enterprise": settings.stripe_price_id_enterprise,
+    }
+    price_id = price_map.get(plan, "")
     if not price_id:
         raise HTTPException(status_code=400, detail=f"No price configured for plan: {plan}")
 
