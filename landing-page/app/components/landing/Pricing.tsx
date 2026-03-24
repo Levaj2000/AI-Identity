@@ -375,14 +375,12 @@ export default function Pricing() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-5xl font-bold text-white">
-            Simple, transparent pricing
+            Simple, transparent pricing for AI agents
           </h2>
           <p className="mt-4 text-lg text-gray-400 max-w-2xl mx-auto">
-            Start free. Scale as your agents grow. Every plan includes the
-            tamper-proof audit chain.
-          </p>
-          <p className="mt-2 text-sm text-gray-500">
-            Prices are draft &mdash; we&apos;re validating with design partners.
+            Start free. Scale securely as your agents go into production. Every
+            plan includes the tamper-proof audit chain and deny-by-default
+            gateway.
           </p>
         </motion.div>
 
