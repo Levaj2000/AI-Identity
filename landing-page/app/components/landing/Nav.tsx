@@ -96,7 +96,7 @@ export default function Nav() {
           : "bg-transparent"
       }`}
     >
-      <div className="max-w-[1200px] mx-auto px-6 md:px-12 h-[72px] flex items-center justify-between">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-10 h-[72px] flex items-center justify-between">
         {/* Logo */}
         <a
           href="#"
@@ -143,7 +143,7 @@ export default function Nav() {
         </a>
 
         {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden md:flex items-center gap-6 lg:gap-8">
           {navLinks.map((link) => (
             <a
               key={link.label}
@@ -164,7 +164,7 @@ export default function Nav() {
         </div>
 
         {/* CTA */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-5 lg:gap-6">
           <a
             href="https://dashboard.ai-identity.co/demo"
             className="text-sm text-gray-400 hover:text-white transition-colors"
