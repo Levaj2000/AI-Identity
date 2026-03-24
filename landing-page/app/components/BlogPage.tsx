@@ -17,11 +17,12 @@ export default function BlogPage() {
             </span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
-            The AI Identity <span className="text-[#F59E0B]">Blog</span>
+            The AI Identity <span className="text-[#F59E0B]">Journal</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-[600px] mx-auto">
-            Thoughts on AI agent identity, governance, compliance, and the
-            infrastructure powering the autonomous agent economy.
+            Engineering trust and transparency for the autonomous agent economy.
+            Deep dives into forensics, governance, and the future of agentic
+            infrastructure.
           </p>
         </div>
       </section>
