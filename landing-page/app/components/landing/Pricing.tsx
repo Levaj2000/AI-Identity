@@ -10,10 +10,10 @@ const tiers = [
     period: "/mo",
     description: "Perfect for prototyping and solo projects.",
     features: [
-      "3 agents",
-      "5,000 requests/mo",
+      "5 agents",
+      "2,000 requests/mo",
       "Community support",
-      "Basic audit logs (7-day retention)",
+      "Audit logs (30-day retention)",
       "1 upstream credential",
     ],
     cta: "Get Started Free",
@@ -22,22 +22,41 @@ const tiers = [
   },
   {
     name: "Pro",
-    price: "$49",
+    price: "$79",
     period: "/mo",
     description: "For teams shipping agents to production.",
     features: [
-      "25 agents",
-      "100,000 requests/mo",
-      "Priority email support",
+      "50 agents",
+      "75,000 requests/mo",
+      "Email support",
       "Full audit logs (90-day retention)",
       "10 upstream credentials",
       "Key rotation with grace periods",
       "Gateway policy enforcement",
-      "Webhook notifications",
+      "Basic SSO",
     ],
     cta: "Start Pro Trial",
     ctaHref: "https://dashboard.ai-identity.co",
     featured: true,
+  },
+  {
+    name: "Business",
+    price: "$299",
+    period: "/mo",
+    description: "For scaling teams with advanced requirements.",
+    features: [
+      "200 agents",
+      "500,000 requests/mo",
+      "Priority support",
+      "1-year audit retention",
+      "50 upstream credentials",
+      "Custom policies",
+      "SAML / SCIM",
+      "Team roles & permissions",
+    ],
+    cta: "Start Business Trial",
+    ctaHref: "https://dashboard.ai-identity.co",
+    featured: false,
   },
   {
     name: "Enterprise",
@@ -46,13 +65,13 @@ const tiers = [
     description: "For organizations with compliance requirements.",
     features: [
       "Unlimited agents",
-      "Custom request limits",
+      "Unlimited requests",
       "Dedicated support + SLA",
       "Unlimited audit retention",
       "Unlimited credentials",
-      "SSO & SAML",
+      "Full SSO & SAML",
       "SOC 2 compliance report",
-      "On-premise deployment option",
+      "On-premise / VPC deployment",
     ],
     cta: "Contact Sales",
     ctaHref: "mailto:sales@ai-identity.co",
@@ -66,63 +85,25 @@ interface ComparisonRow {
   feature: string;
   free: string | boolean;
   pro: string | boolean;
+  business: string | boolean;
   enterprise: string | boolean;
 }
 
 const comparisonRows: ComparisonRow[] = [
-  { feature: "Agents", free: "3", pro: "25", enterprise: "Unlimited" },
-  {
-    feature: "Requests / month",
-    free: "5,000",
-    pro: "100,000",
-    enterprise: "Custom",
-  },
-  {
-    feature: "Upstream credentials",
-    free: "1",
-    pro: "10",
-    enterprise: "Unlimited",
-  },
-  {
-    feature: "Audit log retention",
-    free: "7 days",
-    pro: "90 days",
-    enterprise: "Unlimited",
-  },
-  {
-    feature: "Tamper-proof audit chain",
-    free: true,
-    pro: true,
-    enterprise: true,
-  },
-  {
-    feature: "Key rotation (zero-downtime)",
-    free: false,
-    pro: true,
-    enterprise: true,
-  },
-  {
-    feature: "Gateway policy enforcement",
-    free: false,
-    pro: true,
-    enterprise: true,
-  },
-  {
-    feature: "Webhook notifications",
-    free: false,
-    pro: true,
-    enterprise: true,
-  },
-  { feature: "Priority support", free: false, pro: true, enterprise: true },
-  { feature: "SLA guarantee", free: false, pro: false, enterprise: true },
-  { feature: "SSO & SAML", free: false, pro: false, enterprise: true },
-  { feature: "SOC 2 report", free: false, pro: false, enterprise: true },
-  {
-    feature: "On-premise deployment",
-    free: false,
-    pro: false,
-    enterprise: true,
-  },
+  { feature: "Agents", free: "5", pro: "50", business: "200", enterprise: "Unlimited" },
+  { feature: "Requests / month", free: "2,000", pro: "75,000", business: "500,000", enterprise: "Unlimited" },
+  { feature: "Upstream credentials", free: "1", pro: "10", business: "50", enterprise: "Unlimited" },
+  { feature: "Audit log retention", free: "30 days", pro: "90 days", business: "1 year", enterprise: "Unlimited" },
+  { feature: "Tamper-proof audit chain", free: true, pro: true, business: true, enterprise: true },
+  { feature: "Key rotation (zero-downtime)", free: false, pro: true, business: true, enterprise: true },
+  { feature: "Gateway policy enforcement", free: false, pro: true, business: true, enterprise: true },
+  { feature: "Custom policies", free: false, pro: false, business: true, enterprise: true },
+  { feature: "Team roles & permissions", free: false, pro: false, business: true, enterprise: true },
+  { feature: "SSO", free: false, pro: "Basic", business: "SAML / SCIM", enterprise: "Full" },
+  { feature: "Priority support", free: false, pro: false, business: true, enterprise: true },
+  { feature: "SLA guarantee", free: false, pro: false, business: false, enterprise: true },
+  { feature: "SOC 2 report", free: false, pro: false, business: false, enterprise: true },
+  { feature: "On-premise / VPC", free: false, pro: false, business: false, enterprise: true },
 ];
 
 // ── FAQ Data ────────────────────────────────────────────────────────
@@ -141,16 +122,16 @@ const faqs = [
     a: "We'll send you a heads-up at 80% usage. If you exceed the limit, requests are rate-limited (not dropped) until the next billing cycle. You can upgrade anytime to increase your limit.",
   },
   {
-    q: "Is there a free trial for Pro?",
-    a: "Yes \u2014 14-day free trial with full Pro features. No credit card required to start.",
+    q: "Is there a free trial?",
+    a: "Yes \u2014 14-day free trial on Pro and Business with full features. No credit card required to start.",
   },
   {
     q: "Do you offer discounts for startups or open-source projects?",
-    a: "Yes. Startups with less than $1M in funding get 50% off Pro for the first year. Qualifying open-source projects get Pro free. Email us at sales@ai-identity.co.",
+    a: "Yes. Our Founder Rate gives the first 5\u201310 customers 50% off for 6 months in exchange for a case study and feedback. Qualifying open-source projects get Pro free. Email us at sales@ai-identity.co.",
   },
   {
     q: "How does Enterprise pricing work?",
-    a: "Enterprise pricing is based on your agent count, request volume, and deployment requirements. We'll scope it on a call \u2014 most Enterprise deals start at $500/mo.",
+    a: "Enterprise pricing is based on your agent count, request volume, and deployment requirements. We'll scope it on a call \u2014 most Enterprise deals start around $1,200/mo.",
   },
 ];
 
@@ -252,7 +233,7 @@ export default function Pricing() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto"
         >
           {tiers.map((tier) => (
             <motion.div
@@ -322,10 +303,10 @@ export default function Pricing() {
           </h3>
 
           <div className="overflow-x-auto">
-            <table className="w-full max-w-4xl mx-auto">
+            <table className="w-full max-w-6xl mx-auto">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="py-4 px-4 text-left text-sm font-medium text-gray-500 w-1/3">
+                  <th className="py-4 px-4 text-left text-sm font-medium text-gray-500 w-1/4">
                     Feature
                   </th>
                   <th className="py-4 px-4 text-center text-sm font-medium text-gray-400">
@@ -333,6 +314,9 @@ export default function Pricing() {
                   </th>
                   <th className="py-4 px-4 text-center text-sm font-semibold text-[#F59E0B]">
                     Pro
+                  </th>
+                  <th className="py-4 px-4 text-center text-sm font-medium text-gray-400">
+                    Business
                   </th>
                   <th className="py-4 px-4 text-center text-sm font-medium text-gray-400">
                     Enterprise
@@ -356,6 +340,11 @@ export default function Pricing() {
                     <td className="py-3 px-4 text-center">
                       <span className="inline-flex justify-center">
                         <CellValue value={row.pro} />
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className="inline-flex justify-center">
+                        <CellValue value={row.business} />
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center">
