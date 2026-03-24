@@ -17,7 +17,7 @@ class QuotaUsage(BaseModel):
 class UsageSummaryResponse(BaseModel):
     """Complete usage summary for a user's account."""
 
-    tier: str = Field(description="Current subscription tier: free, pro, enterprise")
+    tier: str = Field(description="Current subscription tier: free, pro, business, enterprise")
     agents: QuotaUsage
     active_keys: QuotaUsage
     credentials: QuotaUsage

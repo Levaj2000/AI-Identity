@@ -21,6 +21,8 @@ function tierColor(tier: string): string {
   switch (tier) {
     case 'pro':
       return 'text-[#F59E0B]'
+    case 'business':
+      return 'text-blue-400'
     case 'enterprise':
       return 'text-purple-400'
     default:
@@ -32,6 +34,8 @@ function tierBadgeClasses(tier: string): string {
   switch (tier) {
     case 'pro':
       return 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20'
+    case 'business':
+      return 'bg-blue-500/10 text-blue-400 border-blue-500/20'
     case 'enterprise':
       return 'bg-purple-500/10 text-purple-400 border-purple-500/20'
     default:
@@ -268,18 +272,31 @@ function TierComparison({ currentTier }: { currentTier: string }) {
       name: 'Free',
       key: 'free',
       price: '$0',
-      features: ['3 agents', '5,000 requests/mo', '1 credential', '7-day audit retention'],
+      features: ['5 agents', '2,000 requests/mo', '1 credential', '30-day audit retention'],
     },
     {
       name: 'Pro',
       key: 'pro',
-      price: '$49/mo',
+      price: '$79/mo',
       features: [
-        '25 agents',
-        '100,000 requests/mo',
+        '50 agents',
+        '75,000 requests/mo',
         '10 credentials',
         '90-day audit retention',
+        'Basic SSO',
+      ],
+    },
+    {
+      name: 'Business',
+      key: 'business',
+      price: '$299/mo',
+      features: [
+        '200 agents',
+        '500,000 requests/mo',
+        '50 credentials',
+        '1-year audit retention',
         'Priority support',
+        'SAML / SCIM',
       ],
     },
     {
@@ -291,14 +308,14 @@ function TierComparison({ currentTier }: { currentTier: string }) {
         'Unlimited requests',
         'Unlimited credentials',
         'Unlimited audit retention',
-        'Dedicated support',
-        'Custom SLAs',
+        'Dedicated support + SLA',
+        'On-premise / VPC',
       ],
     },
   ]
 
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {tiers.map((t) => {
         const isCurrent = t.key === currentTier
 
