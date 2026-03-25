@@ -6,7 +6,9 @@
  * visually highlighted for quick incident identification.
  */
 
+import { useMemo } from 'react'
 import type { AuditLogEntry } from '../../types/api'
+import { detectAnomalies } from './anomalyDetection'
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -62,6 +64,8 @@ interface Props {
 }
 
 export function ForensicsTimeline({ events, onEventClick }: Props) {
+  const anomalyMap = useMemo(() => detectAnomalies(events), [events])
+
   if (events.length === 0) {
     return (
       <div className="flex items-center justify-center py-16 text-zinc-500">
@@ -79,11 +83,21 @@ export function ForensicsTimeline({ events, onEventClick }: Props) {
         const colors = decisionColor(event.decision)
         const isIncident =
           event.decision === 'deny' || event.decision === 'denied' || event.decision === 'error'
+        const anomalies = anomalyMap.get(event.id)
+        const hasDenyCluster = anomalies?.some((a) => a.type === 'deny_cluster')
+        const hasLatencyOrCost = anomalies?.some(
+          (a) => a.type === 'latency_spike' || a.type === 'cost_outlier',
+        )
+        const anomalyRing = hasDenyCluster
+          ? 'ring-1 ring-red-500/40'
+          : hasLatencyOrCost
+            ? 'ring-1 ring-orange-500/40'
+            : ''
 
         return (
           <div
             key={event.id}
-            className={`relative mb-4 last:mb-0 cursor-pointer transition-colors rounded-lg p-3 ${
+            className={`relative mb-4 last:mb-0 cursor-pointer transition-colors rounded-lg p-3 ${anomalyRing} ${
               isIncident
                 ? 'bg-zinc-800/80 border border-red-500/20 hover:border-red-500/40'
                 : 'hover:bg-zinc-800/40'
@@ -123,6 +137,27 @@ export function ForensicsTimeline({ events, onEventClick }: Props) {
                     <span className="text-red-400">{`${event.request_metadata.deny_reason}`}</span>
                   )}
                 </div>
+
+                {/* Anomaly pills */}
+                {anomalies && anomalies.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {anomalies.map((a, i) => (
+                      <span
+                        key={i}
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          a.type === 'deny_cluster'
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                        }`}
+                      >
+                        {a.type === 'latency_spike' && '⚡ '}
+                        {a.type === 'cost_outlier' && '💰 '}
+                        {a.type === 'deny_cluster' && '🚨 '}
+                        {a.detail}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Hash preview */}
