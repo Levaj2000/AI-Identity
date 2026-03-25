@@ -9,6 +9,14 @@ interface KeyValueEditorProps {
   error?: string
 }
 
+const PLACEHOLDER_HINTS = [
+  { key: 'team', value: 'e.g. payments' },
+  { key: 'environment', value: 'e.g. production' },
+  { key: 'owner', value: 'e.g. jeff@company.com' },
+  { key: 'framework', value: 'e.g. langchain' },
+  { key: 'version', value: 'e.g. 2.1.0' },
+]
+
 /**
  * Dynamic key-value pair editor.
  *
@@ -39,14 +47,14 @@ export function KeyValueEditor({ entries, onChange, error }: KeyValueEditorProps
                 type="text"
                 value={entry.key}
                 onChange={(e) => updateRow(i, 'key', e.target.value)}
-                placeholder="Key"
+                placeholder={PLACEHOLDER_HINTS[i % PLACEHOLDER_HINTS.length].key}
                 className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[#F59E0B] dark:border-[#2a2a2d] dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] dark:focus:border-[#F59E0B]"
               />
               <input
                 type="text"
                 value={entry.value}
                 onChange={(e) => updateRow(i, 'value', e.target.value)}
-                placeholder="Value"
+                placeholder={PLACEHOLDER_HINTS[i % PLACEHOLDER_HINTS.length].value}
                 className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-[#F59E0B] dark:border-[#2a2a2d] dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] dark:focus:border-[#F59E0B]"
               />
               <button
