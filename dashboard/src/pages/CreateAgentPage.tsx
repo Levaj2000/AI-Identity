@@ -266,6 +266,10 @@ export function CreateAgentPage() {
             <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
               Metadata
             </label>
+            <p className="mb-2 text-xs text-gray-500 dark:text-[#71717a]">
+              Optional tags for organizing your agents. Use to track team ownership, environment, or
+              version.
+            </p>
             <KeyValueEditor
               entries={form.metadataEntries}
               onChange={(entries) => dispatch({ type: 'SET_METADATA_ENTRIES', value: entries })}

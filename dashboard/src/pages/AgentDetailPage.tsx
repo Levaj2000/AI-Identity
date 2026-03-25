@@ -653,6 +653,10 @@ export function AgentDetailPage() {
             <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
               Metadata
             </h3>
+            <p className="mb-2 text-xs text-gray-500 dark:text-[#71717a]">
+              Optional tags for organizing your agents. Use to track team ownership, environment, or
+              version.
+            </p>
             {isEditing ? (
               <KeyValueEditor
                 entries={editForm.metadataEntries}
