@@ -5,7 +5,7 @@
  * and exportable forensics reports with chain-of-custody verification.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import type {
   Agent,
   AuditLogEntry,
@@ -22,6 +22,8 @@ import {
 } from '../services/api/forensics'
 import { ForensicsTimeline } from '../components/forensics/ForensicsTimeline'
 import { IncidentReconstructModal } from '../components/forensics/IncidentReconstructModal'
+import { detectAnomalies } from '../components/forensics/anomalyDetection'
+import { HashChainView } from '../components/forensics/HashChainView'
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -65,6 +67,10 @@ export function ForensicsPage() {
   const [endDate, setEndDate] = useState(defaultEndDate())
   const [filterDecision, setFilterDecision] = useState<string>('')
   const [filterEndpoint, setFilterEndpoint] = useState<string>('')
+  const [filterActionType, setFilterActionType] = useState<string>('')
+  const [filterModel, setFilterModel] = useState<string>('')
+  const [filterCostMin, setFilterCostMin] = useState<string>('')
+  const [filterCostMax, setFilterCostMax] = useState<string>('')
 
   // Data
   const [entries, setEntries] = useState<AuditLogEntry[]>([])
@@ -113,6 +119,10 @@ export function ForensicsPage() {
       if (startDate) params.start_date = new Date(startDate).toISOString()
       if (endDate) params.end_date = new Date(endDate).toISOString()
       if (filterEndpoint) params.endpoint = filterEndpoint
+      if (filterActionType) params.action_type = filterActionType
+      if (filterModel) params.model = filterModel
+      if (filterCostMin) params.cost_min = parseFloat(filterCostMin)
+      if (filterCostMax) params.cost_max = parseFloat(filterCostMax)
 
       const data = await fetchAuditLogs(params as ForensicsFilterParams)
       setEntries(data.items)
@@ -123,7 +133,18 @@ export function ForensicsPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedAgent, filterDecision, startDate, endDate, filterEndpoint, offset])
+  }, [
+    selectedAgent,
+    filterDecision,
+    startDate,
+    endDate,
+    filterEndpoint,
+    filterActionType,
+    filterModel,
+    filterCostMin,
+    filterCostMax,
+    offset,
+  ])
 
   useEffect(() => {
     loadEntries()
@@ -228,6 +249,9 @@ export function ForensicsPage() {
 
   const totalPages = Math.ceil(total / limit)
   const currentPage = Math.floor(offset / limit) + 1
+
+  // Anomaly detection for table view highlighting
+  const anomalyMap = useMemo(() => detectAnomalies(entries), [entries])
 
   // ── Render ────────────────────────────────────────────────────
 
@@ -359,6 +383,83 @@ export function ForensicsPage() {
           </div>
         </div>
 
+        {/* Metadata filters row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
+          {/* Action type */}
+          <div>
+            <label className="block text-xs text-zinc-500 mb-1">Action Type</label>
+            <select
+              value={filterActionType}
+              onChange={(e) => {
+                setFilterActionType(e.target.value)
+                setOffset(0)
+              }}
+              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+            >
+              <option value="">All</option>
+              <option value="agent_created">agent_created</option>
+              <option value="key_rotated">key_rotated</option>
+              <option value="policy_updated">policy_updated</option>
+              <option value="credential_stored">credential_stored</option>
+              <option value="agent_suspended">agent_suspended</option>
+              <option value="agent_deleted">agent_deleted</option>
+            </select>
+          </div>
+
+          {/* Model */}
+          <div>
+            <label className="block text-xs text-zinc-500 mb-1">Model</label>
+            <select
+              value={filterModel}
+              onChange={(e) => {
+                setFilterModel(e.target.value)
+                setOffset(0)
+              }}
+              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+            >
+              <option value="">All</option>
+              <option value="gpt-4">gpt-4</option>
+              <option value="gpt-4o">gpt-4o</option>
+              <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+              <option value="claude-3-opus">claude-3-opus</option>
+              <option value="claude-3-sonnet">claude-3-sonnet</option>
+              <option value="claude-3-haiku">claude-3-haiku</option>
+            </select>
+          </div>
+
+          {/* Cost range */}
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-zinc-500 mb-1">Cost Range (USD)</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={filterCostMin}
+                onChange={(e) => {
+                  setFilterCostMin(e.target.value)
+                  setOffset(0)
+                }}
+                placeholder="Min"
+                step="0.001"
+                min="0"
+                className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              />
+              <span className="text-zinc-500 text-sm">–</span>
+              <input
+                type="number"
+                value={filterCostMax}
+                onChange={(e) => {
+                  setFilterCostMax(e.target.value)
+                  setOffset(0)
+                }}
+                placeholder="Max"
+                step="0.001"
+                min="0"
+                className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Investigate button */}
         {selectedAgent && (
           <div className="mt-3 pt-3 border-t border-zinc-700">
@@ -450,6 +551,9 @@ export function ForensicsPage() {
         </div>
       </div>
 
+      {/* Hash Chain Visualization */}
+      {entries.length > 1 && <HashChainView events={entries} />}
+
       {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center py-16 text-zinc-500">
@@ -476,33 +580,45 @@ export function ForensicsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
-                {entries.map((e) => (
-                  <tr key={e.id} className="hover:bg-zinc-800/50 transition-colors">
-                    <td className="px-4 py-3 text-zinc-300 whitespace-nowrap">
-                      {formatDate(e.created_at)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${decisionBadge(e.decision)}`}
-                      >
-                        {e.decision}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-zinc-400 font-mono text-xs">{e.method}</td>
-                    <td className="px-4 py-3 text-zinc-300 font-mono text-xs max-w-xs truncate">
-                      {e.endpoint}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-400">
-                      {e.cost_estimate_usd != null ? `$${e.cost_estimate_usd.toFixed(4)}` : '--'}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-400">
-                      {e.latency_ms != null ? `${e.latency_ms}ms` : '--'}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-600 font-mono text-xs">
-                      {e.entry_hash.slice(0, 12)}...
-                    </td>
-                  </tr>
-                ))}
+                {entries.map((e) => {
+                  const rowAnomalies = anomalyMap.get(e.id)
+                  const hasDenyCluster = rowAnomalies?.some((a) => a.type === 'deny_cluster')
+                  const hasLatencyOrCost = rowAnomalies?.some(
+                    (a) => a.type === 'latency_spike' || a.type === 'cost_outlier',
+                  )
+                  const rowBg = hasDenyCluster
+                    ? 'bg-red-500/5'
+                    : hasLatencyOrCost
+                      ? 'bg-orange-500/5'
+                      : ''
+                  return (
+                    <tr key={e.id} className={`hover:bg-zinc-800/50 transition-colors ${rowBg}`}>
+                      <td className="px-4 py-3 text-zinc-300 whitespace-nowrap">
+                        {formatDate(e.created_at)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${decisionBadge(e.decision)}`}
+                        >
+                          {e.decision}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-zinc-400 font-mono text-xs">{e.method}</td>
+                      <td className="px-4 py-3 text-zinc-300 font-mono text-xs max-w-xs truncate">
+                        {e.endpoint}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-400">
+                        {e.cost_estimate_usd != null ? `$${e.cost_estimate_usd.toFixed(4)}` : '--'}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-400">
+                        {e.latency_ms != null ? `${e.latency_ms}ms` : '--'}
+                      </td>
+                      <td className="px-4 py-3 text-zinc-600 font-mono text-xs">
+                        {e.entry_hash.slice(0, 12)}...
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

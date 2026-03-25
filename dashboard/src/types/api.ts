@@ -222,6 +222,10 @@ export interface ForensicsFilterParams {
   end_date?: string
   decision?: string
   endpoint?: string
+  action_type?: string
+  model?: string
+  cost_min?: number
+  cost_max?: number
   limit?: number
   offset?: number
 }
