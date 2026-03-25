@@ -152,6 +152,19 @@ class AgentCreateResponse(BaseModel):
     )
 
 
+# ── Capability Schemas ───────────────────────────────────────────────────
+
+
+class CapabilityResponse(BaseModel):
+    """A predefined capability with its endpoint permission mappings."""
+
+    id: str = Field(description="Capability identifier (e.g. openai_chat)")
+    name: str = Field(description="Human-readable name")
+    description: str = Field(description="What this capability grants access to")
+    endpoints: list[str] = Field(description="Allowed API endpoint patterns")
+    methods: list[str] = Field(description="Allowed HTTP methods")
+
+
 # ── Agent Key Schemas ────────────────────────────────────────────────────
 
 
