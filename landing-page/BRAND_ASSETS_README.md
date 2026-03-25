@@ -106,7 +106,7 @@ function FeatureCard() {
       {/* Card content */}
       <div className="relative z-10">
         <h3 className="text-2xl font-bold text-white mb-4">
-          SOC 2 Ready
+          Aligned with SOC 2 Controls
         </h3>
         <p className="text-gray-300">
           Built-in compliance from day one

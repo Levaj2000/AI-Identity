@@ -10,8 +10,8 @@ const cards = [
     desc: "SHA-256 hashed at rest. Keys are never stored in plaintext, never logged, never returned.",
   },
   {
-    title: "Designed for SOC 2",
-    desc: "Built with SOC 2 compliance principles from day one. Audit trails, access controls, and encryption throughout.",
+    title: "Aligned with SOC 2 Controls",
+    desc: "Built with SOC 2 control principles in mind from day one. Audit trails, access controls, and encryption throughout.",
   },
 ];
 
