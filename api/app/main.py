@@ -358,6 +358,7 @@ from api.app.routers.agents import router as agents_router  # noqa: E402
 from api.app.routers.audit import router as audit_router  # noqa: E402
 from api.app.routers.auth import router as auth_router  # noqa: E402
 from api.app.routers.billing import router as billing_router  # noqa: E402
+from api.app.routers.capabilities import router as capabilities_router  # noqa: E402
 from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
@@ -367,6 +368,7 @@ from api.app.routers.usage import router as usage_router  # noqa: E402
 
 app.include_router(admin_router)
 app.include_router(agents_router)
+app.include_router(capabilities_router)
 app.include_router(audit_router)
 app.include_router(auth_router)
 app.include_router(billing_router)

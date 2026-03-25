@@ -4,7 +4,7 @@ import { useAgentDetail } from '../hooks/useAgentDetail'
 import { deleteAgent, updateAgent } from '../services/api/agents'
 import { isApiError } from '../services/api/client'
 import { AgentStatusBadge } from '../components/AgentStatusBadge'
-import { TagInput } from '../components/forms/TagInput'
+import { CapabilitySelect } from '../components/forms/CapabilitySelect'
 import { KeyValueEditor } from '../components/forms/KeyValueEditor'
 import { ConfirmModal } from '../components/modals/ConfirmModal'
 import { relativeTime } from '../lib/time'
@@ -626,11 +626,10 @@ export function AgentDetailPage() {
               Capabilities
             </h3>
             {isEditing ? (
-              <TagInput
+              <CapabilitySelect
                 id="edit-capabilities"
-                tags={editForm.capabilities}
+                selected={editForm.capabilities}
                 onChange={(caps) => setEditForm({ ...editForm, capabilities: caps })}
-                placeholder="Type a capability and press Enter"
                 error={fieldErrors.capabilities}
               />
             ) : agent.capabilities.length > 0 ? (
