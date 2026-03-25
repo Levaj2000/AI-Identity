@@ -52,6 +52,10 @@ def _build_audit_query(
     start_date: datetime | None = None,
     end_date: datetime | None = None,
     endpoint: str | None = None,
+    action_type: str | None = None,
+    model: str | None = None,
+    cost_min: float | None = None,
+    cost_max: float | None = None,
 ):
     """Build a filtered audit log query scoped to user's agents."""
     query = db.query(AuditLog).filter(AuditLog.agent_id.in_(user_agent_ids))
@@ -72,6 +76,19 @@ def _build_audit_query(
 
     if endpoint:
         query = query.filter(AuditLog.endpoint.ilike(f"%{endpoint}%"))
+
+    if action_type:
+        # Filter by action_type inside JSONB request_metadata
+        query = query.filter(AuditLog.request_metadata["action_type"].astext == action_type)
+
+    if model:
+        query = query.filter(AuditLog.request_metadata["model"].astext == model)
+
+    if cost_min is not None:
+        query = query.filter(AuditLog.cost_estimate_usd >= cost_min)
+
+    if cost_max is not None:
+        query = query.filter(AuditLog.cost_estimate_usd <= cost_max)
 
     return query
 
@@ -123,8 +140,8 @@ def _compute_stats(
 
     return AuditStatsResponse(
         total_events=total_events,
-        allowed_count=counts.get("allow", 0),
-        denied_count=counts.get("deny", 0),
+        allowed_count=counts.get("allow", 0) + counts.get("allowed", 0),
+        denied_count=counts.get("deny", 0) + counts.get("denied", 0),
         error_count=counts.get("error", 0),
         total_cost_usd=total_cost,
         avg_latency_ms=avg_latency,
@@ -147,6 +164,10 @@ def list_audit_logs(
     start_date: datetime | None = Query(None, description="Filter entries after this timestamp"),
     end_date: datetime | None = Query(None, description="Filter entries before this timestamp"),
     endpoint: str | None = Query(None, description="Filter by endpoint (partial match)"),
+    action_type: str | None = Query(None, description="Filter by metadata action_type"),
+    model: str | None = Query(None, description="Filter by metadata model"),
+    cost_min: float | None = Query(None, description="Minimum cost_estimate_usd"),
+    cost_max: float | None = Query(None, description="Maximum cost_estimate_usd"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),
@@ -155,7 +176,8 @@ def list_audit_logs(
     """List audit log entries with optional filters.
 
     Results are scoped to agents owned by the authenticated user.
-    Supports filtering by agent, decision, date range, and endpoint.
+    Supports filtering by agent, decision, date range, endpoint,
+    metadata action_type, metadata model, and cost range.
     """
     user_agents = _user_agent_ids(db, user)
 
@@ -167,6 +189,10 @@ def list_audit_logs(
         start_date=start_date,
         end_date=end_date,
         endpoint=endpoint,
+        action_type=action_type,
+        model=model,
+        cost_min=cost_min,
+        cost_max=cost_max,
     )
 
     if query is None:
