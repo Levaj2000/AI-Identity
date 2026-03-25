@@ -2,7 +2,7 @@ import { useReducer, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { createAgent } from '../services/api/agents'
 import { isApiError } from '../services/api/client'
-import { TagInput } from '../components/forms/TagInput'
+import { CapabilitySelect } from '../components/forms/CapabilitySelect'
 import { KeyValueEditor } from '../components/forms/KeyValueEditor'
 import { ApiKeyModal } from '../components/modals/ApiKeyModal'
 import type { AgentCreateResponse, ValidationErrorItem } from '../types/api'
@@ -249,11 +249,14 @@ export function CreateAgentPage() {
             >
               Capabilities
             </label>
-            <TagInput
+            <p className="mb-2 text-xs text-gray-500 dark:text-[#71717a]">
+              Select capabilities to auto-generate a gateway policy that scopes which endpoints this
+              agent can access.
+            </p>
+            <CapabilitySelect
               id="agent-capabilities"
-              tags={form.capabilities}
+              selected={form.capabilities}
               onChange={(caps) => dispatch({ type: 'SET_CAPABILITIES', value: caps })}
-              placeholder="Type a capability and press Enter"
               error={fieldErrors.capabilities}
             />
           </div>

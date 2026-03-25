@@ -5,6 +5,16 @@
  * when backend schemas change.
  */
 
+// ─── Capabilities ───────────────────────────────────────────────
+
+export interface CapabilityDefinition {
+  id: string
+  name: string
+  description: string
+  endpoints: string[]
+  methods: string[]
+}
+
 // ─── Agent ───────────────────────────────────────────────────────
 
 export type AgentStatus = 'active' | 'suspended' | 'revoked'
