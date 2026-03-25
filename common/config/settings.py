@@ -101,12 +101,13 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Warn loudly if critical secrets are using default/empty values in production
+# Fail-closed: refuse to start with insecure defaults in production
 if settings.environment != "development":
     if settings.audit_hmac_key == "CHANGE-ME-IN-PRODUCTION":
-        _logger.critical(
-            "AUDIT_HMAC_KEY is using the default value! "
-            "Set a strong random key via environment variable."
+        raise SystemExit(
+            "FATAL: AUDIT_HMAC_KEY is using the default value. "
+            "Set a strong random key via environment variable before starting in production. "
+            'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(64))"'
         )
     if not settings.credential_encryption_key:
         _logger.warning(
