@@ -419,7 +419,7 @@ export default function Brand() {
                 Identity & access management for AI
               </h1>
               <p className="text-lg text-white/70 text-center max-w-2xl">
-                SOC 2-ready architecture with HMAC audit chains. Know which agent made that $400 API call.
+                Architecture aligned with SOC 2 controls with HMAC audit chains. Know which agent made that $400 API call.
               </p>
               <button className="bg-[#00FFC2] text-[#0A0A0B] px-8 py-3 rounded-lg font-bold hover:bg-[#00FFC2]/90 transition-colors">
                 Get Started

@@ -770,7 +770,7 @@ function Content21() {
         Agents need armor
       </p>
       <p className="font-['Roboto:Regular',sans-serif] font-normal leading-[1.5] relative shrink-0 text-[16px] w-full" style={{ fontVariationSettings: "'wdth' 100" }}>
-        Non-human identities demand the same rigor as human ones. SOC 2-ready architecture with HMAC-chained audit logs—compliance isn't a roadmap item, it's built-in from day one.
+        Non-human identities demand the same rigor as human ones. Architecture aligned with SOC 2 controls, with HMAC-chained audit logs—compliance isn't a roadmap item, it's built-in from day one.
       </p>
     </div>
   );
@@ -1235,7 +1235,7 @@ function ListItem2() {
         How do you meet compliance?
       </p>
       <p className="font-['Roboto:Regular',sans-serif] font-normal relative shrink-0 w-full" style={{ fontVariationSettings: "'wdth' 100" }}>
-        HMAC-chained audit logs give you the immutable trail regulators demand. SOC 2 Type I ready today, not after fundraising. Every action recorded. Every change tracked. Documentation that holds up.
+        HMAC-chained audit logs give you the immutable trail regulators demand. Built on SOC 2 architectural principles from day one, not after fundraising. Every action recorded. Every change tracked. Documentation that holds up.
       </p>
     </div>
   );

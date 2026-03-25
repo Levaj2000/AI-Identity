@@ -330,7 +330,7 @@ function Content10() {
         Every action is logged and immutable
       </p>
       <p className="font-['Roboto:Regular',sans-serif] font-normal leading-[1.5] relative shrink-0 text-[18px] w-full" style={{ fontVariationSettings: "'wdth' 100" }}>
-        HMAC-chained audit logs capture every identity operation, permissions granted, and API call. Tamper-proof records built for SOC 2 compliance from day one.
+        HMAC-chained audit logs capture every identity operation, permissions granted, and API call. Tamper-proof records aligned with SOC 2 controls from day one.
       </p>
     </div>
   );
