@@ -111,7 +111,7 @@ curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
             title: "Compliance",
             icon: "check",
             description:
-              "Automated compliance reporting for EU AI Act, SOC 2, and internal governance frameworks. AI Identity continuously monitors agent behavior and flags anomalies against your defined policies, generating audit-ready reports on demand.",
+              "Automated compliance monitoring mapped to EU AI Act, SOC 2, and internal governance frameworks. AI Identity continuously monitors agent behavior and flags anomalies against your defined policies, generating audit-ready reports on demand.",
           },
           {
             title: "Forensics",
