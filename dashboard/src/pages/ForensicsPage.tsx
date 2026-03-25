@@ -22,6 +22,7 @@ import {
 } from '../services/api/forensics'
 import { ForensicsTimeline } from '../components/forensics/ForensicsTimeline'
 import { IncidentReconstructModal } from '../components/forensics/IncidentReconstructModal'
+import { EventDetailDrawer } from '../components/forensics/EventDetailDrawer'
 import { detectAnomalies } from '../components/forensics/anomalyDetection'
 import { HashChainView } from '../components/forensics/HashChainView'
 
@@ -90,6 +91,9 @@ export function ForensicsPage() {
   // Incident reconstruction
   const [reconstructData, setReconstructData] = useState<AuditReconstructResponse | null>(null)
   const [reconstructing, setReconstructing] = useState(false)
+
+  // Event detail drawer
+  const [selectedEvent, setSelectedEvent] = useState<AuditLogEntry | null>(null)
 
   // ── Fetch agents ──────────────────────────────────────────────
 
@@ -561,7 +565,7 @@ export function ForensicsPage() {
         </div>
       ) : viewMode === 'timeline' ? (
         <div className="bg-zinc-800/30 border border-zinc-700 rounded-xl p-6">
-          <ForensicsTimeline events={entries} />
+          <ForensicsTimeline events={entries} onEventClick={setSelectedEvent} />
         </div>
       ) : (
         /* Table View */
@@ -592,7 +596,11 @@ export function ForensicsPage() {
                       ? 'bg-orange-500/5'
                       : ''
                   return (
-                    <tr key={e.id} className={`hover:bg-zinc-800/50 transition-colors ${rowBg}`}>
+                    <tr
+                      key={e.id}
+                      className={`hover:bg-zinc-800/50 transition-colors cursor-pointer ${rowBg}`}
+                      onClick={() => setSelectedEvent(e)}
+                    >
                       <td className="px-4 py-3 text-zinc-300 whitespace-nowrap">
                         {formatDate(e.created_at)}
                       </td>
@@ -685,6 +693,16 @@ export function ForensicsPage() {
           onClose={() => setReconstructData(null)}
           onExportJSON={exportJSON}
           onExportCSV={exportCSV}
+        />
+      )}
+
+      {/* Event Detail Drawer */}
+      {selectedEvent && (
+        <EventDetailDrawer
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          events={entries}
+          onNavigate={setSelectedEvent}
         />
       )}
     </div>
