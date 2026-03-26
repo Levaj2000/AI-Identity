@@ -71,3 +71,28 @@ class AdminHealthResponse(BaseModel):
     status: str
     db_latency_ms: float
     table_counts: dict[str, int]
+
+
+# ── Agent Management ─────────────────────────────────────────────
+
+
+class AdminAgentSummary(BaseModel):
+    """Single agent row in the admin agent list."""
+
+    id: str
+    name: str
+    status: str
+    owner_email: str | None
+    key_count: int
+    created_at: datetime.datetime | None
+
+    model_config = {"from_attributes": True}
+
+
+class AdminAgentListResponse(BaseModel):
+    """Paginated list of agents for admin view."""
+
+    items: list[AdminAgentSummary]
+    total: int
+    limit: int
+    offset: int
