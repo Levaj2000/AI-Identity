@@ -49,6 +49,14 @@ export default function Navigation() {
           >
             Security
           </Link>
+          <Link
+            to="/architecture"
+            className={`font-['Inter',sans-serif] font-normal text-[16px] transition-colors ${
+              isActive('/architecture') ? 'text-[#00ffc2]' : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            Architecture
+          </Link>
 
           {/* Resources Dropdown */}
           <div
@@ -83,6 +91,10 @@ export default function Navigation() {
                       <Link to="/integrations" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Framework support</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Native integration with leading AI platforms</span>
+                      </Link>
+                      <Link to="/architecture" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                        <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Architecture</span>
+                        <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Platform design for enterprise security teams</span>
                       </Link>
                     </div>
 
