@@ -182,8 +182,8 @@ app = FastAPI(
     summary="Identity and key management for AI agents",
     description=API_DESCRIPTION,
     version=settings.app_version,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.environment != "production" else None,
+    redoc_url="/redoc" if settings.environment != "production" else None,
     openapi_tags=OPENAPI_TAGS,
     lifespan=lifespan,
     contact={
