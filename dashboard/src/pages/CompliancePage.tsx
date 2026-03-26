@@ -1,25 +1,13 @@
 import { useState, useEffect } from 'react'
 import { apiFetch, toQueryString } from '../services/api/client'
+import type { AuditLogEntry } from '../types/api'
+import { EventDetailDrawer } from '../components/forensics/EventDetailDrawer'
+import { verifyAuditChain } from '../services/api/forensics'
 
 // ── Types ────────────────────────────────────────────────────────
 
-interface AuditEntry {
-  id: number
-  agent_id: string
-  user_id: string | null
-  endpoint: string
-  method: string
-  decision: 'allowed' | 'denied' | 'error'
-  cost_estimate_usd: number | null
-  latency_ms: number | null
-  request_metadata: Record<string, unknown>
-  entry_hash: string
-  prev_hash: string
-  created_at: string
-}
-
 interface AuditListResponse {
-  items: AuditEntry[]
+  items: AuditLogEntry[]
   total: number
   limit: number
   offset: number
@@ -45,22 +33,29 @@ function formatDate(iso: string): string {
   })
 }
 
+/** Match both "allow"/"allowed" and "deny"/"denied" variants (same as Forensics page). */
 function decisionBadge(d: string) {
-  switch (d) {
-    case 'allowed':
-      return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-    case 'denied':
-      return 'bg-red-500/10 text-red-400 border-red-500/20'
-    default:
-      return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-  }
+  if (d === 'allow' || d === 'allowed')
+    return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+  if (d === 'deny' || d === 'denied') return 'bg-red-500/10 text-red-400 border-red-500/20'
+  return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+}
+
+/** Check if a decision string represents a deny. */
+function isDenyDecision(d: string) {
+  return d === 'deny' || d === 'denied'
+}
+
+/** Check if a decision string represents an allow. */
+function isAllowDecision(d: string) {
+  return d === 'allow' || d === 'allowed'
 }
 
 // ── Component ────────────────────────────────────────────────────
 
 export function CompliancePage() {
   // Audit log state
-  const [entries, setEntries] = useState<AuditEntry[]>([])
+  const [entries, setEntries] = useState<AuditLogEntry[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [offset, setOffset] = useState(0)
@@ -82,6 +77,9 @@ export function CompliancePage() {
     denyCount: 0,
     errorCount: 0,
   })
+
+  // Event detail drawer
+  const [selectedEvent, setSelectedEvent] = useState<AuditLogEntry | null>(null)
 
   // ── Fetch audit entries ──────────────────────────────────────
 
@@ -116,20 +114,24 @@ export function CompliancePage() {
   }, [offset, filterDecision, filterAgent])
 
   // ── Fetch stats on mount ─────────────────────────────────────
+  // Count both "deny" and "denied" (and "allow"/"allowed") variants
+  // to avoid showing 0 when backend uses a different form.
 
   useEffect(() => {
     async function loadStats() {
       try {
-        const [all, allows, denies, errors] = await Promise.all([
+        const [all, allows, allowsAlt, denies, deniesAlt, errors] = await Promise.all([
           apiFetch<AuditListResponse>('/api/v1/audit?limit=1'),
           apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=allowed'),
+          apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=allow'),
           apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=denied'),
+          apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=deny'),
           apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=error'),
         ])
         setStats({
           totalEntries: all.total,
-          allowCount: allows.total,
-          denyCount: denies.total,
+          allowCount: allows.total + allowsAlt.total,
+          denyCount: denies.total + deniesAlt.total,
           errorCount: errors.total,
         })
       } catch {
@@ -139,12 +141,12 @@ export function CompliancePage() {
     loadStats()
   }, [])
 
-  // ── Verify chain ─────────────────────────────────────────────
+  // ── Verify chain (uses shared forensics API) ──────────────────
 
   const runVerify = async () => {
     setVerifying(true)
     try {
-      const data = await apiFetch<VerifyResponse>('/api/v1/audit/verify')
+      const data = await verifyAuditChain(filterAgent || undefined)
       setVerifyResult(data)
       setLastVerified(new Date().toLocaleString())
     } catch {
@@ -158,6 +160,13 @@ export function CompliancePage() {
     }
     setVerifying(false)
   }
+
+  // ── Auto-verify on mount ──────────────────────────────────────
+
+  useEffect(() => {
+    runVerify()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Export CSV ────────────────────────────────────────────────
 
@@ -315,10 +324,20 @@ export function CompliancePage() {
             />
           </div>
           <p className="mt-2 text-2xl font-bold text-white">
-            {verifyResult === null ? '—' : verifyResult.valid ? 'VALID' : 'BROKEN'}
+            {verifyResult === null
+              ? verifying
+                ? 'Checking...'
+                : '---'
+              : verifyResult.valid
+                ? 'VALID'
+                : 'BROKEN'}
           </p>
           <p className="mt-1 text-xs text-gray-500">
-            {lastVerified ? `Last checked ${lastVerified}` : 'Not yet verified'}
+            {lastVerified
+              ? `Last checked ${lastVerified}`
+              : verifying
+                ? 'Verifying chain...'
+                : 'Not yet verified'}
           </p>
           <button
             onClick={runVerify}
@@ -573,7 +592,8 @@ export function CompliancePage() {
                 entries.map((entry) => (
                   <tr
                     key={entry.id}
-                    className="bg-[#0A0A0B] hover:bg-[#111113]/50 transition-colors"
+                    className="bg-[#0A0A0B] hover:bg-[#111113]/50 transition-colors cursor-pointer"
+                    onClick={() => setSelectedEvent(entry)}
                   >
                     <td className="px-4 py-3 font-mono text-xs text-gray-500">{entry.id}</td>
                     <td className="px-4 py-3 text-xs text-gray-300 whitespace-nowrap">
@@ -600,7 +620,7 @@ export function CompliancePage() {
                         ? String(entry.request_metadata.deny_reason)
                         : entry.latency_ms
                           ? `${entry.latency_ms}ms`
-                          : '—'}
+                          : '---'}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -654,20 +674,21 @@ export function CompliancePage() {
             {entries.slice(0, 8).map((entry, i) => (
               <div key={entry.id} className="flex items-center gap-2 shrink-0">
                 <div
-                  className={`rounded-lg border px-3 py-2 text-center ${
-                    entry.decision === 'allowed'
+                  className={`rounded-lg border px-3 py-2 text-center cursor-pointer hover:opacity-80 transition-opacity ${
+                    isAllowDecision(entry.decision)
                       ? 'border-emerald-500/20 bg-emerald-500/5'
-                      : entry.decision === 'denied'
+                      : isDenyDecision(entry.decision)
                         ? 'border-red-500/20 bg-red-500/5'
                         : 'border-yellow-500/20 bg-yellow-500/5'
                   }`}
+                  onClick={() => setSelectedEvent(entry)}
                 >
                   <p className="font-mono text-[10px] text-gray-500">#{entry.id}</p>
                   <p
                     className={`text-xs font-medium ${
-                      entry.decision === 'allowed'
+                      isAllowDecision(entry.decision)
                         ? 'text-emerald-400'
-                        : entry.decision === 'denied'
+                        : isDenyDecision(entry.decision)
                           ? 'text-red-400'
                           : 'text-yellow-400'
                     }`}
@@ -701,6 +722,16 @@ export function CompliancePage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Event Detail Drawer (reused from Forensics page) */}
+      {selectedEvent && (
+        <EventDetailDrawer
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          events={entries}
+          onNavigate={setSelectedEvent}
+        />
       )}
     </div>
   )
