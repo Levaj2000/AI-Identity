@@ -10,6 +10,7 @@ import Terms from "./pages/Terms";
 import Blog from "./pages/Blog";
 import Careers from "./pages/Careers";
 import Docs from "./pages/Docs";
+import Architecture from "./pages/Architecture";
 
 export const router = createBrowserRouter([
   {
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
       { path: "how-it-works", Component: HowItWorks },
       { path: "integrations", Component: Integrations },
       { path: "security", Component: Security },
+      { path: "architecture", Component: Architecture },
       { path: "contact", Component: Contact },
       { path: "privacy", Component: Privacy },
       { path: "terms", Component: Terms },
