@@ -14,8 +14,8 @@ const frameworks = [
     name: "EU AI Act",
     version: "2024",
     category: "Regulatory",
-    checks: 6,
-    desc: "European Union AI Act — transparency, audit trails, and access control requirements for high-risk AI.",
+    checks: 8,
+    desc: "Helps meet EU AI Act high-risk obligations — cryptographic identities, automated logging, human oversight enforcement, and forensic evidence exports aligned with Articles 9, 12, 13, and 14.",
     color: "#8B5CF6",
   },
   {
@@ -48,6 +48,8 @@ const automatedChecks = [
   { name: "Credential prefix identification", icon: "tag" },
   { name: "Agent transparency (descriptions)", icon: "eye" },
   { name: "Capability declaration", icon: "list" },
+  { name: "Human oversight enforcement", icon: "eye" },
+  { name: "Forensic evidence export readiness", icon: "file-text" },
 ];
 
 const container = {
@@ -203,8 +205,8 @@ export default function ComplianceSection() {
           </h2>
           <p className="max-w-2xl mx-auto text-gray-400 text-lg">
             Run automated assessments against NIST, EU AI Act, SOC 2, and
-            internal best practices. 30 checks. 11 automated evaluators. One API
-            call.
+            internal best practices. Future-proof compliance infrastructure that supports
+            high-risk AI obligations out of the box.
           </p>
         </motion.div>
 
@@ -218,8 +220,8 @@ export default function ComplianceSection() {
         >
           {[
             { value: "4", label: "Frameworks" },
-            { value: "30", label: "Compliance Checks" },
-            { value: "11", label: "Auto Evaluators" },
+            { value: "32", label: "Compliance Checks" },
+            { value: "13", label: "Auto Evaluators" },
             { value: "< 1s", label: "Assessment Time" },
           ].map((stat) => (
             <div
@@ -305,7 +307,7 @@ export default function ComplianceSection() {
           transition={{ duration: 0.5, delay: 0.3 }}
         >
           <h3 className="text-lg font-semibold text-white mb-2">
-            11 Automated Evaluators
+            13 Automated Evaluators
           </h3>
           <p className="text-sm text-gray-500 mb-6">
             Each check runs automatically against your agents — no manual
@@ -342,13 +344,60 @@ export default function ComplianceSection() {
           </motion.div>
         </motion.div>
 
+        {/* EU AI Act Callout */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+          className="mt-16 bg-gradient-to-br from-[#8B5CF6]/10 to-[#111113]/80 backdrop-blur-xl border border-[#8B5CF6]/20 rounded-2xl p-8 mb-8"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-[#8B5CF6]/15 text-[#8B5CF6]">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M2 12h20" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Aligned with EU AI Act High-Risk Obligations
+              </h3>
+              <p className="text-sm text-gray-400 leading-relaxed mb-4">
+                AI Identity supports organizations preparing for EU AI Act enforcement.
+                Cryptographic agent identities, automated logging, human oversight enforcement,
+                and forensic evidence exports help meet the requirements of Articles 9 (Risk Management),
+                12 (Record-Keeping), 13 (Transparency), and 14 (Human Oversight).
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  "Cryptographic identity per agent",
+                  "Automated, tamper-evident audit logs",
+                  "Human oversight enforcement via policies",
+                  "One-click forensic evidence export",
+                  "Supports EU database registration prep",
+                  "Conformity assessment acceleration",
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-[#8B5CF6] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span className="text-xs text-gray-300">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
         {/* API Example */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-16 bg-[#111113]/80 backdrop-blur-xl border border-[#F59E0B]/10 rounded-2xl p-8"
+          className="mt-8 bg-[#111113]/80 backdrop-blur-xl border border-[#F59E0B]/10 rounded-2xl p-8"
         >
           <div className="flex items-center gap-3 mb-4">
             <div className="w-3 h-3 rounded-full bg-red-500/60" />

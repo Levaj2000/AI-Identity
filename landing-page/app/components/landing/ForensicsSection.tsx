@@ -61,7 +61,7 @@ const capabilities = [
   },
   {
     title: "Forensic Export",
-    desc: "Auditor-ready reports in JSON and PDF. Evidence that holds up — for compliance teams, legal counsel, and external auditors.",
+    desc: "Auditor-ready reports in JSON and PDF. Evidence that supports EU AI Act conformity assessments, SOC 2 audits, and regulatory inquiries — for compliance teams, legal counsel, and external auditors.",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
