@@ -9,6 +9,7 @@ import {
   type AdminHealth,
 } from '../services/api/admin'
 import { isApiError } from '../services/api/client'
+import { StatDetailDrawer, type StatDrawerMode } from '../components/admin/StatDetailDrawer'
 
 type TierFilter = '' | 'free' | 'pro' | 'enterprise'
 
@@ -28,6 +29,9 @@ export function AdminPage() {
 
   // Tier change state
   const [changingTier, setChangingTier] = useState<string | null>(null)
+
+  // Stat detail drawer
+  const [selectedStat, setSelectedStat] = useState<StatDrawerMode | null>(null)
 
   const loadData = async (currentSearch?: string, currentTier?: string, currentPage?: number) => {
     try {
@@ -152,23 +156,31 @@ export function AdminPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total Users" value={stats.total_users} icon="👥" />
+          <StatCard
+            label="Total Users"
+            value={stats.total_users}
+            icon="👥"
+            onClick={() => setSelectedStat('users')}
+          />
           <StatCard
             label="Total Agents"
             value={stats.total_agents}
             sublabel={`${stats.total_active_agents} active`}
             icon="🤖"
+            onClick={() => setSelectedStat('agents')}
           />
           <StatCard
             label="Requests This Month"
             value={stats.total_requests.toLocaleString()}
             icon="📊"
+            onClick={() => setSelectedStat('requests')}
           />
           <StatCard
             label="System Health"
             value={health?.status === 'healthy' ? 'Healthy' : 'Unknown'}
             sublabel={health ? `${health.db_latency_ms}ms DB` : undefined}
             icon={health?.status === 'healthy' ? '✅' : '⚠️'}
+            onClick={() => setSelectedStat('health')}
           />
         </div>
       )}
@@ -331,6 +343,11 @@ export function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* Stat detail drawer */}
+      {selectedStat && (
+        <StatDetailDrawer mode={selectedStat} onClose={() => setSelectedStat(null)} />
+      )}
     </div>
   )
 }
@@ -342,14 +359,19 @@ function StatCard({
   value,
   sublabel,
   icon,
+  onClick,
 }: {
   label: string
   value: string | number
   sublabel?: string
   icon: string
+  onClick?: () => void
 }) {
   return (
-    <div className="bg-[#111113] border border-[#1a1a1d] rounded-xl p-5">
+    <div
+      className="bg-[#111113] border border-[#1a1a1d] rounded-xl p-5 cursor-pointer hover:border-[#F59E0B]/40 transition-colors"
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-gray-400">{label}</p>

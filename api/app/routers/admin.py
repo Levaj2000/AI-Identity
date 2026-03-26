@@ -15,8 +15,11 @@ from sqlalchemy.orm import Session
 from api.app.auth import require_admin
 from common.models import User, get_db
 from common.models.agent import Agent, AgentStatus
+from common.models.agent_key import AgentKey
 from common.models.audit_log import AuditLog
 from common.schemas.admin import (
+    AdminAgentListResponse,
+    AdminAgentSummary,
     AdminHealthResponse,
     AdminStatsResponse,
     AdminTierUpdate,
@@ -220,6 +223,59 @@ async def update_user_tier(
         stripe_customer_id=user.stripe_customer_id,
         created_at=user.created_at,
     )
+
+
+# ── Agent Management ──────────────────────────────────────────────
+
+
+@router.get(
+    "/agents",
+    response_model=AdminAgentListResponse,
+    summary="List all agents with owner info",
+)
+async def list_agents(
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    status: str | None = Query(None, description="Filter by status"),
+    search: str | None = Query(None, description="Search by agent name"),
+) -> AdminAgentListResponse:
+    """Return paginated list of agents with owner email and key counts."""
+    # Subquery: count keys per agent
+    key_count_sq = (
+        db.query(AgentKey.agent_id, func.count(AgentKey.id).label("key_count"))
+        .group_by(AgentKey.agent_id)
+        .subquery()
+    )
+
+    query = (
+        db.query(Agent, User.email, func.coalesce(key_count_sq.c.key_count, 0))
+        .join(User, Agent.user_id == User.id)
+        .outerjoin(key_count_sq, Agent.id == key_count_sq.c.agent_id)
+    )
+
+    if status:
+        query = query.filter(Agent.status == status)
+    if search:
+        query = query.filter(Agent.name.ilike(f"%{search}%"))
+
+    total = query.count()
+    rows = query.order_by(Agent.created_at.desc()).offset(offset).limit(limit).all()
+
+    items = [
+        AdminAgentSummary(
+            id=str(agent.id),
+            name=agent.name,
+            status=agent.status,
+            owner_email=owner_email,
+            key_count=key_count,
+            created_at=agent.created_at,
+        )
+        for agent, owner_email, key_count in rows
+    ]
+
+    return AdminAgentListResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 # ── System Health ────────────────────────────────────────────────────

@@ -42,6 +42,22 @@ export interface AdminHealth {
   table_counts: Record<string, number>
 }
 
+export interface AdminAgent {
+  id: string
+  name: string
+  status: string
+  owner_email: string | null
+  key_count: number
+  created_at: string | null
+}
+
+export interface AdminAgentList {
+  items: AdminAgent[]
+  total: number
+  limit: number
+  offset: number
+}
+
 // ── API Functions ───────────────────────────────────────────────────
 
 export function getAdminStats(): Promise<AdminStats> {
@@ -66,4 +82,13 @@ export function updateUserTier(userId: string, tier: string): Promise<AdminUserS
 
 export function getAdminHealth(): Promise<AdminHealth> {
   return apiFetch<AdminHealth>('/api/v1/admin/health')
+}
+
+export function getAdminAgents(params: {
+  limit?: number
+  offset?: number
+  status?: string
+  search?: string
+}): Promise<AdminAgentList> {
+  return apiFetch<AdminAgentList>(`/api/v1/admin/agents${toQueryString(params)}`)
 }
