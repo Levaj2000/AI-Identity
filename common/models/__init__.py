@@ -1,6 +1,7 @@
 """SQLAlchemy database models for AI Identity."""
 
 from common.models.agent import Agent, AgentStatus
+from common.models.agent_assignment import AgentAssignment, AgentRole
 from common.models.agent_key import AgentKey, KeyStatus, KeyType
 from common.models.audit_log import AuditLog
 from common.models.base import Base, SessionLocal, engine, get_db
@@ -10,6 +11,8 @@ from common.models.compliance import (
     ComplianceReport,
     ComplianceResult,
 )
+from common.models.org_membership import OrgMembership, OrgRole
+from common.models.organization import Organization
 from common.models.policy import Policy
 from common.models.qa_run import QARun
 from common.models.upstream_credential import (
@@ -42,4 +45,9 @@ __all__ = [
     "UserTier",
     "TIER_QUOTAS",
     "QARun",
+    "Organization",
+    "OrgMembership",
+    "OrgRole",
+    "AgentAssignment",
+    "AgentRole",
 ]

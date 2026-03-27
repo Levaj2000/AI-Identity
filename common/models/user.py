@@ -4,7 +4,7 @@ import datetime
 import enum
 import uuid
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -66,7 +66,12 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
-    org_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    org_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="owner")
 
     # Subscription tier + usage tracking
@@ -107,8 +112,24 @@ class User(Base):
     agents: Mapped[list["Agent"]] = relationship(  # noqa: F821
         back_populates="user", cascade="all, delete-orphan"
     )
+    organization: Mapped["Organization | None"] = relationship(  # noqa: F821
+        foreign_keys=[org_id]
+    )
+    org_memberships: Mapped[list["OrgMembership"]] = relationship(  # noqa: F821
+        cascade="all, delete-orphan", overlaps="user"
+    )
+    agent_assignments: Mapped[list["AgentAssignment"]] = relationship(  # noqa: F821
+        cascade="all, delete-orphan", overlaps="user"
+    )
 
     @property
     def quotas(self) -> dict[str, int]:
         """Return the quota limits for this user's tier."""
         return TIER_QUOTAS.get(self.tier, TIER_QUOTAS["free"])
+
+    @property
+    def effective_quotas(self) -> dict[str, int]:
+        """Return quotas from org tier if in an org, otherwise personal tier."""
+        if self.organization:
+            return TIER_QUOTAS.get(self.organization.tier, TIER_QUOTAS["free"])
+        return self.quotas

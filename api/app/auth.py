@@ -171,6 +171,9 @@ async def get_current_user(
     dialect = db.bind.dialect.name if db.bind else "unknown"
     if dialect == "postgresql":
         db.execute(text("SET LOCAL app.current_user_id = :uid"), {"uid": str(user.id)})
+        # Set org context for RLS (if user belongs to an org)
+        if user.org_id:
+            db.execute(text("SET LOCAL app.current_org_id = :oid"), {"oid": str(user.org_id)})
 
     return user
 
@@ -185,6 +188,93 @@ async def require_admin(
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
+
+
+def require_org_role(*allowed_roles: str):
+    """Dependency factory: require the user to have one of the specified org roles."""
+
+    async def _check(
+        user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> User:
+        if user.role == "admin":
+            return user
+        if not user.org_id:
+            raise HTTPException(status_code=403, detail="No organization membership")
+        from common.models.org_membership import OrgMembership
+
+        membership = (
+            db.query(OrgMembership)
+            .filter(
+                OrgMembership.org_id == user.org_id,
+                OrgMembership.user_id == user.id,
+            )
+            .first()
+        )
+        if not membership or membership.role not in allowed_roles:
+            raise HTTPException(status_code=403, detail="Insufficient organization role")
+        return user
+
+    return _check
+
+
+def require_agent_role(*allowed_roles: str):
+    """Dependency factory: require the user to have one of the specified agent roles.
+
+    Fallbacks:
+    - Agent creator (agent.user_id == user.id) always has 'owner' role
+    - Org owner/admin has full access to org agents
+    """
+
+    async def _check(
+        agent_id: uuid.UUID,
+        user: User = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> User:
+        if user.role == "admin":
+            return user
+        from common.models import Agent
+        from common.models.agent_assignment import AgentAssignment
+        from common.models.org_membership import OrgMembership
+
+        agent = db.query(Agent).filter(Agent.id == agent_id).first()
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        # Creator always has owner access
+        if agent.user_id == user.id and (
+            "owner" in allowed_roles or "operator" in allowed_roles or "viewer" in allowed_roles
+        ):
+            return user
+
+        # Org admin/owner has full access to org agents
+        if agent.org_id and user.org_id == agent.org_id:
+            membership = (
+                db.query(OrgMembership)
+                .filter(
+                    OrgMembership.org_id == user.org_id,
+                    OrgMembership.user_id == user.id,
+                )
+                .first()
+            )
+            if membership and membership.role in ("owner", "admin"):
+                return user
+
+        # Check agent-level assignment
+        assignment = (
+            db.query(AgentAssignment)
+            .filter(
+                AgentAssignment.agent_id == agent_id,
+                AgentAssignment.user_id == user.id,
+            )
+            .first()
+        )
+        if assignment and assignment.role in allowed_roles:
+            return user
+
+        raise HTTPException(status_code=403, detail="Insufficient agent access")
+
+    return _check
 
 
 def get_or_create_dev_user(db: Session, api_key: str) -> User:

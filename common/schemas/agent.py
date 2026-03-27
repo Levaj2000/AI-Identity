@@ -100,6 +100,7 @@ class AgentResponse(BaseModel):
 
     id: uuid.UUID = Field(description="Unique agent identifier")
     user_id: uuid.UUID = Field(description="ID of the owning user")
+    org_id: uuid.UUID | None = Field(None, description="ID of the owning organization")
     name: str = Field(description="Human-readable agent name")
     description: str | None = Field(description="Agent description")
     status: str = Field(description="Current status: active, suspended, or revoked")
