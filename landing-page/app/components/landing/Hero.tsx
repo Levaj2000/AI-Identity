@@ -1,25 +1,10 @@
 import { motion } from "framer-motion";
-import { SerifEmphasis } from "./SerifEmphasis";
 
 export default function Hero() {
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-[72px] overflow-hidden">
-      {/* Atmospheric mist */}
-      <motion.div
-        className="absolute top-1/4 left-1/4 w-[600px] h-[400px] rounded-full bg-[#1E3A5F]/30 blur-[150px]"
-        animate={{ opacity: [0.03, 0.08, 0.03] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute top-1/3 right-1/4 w-[500px] h-[350px] rounded-full bg-[#2A4A7F]/20 blur-[130px]"
-        animate={{ opacity: [0.05, 0.1, 0.05] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-      />
-      <motion.div
-        className="absolute bottom-1/4 left-1/3 w-[400px] h-[300px] rounded-full bg-[#F59E0B]/5 blur-[120px]"
-        animate={{ opacity: [0.02, 0.05, 0.02] }}
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 4 }}
-      />
+      {/* Background glow */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#F59E0B]/5 rounded-full blur-[120px] pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -36,11 +21,11 @@ export default function Hero() {
         <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold leading-[1.05] tracking-tight">
           <span className="text-white">Every agent gets</span>
           <br />
-          <span className="text-[#F59E0B]">an <SerifEmphasis>identity</SerifEmphasis>.</span>
+          <span className="text-[#F59E0B]">an identity.</span>
         </h1>
 
         {/* Subtitle */}
-        <p className="mt-6 text-lg md:text-xl text-[#8B9BB4] max-w-2xl leading-relaxed">
+        <p className="mt-6 text-lg md:text-xl text-gray-400 max-w-2xl leading-relaxed">
           Per-agent API keys, scoped permissions, and tamper-proof audit trails.
           Deploy in 15 minutes, not 15 weeks.
         </p>
@@ -49,7 +34,7 @@ export default function Hero() {
         <div className="mt-10 flex flex-col sm:flex-row gap-4">
           <a
             href="https://dashboard.ai-identity.co"
-            className="px-8 py-3.5 bg-[#F59E0B] text-[#0F1724] font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors text-sm"
+            className="px-8 py-3.5 bg-[#F59E0B] text-[#0A0A0B] font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors text-sm"
           >
             Get Started Free &rarr;
           </a>

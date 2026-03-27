@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { SerifEmphasis } from "./SerifEmphasis";
 
 const frameworks = [
   {
@@ -172,7 +171,7 @@ export default function ComplianceSection() {
   const [activeFramework, setActiveFramework] = useState(0);
 
   return (
-    <section id="compliance" className="py-24 px-6 bg-[#0F1724]">
+    <section id="compliance" className="py-24 px-6 bg-[#0A0A0B]">
       <div className="max-w-[1200px] mx-auto">
         {/* Header */}
         <motion.div
@@ -201,10 +200,10 @@ export default function ComplianceSection() {
             </span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
-            Compliance <SerifEmphasis>built in</SerifEmphasis>.{" "}
-            <span className="text-[#6B7C96]">Not bolted on.</span>
+            Compliance built in.{" "}
+            <span className="text-gray-500">Not bolted on.</span>
           </h2>
-          <p className="max-w-2xl mx-auto text-[#8B9BB4] text-lg">
+          <p className="max-w-2xl mx-auto text-gray-400 text-lg">
             Run automated assessments against NIST, EU AI Act, SOC 2, and
             internal best practices. Future-proof compliance infrastructure that supports
             high-risk AI obligations out of the box.
@@ -227,12 +226,12 @@ export default function ComplianceSection() {
           ].map((stat) => (
             <div
               key={stat.label}
-              className="bg-[#162036]/80 backdrop-blur-xl border border-white/[0.08] hover:border-[#F59E0B]/20 rounded-xl p-5 text-center transition-colors"
+              className="bg-[#111113]/80 backdrop-blur-xl border border-[#F59E0B]/10 rounded-xl p-5 text-center"
             >
               <div className="text-2xl md:text-3xl font-bold text-[#F59E0B]">
                 {stat.value}
               </div>
-              <div className="text-xs text-[#6B7C96] mt-1 uppercase tracking-wider">
+              <div className="text-xs text-gray-500 mt-1 uppercase tracking-wider">
                 {stat.label}
               </div>
             </div>
@@ -255,7 +254,7 @@ export default function ComplianceSection() {
               <button
                 key={fw.name}
                 onClick={() => setActiveFramework(i)}
-                className={`text-left bg-[#162036]/80 backdrop-blur-xl border rounded-xl p-5 transition-all ${
+                className={`text-left bg-[#111113]/80 backdrop-blur-xl border rounded-xl p-5 transition-all ${
                   activeFramework === i
                     ? "border-[#F59E0B]/40 ring-1 ring-[#F59E0B]/20"
                     : "border-white/5 hover:border-white/10"
@@ -271,12 +270,12 @@ export default function ComplianceSection() {
                   >
                     {fw.category}
                   </span>
-                  <span className="text-xs text-[#4A5B73]">v{fw.version}</span>
+                  <span className="text-xs text-gray-600">v{fw.version}</span>
                 </div>
                 <h4 className="text-sm font-semibold text-white mb-2">
                   {fw.name}
                 </h4>
-                <p className="text-xs text-[#6B7C96] leading-relaxed mb-3">
+                <p className="text-xs text-gray-500 leading-relaxed mb-3">
                   {fw.desc}
                 </p>
                 <div className="flex items-center gap-1.5">
@@ -291,7 +290,7 @@ export default function ComplianceSection() {
                     <polyline points="9 11 12 14 22 4" />
                     <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2 2h11" />
                   </svg>
-                  <span className="text-xs text-[#8B9BB4]">
+                  <span className="text-xs text-gray-400">
                     {fw.checks} checks
                   </span>
                 </div>
@@ -310,7 +309,7 @@ export default function ComplianceSection() {
           <h3 className="text-lg font-semibold text-white mb-2">
             13 Automated Evaluators
           </h3>
-          <p className="text-sm text-[#6B7C96] mb-6">
+          <p className="text-sm text-gray-500 mb-6">
             Each check runs automatically against your agents — no manual
             review, no spreadsheets.
           </p>
@@ -325,7 +324,7 @@ export default function ComplianceSection() {
               <motion.div
                 key={check.name}
                 variants={item}
-                className="flex items-center gap-3 bg-[#162036]/60 border border-white/5 rounded-lg px-4 py-3 hover:border-[#F59E0B]/15 transition-colors group"
+                className="flex items-center gap-3 bg-[#111113]/60 border border-white/5 rounded-lg px-4 py-3 hover:border-[#F59E0B]/15 transition-colors group"
               >
                 <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-md bg-[#F59E0B]/8 text-[#F59E0B] group-hover:bg-[#F59E0B]/12 transition-colors">
                   <CheckIcon type={check.icon} />
@@ -351,7 +350,7 @@ export default function ComplianceSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.35 }}
-          className="mt-16 bg-gradient-to-br from-[#8B5CF6]/10 to-[#162036]/80 backdrop-blur-xl border border-[#8B5CF6]/20 rounded-2xl p-8 mb-8"
+          className="mt-16 bg-gradient-to-br from-[#8B5CF6]/10 to-[#111113]/80 backdrop-blur-xl border border-[#8B5CF6]/20 rounded-2xl p-8 mb-8"
         >
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-[#8B5CF6]/15 text-[#8B5CF6]">
@@ -365,7 +364,7 @@ export default function ComplianceSection() {
               <h3 className="text-lg font-semibold text-white mb-2">
                 Aligned with EU AI Act High-Risk Obligations
               </h3>
-              <p className="text-sm text-[#8B9BB4] leading-relaxed mb-4">
+              <p className="text-sm text-gray-400 leading-relaxed mb-4">
                 AI Identity supports organizations preparing for EU AI Act enforcement.
                 Cryptographic agent identities, automated logging, human oversight enforcement,
                 and forensic evidence exports help meet the requirements of Articles 9 (Risk Management),
@@ -408,19 +407,19 @@ export default function ComplianceSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-8 bg-[#162036]/80 backdrop-blur-xl border border-white/[0.08] hover:border-[#F59E0B]/20 rounded-2xl p-8 transition-colors"
+          className="mt-8 bg-[#111113]/80 backdrop-blur-xl border border-[#F59E0B]/10 rounded-2xl p-8"
         >
           <div className="flex items-center gap-3 mb-4">
             <div className="w-3 h-3 rounded-full bg-red-500/60" />
             <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
             <div className="w-3 h-3 rounded-full bg-green-500/60" />
-            <span className="ml-2 text-xs text-[#4A5B73] font-mono">
+            <span className="ml-2 text-xs text-gray-600 font-mono">
               Run a compliance assessment
             </span>
           </div>
           <pre className="text-sm font-mono overflow-x-auto">
             <code>
-              <span className="text-[#6B7C96]">
+              <span className="text-gray-500">
                 {"# Run a full compliance assessment against any framework\n"}
               </span>
               <span className="text-green-400">curl</span>
@@ -441,7 +440,7 @@ export default function ComplianceSection() {
                 {'\'{"framework_id": 1}\''}
               </span>
               {"\n\n"}
-              <span className="text-[#6B7C96]">
+              <span className="text-gray-500">
                 {"# Response: score, pass/fail per check, remediation advice\n"}
               </span>
               <span className="text-gray-300">{"{"}</span>

@@ -1,6 +1,4 @@
 import { motion } from "framer-motion";
-import { SerifEmphasis } from "./SerifEmphasis";
-import { SectionBadge } from "./SectionBadge";
 
 const cards = [
   {
@@ -29,21 +27,18 @@ const item = {
 
 export default function SecuritySection() {
   return (
-    <section id="security" className="py-24 px-6 bg-[#131E30]">
+    <section id="security" className="py-24 px-6 bg-[#111113]">
       <div className="max-w-[1200px] mx-auto">
-        <motion.div
+        <motion.h2
           initial={{ opacity: 0, x: -20 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-16"
+          className="text-3xl md:text-5xl font-bold text-white text-center mb-16"
         >
-          <SectionBadge label="Security" />
-          <h2 className="text-3xl md:text-5xl font-bold text-white">
-            Security isn't a feature.{" "}
-            <span className="text-[#6B7C96]">It's the <SerifEmphasis>foundation</SerifEmphasis>.</span>
-          </h2>
-        </motion.div>
+          Security isn't a feature.{" "}
+          <span className="text-gray-500">It's the architecture.</span>
+        </motion.h2>
 
         <motion.div
           variants={container}
@@ -56,10 +51,10 @@ export default function SecuritySection() {
             <motion.div
               key={card.title}
               variants={item}
-              className="bg-[#162036]/80 backdrop-blur-xl border border-white/[0.08] hover:border-[#F59E0B]/20 rounded-2xl p-8 transition-colors"
+              className="bg-[#111113]/80 backdrop-blur-xl border border-[#F59E0B]/10 rounded-2xl p-8 hover:border-[#F59E0B]/25 transition-colors"
             >
               <h3 className="text-lg font-semibold text-white">{card.title}</h3>
-              <p className="mt-3 text-sm text-[#8B9BB4] leading-relaxed">
+              <p className="mt-3 text-sm text-gray-400 leading-relaxed">
                 {card.desc}
               </p>
             </motion.div>
