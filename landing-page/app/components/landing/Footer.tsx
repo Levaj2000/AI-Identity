@@ -74,7 +74,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-[#0F1724] border-t border-white/5">
+    <footer className="bg-[#0A0A0B] border-t border-white/5">
       <div className="max-w-[1200px] mx-auto px-6 md:px-12 py-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16">
           {/* Brand + Subscribe */}
@@ -118,7 +118,7 @@ export default function Footer() {
                 AI Identity
               </span>
             </div>
-            <p className="text-sm text-[#8B9BB4] mb-6 leading-relaxed">
+            <p className="text-sm text-gray-400 mb-6 leading-relaxed">
               Get updates on new features and product releases.
             </p>
             {subscribeStatus === "success" ? (
@@ -136,12 +136,12 @@ export default function Footer() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@email.com"
                   required
-                  className="min-w-0 flex-1 px-3 py-2 bg-[#131E30] border border-white/10 rounded-lg text-xs text-white placeholder:text-[#4A5B73] focus:outline-none focus:border-[#F59E0B]/40"
+                  className="min-w-0 flex-1 px-3 py-2 bg-[#111113] border border-white/10 rounded-lg text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-[#F59E0B]/40"
                 />
                 <button
                   type="submit"
                   disabled={subscribeStatus === "loading"}
-                  className="px-3 py-2 bg-[#F59E0B] text-[#0F1724] text-xs font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors shrink-0 disabled:opacity-50"
+                  className="px-3 py-2 bg-[#F59E0B] text-[#0A0A0B] text-xs font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors shrink-0 disabled:opacity-50"
                 >
                   {subscribeStatus === "loading" ? "..." : "Subscribe"}
                 </button>
@@ -164,7 +164,7 @@ export default function Footer() {
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-sm text-[#8B9BB4] hover:text-white transition-colors"
+                    className="text-sm text-gray-400 hover:text-white transition-colors"
                   >
                     {link.label}
                   </a>
@@ -183,7 +183,7 @@ export default function Footer() {
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="text-sm text-[#8B9BB4] hover:text-white transition-colors"
+                    className="text-sm text-gray-400 hover:text-white transition-colors"
                   >
                     {link.label}
                   </a>
@@ -222,17 +222,17 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-20 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-[#6B7C96]">
+          <p className="text-sm text-gray-500">
             &copy; 2026 AI Identity. All rights reserved.
           </p>
-          <div className="flex items-center gap-6 text-sm text-[#6B7C96]">
-            <a href="/privacy" className="hover:text-[#8B9BB4] transition-colors">
+          <div className="flex items-center gap-6 text-sm text-gray-500">
+            <a href="/privacy" className="hover:text-gray-400 transition-colors">
               Privacy Policy
             </a>
-            <a href="/terms" className="hover:text-[#8B9BB4] transition-colors">
+            <a href="/terms" className="hover:text-gray-400 transition-colors">
               Terms of Service
             </a>
-            <button className="hover:text-[#8B9BB4] transition-colors">
+            <button className="hover:text-gray-400 transition-colors">
               Cookie Settings
             </button>
           </div>

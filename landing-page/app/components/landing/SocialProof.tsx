@@ -8,7 +8,7 @@ export default function SocialProof() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="text-center text-sm text-[#6B7C96] tracking-wide uppercase"
+        className="text-center text-sm text-gray-500 tracking-wide uppercase"
       >
         Trusted by teams building the next generation of AI agents
       </motion.p>
@@ -23,7 +23,7 @@ export default function SocialProof() {
           (name) => (
             <span
               key={name}
-              className="text-[#4A5B73] text-lg font-semibold tracking-wide"
+              className="text-gray-600 text-lg font-semibold tracking-wide"
             >
               {name}
             </span>
