@@ -229,3 +229,29 @@ export interface ForensicsFilterParams {
   limit?: number
   offset?: number
 }
+
+// ─── Organizations ────────────────────────────────────────────────
+
+export interface Organization {
+  id: string
+  name: string
+  owner_id: string
+  tier: string
+  member_count: number
+  agent_count: number
+  created_at: string
+}
+
+export interface OrgMember {
+  user_id: string
+  email: string
+  role: 'owner' | 'admin' | 'member'
+  joined_at: string
+}
+
+export interface AgentAssignment {
+  user_id: string
+  email: string
+  role: 'owner' | 'operator' | 'viewer'
+  created_at: string
+}
