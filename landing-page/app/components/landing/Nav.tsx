@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 
 const navLinks = [
-  { label: "Home", href: "#", sectionId: "" },
-  { label: "How It Works", href: "#how-it-works", sectionId: "how-it-works" },
-  { label: "Compliance", href: "#compliance", sectionId: "compliance" },
-  { label: "Forensics", href: "#forensics", sectionId: "forensics" },
-  { label: "Security", href: "#security", sectionId: "security" },
-  { label: "Integrations", href: "#integrations", sectionId: "integrations" },
-  { label: "Pricing", href: "#pricing", sectionId: "pricing" },
+  { label: "Home", href: "/", sectionId: "" },
+  { label: "How It Works", href: "/how-it-works", sectionId: "how-it-works" },
+  { label: "Compliance", href: "/security", sectionId: "compliance" },
+  { label: "Forensics", href: "/security", sectionId: "forensics" },
+  { label: "Security", href: "/security", sectionId: "security" },
+  { label: "Integrations", href: "/integrations", sectionId: "integrations" },
+  { label: "Pricing", href: "/contact", sectionId: "pricing" },
 ];
 
 export default function Nav() {
@@ -52,11 +52,11 @@ export default function Nav() {
 
   const handleClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
-    href: string,
+    sectionId: string,
   ) => {
     const isHome = window.location.pathname === "/";
 
-    if (href === "#") {
+    if (!sectionId) {
       e.preventDefault();
       if (isHome) {
         window.scrollTo({ top: 0, behavior: "smooth" });
@@ -66,21 +66,13 @@ export default function Nav() {
       setMobileOpen(false);
       return;
     }
-
-    // If not on home page, navigate to home with hash
-    if (!isHome) {
-      e.preventDefault();
-      window.location.href = "/" + href;
-      setMobileOpen(false);
-      return;
-    }
-
-    e.preventDefault();
-    const el = document.querySelector(href);
+    const el = document.getElementById(sectionId);
     if (el) {
+      e.preventDefault();
       el.scrollIntoView({ behavior: "smooth" });
       setMobileOpen(false);
     }
+    // If section not found on page, let the browser navigate to the href
   };
 
   const isActive = (sectionId: string) => {
@@ -100,7 +92,7 @@ export default function Nav() {
         {/* Logo */}
         <a
           href="#"
-          onClick={(e) => handleClick(e, "#")}
+          onClick={(e) => handleClick(e, "")}
           className="flex items-center gap-2"
         >
           <svg
@@ -148,7 +140,7 @@ export default function Nav() {
             <a
               key={link.label}
               href={link.href}
-              onClick={(e) => handleClick(e, link.href)}
+              onClick={(e) => handleClick(e, link.sectionId)}
               className={`text-sm transition-colors relative ${
                 isActive(link.sectionId)
                   ? "text-[#F59E0B] font-medium"
@@ -190,8 +182,8 @@ export default function Nav() {
             Dashboard
           </a>
           <a
-            href="#pricing"
-            onClick={(e) => handleClick(e, "#pricing")}
+            href="/contact"
+            onClick={(e) => handleClick(e, "pricing")}
             className="px-5 py-2 bg-[#F59E0B] text-[#0A0A0B] text-sm font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors"
           >
             Get Started
@@ -227,7 +219,7 @@ export default function Nav() {
             <a
               key={link.label}
               href={link.href}
-              onClick={(e) => handleClick(e, link.href)}
+              onClick={(e) => handleClick(e, link.sectionId)}
               className={`block py-3 text-sm transition-colors ${
                 isActive(link.sectionId)
                   ? "text-[#F59E0B] font-medium"
@@ -262,8 +254,8 @@ export default function Nav() {
             Dashboard
           </a>
           <a
-            href="#pricing"
-            onClick={(e) => handleClick(e, "#pricing")}
+            href="/contact"
+            onClick={(e) => handleClick(e, "pricing")}
             className="mt-3 block text-center px-5 py-2 bg-[#F59E0B] text-[#0A0A0B] text-sm font-semibold rounded-lg"
           >
             Get Started

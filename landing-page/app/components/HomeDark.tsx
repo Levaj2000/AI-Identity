@@ -18,7 +18,7 @@ function Content1() {
 function Actions() {
   return (
     <div className="content-stretch flex gap-[16px] items-start relative shrink-0" data-name="Actions">
-      <a href="#signup" className="bg-[#00ffc2] content-stretch flex items-center justify-center px-[24px] py-[12px] relative shrink-0 rounded-lg hover:bg-[#00e6ad] transition-colors cursor-pointer" data-name="Button">
+      <a href="https://dashboard.ai-identity.co" className="bg-[#00ffc2] content-stretch flex items-center justify-center px-[24px] py-[12px] relative shrink-0 rounded-lg hover:bg-[#00e6ad] transition-colors cursor-pointer" data-name="Button">
         <p className="font-['Inter',sans-serif] font-semibold leading-[1.5] relative shrink-0 text-[#0a0a0b] text-[16px] whitespace-nowrap">
           Get started
         </p>

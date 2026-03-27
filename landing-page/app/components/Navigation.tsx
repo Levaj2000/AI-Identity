@@ -80,10 +80,10 @@ export default function Navigation() {
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Proxy gateway</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Secure authentication for autonomous agents</span>
                       </Link>
-                      <a href="#docs" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      <Link to="/how-it-works" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">API reference</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Complete technical documentation and examples</span>
-                      </a>
+                      </Link>
                       <Link to="/security" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Fail-closed security</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Deny-by-default when errors occur</span>
@@ -101,64 +101,64 @@ export default function Navigation() {
                     {/* Developers Column */}
                     <div className="flex flex-col gap-4">
                       <h3 className="font-['Inter',sans-serif] font-semibold text-[14px] text-[#00ffc2] uppercase tracking-wider">Developers</h3>
-                      <a href="#signup" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      <a href="https://dashboard.ai-identity.co" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Get started</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Build your first identity in minutes</span>
                       </a>
-                      <a href="#docs" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      <Link to="/how-it-works" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Documentation</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Explore our complete developer guides</span>
-                      </a>
-                      <a href="#docs" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      </Link>
+                      <Link to="/how-it-works" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Code samples</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Ready-to-use implementations for your stack</span>
-                      </a>
-                      <a href="#community" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      </Link>
+                      <Link to="/contact" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Community</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Join developers building the future</span>
-                      </a>
+                      </Link>
                     </div>
 
                     {/* Company Column */}
                     <div className="flex flex-col gap-4">
                       <h3 className="font-['Inter',sans-serif] font-semibold text-[14px] text-[#00ffc2] uppercase tracking-wider">Company</h3>
-                      <a href="#about" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      <Link to="/" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">About us</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Learn our mission and approach</span>
-                      </a>
-                      <a href="#blog" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      </Link>
+                      <Link to="/blog" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Blog</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Insights on identity and AI security</span>
-                      </a>
-                      <a href="#contact" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      </Link>
+                      <Link to="/contact" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Contact</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Reach out to our team directly</span>
-                      </a>
-                      <a href="#careers" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      </Link>
+                      <Link to="/careers" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Careers</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Join us in securing autonomous systems</span>
-                      </a>
+                      </Link>
                     </div>
 
                     {/* Legal Column */}
                     <div className="flex flex-col gap-4">
                       <h3 className="font-['Inter',sans-serif] font-semibold text-[14px] text-[#00ffc2] uppercase tracking-wider">Legal</h3>
-                      <a href="#privacy" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      <Link to="/privacy" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Privacy</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">How we protect your data</span>
-                      </a>
-                      <a href="#terms" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      </Link>
+                      <Link to="/terms" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Terms</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Our service terms and conditions</span>
-                      </a>
+                      </Link>
                       <Link to="/security" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Security</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Our commitment to your protection</span>
                       </Link>
-                      <a href="#compliance" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
+                      <Link to="/security" className="group flex flex-col gap-1 py-2 hover:translate-x-1 transition-transform">
                         <span className="font-['Inter',sans-serif] font-medium text-[14px] text-white group-hover:text-[#00ffc2]">Compliance</span>
                         <span className="font-['Inter',sans-serif] font-normal text-[12px] text-gray-400">Standards we meet and exceed</span>
-                      </a>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -169,10 +169,10 @@ export default function Navigation() {
         </div>
 
         <div className="flex gap-[16px] items-center">
-          <a href="#demo" className="px-[20px] py-[8px] border border-gray-600 rounded-lg font-['Inter',sans-serif] font-normal text-[16px] text-white hover:border-[#00ffc2] hover:bg-[#00ffc2]/10 transition-all">
+          <a href="https://dashboard.ai-identity.co/demo" className="px-[20px] py-[8px] border border-gray-600 rounded-lg font-['Inter',sans-serif] font-normal text-[16px] text-white hover:border-[#00ffc2] hover:bg-[#00ffc2]/10 transition-all">
             Demo
           </a>
-          <a href="#signup" className="px-[20px] py-[8px] bg-[#00ffc2] rounded-lg font-['Inter',sans-serif] font-semibold text-[16px] text-[#0a0a0b] hover:bg-[#00e6ad] transition-colors">
+          <a href="https://dashboard.ai-identity.co" className="px-[20px] py-[8px] bg-[#00ffc2] rounded-lg font-['Inter',sans-serif] font-semibold text-[16px] text-[#0a0a0b] hover:bg-[#00e6ad] transition-colors">
             Start
           </a>
         </div>
