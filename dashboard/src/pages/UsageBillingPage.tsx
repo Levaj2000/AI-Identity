@@ -635,8 +635,11 @@ export function UsageBillingPage() {
               {aggregation.billing_period.period_end.slice(5)}
             </p>
             <p className="mt-1 text-xs text-gray-500">
-              {aggregation.billing_period.active_agents} active agent
-              {aggregation.billing_period.active_agents !== 1 ? 's' : ''}
+              {usage ? `${usage.agents.current} active` : ''}
+              {usage && aggregation.billing_period.agents_seen > 0 ? ' · ' : ''}
+              {aggregation.billing_period.agents_seen > 0
+                ? `${aggregation.billing_period.agents_seen} seen in logs`
+                : 'No agents seen in logs'}
             </p>
           </div>
           <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
