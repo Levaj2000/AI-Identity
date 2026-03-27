@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import Nav from "./landing/Nav";
 import Hero from "./landing/Hero";
 import SocialProof from "./landing/SocialProof";
@@ -12,10 +11,12 @@ import IntegrationsSection from "./landing/IntegrationsSection";
 import Pricing from "./landing/Pricing";
 import FinalCTA from "./landing/FinalCTA";
 import Footer from "./landing/Footer";
+import { ParticleBackground } from "./landing/ParticleBackground";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0A0A0B] text-white font-['Inter',sans-serif]">
+    <div className="min-h-screen bg-[#0F1724] text-white font-['Inter',sans-serif] relative">
+      <ParticleBackground />
       <Nav />
       <Hero />
       <SocialProof />

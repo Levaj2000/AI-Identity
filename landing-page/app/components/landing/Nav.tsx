@@ -84,7 +84,7 @@ export default function Nav() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? "bg-[#0A0A0B]/80 backdrop-blur-xl border-b border-white/5"
+          ? "bg-[#0F1724]/80 backdrop-blur-xl border-b border-white/5"
           : "bg-transparent"
       }`}
     >
@@ -144,7 +144,7 @@ export default function Nav() {
               className={`text-sm transition-colors relative ${
                 isActive(link.sectionId)
                   ? "text-[#F59E0B] font-medium"
-                  : "text-gray-400 hover:text-white"
+                  : "text-[#8B9BB4] hover:text-white"
               }`}
             >
               {link.label}
@@ -159,32 +159,32 @@ export default function Nav() {
         <div className="hidden md:flex items-center gap-5 lg:gap-6">
           <a
             href="https://dashboard.ai-identity.co/demo"
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-[#8B9BB4] hover:text-white transition-colors"
           >
             Live Demo
           </a>
           <a
             href="/docs"
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-[#8B9BB4] hover:text-white transition-colors"
           >
             Docs
           </a>
           <a
             href="/blog"
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-[#8B9BB4] hover:text-white transition-colors"
           >
             Blog
           </a>
           <a
             href="https://dashboard.ai-identity.co"
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-[#8B9BB4] hover:text-white transition-colors"
           >
             Dashboard
           </a>
           <a
             href="/contact"
             onClick={(e) => handleClick(e, "pricing")}
-            className="px-5 py-2 bg-[#F59E0B] text-[#0A0A0B] text-sm font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors"
+            className="px-5 py-2 bg-[#F59E0B] text-[#0F1724] text-sm font-semibold rounded-lg hover:bg-[#F59E0B]/80 transition-colors"
           >
             Get Started
           </a>
@@ -192,7 +192,7 @@ export default function Nav() {
 
         {/* Mobile hamburger */}
         <button
-          className="md:hidden text-gray-400"
+          className="md:hidden text-[#8B9BB4]"
           onClick={() => setMobileOpen(!mobileOpen)}
         >
           <svg
@@ -214,7 +214,7 @@ export default function Nav() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-[#0A0A0B]/95 backdrop-blur-xl border-t border-white/5 px-6 pb-6">
+        <div className="md:hidden bg-[#0F1724]/95 backdrop-blur-xl border-t border-white/5 px-6 pb-6">
           {navLinks.map((link) => (
             <a
               key={link.label}
@@ -223,7 +223,7 @@ export default function Nav() {
               className={`block py-3 text-sm transition-colors ${
                 isActive(link.sectionId)
                   ? "text-[#F59E0B] font-medium"
-                  : "text-gray-400 hover:text-white"
+                  : "text-[#8B9BB4] hover:text-white"
               }`}
             >
               {link.label}
@@ -231,32 +231,32 @@ export default function Nav() {
           ))}
           <a
             href="https://dashboard.ai-identity.co/demo"
-            className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
+            className="block py-3 text-sm text-[#8B9BB4] hover:text-white transition-colors"
           >
             Live Demo
           </a>
           <a
             href="/docs"
-            className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
+            className="block py-3 text-sm text-[#8B9BB4] hover:text-white transition-colors"
           >
             Docs
           </a>
           <a
             href="/blog"
-            className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
+            className="block py-3 text-sm text-[#8B9BB4] hover:text-white transition-colors"
           >
             Blog
           </a>
           <a
             href="https://dashboard.ai-identity.co"
-            className="block py-3 text-sm text-gray-400 hover:text-white transition-colors"
+            className="block py-3 text-sm text-[#8B9BB4] hover:text-white transition-colors"
           >
             Dashboard
           </a>
           <a
             href="/contact"
             onClick={(e) => handleClick(e, "pricing")}
-            className="mt-3 block text-center px-5 py-2 bg-[#F59E0B] text-[#0A0A0B] text-sm font-semibold rounded-lg"
+            className="mt-3 block text-center px-5 py-2 bg-[#F59E0B] text-[#0F1724] text-sm font-semibold rounded-lg"
           >
             Get Started
           </a>
