@@ -61,7 +61,7 @@ export interface BillingPeriodSummary {
   allowed: number
   denied: number
   errors: number
-  active_agents: number
+  agents_seen: number
   peak_daily_requests: number
   avg_daily_requests: number
 }

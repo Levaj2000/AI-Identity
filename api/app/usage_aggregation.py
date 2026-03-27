@@ -72,8 +72,8 @@ def _aggregate_period(
         counts[decision] = cnt
     total = sum(counts.values())
 
-    # Active agents (distinct agent_ids)
-    active_agents = (
+    # Agents seen in audit logs (distinct agent_ids — includes deleted/demo/QA agents)
+    agents_seen = (
         db.query(func.count(func.distinct(AuditLog.agent_id)))
         .filter(
             AuditLog.user_id == user_id,
@@ -105,7 +105,7 @@ def _aggregate_period(
         "allowed": counts["allow"],
         "denied": counts["deny"],
         "errors": counts["error"],
-        "active_agents": active_agents,
+        "agents_seen": agents_seen,
         "peak_daily_requests": max(daily_values) if daily_values else 0,
         "avg_daily_requests": round(total / days_in_period, 1),
     }

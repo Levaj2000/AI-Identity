@@ -77,7 +77,9 @@ class BillingPeriodSummary(BaseModel):
     allowed: int
     denied: int
     errors: int
-    active_agents: int = Field(description="Agents with at least 1 request")
+    agents_seen: int = Field(
+        description="Distinct agents seen in audit logs this period (includes deleted/demo agents)"
+    )
     peak_daily_requests: int = Field(description="Highest single-day request count")
     avg_daily_requests: float = Field(description="Average daily request count")
 
