@@ -387,6 +387,16 @@ export default function ComplianceSection() {
                   </div>
                 ))}
               </div>
+              <a
+                href="/eu-ai-act-checklist"
+                className="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-[#8B5CF6] text-white font-semibold rounded-lg hover:bg-[#8B5CF6]/80 transition-colors text-sm"
+              >
+                Take the Free EU AI Act Self-Assessment
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </a>
             </div>
           </div>
         </motion.div>
