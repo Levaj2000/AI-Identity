@@ -71,6 +71,7 @@ const tiers = [
       "Unlimited credentials",
       "Full SSO & SAML",
       "Compliance evidence export",
+      "Human-in-the-loop review",
       "On-premise / VPC deployment",
     ],
     cta: "Contact Sales",
@@ -103,6 +104,7 @@ const comparisonRows: ComparisonRow[] = [
   { feature: "Priority support", free: false, pro: false, business: true, enterprise: true },
   { feature: "SLA guarantee", free: false, pro: false, business: false, enterprise: true },
   { feature: "Compliance evidence export", free: false, pro: false, business: false, enterprise: true },
+  { feature: "Human-in-the-loop review", free: false, pro: false, business: false, enterprise: true },
   { feature: "On-premise / VPC", free: false, pro: false, business: false, enterprise: true },
 ];
 
