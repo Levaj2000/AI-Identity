@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import Nav from "./landing/Nav";
 import Footer from "./landing/Footer";
 
+type Answer = "yes" | "no" | "not-sure";
+
 interface ChecklistItem {
   id: string;
-  text: string;
+  question: string;
   helper: string;
 }
 
@@ -26,10 +28,10 @@ const sections: ChecklistSection[] = [
     pillar: "Identity",
     pillarColor: "#F59E0B",
     items: [
-      { id: "c1", text: "Identified which AI agents qualify as high-risk under the EU AI Act", helper: "Do you know which of your agents make decisions that could affect health, safety, or legal rights? These are likely high-risk under the Act." },
-      { id: "c2", text: "Documented each agent's purpose, scope, and operational boundaries", helper: "Can you describe what each agent does, what data it accesses, and what it's not allowed to do — in writing?" },
-      { id: "c3", text: "Maintained a current inventory/registry of all production agents", helper: "Do you have a single place (spreadsheet, dashboard, or registry) listing every AI agent running in production?" },
-      { id: "c4", text: "Assigned a responsible human operator for each agent", helper: "Is there a named person accountable for each agent's behavior and decisions?" },
+      { id: "c1", question: "Do you know which of your AI agents qualify as high-risk under the EU AI Act?", helper: "The Act classifies agents by risk tier — high-risk agents face the strictest requirements." },
+      { id: "c2", question: "Have you documented each agent's purpose, scope, and operational boundaries?", helper: "Clear documentation of what each agent does and where it operates is foundational to compliance." },
+      { id: "c3", question: "Do you maintain a current inventory or registry of all production agents?", helper: "A living registry ensures no agent is deployed without oversight." },
+      { id: "c4", question: "Is there a named human operator responsible for each agent?", helper: "The Act requires a natural or legal person accountable for each high-risk system." },
     ],
   },
   {
@@ -39,10 +41,10 @@ const sections: ChecklistSection[] = [
     pillar: "Identity",
     pillarColor: "#F59E0B",
     items: [
-      { id: "t1", text: "Each agent has a unique, cryptographic identity (not shared API keys)", helper: "Does every agent authenticate with its own unique key or certificate — not a shared token used by multiple agents?" },
-      { id: "t2", text: "Agent credentials are scoped to specific capabilities", helper: "Are agent keys limited to only what that agent needs? For example, a support agent can't access billing data." },
-      { id: "t3", text: "Key rotation and lifecycle management is automated", helper: "Do agent keys expire and rotate automatically, or are they set once and never changed?" },
-      { id: "t4", text: "Agent identity can be verified at any point in the chain", helper: "If an agent makes a request, can you trace it back to a specific registered agent identity?" },
+      { id: "t1", question: "Does every agent authenticate with its own unique cryptographic identity (not shared API keys)?", helper: "Shared keys make it impossible to attribute actions to a specific agent." },
+      { id: "t2", question: "Are agent credentials scoped to only the specific capabilities each agent needs?", helper: "Least-privilege scoping limits blast radius if an agent is compromised." },
+      { id: "t3", question: "Is key rotation and lifecycle management automated for your agents?", helper: "Manual rotation leads to stale credentials and gaps in coverage." },
+      { id: "t4", question: "Can you trace any agent request back to a specific registered agent identity?", helper: "End-to-end traceability is critical for transparency and accountability." },
     ],
   },
   {
@@ -52,10 +54,10 @@ const sections: ChecklistSection[] = [
     pillar: "Policy",
     pillarColor: "#8B5CF6",
     items: [
-      { id: "r1", text: "Conducted risk assessment for each high-risk agent", helper: "Have you evaluated what could go wrong with each agent — unauthorized actions, data leaks, or incorrect decisions?" },
-      { id: "r2", text: "Documented known limitations and failure modes", helper: "Is there a written record of what each agent can't do well, and what happens when it fails?" },
-      { id: "r3", text: "Implemented fail-closed defaults (deny on error, not allow)", helper: "When something goes wrong, does the system block the action by default — or does it let it through?" },
-      { id: "r4", text: "Residual risks are monitored and reviewed periodically", helper: "Do you regularly check whether your mitigations are still working, or has it been 'set and forget'?" },
+      { id: "r1", question: "Have you conducted a risk assessment for each high-risk agent?", helper: "Article 9 mandates a documented risk management process for high-risk AI systems." },
+      { id: "r2", question: "Are known limitations and failure modes documented for each agent?", helper: "Users and operators must be informed of what the system cannot do reliably." },
+      { id: "r3", question: "Do your systems fail closed (deny on error) rather than fail open?", helper: "Fail-open defaults can allow uncontrolled behavior during outages." },
+      { id: "r4", question: "Are residual risks monitored and reviewed on a regular schedule?", helper: "Risk management is continuous — not a one-time checkbox exercise." },
     ],
   },
   {
@@ -65,11 +67,11 @@ const sections: ChecklistSection[] = [
     pillar: "Compliance",
     pillarColor: "#10B981",
     items: [
-      { id: "l1", text: "All agent decisions are logged automatically", helper: "Is every allow/deny decision your agents make written to a log without anyone having to remember to do it?" },
-      { id: "l2", text: "Logs are tamper-evident (cryptographic hash chain or equivalent)", helper: "Can you prove that no one — not even an admin — has altered the audit logs after the fact?" },
-      { id: "l3", text: "PII is sanitized from audit records", helper: "Are personal details like emails, phone numbers, and tokens automatically stripped from logs?" },
-      { id: "l4", text: "Logs are retained for the required period (minimum as specified)", helper: "Are your logs kept for at least the minimum period regulators expect (typically 6-12 months)?" },
-      { id: "l5", text: "Evidence can be exported for auditors or regulators on demand", helper: "Can you generate a clean CSV or JSON export of agent activity within minutes if an auditor asks?" },
+      { id: "l1", question: "Are all agent decisions logged automatically without manual intervention?", helper: "Automatic logging ensures no decision goes unrecorded." },
+      { id: "l2", question: "Are your audit logs tamper-evident (using cryptographic hash chains or equivalent)?", helper: "Tamper-evident logs prove records haven't been altered after the fact." },
+      { id: "l3", question: "Is personally identifiable information (PII) automatically sanitized from audit records?", helper: "GDPR and the AI Act both require protecting personal data in logs." },
+      { id: "l4", question: "Are logs retained for at least the minimum required period (typically 6\u201312 months)?", helper: "Retention periods vary by jurisdiction and risk classification." },
+      { id: "l5", question: "Can you export audit evidence for regulators or auditors on demand?", helper: "Regulators may request evidence at any time — export should be fast and reliable." },
     ],
   },
   {
@@ -79,10 +81,10 @@ const sections: ChecklistSection[] = [
     pillar: "Policy",
     pillarColor: "#8B5CF6",
     items: [
-      { id: "h1", text: "Human-in-the-loop controls exist for high-risk decisions", helper: "For sensitive actions (deleting data, financial transactions), does a human review or approve before the agent acts?" },
-      { id: "h2", text: "Agents can be paused or deactivated immediately", helper: "Can you shut down a misbehaving agent in seconds — not hours or days?" },
-      { id: "h3", text: "Policy enforcement prevents agents from bypassing human rules", helper: "Are your rules enforced at the infrastructure level, or could a clever prompt or config change let an agent skip them?" },
-      { id: "h4", text: "Override and intervention capabilities are documented", helper: "Is there a written procedure for how to intervene when an agent goes off-script?" },
+      { id: "h1", question: "Do human-in-the-loop controls exist for high-risk agent decisions?", helper: "Human oversight is non-negotiable for high-risk systems under the Act." },
+      { id: "h2", question: "Can you pause or deactivate any agent immediately if needed?", helper: "Kill-switch capability is an explicit requirement for high-risk AI." },
+      { id: "h3", question: "Is policy enforcement handled at the infrastructure level so agents cannot bypass rules?", helper: "Agent-side enforcement can be circumvented — infrastructure-level controls cannot." },
+      { id: "h4", question: "Are override and intervention procedures documented and accessible?", helper: "Operators must know how to intervene — and the procedures must be tested." },
     ],
   },
   {
@@ -92,10 +94,10 @@ const sections: ChecklistSection[] = [
     pillar: "Identity",
     pillarColor: "#F59E0B",
     items: [
-      { id: "s1", text: "Input validation prevents injection and manipulation", helper: "Are agent inputs checked for malicious content (prompt injection, SQL injection) before being processed?" },
-      { id: "s2", text: "Rate limiting and circuit breakers protect against abuse", helper: "If an agent starts making thousands of requests per second, does the system automatically throttle or stop it?" },
-      { id: "s3", text: "Security headers and encryption are enforced", helper: "Is all data encrypted in transit (HTTPS/TLS) and are standard security headers present on every response?" },
-      { id: "s4", text: "Regular security audits are conducted", helper: "When was the last time someone reviewed your agent infrastructure for vulnerabilities? If you can't remember, that's a gap." },
+      { id: "s1", question: "Does your system validate inputs to prevent injection and manipulation attacks?", helper: "Prompt injection and data manipulation are top threats to agent systems." },
+      { id: "s2", question: "Are rate limiting and circuit breakers in place to protect against abuse?", helper: "Without throttling, compromised agents can cause cascading failures." },
+      { id: "s3", question: "Are security headers and encryption enforced on all agent communications?", helper: "All agent-to-agent and agent-to-service traffic should be encrypted in transit." },
+      { id: "s4", question: "Do you conduct regular security audits of your agent infrastructure?", helper: "Periodic audits catch configuration drift and emerging vulnerabilities." },
     ],
   },
   {
@@ -105,10 +107,10 @@ const sections: ChecklistSection[] = [
     pillar: "Forensics",
     pillarColor: "#EF4444",
     items: [
-      { id: "p1", text: "Anomaly detection identifies unusual agent behavior", helper: "Would you know within minutes if an agent suddenly started making requests it's never made before?" },
-      { id: "p2", text: "Incident response plan covers AI agent-specific scenarios", helper: "Does your incident playbook include 'what to do if an AI agent goes rogue' — not just traditional server outages?" },
-      { id: "p3", text: "Forensic replay can reconstruct any agent incident", helper: "After an incident, can you replay exactly what happened — every request, every decision, every timestamp?" },
-      { id: "p4", text: "Serious incidents can be reported to authorities with evidence", helper: "If a regulator asks 'what happened?', can you hand them a tamper-proof evidence package within 72 hours?" },
+      { id: "p1", question: "Can your system detect unusual or anomalous agent behavior automatically?", helper: "Anomaly detection is the first line of defense for post-deployment monitoring." },
+      { id: "p2", question: "Does your incident response plan include AI agent-specific scenarios?", helper: "Generic IR plans often miss agent-specific failure modes like hallucination loops." },
+      { id: "p3", question: "Can you forensically replay and reconstruct any agent incident after the fact?", helper: "Post-incident reconstruction is essential for root cause analysis and evidence." },
+      { id: "p4", question: "Can you report serious incidents to authorities with tamper-proof evidence within 72 hours?", helper: "The Act requires timely incident reporting with supporting documentation." },
     ],
   },
 ];
@@ -116,10 +118,10 @@ const sections: ChecklistSection[] = [
 const totalItems = sections.reduce((acc, s) => acc + s.items.length, 0);
 
 const scoreRanges = [
-  { min: 0, max: 8, label: "Critical gaps", desc: "Your agents are at risk of non-compliance. Immediate action is needed.", color: "#EF4444" },
-  { min: 9, max: 16, label: "Partial coverage", desc: "Key areas need attention before August 2026 enforcement.", color: "#F59E0B" },
-  { min: 17, max: 22, label: "Strong foundation", desc: "Fill remaining gaps to be fully prepared before the deadline.", color: "#3B82F6" },
-  { min: 23, max: 25, label: "Excellent", desc: "You're ahead of most organizations. Keep maintaining your posture.", color: "#10B981" },
+  { min: 0, max: 9, label: "Critical gaps", desc: "Immediate action needed.", color: "#EF4444" },
+  { min: 10, max: 17, label: "Significant gaps", desc: "Prioritize remediation.", color: "#F97316" },
+  { min: 18, max: 24, label: "Moderate gaps", desc: "Address before August 2026.", color: "#F59E0B" },
+  { min: 25, max: 29, label: "Strong compliance posture", desc: "You're well prepared.", color: "#10B981" },
 ];
 
 const pillarMapping = [
@@ -158,26 +160,83 @@ const container = {
   show: { transition: { staggerChildren: 0.04 } },
 };
 
-const item = {
+const itemVariant = {
   hidden: { opacity: 0, y: 12 },
   show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
 };
 
-export default function EUAIActChecklistPage() {
-  const [checked, setChecked] = useState<Set<string>>(new Set());
+function AnswerButton({
+  label,
+  value,
+  selected,
+  onClick,
+}: {
+  label: string;
+  value: Answer;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const colors: Record<Answer, { border: string; bg: string; text: string; selectedText: string }> = {
+    yes: { border: "#22C55E", bg: "#22C55E", text: "#22C55E", selectedText: "#052E16" },
+    no: { border: "#EF4444", bg: "#EF4444", text: "#EF4444", selectedText: "#450A0A" },
+    "not-sure": { border: "#F59E0B", bg: "#F59E0B", text: "#F59E0B", selectedText: "#451A03" },
+  };
 
-  const toggle = (id: string) => {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+  const c = colors[value];
+
+  return (
+    <button
+      onClick={onClick}
+      className="px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150 border"
+      style={{
+        borderColor: selected ? c.border : `${c.border}40`,
+        backgroundColor: selected ? c.bg : "transparent",
+        color: selected ? c.selectedText : c.text,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+export default function EUAIActChecklistPage() {
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+
+  const setAnswer = (id: string, value: Answer) => {
+    setAnswers((prev) => {
+      // Toggle off if clicking same answer
+      if (prev[id] === value) {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: value };
     });
   };
 
-  const score = checked.size;
-  const currentRange = scoreRanges.find((r) => score >= r.min && score <= r.max) || scoreRanges[0];
-  const progressPercent = (score / totalItems) * 100;
+  const yesCount = useMemo(() => Object.values(answers).filter((a) => a === "yes").length, [answers]);
+  const noCount = useMemo(() => Object.values(answers).filter((a) => a === "no").length, [answers]);
+  const notSureCount = useMemo(() => Object.values(answers).filter((a) => a === "not-sure").length, [answers]);
+  const answeredCount = Object.keys(answers).length;
+  const allAnswered = answeredCount === totalItems;
+
+  const currentRange = scoreRanges.find((r) => yesCount >= r.min && yesCount <= r.max) || scoreRanges[0];
+  const progressPercent = (yesCount / totalItems) * 100;
+
+  // Section-level gap analysis
+  const sectionGaps = useMemo(() => {
+    return sections.map((section) => {
+      const noItems = section.items.filter((i) => answers[i.id] === "no");
+      const notSureItems = section.items.filter((i) => answers[i.id] === "not-sure");
+      return {
+        title: section.title,
+        color: section.color,
+        noCount: noItems.length,
+        notSureCount: notSureItems.length,
+        gapCount: noItems.length + notSureItems.length,
+      };
+    }).filter((s) => s.gapCount > 0).sort((a, b) => b.gapCount - a.gapCount);
+  }, [answers]);
 
   const handlePrint = () => {
     window.print();
@@ -221,15 +280,14 @@ export default function EUAIActChecklistPage() {
             </div>
 
             <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight">
-              EU AI Act Compliance Checklist{" "}
+              EU AI Act Self-Assessment{" "}
               <span className="text-gray-500">for AI Agents</span>
             </h1>
 
             <p className="text-lg text-gray-400 max-w-[700px] mx-auto mb-6 leading-relaxed">
-              Is your AI agent fleet ready for August 2026? The EU AI Act's high-risk
-              provisions will require organizations deploying autonomous AI agents to
-              demonstrate identity controls, logging, human oversight, and incident
-              response capabilities. Use this checklist to assess your readiness.
+              Is your AI agent fleet ready for August 2026? Answer each question below
+              to assess your organization's readiness across identity controls, logging,
+              human oversight, and incident response.
             </p>
 
             <div className="flex items-center justify-center gap-4 no-print">
@@ -257,7 +315,7 @@ export default function EUAIActChecklistPage() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-white">Your Score</h3>
               <span className="text-sm font-mono" style={{ color: currentRange.color }}>
-                {score} / {totalItems}
+                {yesCount} / {totalItems}
               </span>
             </div>
             <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden mb-3">
@@ -269,18 +327,27 @@ export default function EUAIActChecklistPage() {
                 }}
               />
             </div>
-            <div className="flex items-center gap-2">
-              <span
-                className="text-xs font-semibold px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: `${currentRange.color}20`, color: currentRange.color }}
-              >
-                {currentRange.label}
-              </span>
-              <span className="text-xs text-gray-500">{currentRange.desc}</span>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: `${currentRange.color}20`, color: currentRange.color }}
+                >
+                  {currentRange.label}
+                </span>
+                <span className="text-xs text-gray-500">{currentRange.desc}</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs font-mono">
+                <span className="text-[#22C55E]">{yesCount} Yes</span>
+                <span className="text-gray-600">&middot;</span>
+                <span className="text-[#EF4444]">{noCount} No</span>
+                <span className="text-gray-600">&middot;</span>
+                <span className="text-[#F59E0B]">{notSureCount} Not Sure</span>
+              </div>
             </div>
           </motion.div>
 
-          {/* Checklist Sections */}
+          {/* Assessment Sections */}
           <motion.div
             variants={container}
             initial="hidden"
@@ -290,7 +357,7 @@ export default function EUAIActChecklistPage() {
             {sections.map((section, sectionIdx) => (
               <motion.div
                 key={section.title}
-                variants={item}
+                variants={itemVariant}
                 className="bg-[#111113]/80 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden"
               >
                 {/* Section Header */}
@@ -315,50 +382,106 @@ export default function EUAIActChecklistPage() {
                   </span>
                 </div>
 
-                {/* Checklist Items */}
+                {/* Questions */}
                 <div className="px-6 py-3">
                   {section.items.map((checkItem) => (
-                    <label
+                    <div
                       key={checkItem.id}
-                      className="checklist-item flex items-start gap-3 py-3 cursor-pointer group border-b border-white/[0.03] last:border-0"
+                      className="checklist-item py-4 border-b border-white/[0.03] last:border-0"
                     >
-                      <div className="mt-0.5 flex-shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={checked.has(checkItem.id)}
-                          onChange={() => toggle(checkItem.id)}
-                          className="sr-only peer"
-                        />
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                          checked.has(checkItem.id)
-                            ? "bg-[#F59E0B] border-[#F59E0B]"
-                            : "border-gray-600 group-hover:border-gray-400"
-                        }`}>
-                          {checked.has(checkItem.id) && (
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0A0A0B" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          )}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-200 leading-relaxed">
+                            {checkItem.question}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                            {checkItem.helper}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 pt-0.5">
+                          <AnswerButton
+                            label="Yes"
+                            value="yes"
+                            selected={answers[checkItem.id] === "yes"}
+                            onClick={() => setAnswer(checkItem.id, "yes")}
+                          />
+                          <AnswerButton
+                            label="No"
+                            value="no"
+                            selected={answers[checkItem.id] === "no"}
+                            onClick={() => setAnswer(checkItem.id, "no")}
+                          />
+                          <AnswerButton
+                            label="Not Sure"
+                            value="not-sure"
+                            selected={answers[checkItem.id] === "not-sure"}
+                            onClick={() => setAnswer(checkItem.id, "not-sure")}
+                          />
                         </div>
                       </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`text-sm leading-relaxed transition-colors ${
-                          checked.has(checkItem.id)
-                            ? "text-gray-500 line-through"
-                            : "text-gray-300 group-hover:text-white"
-                        }`}>
-                          {checkItem.text}
-                        </span>
-                        <span className="text-[13px] leading-snug text-gray-500">
-                          {checkItem.helper}
-                        </span>
-                      </div>
-                    </label>
+                    </div>
                   ))}
                 </div>
               </motion.div>
             ))}
           </motion.div>
+
+          {/* Results Summary — appears when all questions answered */}
+          {allAnswered && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="mt-12 bg-[#111113]/80 backdrop-blur-xl border border-white/5 rounded-2xl p-6"
+            >
+              <h2 className="text-lg font-semibold text-white mb-2">Assessment Results</h2>
+              <p className="text-sm text-gray-400 mb-6">
+                You answered <span className="text-[#22C55E] font-semibold">{yesCount} Yes</span>,{" "}
+                <span className="text-[#EF4444] font-semibold">{noCount} No</span>, and{" "}
+                <span className="text-[#F59E0B] font-semibold">{notSureCount} Not Sure</span> out of {totalItems} questions.
+              </p>
+
+              {sectionGaps.length > 0 ? (
+                <>
+                  <h3 className="text-sm font-semibold text-gray-300 mb-3">Sections with gaps</h3>
+                  <div className="space-y-2 mb-6">
+                    {sectionGaps.map((gap) => (
+                      <div
+                        key={gap.title}
+                        className="flex items-center justify-between p-3 rounded-xl border border-white/5"
+                      >
+                        <span className="text-sm text-gray-300">{gap.title}</span>
+                        <div className="flex items-center gap-3 text-xs font-mono">
+                          {gap.noCount > 0 && (
+                            <span className="text-[#EF4444]">{gap.noCount} No</span>
+                          )}
+                          {gap.notSureCount > 0 && (
+                            <span className="text-[#F59E0B]">{gap.notSureCount} Not Sure</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-[#22C55E] mb-6">
+                  No gaps detected — you answered Yes to all {totalItems} questions.
+                </p>
+              )}
+
+              <div className="border-t border-white/5 pt-6">
+                <a
+                  href="https://dashboard.ai-identity.co"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#F59E0B] text-[#0A0A0B] font-semibold rounded-xl hover:bg-[#F59E0B]/80 transition-colors"
+                >
+                  AI Identity can help close these gaps. Get started free
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </a>
+              </div>
+            </motion.div>
+          )}
 
           {/* Scoring Guide */}
           <motion.div
@@ -474,7 +597,7 @@ export default function EUAIActChecklistPage() {
             className="mt-8 p-4 border border-white/5 rounded-xl"
           >
             <p className="text-xs text-gray-500 leading-relaxed">
-              <strong className="text-gray-400">Disclaimer:</strong> This checklist is provided
+              <strong className="text-gray-400">Disclaimer:</strong> This self-assessment is provided
               as an informational resource to help organizations assess readiness for the EU AI Act.
               It does not constitute legal advice and is not a substitute for professional compliance
               counsel. The EU AI Act requirements may evolve as implementing measures and guidance
