@@ -1,13 +1,16 @@
 """
-Keepalive ping for Render cron job.
+Keepalive + daily tasks for Render cron job.
 
-Sends lightweight HEAD requests to API and Gateway health endpoints
-to prevent Render Starter instances from spinning down (~15 min idle timeout).
+1. Sends lightweight HEAD requests to API and Gateway health endpoints
+   to prevent Render Starter instances from spinning down (~15 min idle timeout).
+2. Once per day (first run after 16:00 UTC), triggers the follow-up email cron
+   to send 5-day check-in emails to new users.
 
 Runs every 10 minutes via Render cron job (see render.yaml).
 """
 
 import datetime
+import os
 
 import httpx
 
@@ -16,11 +19,14 @@ SERVICES = [
     ("Gateway", "https://ai-identity-gateway.onrender.com/health"),
 ]
 
+FOLLOWUP_URL = "https://ai-identity-api.onrender.com/api/internal/email/send-followups"
+
 TIMEOUT = 30
 
 
 def main():
     ts = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = datetime.datetime.utcnow()
     print(f"{ts} Keepalive ping starting...")
 
     for name, url in SERVICES:
@@ -31,7 +37,35 @@ def main():
         except Exception as e:
             print(f"{ts} {name}: error - {e}")
 
+    # Run follow-up email check once per day (first run in the 16:00 UTC hour)
+    if now.hour == 16 and now.minute < 10:
+        _send_followup_emails(ts)
+
     print(f"{ts} Keepalive complete.")
+
+
+def _send_followup_emails(ts: str):
+    """Trigger the follow-up email endpoint on the API."""
+    internal_key = os.environ.get("INTERNAL_SERVICE_KEY", "")
+    if not internal_key:
+        print(f"{ts} Follow-up emails: skipped (no INTERNAL_SERVICE_KEY)")
+        return
+
+    try:
+        r = httpx.post(
+            FOLLOWUP_URL,
+            headers={"x-internal-key": internal_key},
+            timeout=TIMEOUT,
+        )
+        if r.status_code == 200:
+            data = r.json()
+            print(
+                f"{ts} Follow-up emails: sent={data.get('sent', 0)}, eligible={data.get('eligible', 0)}"
+            )
+        else:
+            print(f"{ts} Follow-up emails: status {r.status_code}")
+    except Exception as e:
+        print(f"{ts} Follow-up emails: error - {e}")
 
 
 if __name__ == "__main__":

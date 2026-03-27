@@ -48,6 +48,9 @@ services:
     schedule: "*/10 * * * *"
     buildCommand: pip install httpx
     startCommand: python scripts/keepalive_cron.py
+    envVars:
+      - key: INTERNAL_SERVICE_KEY
+        sync: false
 
   # ── Proxy Gateway ────────────────────────────────────────────────────
   - type: web
