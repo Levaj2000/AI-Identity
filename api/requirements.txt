@@ -13,7 +13,7 @@ alembic==1.18.4
 cryptography==46.0.5
 PyJWT==2.10.1
 stripe==14.4.1
-resend>=4.0.0
+resend==2.26.0
 sentry-sdk[fastapi]==2.22.0
 jinja2>=3.1
 
