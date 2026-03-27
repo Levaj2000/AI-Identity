@@ -138,6 +138,21 @@ async def get_current_user(
             db.refresh(user)
             logger.info("Auto-provisioned user from Clerk: %s (clerk_id=%s)", email, clerk_user_id)
 
+            # Send welcome email (fire-and-forget, never blocks auth)
+            try:
+                from sqlalchemy import func
+
+                from api.app.email import send_welcome_email
+
+                result = send_welcome_email(email)
+                if result:
+                    user.welcome_email_sent_at = func.now()
+                    db.commit()
+            except Exception:
+                logger.warning(
+                    "Welcome email failed for %s — user provisioned without email", email
+                )
+
         if user is None:
             raise HTTPException(
                 status_code=401,

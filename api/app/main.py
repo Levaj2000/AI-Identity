@@ -158,6 +158,15 @@ async def lifespan(app: FastAPI):
                     conn.execute(text("CREATE INDEX ix_qa_runs_user_id ON qa_runs (user_id)"))
                 logger.info("Added 'user_id' column to qa_runs table")
 
+        # Defensive migration: email tracking columns on users table
+        if "users" in inspector.get_table_names():
+            user_cols = {c["name"] for c in inspector.get_columns("users")}
+            for col_name in ("welcome_email_sent_at", "followup_email_sent_at"):
+                if col_name not in user_cols:
+                    with engine.begin() as conn:
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} TIMESTAMPTZ"))
+                    logger.info("Added '%s' column to users table", col_name)
+
         # Seed compliance frameworks if empty
         from common.models.base import SessionLocal
 
@@ -388,6 +397,7 @@ from api.app.routers.billing import router as billing_router  # noqa: E402
 from api.app.routers.capabilities import router as capabilities_router  # noqa: E402
 from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
+from api.app.routers.email_cron import router as email_cron_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
 from api.app.routers.policies import router as policies_router  # noqa: E402
 from api.app.routers.qa import router as qa_router  # noqa: E402
@@ -401,6 +411,7 @@ app.include_router(auth_router)
 app.include_router(billing_router)
 app.include_router(compliance_router)
 app.include_router(credentials_router)
+app.include_router(email_cron_router)
 app.include_router(keys_router)
 app.include_router(policies_router)
 app.include_router(qa_router)
