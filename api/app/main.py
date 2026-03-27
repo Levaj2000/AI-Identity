@@ -29,7 +29,9 @@ if settings.sentry_dsn:
         environment=settings.environment,
         release=f"ai-identity-api@{settings.app_version}",
         traces_sample_rate=0.2 if settings.environment == "production" else 1.0,
+        profiles_sample_rate=0.1 if settings.environment == "production" else 1.0,
         send_default_pii=False,
+        enable_tracing=True,
     )
 
 # ── Logging ──────────────────────────────────────────────────────────────
@@ -236,20 +238,43 @@ async def request_logging_middleware(request: Request, call_next):
     response = await call_next(request)
     duration_ms = round((time.perf_counter() - start) * 1000, 2)
 
-    logger.info(
-        "%s %s → %s (%sms)",
-        request.method,
-        request.url.path,
-        response.status_code,
-        duration_ms,
-        extra={
-            "request_id": request_id,
-            "method": request.method,
-            "path": request.url.path,
-            "status_code": response.status_code,
-            "duration_ms": duration_ms,
-        },
-    )
+    log_extra = {
+        "request_id": request_id,
+        "method": request.method,
+        "path": request.url.path,
+        "status_code": response.status_code,
+        "duration_ms": duration_ms,
+    }
+
+    # Flag slow requests (P95 alert threshold: 500ms)
+    if duration_ms > 500 and request.url.path != "/health":
+        logger.warning(
+            "SLOW REQUEST: %s %s → %s (%sms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+            extra=log_extra,
+        )
+        if settings.sentry_dsn:
+            sentry_sdk.set_tag("slow_request", True)
+            sentry_sdk.set_context(
+                "performance",
+                {
+                    "duration_ms": duration_ms,
+                    "endpoint": request.url.path,
+                    "method": request.method,
+                },
+            )
+    else:
+        logger.info(
+            "%s %s → %s (%sms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+            extra=log_extra,
+        )
 
     response.headers["X-Request-ID"] = request_id
     return response
