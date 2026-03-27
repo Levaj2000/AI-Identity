@@ -11,6 +11,7 @@ const productLinks = [
   { label: "Architecture", href: "/architecture" },
   { label: "Dashboard", href: "https://dashboard.ai-identity.co" },
   { label: "Documentation", href: "/docs" },
+  { label: "EU AI Act Checklist", href: "/eu-ai-act-checklist" },
 ];
 
 const companyLinks = [
