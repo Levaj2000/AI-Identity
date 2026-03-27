@@ -13,6 +13,7 @@ from common.audit.writer import create_audit_entry
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
 from common.capabilities import build_policy_rules_from_capabilities
 from common.models import Agent, AgentKey, AgentStatus, KeyStatus, KeyType, Policy, User, get_db
+from common.models.agent_assignment import AgentAssignment, AgentRole
 from common.queries import get_user_agent
 from common.schemas.agent import (
     AgentCreate,
@@ -120,7 +121,19 @@ def create_agent(
         capabilities=body.capabilities,
         metadata_=body.metadata,
     )
+    # If user belongs to an org, assign agent to that org
+    if user.org_id:
+        agent.org_id = user.org_id
     db.add(agent)
+
+    # Create owner assignment for the creator
+    assignment = AgentAssignment(
+        id=uuid.uuid4(),
+        agent_id=agent.id,
+        user_id=user.id,
+        role=AgentRole.owner.value,
+    )
+    db.add(assignment)
 
     # Generate the initial API key (always runtime — admin keys must be created explicitly)
     plaintext_key = generate_api_key(key_type=KeyType.runtime.value)
@@ -195,7 +208,10 @@ def list_agents(
     """
     query = db.query(Agent)
     if user.role != "admin":
-        query = query.filter(Agent.user_id == user.id)
+        if user.org_id:
+            query = query.filter((Agent.user_id == user.id) | (Agent.org_id == user.org_id))
+        else:
+            query = query.filter(Agent.user_id == user.id)
 
     if status:
         query = query.filter(Agent.status == status)
@@ -387,6 +403,7 @@ def _agent_to_response(agent: Agent) -> AgentResponse:
     return AgentResponse(
         id=agent.id,
         user_id=agent.user_id,
+        org_id=agent.org_id,
         name=agent.name,
         description=agent.description,
         status=agent.status,

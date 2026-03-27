@@ -112,6 +112,16 @@ OPENAPI_TAGS = [
         "track results, and collect customer + staff sign-offs for onboarding.",
     },
     {
+        "name": "organizations",
+        "description": "Create and manage organizations — invite team members, "
+        "assign roles, and share agents across your team.",
+    },
+    {
+        "name": "agent-assignments",
+        "description": "Assign users to specific agents with roles — "
+        "owner, operator, or viewer for fine-grained access control.",
+    },
+    {
         "name": "health",
         "description": "Service health and status endpoints.",
     },
@@ -390,6 +400,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 # ── Routers ──────────────────────────────────────────────────────────────
 
 from api.app.routers.admin import router as admin_router  # noqa: E402
+from api.app.routers.agent_assignments import router as agent_assignments_router  # noqa: E402
 from api.app.routers.agents import router as agents_router  # noqa: E402
 from api.app.routers.audit import router as audit_router  # noqa: E402
 from api.app.routers.auth import router as auth_router  # noqa: E402
@@ -399,6 +410,7 @@ from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
 from api.app.routers.email_cron import router as email_cron_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
+from api.app.routers.organizations import router as organizations_router  # noqa: E402
 from api.app.routers.policies import router as policies_router  # noqa: E402
 from api.app.routers.qa import router as qa_router  # noqa: E402
 from api.app.routers.usage import router as usage_router  # noqa: E402
@@ -416,6 +428,8 @@ app.include_router(keys_router)
 app.include_router(policies_router)
 app.include_router(qa_router)
 app.include_router(usage_router)
+app.include_router(organizations_router)
+app.include_router(agent_assignments_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────
 
