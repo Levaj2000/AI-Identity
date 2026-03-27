@@ -37,6 +37,24 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://ai-identity.co/eu-ai-act-checklist</loc>
+    <lastmod>2026-03-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://ai-identity.co/architecture</loc>
+    <lastmod>2026-03-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://ai-identity.co/contact</loc>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://ai-identity.co/how-it-works</loc>
     <lastmod>2026-03-22</lastmod>
     <changefreq>monthly</changefreq>
