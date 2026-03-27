@@ -4,10 +4,10 @@ const BUTTONDOWN_URL =
   "https://buttondown.com/api/emails/embed-subscribe/ai-identity";
 
 const productLinks = [
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Integrations", href: "#integrations" },
-  { label: "Security", href: "#security" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "How It Works", href: "/how-it-works" },
+  { label: "Integrations", href: "/integrations" },
+  { label: "Security", href: "/security" },
+  { label: "Pricing", href: "/contact" },
   { label: "Architecture", href: "/architecture" },
   { label: "Dashboard", href: "https://dashboard.ai-identity.co" },
   { label: "Documentation", href: "/docs" },
