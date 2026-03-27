@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     )
     stripe_cancel_url: str = "https://dashboard.ai-identity.co/settings"
 
+    # Resend transactional email (leave empty to disable)
+    resend_api_key: str = ""
+    resend_from_email: str = "Jeff Leva <jeff@ai-identity.co>"
+    resend_reply_to: str = "jeff@ai-identity.co"
+
     # Clerk authentication
     # CLERK_ISSUER is the Clerk instance URL (e.g. https://your-app.clerk.accounts.dev)
     # Used to fetch JWKS for JWT verification. If empty, Clerk auth is disabled
