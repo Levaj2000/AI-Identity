@@ -6,6 +6,7 @@ import Footer from "./landing/Footer";
 interface ChecklistItem {
   id: string;
   text: string;
+  helper: string;
 }
 
 interface ChecklistSection {
@@ -25,10 +26,10 @@ const sections: ChecklistSection[] = [
     pillar: "Identity",
     pillarColor: "#F59E0B",
     items: [
-      { id: "c1", text: "Identified which AI agents qualify as high-risk under the EU AI Act" },
-      { id: "c2", text: "Documented each agent's purpose, scope, and operational boundaries" },
-      { id: "c3", text: "Maintained a current inventory/registry of all production agents" },
-      { id: "c4", text: "Assigned a responsible human operator for each agent" },
+      { id: "c1", text: "Identified which AI agents qualify as high-risk under the EU AI Act", helper: "Do you know which of your agents make decisions that could affect health, safety, or legal rights? These are likely high-risk under the Act." },
+      { id: "c2", text: "Documented each agent's purpose, scope, and operational boundaries", helper: "Can you describe what each agent does, what data it accesses, and what it's not allowed to do — in writing?" },
+      { id: "c3", text: "Maintained a current inventory/registry of all production agents", helper: "Do you have a single place (spreadsheet, dashboard, or registry) listing every AI agent running in production?" },
+      { id: "c4", text: "Assigned a responsible human operator for each agent", helper: "Is there a named person accountable for each agent's behavior and decisions?" },
     ],
   },
   {
@@ -38,10 +39,10 @@ const sections: ChecklistSection[] = [
     pillar: "Identity",
     pillarColor: "#F59E0B",
     items: [
-      { id: "t1", text: "Each agent has a unique, cryptographic identity (not shared API keys)" },
-      { id: "t2", text: "Agent credentials are scoped to specific capabilities" },
-      { id: "t3", text: "Key rotation and lifecycle management is automated" },
-      { id: "t4", text: "Agent identity can be verified at any point in the chain" },
+      { id: "t1", text: "Each agent has a unique, cryptographic identity (not shared API keys)", helper: "Does every agent authenticate with its own unique key or certificate — not a shared token used by multiple agents?" },
+      { id: "t2", text: "Agent credentials are scoped to specific capabilities", helper: "Are agent keys limited to only what that agent needs? For example, a support agent can't access billing data." },
+      { id: "t3", text: "Key rotation and lifecycle management is automated", helper: "Do agent keys expire and rotate automatically, or are they set once and never changed?" },
+      { id: "t4", text: "Agent identity can be verified at any point in the chain", helper: "If an agent makes a request, can you trace it back to a specific registered agent identity?" },
     ],
   },
   {
@@ -51,10 +52,10 @@ const sections: ChecklistSection[] = [
     pillar: "Policy",
     pillarColor: "#8B5CF6",
     items: [
-      { id: "r1", text: "Conducted risk assessment for each high-risk agent" },
-      { id: "r2", text: "Documented known limitations and failure modes" },
-      { id: "r3", text: "Implemented fail-closed defaults (deny on error, not allow)" },
-      { id: "r4", text: "Residual risks are monitored and reviewed periodically" },
+      { id: "r1", text: "Conducted risk assessment for each high-risk agent", helper: "Have you evaluated what could go wrong with each agent — unauthorized actions, data leaks, or incorrect decisions?" },
+      { id: "r2", text: "Documented known limitations and failure modes", helper: "Is there a written record of what each agent can't do well, and what happens when it fails?" },
+      { id: "r3", text: "Implemented fail-closed defaults (deny on error, not allow)", helper: "When something goes wrong, does the system block the action by default — or does it let it through?" },
+      { id: "r4", text: "Residual risks are monitored and reviewed periodically", helper: "Do you regularly check whether your mitigations are still working, or has it been 'set and forget'?" },
     ],
   },
   {
@@ -64,11 +65,11 @@ const sections: ChecklistSection[] = [
     pillar: "Compliance",
     pillarColor: "#10B981",
     items: [
-      { id: "l1", text: "All agent decisions are logged automatically" },
-      { id: "l2", text: "Logs are tamper-evident (cryptographic hash chain or equivalent)" },
-      { id: "l3", text: "PII is sanitized from audit records" },
-      { id: "l4", text: "Logs are retained for the required period (minimum as specified)" },
-      { id: "l5", text: "Evidence can be exported for auditors or regulators on demand" },
+      { id: "l1", text: "All agent decisions are logged automatically", helper: "Is every allow/deny decision your agents make written to a log without anyone having to remember to do it?" },
+      { id: "l2", text: "Logs are tamper-evident (cryptographic hash chain or equivalent)", helper: "Can you prove that no one — not even an admin — has altered the audit logs after the fact?" },
+      { id: "l3", text: "PII is sanitized from audit records", helper: "Are personal details like emails, phone numbers, and tokens automatically stripped from logs?" },
+      { id: "l4", text: "Logs are retained for the required period (minimum as specified)", helper: "Are your logs kept for at least the minimum period regulators expect (typically 6-12 months)?" },
+      { id: "l5", text: "Evidence can be exported for auditors or regulators on demand", helper: "Can you generate a clean CSV or JSON export of agent activity within minutes if an auditor asks?" },
     ],
   },
   {
@@ -78,10 +79,10 @@ const sections: ChecklistSection[] = [
     pillar: "Policy",
     pillarColor: "#8B5CF6",
     items: [
-      { id: "h1", text: "Human-in-the-loop controls exist for high-risk decisions" },
-      { id: "h2", text: "Agents can be paused or deactivated immediately" },
-      { id: "h3", text: "Policy enforcement prevents agents from bypassing human rules" },
-      { id: "h4", text: "Override and intervention capabilities are documented" },
+      { id: "h1", text: "Human-in-the-loop controls exist for high-risk decisions", helper: "For sensitive actions (deleting data, financial transactions), does a human review or approve before the agent acts?" },
+      { id: "h2", text: "Agents can be paused or deactivated immediately", helper: "Can you shut down a misbehaving agent in seconds — not hours or days?" },
+      { id: "h3", text: "Policy enforcement prevents agents from bypassing human rules", helper: "Are your rules enforced at the infrastructure level, or could a clever prompt or config change let an agent skip them?" },
+      { id: "h4", text: "Override and intervention capabilities are documented", helper: "Is there a written procedure for how to intervene when an agent goes off-script?" },
     ],
   },
   {
@@ -91,10 +92,10 @@ const sections: ChecklistSection[] = [
     pillar: "Identity",
     pillarColor: "#F59E0B",
     items: [
-      { id: "s1", text: "Input validation prevents injection and manipulation" },
-      { id: "s2", text: "Rate limiting and circuit breakers protect against abuse" },
-      { id: "s3", text: "Security headers and encryption are enforced" },
-      { id: "s4", text: "Regular security audits are conducted" },
+      { id: "s1", text: "Input validation prevents injection and manipulation", helper: "Are agent inputs checked for malicious content (prompt injection, SQL injection) before being processed?" },
+      { id: "s2", text: "Rate limiting and circuit breakers protect against abuse", helper: "If an agent starts making thousands of requests per second, does the system automatically throttle or stop it?" },
+      { id: "s3", text: "Security headers and encryption are enforced", helper: "Is all data encrypted in transit (HTTPS/TLS) and are standard security headers present on every response?" },
+      { id: "s4", text: "Regular security audits are conducted", helper: "When was the last time someone reviewed your agent infrastructure for vulnerabilities? If you can't remember, that's a gap." },
     ],
   },
   {
@@ -104,10 +105,10 @@ const sections: ChecklistSection[] = [
     pillar: "Forensics",
     pillarColor: "#EF4444",
     items: [
-      { id: "p1", text: "Anomaly detection identifies unusual agent behavior" },
-      { id: "p2", text: "Incident response plan covers AI agent-specific scenarios" },
-      { id: "p3", text: "Forensic replay can reconstruct any agent incident" },
-      { id: "p4", text: "Serious incidents can be reported to authorities with evidence" },
+      { id: "p1", text: "Anomaly detection identifies unusual agent behavior", helper: "Would you know within minutes if an agent suddenly started making requests it's never made before?" },
+      { id: "p2", text: "Incident response plan covers AI agent-specific scenarios", helper: "Does your incident playbook include 'what to do if an AI agent goes rogue' — not just traditional server outages?" },
+      { id: "p3", text: "Forensic replay can reconstruct any agent incident", helper: "After an incident, can you replay exactly what happened — every request, every decision, every timestamp?" },
+      { id: "p4", text: "Serious incidents can be reported to authorities with evidence", helper: "If a regulator asks 'what happened?', can you hand them a tamper-proof evidence package within 72 hours?" },
     ],
   },
 ];
@@ -340,13 +341,18 @@ export default function EUAIActChecklistPage() {
                           )}
                         </div>
                       </div>
-                      <span className={`text-sm leading-relaxed transition-colors ${
-                        checked.has(checkItem.id)
-                          ? "text-gray-500 line-through"
-                          : "text-gray-300 group-hover:text-white"
-                      }`}>
-                        {checkItem.text}
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className={`text-sm leading-relaxed transition-colors ${
+                          checked.has(checkItem.id)
+                            ? "text-gray-500 line-through"
+                            : "text-gray-300 group-hover:text-white"
+                        }`}>
+                          {checkItem.text}
+                        </span>
+                        <span className="text-[13px] leading-snug text-gray-500">
+                          {checkItem.helper}
+                        </span>
+                      </div>
                     </label>
                   ))}
                 </div>
