@@ -11,6 +11,7 @@ import Blog from "./pages/Blog";
 import Careers from "./pages/Careers";
 import Docs from "./pages/Docs";
 import Architecture from "./pages/Architecture";
+import EUAIActChecklist from "./pages/EUAIActChecklist";
 
 export const router = createBrowserRouter([
   {
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
       { path: "blog/:slug", Component: Blog },
       { path: "careers", Component: Careers },
       { path: "docs", Component: Docs },
+      { path: "eu-ai-act-checklist", Component: EUAIActChecklist },
     ],
   },
 ]);
