@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { SerifEmphasis } from "./SerifEmphasis";
+import { SectionBadge } from "./SectionBadge";
 
 // ── Tier Data ───────────────────────────────────────────────────────
 
@@ -190,7 +192,7 @@ function XIcon() {
       height="16"
       viewBox="0 0 16 16"
       fill="none"
-      className="shrink-0 text-gray-600"
+      className="shrink-0 text-[#4A5B73]"
     >
       <path
         d="M4 4l8 8M12 4l-8 8"
@@ -228,7 +230,7 @@ function UsageEstimator() {
   ) ?? tierThresholds[tierThresholds.length - 1];
 
   const tierColorMap: Record<string, string> = {
-    Free: "text-gray-400",
+    Free: "text-[#8B9BB4]",
     Pro: "text-[#F59E0B]",
     Business: "text-blue-400",
     Enterprise: "text-purple-400",
@@ -242,7 +244,7 @@ function UsageEstimator() {
       transition={{ duration: 0.6, delay: 0.15 }}
       className="mt-16 max-w-2xl mx-auto"
     >
-      <div className="rounded-2xl border border-white/10 bg-[#111113]/80 backdrop-blur-xl p-8">
+      <div className="rounded-2xl border border-white/10 bg-[#162036]/80 backdrop-blur-xl p-8">
         <div className="mb-6">
           <div className="flex items-center gap-2">
             <svg
@@ -263,7 +265,7 @@ function UsageEstimator() {
               How much will it cost?
             </h3>
           </div>
-          <p className="mt-1.5 text-sm text-gray-500 ml-[26px]">
+          <p className="mt-1.5 text-sm text-[#6B7C96] ml-[26px]">
             See your projected usage in real time.
           </p>
         </div>
@@ -272,7 +274,7 @@ function UsageEstimator() {
           {/* Agents slider */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm text-gray-400">Active agents</label>
+              <label className="text-sm text-[#8B9BB4]">Active agents</label>
               <span className="text-sm font-mono font-semibold text-white">
                 {agents}
               </span>
@@ -283,9 +285,9 @@ function UsageEstimator() {
               max={250}
               value={agents}
               onChange={(e) => setAgents(Number(e.target.value))}
-              className="w-full h-1.5 rounded-full bg-[#1a1a1d] appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#F59E0B]"
+              className="w-full h-1.5 rounded-full bg-[#1A2540] appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#F59E0B]"
             />
-            <div className="flex justify-between mt-1 text-[10px] text-gray-600">
+            <div className="flex justify-between mt-1 text-[10px] text-[#4A5B73]">
               <span>1</span>
               <span>50</span>
               <span>100</span>
@@ -297,7 +299,7 @@ function UsageEstimator() {
           {/* Requests per agent slider */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm text-gray-400">
+              <label className="text-sm text-[#8B9BB4]">
                 Requests per agent / month
               </label>
               <span className="text-sm font-mono font-semibold text-white">
@@ -311,9 +313,9 @@ function UsageEstimator() {
               step={100}
               value={reqPerAgent}
               onChange={(e) => setReqPerAgent(Number(e.target.value))}
-              className="w-full h-1.5 rounded-full bg-[#1a1a1d] appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#F59E0B]"
+              className="w-full h-1.5 rounded-full bg-[#1A2540] appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#F59E0B]"
             />
-            <div className="flex justify-between mt-1 text-[10px] text-gray-600">
+            <div className="flex justify-between mt-1 text-[10px] text-[#4A5B73]">
               <span>100</span>
               <span>2.5k</span>
               <span>5k</span>
@@ -326,18 +328,18 @@ function UsageEstimator() {
           <div className="rounded-xl bg-white/[0.03] border border-white/5 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wider">
+                <p className="text-xs text-[#6B7C96] uppercase tracking-wider">
                   Estimated monthly volume
                 </p>
                 <p className="mt-1 text-xl font-bold text-white">
                   {totalRequests.toLocaleString()}{" "}
-                  <span className="text-sm font-normal text-gray-500">
+                  <span className="text-sm font-normal text-[#6B7C96]">
                     requests/mo
                   </span>
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-wider">
+                <p className="text-xs text-[#6B7C96] uppercase tracking-wider">
                   Recommended plan
                 </p>
                 <p
@@ -345,12 +347,12 @@ function UsageEstimator() {
                 >
                   {recommended.name}
                 </p>
-                <p className="text-sm text-gray-500">{recommended.price}</p>
+                <p className="text-sm text-[#6B7C96]">{recommended.price}</p>
               </div>
             </div>
           </div>
 
-          <p className="text-xs text-gray-600 leading-relaxed">
+          <p className="text-xs text-[#4A5B73] leading-relaxed">
             Most teams with 10–20 active agents stay under 75k requests/mo.
             Heavy QA or forensics runs? Overages billed at ~$1 per 1k extra
             requests.{" "}
@@ -375,7 +377,7 @@ export default function Pricing() {
   const [annual, setAnnual] = useState(false);
 
   return (
-    <section id="pricing" className="py-24 px-6 bg-[#111113]">
+    <section id="pricing" className="py-24 px-6 bg-[#131E30]">
       <div className="max-w-[1200px] mx-auto">
         {/* Header */}
         <motion.div
@@ -385,10 +387,11 @@ export default function Pricing() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
+          <SectionBadge label="Pricing" />
           <h2 className="text-3xl md:text-5xl font-bold text-white">
-            Simple, transparent pricing for AI agents
+            Simple, <SerifEmphasis>transparent</SerifEmphasis> pricing for AI agents
           </h2>
-          <p className="mt-4 text-lg text-gray-400 max-w-2xl mx-auto">
+          <p className="mt-4 text-lg text-[#8B9BB4] max-w-2xl mx-auto">
             Start free. Scale securely as your agents go into production. Every
             plan includes the tamper-proof audit chain and deny-by-default
             gateway.
@@ -397,13 +400,13 @@ export default function Pricing() {
           {/* Billing toggle */}
           <div className="mt-8 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2">
             <span
-              className={`text-sm font-medium transition-colors ${!annual ? "text-white" : "text-gray-500"}`}
+              className={`text-sm font-medium transition-colors ${!annual ? "text-white" : "text-[#6B7C96]"}`}
             >
               Monthly
             </span>
             <button
               onClick={() => setAnnual(!annual)}
-              className={`relative h-6 w-11 rounded-full transition-colors ${annual ? "bg-[#F59E0B]" : "bg-[#2a2a2d]"}`}
+              className={`relative h-6 w-11 rounded-full transition-colors ${annual ? "bg-[#F59E0B]" : "bg-[#2A3654]"}`}
               aria-label="Toggle annual billing"
             >
               <span
@@ -411,7 +414,7 @@ export default function Pricing() {
               />
             </button>
             <span
-              className={`text-sm font-medium transition-colors ${annual ? "text-white" : "text-gray-500"}`}
+              className={`text-sm font-medium transition-colors ${annual ? "text-white" : "text-[#6B7C96]"}`}
             >
               Annual
             </span>
@@ -446,28 +449,28 @@ export default function Pricing() {
               variants={cardVariant}
               className={`relative rounded-2xl p-8 flex flex-col ${
                 tier.featured
-                  ? "bg-[#111113]/80 backdrop-blur-xl border-2 border-[#F59E0B]/40 shadow-[0_0_40px_rgba(245,158,11,0.08)]"
-                  : "bg-[#111113]/80 backdrop-blur-xl border border-white/10"
+                  ? "bg-[#162036]/80 backdrop-blur-xl border-2 border-[#F59E0B]/40 shadow-[0_0_40px_rgba(245,158,11,0.08)]"
+                  : "bg-[#162036]/80 backdrop-blur-xl border border-white/10"
               }`}
             >
               {tier.featured && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#F59E0B] text-[#0A0A0B] text-xs font-semibold rounded-full">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#F59E0B] text-[#0F1724] text-xs font-semibold rounded-full">
                   Most Popular
                 </span>
               )}
 
               <h3 className="text-lg font-semibold text-white">{tier.name}</h3>
-              <p className="mt-1 text-sm text-gray-500">{tier.description}</p>
+              <p className="mt-1 text-sm text-[#6B7C96]">{tier.description}</p>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="text-4xl font-bold text-white">
                   {displayPrice}
                 </span>
                 {period && (
-                  <span className="text-gray-500 text-sm">{period}</span>
+                  <span className="text-[#6B7C96] text-sm">{period}</span>
                 )}
               </div>
               {annual && !isCustom && tier.monthlyPrice > 0 && (
-                <p className="mt-1 text-xs text-gray-600">
+                <p className="mt-1 text-xs text-[#4A5B73]">
                   <span className="line-through">${tier.monthlyPrice}/mo</span>
                   {" "}
                   <span className="text-[#F59E0B]">
@@ -480,7 +483,7 @@ export default function Pricing() {
                 {tier.features.map((f) => (
                   <li
                     key={f}
-                    className="flex items-start gap-2 text-sm text-gray-400"
+                    className="flex items-start gap-2 text-sm text-[#8B9BB4]"
                   >
                     <span className="mt-0.5">
                       <CheckIcon />
@@ -494,7 +497,7 @@ export default function Pricing() {
                 href={tier.ctaHref}
                 className={`mt-8 w-full py-3 rounded-lg text-sm font-semibold transition-colors text-center block ${
                   tier.featured
-                    ? "bg-[#F59E0B] text-[#0A0A0B] hover:bg-[#F59E0B]/80"
+                    ? "bg-[#F59E0B] text-[#0F1724] hover:bg-[#F59E0B]/80"
                     : "border border-white/20 text-white hover:border-[#F59E0B]/40 hover:bg-white/5"
                 }`}
               >
@@ -524,19 +527,19 @@ export default function Pricing() {
             <table className="w-full max-w-6xl mx-auto">
               <thead>
                 <tr className="border-b border-white/10">
-                  <th className="py-4 px-4 text-left text-sm font-medium text-gray-500 w-1/4">
+                  <th className="py-4 px-4 text-left text-sm font-medium text-[#6B7C96] w-1/4">
                     Feature
                   </th>
-                  <th className="py-4 px-4 text-center text-sm font-medium text-gray-400">
+                  <th className="py-4 px-4 text-center text-sm font-medium text-[#8B9BB4]">
                     Free
                   </th>
                   <th className="py-4 px-4 text-center text-sm font-semibold text-[#F59E0B]">
                     Pro
                   </th>
-                  <th className="py-4 px-4 text-center text-sm font-medium text-gray-400">
+                  <th className="py-4 px-4 text-center text-sm font-medium text-[#8B9BB4]">
                     Business
                   </th>
-                  <th className="py-4 px-4 text-center text-sm font-medium text-gray-400">
+                  <th className="py-4 px-4 text-center text-sm font-medium text-[#8B9BB4]">
                     Enterprise
                   </th>
                 </tr>
@@ -607,7 +610,7 @@ export default function Pricing() {
                     height="20"
                     viewBox="0 0 20 20"
                     fill="none"
-                    className={`shrink-0 text-gray-500 transition-transform duration-200 ${
+                    className={`shrink-0 text-[#6B7C96] transition-transform duration-200 ${
                       openFaq === i ? "rotate-180" : ""
                     }`}
                   >
@@ -622,7 +625,7 @@ export default function Pricing() {
                 </button>
                 {openFaq === i && (
                   <div className="px-6 pb-4">
-                    <p className="text-sm text-gray-400 leading-relaxed">
+                    <p className="text-sm text-[#8B9BB4] leading-relaxed">
                       {faq.a}
                     </p>
                   </div>

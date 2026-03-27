@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { SerifEmphasis } from "./SerifEmphasis";
 
 const pillars = [
   {
@@ -84,7 +85,7 @@ const item = {
 
 export default function ForensicsSection() {
   return (
-    <section id="forensics" className="py-24 px-6 bg-[#0A0A0B]">
+    <section id="forensics" className="py-24 px-6 bg-[#0F1724]">
       <div className="max-w-[1200px] mx-auto">
         {/* Section header */}
         <motion.div
@@ -99,9 +100,9 @@ export default function ForensicsSection() {
           </span>
           <h2 className="text-3xl md:text-5xl font-bold text-white">
             When something goes wrong,{" "}
-            <span className="text-gray-500">prove what happened.</span>
+            <span className="text-[#6B7C96]"><SerifEmphasis>prove</SerifEmphasis> what happened.</span>
           </h2>
-          <p className="mt-4 text-gray-400 max-w-2xl text-lg">
+          <p className="mt-4 text-[#8B9BB4] max-w-2xl text-lg">
             Tamper-evident audit chains, incident replay, and forensic export.
             Not monitoring — proof.
           </p>
@@ -122,12 +123,12 @@ export default function ForensicsSection() {
               className={`rounded-2xl p-6 border transition-colors ${
                 pillar.active
                   ? "bg-[#F59E0B]/10 border-[#F59E0B]/30"
-                  : "bg-[#111113]/80 border-white/5 hover:border-white/10"
+                  : "bg-[#162036]/80 border-white/5 hover:border-white/10"
               }`}
             >
               <span
                 className={`text-xs font-semibold tracking-widest uppercase ${
-                  pillar.active ? "text-[#F59E0B]" : "text-gray-500"
+                  pillar.active ? "text-[#F59E0B]" : "text-[#6B7C96]"
                 }`}
               >
                 {pillar.label}
@@ -135,7 +136,7 @@ export default function ForensicsSection() {
               <p className="mt-2 text-white font-semibold text-sm">
                 {pillar.question}
               </p>
-              <p className="mt-1 text-xs text-gray-400 leading-relaxed">
+              <p className="mt-1 text-xs text-[#8B9BB4] leading-relaxed">
                 {pillar.desc}
               </p>
             </motion.div>
@@ -154,13 +155,13 @@ export default function ForensicsSection() {
             <motion.div
               key={cap.title}
               variants={item}
-              className="bg-[#111113]/80 backdrop-blur-xl border border-[#F59E0B]/10 rounded-2xl p-8 hover:border-[#F59E0B]/25 transition-colors group"
+              className="bg-[#162036]/80 backdrop-blur-xl border border-white/[0.08] hover:border-[#F59E0B]/20 rounded-2xl p-8 transition-colors group"
             >
               <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#F59E0B]/10 text-[#F59E0B] mb-5 group-hover:bg-[#F59E0B]/15 transition-colors">
                 {cap.icon}
               </div>
               <h3 className="text-lg font-semibold text-white">{cap.title}</h3>
-              <p className="mt-2 text-sm text-gray-400 leading-relaxed">
+              <p className="mt-2 text-sm text-[#8B9BB4] leading-relaxed">
                 {cap.desc}
               </p>
             </motion.div>

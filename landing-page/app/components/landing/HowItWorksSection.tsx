@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { SerifEmphasis } from "./SerifEmphasis";
 
 const steps = [
   {
@@ -30,7 +31,7 @@ const item = {
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-24 px-6 bg-[#111113]">
+    <section id="how-it-works" className="py-24 px-6 bg-[#131E30]">
       <div className="max-w-[1200px] mx-auto">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -43,7 +44,7 @@ export default function HowItWorksSection() {
             How It Works
           </span>
           <h2 className="text-3xl md:text-5xl font-bold text-white">
-            Three steps to secure your agents
+            Three steps to <SerifEmphasis>secure</SerifEmphasis> your agents
           </h2>
         </motion.div>
 
@@ -58,7 +59,7 @@ export default function HowItWorksSection() {
             <motion.div
               key={step.num}
               variants={item}
-              className="bg-[#111113]/80 backdrop-blur-xl border border-[#F59E0B]/10 rounded-2xl p-8 hover:border-[#F59E0B]/25 transition-colors"
+              className="bg-[#162036]/80 backdrop-blur-xl border border-white/[0.08] hover:border-[#F59E0B]/20 rounded-2xl p-8 transition-colors"
             >
               <span className="text-5xl font-bold text-[#F59E0B]/30">
                 {step.num}
@@ -66,7 +67,7 @@ export default function HowItWorksSection() {
               <h3 className="mt-4 text-xl font-semibold text-white">
                 {step.title}
               </h3>
-              <p className="mt-3 text-sm text-gray-400 leading-relaxed">
+              <p className="mt-3 text-sm text-[#8B9BB4] leading-relaxed">
                 {step.desc}
               </p>
             </motion.div>

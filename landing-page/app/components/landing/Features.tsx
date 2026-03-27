@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import { SerifEmphasis } from "./SerifEmphasis";
+import { SectionBadge } from "./SectionBadge";
 
 const features = [
   {
@@ -77,17 +79,20 @@ const item = {
 
 export default function Features() {
   return (
-    <section id="features" className="py-24 px-6 bg-[#0A0A0B]">
+    <section id="features" className="py-24 px-6 bg-[#0F1724]">
       <div className="max-w-[1200px] mx-auto">
-        <motion.h2
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="text-3xl md:text-5xl font-bold text-white text-center mb-16"
+          className="text-center mb-16"
         >
-          Built for security-first teams
-        </motion.h2>
+          <SectionBadge label="Features" />
+          <h2 className="text-3xl md:text-5xl font-bold text-white">
+            Built for <SerifEmphasis>security-first</SerifEmphasis> teams
+          </h2>
+        </motion.div>
 
         <motion.div
           variants={container}
@@ -100,13 +105,13 @@ export default function Features() {
             <motion.div
               key={f.title}
               variants={item}
-              className="bg-[#111113]/80 backdrop-blur-xl border border-[#F59E0B]/10 rounded-2xl p-8 hover:border-[#F59E0B]/25 transition-colors group"
+              className="bg-[#162036]/80 backdrop-blur-xl border border-white/[0.08] hover:border-[#F59E0B]/20 rounded-2xl p-8 transition-colors group"
             >
               <div className="w-10 h-10 flex items-center justify-center rounded-lg bg-[#F59E0B]/10 text-[#F59E0B] mb-5 group-hover:bg-[#F59E0B]/15 transition-colors">
                 {f.icon}
               </div>
               <h3 className="text-lg font-semibold text-white">{f.title}</h3>
-              <p className="mt-2 text-sm text-gray-400 leading-relaxed">
+              <p className="mt-2 text-sm text-[#8B9BB4] leading-relaxed">
                 {f.desc}
               </p>
             </motion.div>
