@@ -11,10 +11,22 @@ import ParticleHero from "../components/ParticleHero";
 export default function Home() {
   return (
     <div className="flex flex-col items-center">
-      {/* ── Hero Section — tsparticles background ── */}
+      {/* ── Hero Section — tsparticles + smoky atmosphere ── */}
       <section className="relative w-full overflow-hidden min-h-[100vh]">
         {/* Full-viewport particle background */}
         <ParticleHero />
+
+        {/* Smoky/misty atmosphere layers */}
+        {/* Bottom fog bank - the key Landio effect */}
+        <div className="absolute bottom-0 left-0 right-0 h-[50%] bg-gradient-to-t from-[rgba(40,50,65,0.4)] via-[rgba(30,40,55,0.2)] to-transparent pointer-events-none z-[1]" />
+        {/* Side mist - left */}
+        <div className="absolute bottom-[10%] -left-[5%] w-[40%] h-[40%] bg-[radial-gradient(ellipse_at_center,rgba(60,75,95,0.25)_0%,transparent_70%)] pointer-events-none blur-[80px] z-[1]" />
+        {/* Side mist - right */}
+        <div className="absolute bottom-[15%] -right-[5%] w-[35%] h-[35%] bg-[radial-gradient(ellipse_at_center,rgba(55,70,90,0.2)_0%,transparent_70%)] pointer-events-none blur-[80px] z-[1]" />
+        {/* Central subtle glow behind text */}
+        <div className="absolute top-[35%] left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(80,100,130,0.08)_0%,transparent_60%)] pointer-events-none z-[1]" />
+        {/* Bottom edge fade to page background */}
+        <div className="absolute bottom-0 left-0 right-0 h-[120px] bg-gradient-to-t from-[rgb(4,7,13)] to-transparent pointer-events-none z-[2]" />
 
         {/* Hero content overlaid on top */}
         <div className="relative z-10 pt-40 pb-24 px-6 min-h-[100vh] flex items-center justify-center">
@@ -23,16 +35,16 @@ export default function Home() {
               <BadgeFramerComponent.Responsive content="IDENTITY FOR AI AGENTS" />
             </div>
 
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6 max-w-4xl mx-auto">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6 max-w-4xl mx-auto drop-shadow-[0_0_30px_rgba(255,255,255,0.05)]">
               Every AI Agent Deserves an{" "}
-              <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
+              <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)] drop-shadow-[0_0_20px_rgba(166,218,255,0.3)]">
                 Identity
               </span>
             </h1>
 
-            <p className="text-lg md:text-xl text-[rgba(213,219,230,0.6)] max-w-2xl mx-auto mb-10">
+            <p className="text-lg md:text-xl text-[rgba(230,235,245,0.75)] max-w-2xl mx-auto mb-10">
               Per-agent API keys, scoped permissions, and tamper-proof audit trails.
-              Know which agent did what, when, and why -- before regulators ask.
+              Know which agent did what, when, and why — before regulators ask.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -43,14 +55,14 @@ export default function Home() {
               />
               <a
                 href="/how-it-works"
-                className="px-6 py-3 rounded-lg border border-[rgba(216,231,242,0.07)] text-sm text-[rgba(213,219,230,0.7)] hover:text-white hover:border-[rgba(216,231,242,0.15)] transition-colors"
+                className="px-6 py-3 rounded-lg border border-[rgba(216,231,242,0.12)] text-sm text-[rgba(230,235,245,0.8)] hover:text-white hover:border-[rgba(216,231,242,0.25)] transition-colors"
               >
                 See How It Works
               </a>
             </div>
 
             {/* Trust badges */}
-            <div className="mt-16 flex flex-wrap justify-center gap-8 text-[rgba(213,219,230,0.3)] text-xs uppercase tracking-wider">
+            <div className="mt-16 flex flex-wrap justify-center gap-8 text-[rgba(213,219,230,0.4)] text-xs uppercase tracking-wider">
               <span>SOC 2 Type II</span>
               <span>EU AI Act Ready</span>
               <span>GDPR Compliant</span>
