@@ -11,14 +11,14 @@ export default function Home() {
   return (
     <div className="flex flex-col items-center">
       {/* ── Hero Section — uses CTA component for 3D particle background ── */}
-      <section className="relative w-full overflow-hidden min-h-[90vh]">
-        {/* Framer CTA component provides the 3D particle/mist background */}
-        <div className="absolute inset-0">
-          <CtaSectionFramerComponent.Responsive />
+      <section className="relative w-full overflow-hidden min-h-[100vh]">
+        {/* Framer CTA component stretched to fill entire hero — its text content hidden */}
+        <div className="absolute inset-0 [&>*]:!w-full [&>*]:!h-full [&>*]:!max-w-none [&_p]:!hidden [&_h2]:!hidden [&_h3]:!hidden [&_a]:!hidden [&_span]:!hidden" style={{ width: '100%', height: '100%' }}>
+          <CtaSectionFramerComponent.Responsive style={{ width: '100%', height: '100%', maxWidth: 'none' }} />
         </div>
 
         {/* Hero content overlaid on top */}
-        <div className="relative z-10 pt-32 pb-20 px-6 min-h-[90vh] flex items-center justify-center">
+        <div className="relative z-10 pt-40 pb-24 px-6 min-h-[100vh] flex items-center justify-center">
           <div className="max-w-[1200px] mx-auto text-center">
             <div className="flex justify-center mb-8">
               <BadgeFramerComponent.Responsive content="IDENTITY FOR AI AGENTS" />
