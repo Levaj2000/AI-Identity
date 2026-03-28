@@ -6,28 +6,15 @@ import FeatureCard2FramerComponent from "../framer/cards/feature-card-2";
 import FeatureCard3FramerComponent from "../framer/cards/feature-card-3";
 import CtaSectionFramerComponent from "../framer/cta-section";
 import PricingCardFramerComponent from "../framer/pricing-card";
+import ParticleHero from "../components/ParticleHero";
 
 export default function Home() {
   return (
     <div className="flex flex-col items-center">
-      {/* ── Hero Section — uses CTA component for 3D particle background ── */}
+      {/* ── Hero Section — tsparticles background ── */}
       <section className="relative w-full overflow-hidden min-h-[100vh]">
-        {/* Framer CTA component stretched to fill entire hero — its text content hidden via opacity */}
-        <div
-          className="absolute inset-0 overflow-hidden"
-          style={{ width: '100%', height: '100%' }}
-        >
-          <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
-            style={{ width: '100vw', height: '100vh', minWidth: '100%', minHeight: '100%', transform: 'translate(-50%, -50%) scale(1.5)' }}
-          >
-            <CtaSectionFramerComponent.Responsive
-              style={{ width: '100%', height: '100%', maxWidth: 'none' }}
-            />
-          </div>
-          {/* Overlay to hide the CTA's default text content */}
-          <div className="absolute inset-0 bg-[rgb(4,7,13)]/60 pointer-events-none" />
-        </div>
+        {/* Full-viewport particle background */}
+        <ParticleHero />
 
         {/* Hero content overlaid on top */}
         <div className="relative z-10 pt-40 pb-24 px-6 min-h-[100vh] flex items-center justify-center">
