@@ -46,7 +46,7 @@ function MiniSparkline({ values }: { values: number[] }) {
       <path
         d={path}
         fill="none"
-        stroke="#F59E0B"
+        stroke="#A6DAFF"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -110,7 +110,7 @@ export function SystemStatusBanner() {
 
   return (
     <div
-      className={`rounded-xl border border-l-4 border-gray-200 ${isHealthy ? 'border-l-emerald-500' : 'border-l-yellow-500'} bg-white p-5 dark:border-[#F59E0B]/10 ${isHealthy ? 'dark:border-l-emerald-500' : 'dark:border-l-yellow-500'} dark:bg-[#111113]/80 dark:backdrop-blur-xl`}
+      className={`rounded-xl border border-l-4 border-gray-200 ${isHealthy ? 'border-l-emerald-500' : 'border-l-yellow-500'} bg-white p-5 dark:border-[#A6DAFF]/10 ${isHealthy ? 'dark:border-l-emerald-500' : 'dark:border-l-yellow-500'} dark:bg-[#10131C]/80 dark:backdrop-blur-xl`}
     >
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {/* Gateway Status */}

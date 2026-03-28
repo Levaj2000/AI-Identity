@@ -28,7 +28,7 @@ function TierBadge({ tier }: { tier: string }) {
     free: 'bg-gray-100 text-gray-700 dark:bg-[#1a1a1d] dark:text-[#a1a1aa]',
     starter: 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',
     pro: 'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400',
-    enterprise: 'bg-[#F59E0B]/10 text-[#F59E0B] dark:bg-[#F59E0B]/10 dark:text-[#F59E0B]',
+    enterprise: 'bg-[#A6DAFF]/10 text-[#A6DAFF] dark:bg-[#A6DAFF]/10 dark:text-[#A6DAFF]',
   }
   const cls = colors[tier.toLowerCase()] || colors.free
   return (
@@ -127,7 +127,7 @@ function Toast({
 function Skeleton() {
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#111113]">
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#10131C]">
         <div className="h-6 w-48 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
         <div className="mt-4 h-4 w-64 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
         <div className="mt-6 flex gap-4">
@@ -135,7 +135,7 @@ function Skeleton() {
           <div className="h-16 w-32 animate-pulse rounded-lg bg-gray-200 dark:bg-[#1a1a1d]" />
         </div>
       </div>
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#111113]">
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#10131C]">
         <div className="h-6 w-36 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
         <div className="mt-4 space-y-3">
           {[1, 2, 3].map((i) => (
@@ -171,14 +171,14 @@ function CreateOrgCard({ onCreated }: { onCreated: (org: Organization) => void }
 
   return (
     <div className="mx-auto max-w-lg">
-      <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-[#1a1a1d] dark:bg-[#111113]">
+      <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-[#1a1a1d] dark:bg-[#10131C]">
         {/* Icon */}
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F59E0B]/10">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#A6DAFF]/10">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
-            className="h-7 w-7 text-[#F59E0B]"
+            className="h-7 w-7 text-[#A6DAFF]"
           >
             <path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 18a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z" />
           </svg>
@@ -197,14 +197,14 @@ function CreateOrgCard({ onCreated }: { onCreated: (org: Organization) => void }
             placeholder="Organization name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F59E0B] focus:outline-none focus:ring-1 focus:ring-[#F59E0B] dark:border-[#2a2a2d] dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder-[#52525b]"
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#2a2a2d] dark:bg-[#04070D] dark:text-[#e4e4e7] dark:placeholder-[#52525b]"
             required
           />
           {error && <p className="text-sm text-red-500">{error}</p>}
           <button
             type="submit"
             disabled={loading || !name.trim()}
-            className="w-full rounded-lg bg-[#F59E0B] px-4 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create Organization'}
           </button>
@@ -272,7 +272,7 @@ function InlineEditName({
         onBlur={save}
         onKeyDown={handleKeyDown}
         disabled={saving}
-        className="rounded-lg border border-[#F59E0B] bg-white px-3 py-1.5 text-xl font-bold text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#F59E0B] dark:bg-[#0A0A0B] dark:text-[#e4e4e7]"
+        className="rounded-lg border border-[#A6DAFF] bg-white px-3 py-1.5 text-xl font-bold text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:bg-[#04070D] dark:text-[#e4e4e7]"
       />
     )
   }
@@ -467,7 +467,7 @@ export function OrganizationPage() {
 
       {/* ── Section 1: Org Info ─────────────────────────────────────── */}
       {org && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#111113]">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#10131C]">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
               <InlineEditName value={org.name} onSave={handleUpdateName} />
@@ -505,12 +505,12 @@ export function OrganizationPage() {
       )}
 
       {/* ── Section 2: Team Members ────────────────────────────────── */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#111113]">
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#10131C]">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">Team Members</h2>
           <button
             onClick={() => setShowInvite(!showInvite)}
-            className="rounded-lg bg-[#F59E0B] px-4 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80"
+            className="rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80"
           >
             {showInvite ? 'Cancel' : 'Invite Member'}
           </button>
@@ -520,7 +520,7 @@ export function OrganizationPage() {
         {showInvite && (
           <form
             onSubmit={handleInvite}
-            className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-[#1a1a1d] dark:bg-[#0A0A0B]"
+            className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-[#1a1a1d] dark:bg-[#04070D]"
           >
             <div className="flex-1">
               <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-[#a1a1aa]">
@@ -531,7 +531,7 @@ export function OrganizationPage() {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="colleague@company.com"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#F59E0B] focus:outline-none focus:ring-1 focus:ring-[#F59E0B] dark:border-[#2a2a2d] dark:bg-[#0A0A0B] dark:text-[#e4e4e7] dark:placeholder-[#52525b]"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#2a2a2d] dark:bg-[#04070D] dark:text-[#e4e4e7] dark:placeholder-[#52525b]"
                 required
               />
             </div>
@@ -542,7 +542,7 @@ export function OrganizationPage() {
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value as 'admin' | 'member')}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#F59E0B] focus:outline-none focus:ring-1 focus:ring-[#F59E0B] dark:border-[#2a2a2d] dark:bg-[#0A0A0B] dark:text-[#e4e4e7]"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#2a2a2d] dark:bg-[#04070D] dark:text-[#e4e4e7]"
               >
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>
@@ -551,7 +551,7 @@ export function OrganizationPage() {
             <button
               type="submit"
               disabled={inviteLoading || !inviteEmail.trim()}
-              className="rounded-lg bg-[#F59E0B] px-4 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {inviteLoading ? 'Sending...' : 'Send Invite'}
             </button>
@@ -590,7 +590,7 @@ export function OrganizationPage() {
                         <select
                           value={member.role}
                           onChange={(e) => handleChangeRole(member.user_id, e.target.value)}
-                          className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-900 focus:border-[#F59E0B] focus:outline-none focus:ring-1 focus:ring-[#F59E0B] dark:border-[#2a2a2d] dark:bg-[#0A0A0B] dark:text-[#e4e4e7]"
+                          className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#2a2a2d] dark:bg-[#04070D] dark:text-[#e4e4e7]"
                         >
                           <option value="admin">Admin</option>
                           <option value="member">Member</option>

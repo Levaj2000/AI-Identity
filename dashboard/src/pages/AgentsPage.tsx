@@ -41,7 +41,7 @@ export function AgentsPage() {
         </div>
         <Link
           to="/dashboard/agents/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-[#F59E0B] px-4 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -68,7 +68,7 @@ export function AgentsPage() {
         <>
           {/* Desktop skeleton: table rows */}
           <div className="hidden space-y-0 md:block">
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
               {/* Header row */}
               <div className="border-b border-gray-200 px-6 py-3 dark:border-[#1a1a1d]">
                 <div className="h-3 w-48 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
@@ -92,7 +92,7 @@ export function AgentsPage() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-[#111113]"
+                className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-[#10131C]"
               />
             ))}
           </div>

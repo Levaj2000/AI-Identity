@@ -40,7 +40,7 @@ export function RequestVolumeChart() {
   }, [])
 
   if (isLoading) {
-    return <div className="h-80 animate-pulse rounded-xl bg-gray-200 dark:bg-[#111113]" />
+    return <div className="h-80 animate-pulse rounded-xl bg-gray-200 dark:bg-[#10131C]" />
   }
 
   const dayLabels = data.map((d) => {
@@ -65,7 +65,7 @@ export function RequestVolumeChart() {
   const areaPath = `${linePath} L${points[points.length - 1].x},${padding.top + innerHeight} L${points[0].x},${padding.top + innerHeight} Z`
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
       <div className="mb-4 flex items-start justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">
@@ -73,7 +73,7 @@ export function RequestVolumeChart() {
           </h2>
           <p className="text-sm text-gray-500 dark:text-[#71717a]">Last 7 days</p>
         </div>
-        <span className="text-2xl font-bold text-[#F59E0B]">{total.toLocaleString()}</span>
+        <span className="text-2xl font-bold text-[#A6DAFF]">{total.toLocaleString()}</span>
       </div>
 
       {total === 0 ? (
@@ -88,8 +88,8 @@ export function RequestVolumeChart() {
         >
           <defs>
             <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
+              <stop offset="0%" stopColor="#A6DAFF" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#A6DAFF" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -97,7 +97,7 @@ export function RequestVolumeChart() {
           <path
             d={linePath}
             fill="none"
-            stroke="#F59E0B"
+            stroke="#A6DAFF"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -109,8 +109,8 @@ export function RequestVolumeChart() {
                 cx={p.x}
                 cy={p.y}
                 r={hoveredIndex === i ? 5 : 3.5}
-                fill="#F59E0B"
-                stroke="#0A0A0B"
+                fill="#A6DAFF"
+                stroke="#04070D"
                 strokeWidth="2"
                 className="cursor-pointer transition-all"
                 onMouseEnter={() => setHoveredIndex(i)}
@@ -133,14 +133,14 @@ export function RequestVolumeChart() {
                     height="22"
                     rx="4"
                     fill="#1a1a1d"
-                    stroke="#F59E0B"
+                    stroke="#A6DAFF"
                     strokeWidth="0.5"
                   />
                   <text
                     x={p.x}
                     y={p.y - 15}
                     textAnchor="middle"
-                    fill="#F59E0B"
+                    fill="#A6DAFF"
                     fontSize="12"
                     fontWeight="600"
                   >

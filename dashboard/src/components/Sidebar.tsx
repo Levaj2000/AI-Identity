@@ -169,7 +169,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       {/* Sidebar panel */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out dark:border-[#1a1a1d] dark:bg-[#0A0A0B] lg:static lg:z-auto lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out dark:border-[#1a1a1d] dark:bg-[#04070D] lg:static lg:z-auto lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -189,7 +189,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-[#F59E0B]/10 text-[#F59E0B] dark:bg-[#F59E0B]/10 dark:text-[#F59E0B]'
+                    ? 'bg-[#A6DAFF]/10 text-[#A6DAFF] dark:bg-[#A6DAFF]/10 dark:text-[#A6DAFF]'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d] dark:hover:text-[#e4e4e7]'
                 }`
               }
@@ -208,7 +208,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             className={({ isActive }) =>
               `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-[#F59E0B]/10 text-[#F59E0B] dark:bg-[#F59E0B]/10 dark:text-[#F59E0B]'
+                  ? 'bg-[#A6DAFF]/10 text-[#A6DAFF] dark:bg-[#A6DAFF]/10 dark:text-[#A6DAFF]'
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d] dark:hover:text-[#e4e4e7]'
               }`
             }

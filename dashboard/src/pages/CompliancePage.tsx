@@ -264,7 +264,7 @@ export function CompliancePage() {
         <div className="flex items-center gap-2">
           <button
             onClick={exportCSV}
-            className="rounded-lg border border-[#1a1a1d] bg-[#111113] px-3 py-2 text-sm text-gray-300 hover:border-[#F59E0B]/30 hover:text-white transition-colors"
+            className="rounded-lg border border-[#1a1a1d] bg-[#10131C] px-3 py-2 text-sm text-gray-300 hover:border-[#A6DAFF]/30 hover:text-white transition-colors"
           >
             <span className="flex items-center gap-1.5">
               <svg
@@ -284,7 +284,7 @@ export function CompliancePage() {
           </button>
           <button
             onClick={exportJSON}
-            className="rounded-lg border border-[#1a1a1d] bg-[#111113] px-3 py-2 text-sm text-gray-300 hover:border-[#F59E0B]/30 hover:text-white transition-colors"
+            className="rounded-lg border border-[#1a1a1d] bg-[#10131C] px-3 py-2 text-sm text-gray-300 hover:border-[#A6DAFF]/30 hover:text-white transition-colors"
           >
             <span className="flex items-center gap-1.5">
               <svg
@@ -308,7 +308,7 @@ export function CompliancePage() {
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Chain Integrity */}
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
           <div className="flex items-center justify-between">
             <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
               Chain Integrity
@@ -342,14 +342,14 @@ export function CompliancePage() {
           <button
             onClick={runVerify}
             disabled={verifying}
-            className="mt-3 w-full rounded-lg bg-[#F59E0B]/10 px-3 py-1.5 text-xs font-medium text-[#F59E0B] hover:bg-[#F59E0B]/20 transition-colors disabled:opacity-50"
+            className="mt-3 w-full rounded-lg bg-[#A6DAFF]/10 px-3 py-1.5 text-xs font-medium text-[#A6DAFF] hover:bg-[#A6DAFF]/20 transition-colors disabled:opacity-50"
           >
             {verifying ? 'Verifying...' : 'Verify Now'}
           </button>
         </div>
 
         {/* Total Entries */}
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
           <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
             Total Entries
           </p>
@@ -360,7 +360,7 @@ export function CompliancePage() {
         </div>
 
         {/* Allow / Deny */}
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
           <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Decisions</p>
           <div className="mt-2 flex items-baseline gap-3">
             <span className="text-2xl font-bold text-emerald-400">{stats.allowCount}</span>
@@ -379,11 +379,11 @@ export function CompliancePage() {
         </div>
 
         {/* Compliance Score */}
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
           <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
             Compliance Readiness
           </p>
-          <p className="mt-2 text-2xl font-bold text-[#F59E0B]">SOC 2</p>
+          <p className="mt-2 text-2xl font-bold text-[#A6DAFF]">SOC 2</p>
           <div className="mt-2 space-y-1">
             <div className="flex items-center gap-2 text-xs">
               <svg
@@ -506,7 +506,7 @@ export function CompliancePage() {
             setFilterDecision(e.target.value)
             setOffset(0)
           }}
-          className="rounded-lg border border-[#1a1a1d] bg-[#111113] px-3 py-2 text-sm text-gray-300 focus:border-[#F59E0B]/50 focus:outline-none"
+          className="rounded-lg border border-[#1a1a1d] bg-[#10131C] px-3 py-2 text-sm text-gray-300 focus:border-[#A6DAFF]/50 focus:outline-none"
         >
           <option value="">All decisions</option>
           <option value="allowed">Allowed</option>
@@ -522,7 +522,7 @@ export function CompliancePage() {
             setFilterAgent(e.target.value)
             setOffset(0)
           }}
-          className="rounded-lg border border-[#1a1a1d] bg-[#111113] px-3 py-2 text-sm text-gray-300 placeholder:text-gray-600 focus:border-[#F59E0B]/50 focus:outline-none"
+          className="rounded-lg border border-[#1a1a1d] bg-[#10131C] px-3 py-2 text-sm text-gray-300 placeholder:text-gray-600 focus:border-[#A6DAFF]/50 focus:outline-none"
         />
 
         <span className="text-xs text-gray-500">
@@ -535,7 +535,7 @@ export function CompliancePage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#1a1a1d] bg-[#111113]">
+              <tr className="border-b border-[#1a1a1d] bg-[#10131C]">
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
                   #
                 </th>
@@ -567,13 +567,13 @@ export function CompliancePage() {
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
                     <div className="flex items-center justify-center gap-2">
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-[#F59E0B]" />
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]" />
                       <div
-                        className="h-2 w-2 animate-bounce rounded-full bg-[#F59E0B]"
+                        className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]"
                         style={{ animationDelay: '0.15s' }}
                       />
                       <div
-                        className="h-2 w-2 animate-bounce rounded-full bg-[#F59E0B]"
+                        className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]"
                         style={{ animationDelay: '0.3s' }}
                       />
                     </div>
@@ -592,7 +592,7 @@ export function CompliancePage() {
                 entries.map((entry) => (
                   <tr
                     key={entry.id}
-                    className="bg-[#0A0A0B] hover:bg-[#111113]/50 transition-colors cursor-pointer"
+                    className="bg-[#04070D] hover:bg-[#10131C]/50 transition-colors cursor-pointer"
                     onClick={() => setSelectedEvent(entry)}
                   >
                     <td className="px-4 py-3 font-mono text-xs text-gray-500">{entry.id}</td>
@@ -639,7 +639,7 @@ export function CompliancePage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-[#1a1a1d] bg-[#111113] px-4 py-3">
+          <div className="flex items-center justify-between border-t border-[#1a1a1d] bg-[#10131C] px-4 py-3">
             <p className="text-xs text-gray-500">
               Page {currentPage} of {totalPages}
             </p>
@@ -665,7 +665,7 @@ export function CompliancePage() {
 
       {/* Hash chain visualization */}
       {entries.length > 0 && (
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 p-5">
+        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 p-5">
           <h3 className="text-sm font-medium text-white">HMAC Chain Visualization</h3>
           <p className="mt-1 text-xs text-gray-500">
             Each entry's hash includes the previous entry's hash, creating a tamper-evident chain
@@ -704,7 +704,7 @@ export function CompliancePage() {
                     width="20"
                     height="12"
                     viewBox="0 0 20 12"
-                    className="text-[#F59E0B]/40 shrink-0"
+                    className="text-[#A6DAFF]/40 shrink-0"
                   >
                     <line x1="0" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="1.5" />
                     <polyline

@@ -19,7 +19,7 @@ interface KeyTableProps {
 export function KeyTable({ keys, isAgentRevoked, onRevoke }: KeyTableProps) {
   if (keys.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center dark:border-[#2a2a2d] dark:bg-[#111113]/50">
+      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center dark:border-[#2a2a2d] dark:bg-[#10131C]/50">
         <p className="text-sm text-gray-500 dark:text-[#71717a]">No keys match this filter.</p>
       </div>
     )
