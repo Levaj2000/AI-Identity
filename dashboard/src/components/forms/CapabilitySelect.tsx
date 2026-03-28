@@ -68,7 +68,7 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
   const borderColor = error
     ? 'border-red-500 dark:border-red-500'
     : isOpen
-      ? 'border-[#F59E0B] ring-2 ring-[#F59E0B]/50 dark:border-[#F59E0B]'
+      ? 'border-[#A6DAFF] ring-2 ring-[#A6DAFF]/50 dark:border-[#A6DAFF]'
       : 'border-gray-300 dark:border-[#2a2a2d]'
 
   return (
@@ -77,14 +77,14 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex min-h-[2.5rem] w-full flex-wrap items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-left transition-colors dark:bg-[#0A0A0B] ${borderColor}`}
+        className={`flex min-h-[2.5rem] w-full flex-wrap items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-left transition-colors dark:bg-[#04070D] ${borderColor}`}
       >
         {/* Selected pills */}
         {selected.length > 0 ? (
           selected.map((capId) => (
             <span
               key={capId}
-              className="inline-flex items-center gap-1 rounded-md border border-[#F59E0B]/30 bg-[#F59E0B]/10 px-2 py-0.5 text-xs font-medium text-[#F59E0B] dark:border-[#F59E0B]/20 dark:bg-[#F59E0B]/5"
+              className="inline-flex items-center gap-1 rounded-md border border-[#A6DAFF]/30 bg-[#A6DAFF]/10 px-2 py-0.5 text-xs font-medium text-[#A6DAFF] dark:border-[#A6DAFF]/20 dark:bg-[#A6DAFF]/5"
             >
               {getCapName(capId)}
               <button
@@ -93,7 +93,7 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
                   e.stopPropagation()
                   removeCapability(capId)
                 }}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-[#F59E0B]/20"
+                className="ml-0.5 rounded-full p-0.5 hover:bg-[#A6DAFF]/20"
                 aria-label={`Remove ${getCapName(capId)}`}
               >
                 <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
@@ -124,7 +124,7 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-[#2a2a2d] dark:bg-[#111113]">
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-[#2a2a2d] dark:bg-[#10131C]">
           {capabilities.length === 0 ? (
             <div className="px-4 py-3 text-sm text-gray-400 dark:text-[#52525b]">
               {isLoading ? 'Loading...' : 'No capabilities available'}
@@ -145,13 +145,13 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
                     <div
                       className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
                         isSelected
-                          ? 'border-[#F59E0B] bg-[#F59E0B]'
+                          ? 'border-[#A6DAFF] bg-[#A6DAFF]'
                           : 'border-gray-300 dark:border-[#3a3a3d]'
                       }`}
                     >
                       {isSelected && (
                         <svg
-                          className="h-3 w-3 text-[#0A0A0B]"
+                          className="h-3 w-3 text-[#04070D]"
                           viewBox="0 0 20 20"
                           fill="currentColor"
                         >

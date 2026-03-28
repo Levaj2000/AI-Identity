@@ -295,7 +295,7 @@ export function ForensicsPage() {
           </button>
           <button
             onClick={exportJSON}
-            className="px-3 py-2 text-sm font-medium text-zinc-100 bg-amber-600 hover:bg-amber-500 rounded-lg transition-colors"
+            className="px-3 py-2 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 rounded-lg transition-colors"
           >
             Export JSON
           </button>
@@ -314,7 +314,7 @@ export function ForensicsPage() {
                 setSelectedAgent(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
             >
               <option value="">All Agents</option>
               {agents.map((a) => (
@@ -335,7 +335,7 @@ export function ForensicsPage() {
                 setStartDate(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
             />
           </div>
 
@@ -349,7 +349,7 @@ export function ForensicsPage() {
                 setEndDate(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
             />
           </div>
 
@@ -362,7 +362,7 @@ export function ForensicsPage() {
                 setFilterDecision(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
             >
               <option value="">All</option>
               <option value="allowed">Allowed</option>
@@ -382,7 +382,7 @@ export function ForensicsPage() {
                 setOffset(0)
               }}
               placeholder="/v1/chat"
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-sky-400"
             />
           </div>
         </div>
@@ -398,7 +398,7 @@ export function ForensicsPage() {
                 setFilterActionType(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
             >
               <option value="">All</option>
               <option value="agent_created">agent_created</option>
@@ -419,7 +419,7 @@ export function ForensicsPage() {
                 setFilterModel(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-amber-500"
+              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
             >
               <option value="">All</option>
               <option value="gpt-4">gpt-4</option>
@@ -445,7 +445,7 @@ export function ForensicsPage() {
                 placeholder="Min"
                 step="0.001"
                 min="0"
-                className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-sky-400"
               />
               <span className="text-zinc-500 text-sm">–</span>
               <input
@@ -458,7 +458,7 @@ export function ForensicsPage() {
                 placeholder="Max"
                 step="0.001"
                 min="0"
-                className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-sky-400"
               />
             </div>
           </div>
@@ -470,7 +470,7 @@ export function ForensicsPage() {
             <button
               onClick={handleReconstruct}
               disabled={reconstructing}
-              className="px-4 py-2 text-sm font-medium text-zinc-100 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 rounded-lg transition-colors inline-flex items-center gap-2"
+              className="px-4 py-2 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 disabled:opacity-50 rounded-lg transition-colors inline-flex items-center gap-2"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -491,7 +491,7 @@ export function ForensicsPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
             <div className="text-xs text-zinc-500 uppercase tracking-wider">Total Events</div>
-            <div className="text-2xl font-bold text-amber-400 mt-1">
+            <div className="text-2xl font-bold text-[#A6DAFF] mt-1">
               {stats.total_events.toLocaleString()}
             </div>
           </div>
@@ -538,7 +538,7 @@ export function ForensicsPage() {
             onClick={() => setViewMode('timeline')}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
               viewMode === 'timeline'
-                ? 'bg-amber-600 text-white'
+                ? 'bg-[#A6DAFF] text-[#04070D]'
                 : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
@@ -547,7 +547,9 @@ export function ForensicsPage() {
           <button
             onClick={() => setViewMode('table')}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              viewMode === 'table' ? 'bg-amber-600 text-white' : 'text-zinc-400 hover:text-zinc-200'
+              viewMode === 'table'
+                ? 'bg-[#A6DAFF] text-[#04070D]'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             Table
@@ -672,7 +674,7 @@ export function ForensicsPage() {
                   </span>
                   <div className="flex-1 bg-zinc-700/50 rounded-full h-2">
                     <div
-                      className="bg-amber-500 h-2 rounded-full transition-all"
+                      className="bg-[#A6DAFF] h-2 rounded-full transition-all"
                       style={{ width: `${pct}%` }}
                     />
                   </div>

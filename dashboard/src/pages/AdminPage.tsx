@@ -187,7 +187,7 @@ export function AdminPage() {
 
       {/* Tier Distribution */}
       {stats && (
-        <div className="bg-[#111113] border border-[#1a1a1d] rounded-xl p-5">
+        <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl p-5">
           <h3 className="text-sm font-medium text-gray-400 mb-3">Users by Tier</h3>
           <div className="flex gap-4">
             {['free', 'pro', 'enterprise'].map((tier) => (
@@ -202,7 +202,7 @@ export function AdminPage() {
 
       {/* Table Counts */}
       {health && (
-        <div className="bg-[#111113] border border-[#1a1a1d] rounded-xl p-5">
+        <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl p-5">
           <h3 className="text-sm font-medium text-gray-400 mb-3">Database Tables</h3>
           <div className="flex gap-6">
             {Object.entries(health.table_counts).map(([table, count]) => (
@@ -216,7 +216,7 @@ export function AdminPage() {
       )}
 
       {/* User Management */}
-      <div className="bg-[#111113] border border-[#1a1a1d] rounded-xl overflow-hidden">
+      <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl overflow-hidden">
         <div className="p-5 border-b border-[#1a1a1d]">
           <h3 className="text-lg font-medium text-white mb-3">User Management</h3>
           <div className="flex flex-wrap gap-3">
@@ -228,11 +228,11 @@ export function AdminPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="px-3 py-1.5 bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#F59E0B]/50 w-64"
+                className="px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#A6DAFF]/50 w-64"
               />
               <button
                 onClick={handleSearch}
-                className="px-3 py-1.5 bg-[#F59E0B]/10 text-[#F59E0B] rounded-lg text-sm hover:bg-[#F59E0B]/20 transition-colors"
+                className="px-3 py-1.5 bg-[#A6DAFF]/10 text-[#A6DAFF] rounded-lg text-sm hover:bg-[#A6DAFF]/20 transition-colors"
               >
                 Search
               </button>
@@ -242,7 +242,7 @@ export function AdminPage() {
             <select
               value={tierFilter}
               onChange={(e) => handleTierFilter(e.target.value as TierFilter)}
-              className="px-3 py-1.5 bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg text-sm text-white focus:outline-none focus:border-[#F59E0B]/50"
+              className="px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white focus:outline-none focus:border-[#A6DAFF]/50"
             >
               <option value="">All tiers</option>
               <option value="free">Free</option>
@@ -297,7 +297,7 @@ export function AdminPage() {
                       value={user.tier}
                       disabled={changingTier === user.id}
                       onChange={(e) => handleTierChange(user.id, e.target.value)}
-                      className="px-2 py-1 bg-[#0A0A0B] border border-[#1a1a1d] rounded text-xs text-white focus:outline-none focus:border-[#F59E0B]/50 disabled:opacity-50"
+                      className="px-2 py-1 bg-[#04070D] border border-[#1a1a1d] rounded text-xs text-white focus:outline-none focus:border-[#A6DAFF]/50 disabled:opacity-50"
                     >
                       <option value="free">Free</option>
                       <option value="pro">Pro</option>
@@ -369,7 +369,7 @@ function StatCard({
 }) {
   return (
     <div
-      className="bg-[#111113] border border-[#1a1a1d] rounded-xl p-5 cursor-pointer hover:border-[#F59E0B]/40 transition-colors"
+      className="bg-[#10131C] border border-[#1a1a1d] rounded-xl p-5 cursor-pointer hover:border-[#A6DAFF]/40 transition-colors"
       onClick={onClick}
     >
       <div className="flex items-start justify-between">
@@ -387,7 +387,7 @@ function StatCard({
 function TierBadge({ tier }: { tier: string }) {
   const colors: Record<string, string> = {
     free: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-    pro: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20',
+    pro: 'bg-[#A6DAFF]/10 text-[#A6DAFF] border-[#A6DAFF]/20',
     enterprise: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   }
   return (

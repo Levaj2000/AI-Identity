@@ -57,6 +57,12 @@ export default function Nav() {
               {link.label}
             </Link>
           ))}
+          <a
+            href="https://dashboard.ai-identity.co"
+            className="text-sm text-[rgba(213,219,230,0.7)] hover:text-white transition-colors"
+          >
+            Dashboard
+          </a>
         </div>
 
         {/* CTA + Mobile Toggle */}
@@ -106,6 +112,12 @@ export default function Nav() {
               {link.label}
             </Link>
           ))}
+          <a
+            href="https://dashboard.ai-identity.co"
+            className="block text-sm py-2 text-[rgba(213,219,230,0.7)]"
+          >
+            Dashboard
+          </a>
           <a
             href="https://dashboard.ai-identity.co"
             className="block w-full text-center px-4 py-2 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 text-[rgb(166,218,255)] text-sm font-medium mt-2"

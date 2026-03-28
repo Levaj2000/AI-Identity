@@ -29,9 +29,9 @@ export function StatDetailDrawer({ mode, onClose }: Props) {
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#111113] border-l border-[#1a1a1d] z-50 overflow-y-auto shadow-2xl animate-slide-in flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#10131C] border-l border-[#1a1a1d] z-50 overflow-y-auto shadow-2xl animate-slide-in flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-[#111113]/95 backdrop-blur border-b border-[#1a1a1d] px-6 py-4 flex items-center justify-between z-10 shrink-0">
+        <div className="sticky top-0 bg-[#10131C]/95 backdrop-blur border-b border-[#1a1a1d] px-6 py-4 flex items-center justify-between z-10 shrink-0">
           <h2 className="text-lg font-semibold text-white">{drawerTitle(mode)}</h2>
           <button
             onClick={onClose}
@@ -118,11 +118,11 @@ function UsersPanel() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          className="flex-1 px-3 py-1.5 bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#F59E0B]/50"
+          className="flex-1 px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#A6DAFF]/50"
         />
         <button
           onClick={handleSearch}
-          className="px-3 py-1.5 bg-[#F59E0B]/10 text-[#F59E0B] rounded-lg text-sm hover:bg-[#F59E0B]/20 transition-colors"
+          className="px-3 py-1.5 bg-[#A6DAFF]/10 text-[#A6DAFF] rounded-lg text-sm hover:bg-[#A6DAFF]/20 transition-colors"
         >
           Search
         </button>
@@ -137,7 +137,7 @@ function UsersPanel() {
             {data?.items.map((u) => (
               <div
                 key={u.id}
-                className="bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between"
+                className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between"
               >
                 <div className="min-w-0">
                   <div className="text-sm text-white truncate">{u.email || '--'}</div>
@@ -237,12 +237,12 @@ function AgentsPanel() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          className="flex-1 px-3 py-1.5 bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#F59E0B]/50"
+          className="flex-1 px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#A6DAFF]/50"
         />
         <select
           value={statusFilter}
           onChange={(e) => handleStatusChange(e.target.value)}
-          className="px-3 py-1.5 bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg text-sm text-white focus:outline-none focus:border-[#F59E0B]/50"
+          className="px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white focus:outline-none focus:border-[#A6DAFF]/50"
         >
           <option value="">All statuses</option>
           <option value="active">Active</option>
@@ -251,7 +251,7 @@ function AgentsPanel() {
         </select>
         <button
           onClick={handleSearch}
-          className="px-3 py-1.5 bg-[#F59E0B]/10 text-[#F59E0B] rounded-lg text-sm hover:bg-[#F59E0B]/20 transition-colors"
+          className="px-3 py-1.5 bg-[#A6DAFF]/10 text-[#A6DAFF] rounded-lg text-sm hover:bg-[#A6DAFF]/20 transition-colors"
         >
           Search
         </button>
@@ -266,7 +266,7 @@ function AgentsPanel() {
             {data?.items.map((a) => (
               <div
                 key={a.id}
-                className="bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between"
+                className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between"
               >
                 <div className="min-w-0">
                   <div className="text-sm text-white truncate">{a.name}</div>
@@ -333,7 +333,7 @@ function RequestsPanel() {
         {data?.items.map((u, idx) => (
           <div
             key={u.id}
-            className="bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between"
+            className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between"
           >
             <div className="flex items-center gap-3 min-w-0">
               <span className="text-xs text-gray-600 font-mono w-6 text-right shrink-0">
@@ -347,7 +347,7 @@ function RequestsPanel() {
               </div>
             </div>
             <div className="text-right shrink-0 ml-3">
-              <div className="text-sm font-semibold text-[#F59E0B]">
+              <div className="text-sm font-semibold text-[#A6DAFF]">
                 {u.requests_this_month.toLocaleString()}
               </div>
               <div className="text-xs text-gray-500">requests</div>
@@ -405,7 +405,7 @@ function HealthPanel() {
   return (
     <div className="px-6 py-5 space-y-5">
       {/* Overall status */}
-      <div className="bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg px-4 py-4">
+      <div className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-4">
         <div className="text-xs text-gray-500 mb-2">Overall Status</div>
         <div className="flex items-center gap-2">
           <span
@@ -416,7 +416,7 @@ function HealthPanel() {
       </div>
 
       {/* DB Latency */}
-      <div className="bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg px-4 py-4">
+      <div className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-4">
         <div className="text-xs text-gray-500 mb-2">Database Latency</div>
         <div className="flex items-center gap-3">
           <span className={`text-2xl font-semibold ${latencyColor}`}>{data.db_latency_ms}ms</span>
@@ -433,7 +433,7 @@ function HealthPanel() {
       </div>
 
       {/* Table row counts */}
-      <div className="bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg px-4 py-4">
+      <div className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-4">
         <div className="text-xs text-gray-500 mb-3">Table Row Counts</div>
         <div className="space-y-2">
           {Object.entries(data.table_counts).map(([table, count]) => (
@@ -456,7 +456,7 @@ function HealthPanel() {
 function TierBadge({ tier }: { tier: string }) {
   const colors: Record<string, string> = {
     free: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-    pro: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20',
+    pro: 'bg-[#A6DAFF]/10 text-[#A6DAFF] border-[#A6DAFF]/20',
     enterprise: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   }
   return (
