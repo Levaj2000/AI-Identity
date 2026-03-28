@@ -10,67 +10,53 @@ import PricingCardFramerComponent from "../framer/pricing-card";
 export default function Home() {
   return (
     <div className="flex flex-col items-center">
-      {/* ── Hero Section ── */}
-      <section className="relative w-full overflow-hidden pt-32 pb-20 px-6 min-h-[90vh] flex items-center justify-center">
-        {/* Subtle atmospheric depth - very dark with minimal blue hint */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#060a12] via-[rgb(4,7,13)] to-[rgb(4,7,13)] pointer-events-none" />
-        {/* Very subtle mist - barely visible */}
-        <div className="absolute top-[30%] left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-[radial-gradient(ellipse_at_center,rgba(150,180,210,0.03)_0%,transparent_70%)] pointer-events-none" />
-        {/* Floating particles */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {Array.from({ length: 30 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute rounded-full bg-white/[0.15] animate-pulse"
-              style={{
-                width: `${Math.random() * 3 + 1}px`,
-                height: `${Math.random() * 3 + 1}px`,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDuration: `${Math.random() * 4 + 3}s`,
-                animationDelay: `${Math.random() * 5}s`,
-              }}
-            />
-          ))}
+      {/* ── Hero Section — uses CTA component for 3D particle background ── */}
+      <section className="relative w-full overflow-hidden min-h-[90vh]">
+        {/* Framer CTA component provides the 3D particle/mist background */}
+        <div className="absolute inset-0">
+          <CtaSectionFramerComponent.Responsive />
         </div>
 
-        <div className="relative max-w-[1200px] mx-auto text-center">
-          <div className="flex justify-center mb-8">
-            <BadgeFramerComponent.Responsive content="IDENTITY FOR AI AGENTS" />
-          </div>
+        {/* Hero content overlaid on top */}
+        <div className="relative z-10 pt-32 pb-20 px-6 min-h-[90vh] flex items-center justify-center">
+          <div className="max-w-[1200px] mx-auto text-center">
+            <div className="flex justify-center mb-8">
+              <BadgeFramerComponent.Responsive content="IDENTITY FOR AI AGENTS" />
+            </div>
 
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6 max-w-4xl mx-auto">
-            Every AI Agent Deserves an{" "}
-            <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
-              Identity
-            </span>
-          </h1>
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6 max-w-4xl mx-auto">
+              Every AI Agent Deserves an{" "}
+              <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
+                Identity
+              </span>
+            </h1>
 
-          <p className="text-lg md:text-xl text-[rgba(213,219,230,0.6)] max-w-2xl mx-auto mb-10">
-            Per-agent API keys, scoped permissions, and tamper-proof audit trails.
-            Know which agent did what, when, and why -- before regulators ask.
-          </p>
+            <p className="text-lg md:text-xl text-[rgba(213,219,230,0.6)] max-w-2xl mx-auto mb-10">
+              Per-agent API keys, scoped permissions, and tamper-proof audit trails.
+              Know which agent did what, when, and why -- before regulators ask.
+            </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <MainButtonFramerComponent.Responsive
-              title="Start Free Trial"
-              link="https://dashboard.ai-identity.co"
-              newTab={true}
-            />
-            <a
-              href="/how-it-works"
-              className="px-6 py-3 rounded-lg border border-[rgba(216,231,242,0.07)] text-sm text-[rgba(213,219,230,0.7)] hover:text-white hover:border-[rgba(216,231,242,0.15)] transition-colors"
-            >
-              See How It Works
-            </a>
-          </div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <MainButtonFramerComponent.Responsive
+                title="Start Free Trial"
+                link="https://dashboard.ai-identity.co"
+                newTab={true}
+              />
+              <a
+                href="/how-it-works"
+                className="px-6 py-3 rounded-lg border border-[rgba(216,231,242,0.07)] text-sm text-[rgba(213,219,230,0.7)] hover:text-white hover:border-[rgba(216,231,242,0.15)] transition-colors"
+              >
+                See How It Works
+              </a>
+            </div>
 
-          {/* Trust badges */}
-          <div className="mt-16 flex flex-wrap justify-center gap-8 text-[rgba(213,219,230,0.3)] text-xs uppercase tracking-wider">
-            <span>SOC 2 Type II</span>
-            <span>EU AI Act Ready</span>
-            <span>GDPR Compliant</span>
-            <span>ISO 27001</span>
+            {/* Trust badges */}
+            <div className="mt-16 flex flex-wrap justify-center gap-8 text-[rgba(213,219,230,0.3)] text-xs uppercase tracking-wider">
+              <span>SOC 2 Type II</span>
+              <span>EU AI Act Ready</span>
+              <span>GDPR Compliant</span>
+              <span>ISO 27001</span>
+            </div>
           </div>
         </div>
       </section>
