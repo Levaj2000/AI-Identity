@@ -10,6 +10,92 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: "prepare-ai-agents-eu-ai-act-2026",
+    title:
+      "How to Prepare Your AI Agents for the August 2026 EU AI Act Deadline",
+    date: "March 27, 2026",
+    readTime: "10 min read",
+    excerpt:
+      "The EU AI Act's high-risk provisions take effect August 2, 2026. If your AI agents operate in hiring, finance, healthcare, or critical infrastructure, you have four months to get compliant. Here's exactly what you need to do.",
+    tags: ["EU AI Act", "Compliance", "AI Agents", "Regulation"],
+    sections: [
+      {
+        heading: "The Clock Is Ticking: August 2, 2026",
+        content: [
+          "The EU AI Act entered into force on August 1, 2024, with a phased enforcement timeline. The prohibitions on unacceptable-risk AI (social scoring, manipulative systems) took effect in February 2025. General-purpose AI model obligations kicked in August 2025.",
+          "But the provision that will hit most enterprise AI deployments lands on August 2, 2026: the full requirements for high-risk AI systems under Annex III. This is when documentation, logging, human oversight, and risk management obligations become legally enforceable. If your agents operate in any high-risk domain, this deadline applies to you.",
+          "The penalties are not abstract. Violations carry fines of up to 15 million EUR or 3% of global annual turnover — whichever is higher. For prohibited practices, that ceiling rises to 35 million EUR or 7% of turnover. These are GDPR-scale consequences applied to AI systems.",
+        ],
+      },
+      {
+        heading: "Step 1: Classify Your Agents",
+        content: [
+          "The Act defines four risk tiers, and your compliance obligations depend entirely on where your agents fall. Getting classification right is the first step — and the one most teams skip.",
+          "Unacceptable risk covers AI systems that are outright banned: social scoring, real-time biometric surveillance in public spaces (with narrow law enforcement exceptions), and systems that exploit vulnerabilities of specific groups. If your agents do any of this, stop deploying them.",
+          "High-risk is where most enterprise agents land. The Act lists specific use cases in Annex III: AI in employment and worker management (resume screening, interview evaluation, performance monitoring), credit scoring and financial risk assessment, healthcare diagnostics and treatment recommendations, critical infrastructure management (energy, water, transport), education (admissions, grading), law enforcement, and migration and border control.",
+          "Limited risk covers chatbots, deepfake generators, and emotion recognition systems outside of banned contexts. These carry transparency obligations — users must know they are interacting with AI — but not the full compliance burden of high-risk systems.",
+          "Minimal risk applies to spam filters, recommendation engines, and AI in video games. No specific obligations beyond voluntary codes of conduct.",
+          "The critical insight for agent deployments: classification is based on use case, not architecture. The same LLM-powered agent is minimal risk when recommending movies and high-risk when screening job applications. Classify each agent by what it does, not what it is.",
+        ],
+      },
+      {
+        heading: "Step 2: Implement Technical Documentation",
+        content: [
+          "Article 11 of the Act requires comprehensive technical documentation for every high-risk AI system. This is not a one-time filing — it must be kept current throughout the system's lifecycle.",
+          "Your documentation must cover the system's intended purpose and how it works, design specifications and development methodology, training data governance (what data was used, how it was curated, what biases were identified and mitigated), accuracy and robustness metrics with testing methodology, and the risk management measures you have in place.",
+          "For AI agents specifically, this means documenting which models power each agent, what tools and APIs each agent can access, how the agent makes decisions (the chain from input to action), and what guardrails constrain the agent's behavior.",
+          "AI Identity's agent registry provides a foundation here. Every registered agent has structured metadata — name, description, capabilities, policy bindings, and version history. This metadata forms the core of your technical documentation. The [compliance assessment](/compliance) feature maps this data directly to EU AI Act requirements, identifying gaps before an auditor does.",
+        ],
+      },
+      {
+        heading: "Step 3: Build Continuous Logging",
+        content: [
+          "Article 12 mandates automatic logging throughout the AI system's lifecycle. Logs must capture the periods during which the system was in use, the reference databases the system checked, input data that led to specific decisions, and identification of natural persons involved in verification of results.",
+          "Standard application logs do not meet this standard. The Act requires logs that are complete (covering every decision, not just errors), attributable (tied to a specific AI system and its operator), retained appropriately (for the system's intended purpose and regulatory requirements), and accessible to authorities upon request.",
+          "This is where most teams underestimate the effort. Bolting logging onto an existing agent deployment after the fact is painful and error-prone. Building it into the infrastructure from the start is straightforward.",
+          "AI Identity's [tamper-proof audit trail](/forensics) was designed for exactly this requirement. Every request through the gateway is logged with the agent's identity, the action taken, the policy evaluation result, timestamps, and an HMAC-SHA256 hash chain that makes any tampering detectable. The audit trail is exportable as JSON or CSV with a chain-of-custody verification certificate — exactly what a regulator needs to see.",
+        ],
+      },
+      {
+        heading: "Step 4: Design for Human Oversight",
+        content: [
+          "Article 14 requires that high-risk AI systems are designed to be effectively overseen by humans. This is not a checkbox — the Act specifies what effective oversight means.",
+          "Human overseers must be able to fully understand the system's capabilities and limitations, monitor the system's operation in real time, correctly interpret the system's outputs, decide not to use the system or to disregard its output in any particular situation, and intervene in the system's operation or halt it entirely.",
+          "For autonomous agents, this translates to concrete engineering requirements. You need dashboards that show what each agent is doing in real time, not just aggregate metrics. You need the ability to pause or revoke an agent instantly. You need decision explanations that non-technical overseers can understand. And you need escalation paths for high-stakes decisions.",
+          "AI Identity's policy engine supports this through scoped permissions (agents can only access what they are explicitly allowed to), real-time monitoring via the [dashboard](https://dashboard.ai-identity.co), instant agent revocation through key management, and a fail-closed gateway design where any uncertainty results in a denied request. The planned human-in-the-loop review feature will add explicit approval workflows for sensitive agent actions — a direct response to Article 14's oversight requirements.",
+        ],
+      },
+      {
+        heading: "Step 5: Establish Risk Management",
+        content: [
+          "Article 9 requires a risk management system that operates continuously and iteratively throughout the AI system's lifecycle. This means identifying and analyzing known and reasonably foreseeable risks, estimating and evaluating those risks, adopting appropriate risk management measures, and testing to ensure the measures are effective.",
+          "For agent deployments, risk management is not a document you write once. It is an ongoing process of monitoring agent behavior, identifying new risk patterns, and updating policies accordingly.",
+          "Practically, this means running regular compliance assessments against your agent fleet. AI Identity's [compliance framework](/compliance) automates this — you can run assessments against EU AI Act requirements, NIST AI RMF, and SOC 2 controls at any time. Each assessment produces a scored report with specific findings and remediation guidance. Schedule these weekly or monthly, not just before an audit.",
+        ],
+      },
+      {
+        heading: "The Four-Month Checklist",
+        content: [
+          "With August 2026 approaching, here is a prioritized action plan.",
+          "This month (April 2026): Classify every AI agent in your organization by risk tier. Identify which agents fall into high-risk categories under Annex III. This is the foundation — everything else depends on it.",
+          "May 2026: Implement per-agent identity and logging. Every high-risk agent should have a unique identity, scoped permissions, and a tamper-proof audit trail. If you are starting from shared API keys and application-level logs, this is the biggest lift.",
+          "June 2026: Complete technical documentation for each high-risk agent. Document the system's purpose, design, training data governance, testing methodology, and risk management measures. Map your documentation against the Act's specific requirements.",
+          "July 2026: Run a compliance dry-run. Perform a full assessment against EU AI Act requirements. Identify gaps, remediate them, and re-assess. Produce a compliance evidence package — the same one you would hand to a regulator — and have your legal team review it.",
+          "August 2026: Enforcement begins. Your agents should be operating with per-agent identity, scoped permissions, continuous logging, human oversight capabilities, and documented risk management processes. Compliance evidence should be exportable on demand.",
+        ],
+      },
+      {
+        heading: "Why Agent Infrastructure Matters More Than Agent Intelligence",
+        content: [
+          "The teams racing to build more capable agents are solving the wrong problem. Capability without governance is a liability in regulated environments. The EU AI Act does not care how smart your agent is. It cares whether you can prove it operates safely, transparently, and under human oversight.",
+          "The companies that will deploy agents successfully in the post-regulation era are the ones investing in governance infrastructure now. Per-agent identity, scoped permissions, tamper-proof audit trails, automated compliance assessments, and human oversight tooling. This is not overhead — it is the foundation that makes agent deployment possible in any regulated industry.",
+          "AI Identity provides this infrastructure in a [15-minute integration](https://dashboard.ai-identity.co). Register your agents, set their policies, route their API calls through our gateway, and you have identity, policy enforcement, forensic logging, and compliance evidence built in. Start with the [free tier](/pricing) — five agents, full audit trail, EU AI Act compliance assessments included.",
+          "The deadline is August 2, 2026. The time to prepare is now.",
+        ],
+      },
+    ],
+  },
+  {
     slug: "ai-forensics-vs-observability",
     title:
       "AI Forensics vs. Observability: Why Monitoring Your Agents Isn't Enough",
