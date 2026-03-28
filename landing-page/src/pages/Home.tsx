@@ -341,7 +341,7 @@ export default function Home() {
                 SOC 2, EU AI Act, NIST, and GDPR compliance monitoring with automated assessments and one-click reports.
               </p>
               <a
-                href="/demo"
+                href="https://dashboard.ai-identity.co/demo"
                 className="inline-flex items-center gap-1.5 text-xs text-[rgb(166,218,255)] hover:underline"
               >
                 Try the live demo
@@ -378,7 +378,7 @@ export default function Home() {
           </div>
           <div className="text-center mt-6">
             <a
-              href="/demo"
+              href="https://dashboard.ai-identity.co/demo"
               className="inline-flex items-center gap-2 text-sm text-[rgb(166,218,255)] hover:underline"
             >
               Try it yourself — Interactive API Playground
