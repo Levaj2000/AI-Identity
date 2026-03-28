@@ -190,12 +190,19 @@ export default function Home() {
               </a>
             </div>
 
-            {/* Trust badges */}
-            <div className="mt-16 flex flex-wrap justify-center gap-10 text-sm uppercase tracking-wider">
-              <a href="/security" className="text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">SOC 2 Type II</a>
-              <a href="/eu-ai-act-checklist" className="text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">EU AI Act Ready</a>
-              <a href="/privacy" className="text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">GDPR Compliant</a>
-              <a href="/security" className="text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">ISO 27001</a>
+            {/* Design partner callout + compliance badges */}
+            <div className="mt-16 rounded-xl border border-[rgba(216,231,242,0.07)] bg-white/[0.02] px-6 py-4 max-w-xl mx-auto">
+              <p className="text-sm text-[rgba(213,219,230,0.55)] text-center">
+                AI Identity is in early launch and{" "}
+                <a href="/contact" className="text-[rgb(166,218,255)] hover:underline">actively seeking design partners</a>.
+                Get early access, shape the roadmap, and lock in preferred pricing.
+              </p>
+            </div>
+            <div className="mt-6 flex flex-wrap justify-center gap-8 text-xs uppercase tracking-wider">
+              <a href="/security" className="text-[rgba(213,219,230,0.35)] hover:text-[rgba(213,219,230,0.6)] transition-colors">SOC 2 Type II</a>
+              <a href="/eu-ai-act-checklist" className="text-[rgba(213,219,230,0.35)] hover:text-[rgba(213,219,230,0.6)] transition-colors">EU AI Act Ready</a>
+              <a href="/privacy" className="text-[rgba(213,219,230,0.35)] hover:text-[rgba(213,219,230,0.6)] transition-colors">GDPR Compliant</a>
+              <a href="/security" className="text-[rgba(213,219,230,0.35)] hover:text-[rgba(213,219,230,0.6)] transition-colors">ISO 27001</a>
             </div>
 
             {/* Scroll indicator — down chevron like Landio */}
@@ -330,9 +337,18 @@ export default function Home() {
                 </div>
               </div>
               <h3 className="text-lg font-medium text-white mb-2">Compliance Dashboard</h3>
-              <p className="text-sm text-[rgba(213,219,230,0.55)] leading-relaxed">
+              <p className="text-sm text-[rgba(213,219,230,0.55)] leading-relaxed mb-3">
                 SOC 2, EU AI Act, NIST, and GDPR compliance monitoring with automated assessments and one-click reports.
               </p>
+              <a
+                href="/demo"
+                className="inline-flex items-center gap-1.5 text-xs text-[rgb(166,218,255)] hover:underline"
+              >
+                Try the live demo
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </a>
             </div>
           </div>
         </div>
