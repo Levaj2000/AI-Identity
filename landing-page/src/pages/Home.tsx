@@ -62,11 +62,11 @@ export default function Home() {
             </div>
 
             {/* Trust badges */}
-            <div className="mt-16 flex flex-wrap justify-center gap-8 text-[rgba(213,219,230,0.4)] text-xs uppercase tracking-wider">
-              <span>SOC 2 Type II</span>
-              <span>EU AI Act Ready</span>
-              <span>GDPR Compliant</span>
-              <span>ISO 27001</span>
+            <div className="mt-16 flex flex-wrap justify-center gap-10 text-sm uppercase tracking-wider">
+              <a href="/security" className="text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">SOC 2 Type II</a>
+              <a href="/eu-ai-act-checklist" className="text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">EU AI Act Ready</a>
+              <a href="/privacy" className="text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">GDPR Compliant</a>
+              <a href="/security" className="text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">ISO 27001</a>
             </div>
           </div>
         </div>
