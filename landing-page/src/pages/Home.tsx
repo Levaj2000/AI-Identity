@@ -1,11 +1,102 @@
+import { useState } from "react";
 import BadgeFramerComponent from "../framer/elements/badge";
 import MainButtonFramerComponent from "../framer/main-button";
-import ProcessFramerComponent from "../framer/process";
 import FeatureCard1FramerComponent from "../framer/cards/feature-card-1";
 import FeatureCard2FramerComponent from "../framer/cards/feature-card-2";
 import FeatureCard3FramerComponent from "../framer/cards/feature-card-3";
 import CtaSectionFramerComponent from "../framer/cta-section";
 import PricingCardFramerComponent from "../framer/pricing-card";
+
+const steps = [
+  {
+    num: "01",
+    title: "Register Agents",
+    description:
+      "Issue unique API keys to each AI agent with scoped permissions. Define what each agent can access, which tools it can call, and set rate limits.",
+    details: [
+      "One API call to register — get a unique aid_sk_ prefixed key",
+      "Scope permissions per agent: read-only, write, admin, or custom",
+      "Set rate limits and spending caps before the agent goes live",
+      "Keys are SHA-256 hashed at rest — shown once, never stored in plain text",
+    ],
+  },
+  {
+    num: "02",
+    title: "Enforce Policies",
+    description:
+      "The deny-by-default gateway validates every request before it reaches your upstream APIs. No valid key, no access — no exceptions.",
+    details: [
+      "Every request passes through the gateway — invalid or expired keys are rejected instantly",
+      "Apply organization-wide governance rules: human-in-the-loop approvals for high-risk actions",
+      "Real-time anomaly detection flags agents acting outside their defined boundaries",
+      "Zero-downtime key rotation with configurable grace periods",
+    ],
+  },
+  {
+    num: "03",
+    title: "Audit Everything",
+    description:
+      "Every agent action is logged to a tamper-proof, append-only audit trail. When regulators or customers ask what happened — you have the answer.",
+    details: [
+      "Full chain-of-thought capture: agent ID, timestamp, action, key fingerprint",
+      "Cryptographically verifiable audit chain — tamper-evident by design",
+      "Generate compliance reports for SOC 2, EU AI Act, and GDPR with one click",
+      "Forensic replay: step through any agent session to see exactly what happened",
+    ],
+  },
+];
+
+function HowItWorksSteps() {
+  const [active, setActive] = useState(0);
+  const step = steps[active];
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      {/* Step tabs */}
+      <div className="flex rounded-xl border border-[rgba(216,231,242,0.07)] overflow-hidden mb-8">
+        {steps.map((s, i) => (
+          <button
+            key={s.num}
+            onClick={() => setActive(i)}
+            className={`flex-1 py-4 px-6 text-sm font-medium transition-colors ${
+              i === active
+                ? "bg-[rgb(16,19,28)] text-white border-b-2 border-[rgb(166,218,255)]"
+                : "text-[rgba(213,219,230,0.5)] hover:text-[rgba(213,219,230,0.8)] hover:bg-white/[0.02]"
+            }`}
+          >
+            STEP {i + 1}
+          </button>
+        ))}
+      </div>
+
+      {/* Step content */}
+      <div className="rounded-2xl border border-[rgba(216,231,242,0.07)] bg-[rgb(16,19,28)]/50 p-8 md:p-10">
+        <div className="text-[rgb(166,218,255)] text-sm font-mono mb-2">{step.num}</div>
+        <h3 className="text-2xl font-medium text-white mb-3">{step.title}</h3>
+        <p className="text-[rgba(213,219,230,0.6)] leading-relaxed mb-6 max-w-2xl">
+          {step.description}
+        </p>
+
+        <ul className="space-y-3">
+          {step.details.map((detail) => (
+            <li key={detail} className="flex items-start gap-3">
+              <svg
+                width="16" height="16" viewBox="0 0 16 16" fill="none"
+                className="shrink-0 mt-0.5 text-[rgb(166,218,255)]"
+              >
+                <path
+                  d="M13.3 4.3L6 11.6 2.7 8.3"
+                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                />
+              </svg>
+              <span className="text-sm text-[rgba(213,219,230,0.55)] leading-relaxed">{detail}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   return (
@@ -141,18 +232,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="flex justify-center">
-            <ProcessFramerComponent.Responsive
-              step1Heading="Register Agents"
-              step1Discription="Issue unique API keys to each AI agent with scoped permissions. Define what each agent can access, which tools it can call, and set rate limits."
-              step2Heading="Enforce Policies"
-              step2Discription="Apply organization-wide governance rules automatically. Human-in-the-loop approvals, spend limits, and real-time anomaly detection keep agents in check."
-              step3Heading="Audit Everything"
-              step3Discription="Every agent action is logged with tamper-proof audit trails. Generate compliance reports for SOC 2, EU AI Act, and GDPR with one click."
-              imagesVisible={false}
-              direction3="Horizontal"
-            />
-          </div>
+          <HowItWorksSteps />
         </div>
       </section>
 
