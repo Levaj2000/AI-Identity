@@ -150,11 +150,11 @@ const faqs = [
 const container = {
   hidden: {},
   show: { transition: { staggerChildren: 0.1 } },
-};
+} as const;
 
 const cardVariant = {
   hidden: { opacity: 0, y: 30 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" as const } },
 };
 
 // ── Icons ───────────────────────────────────────────────────────────
