@@ -13,6 +13,7 @@ import EUAIActChecklist from "./pages/EUAIActChecklist";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Careers from "./pages/Careers";
+import Pricing from "./pages/Pricing";
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
       { path: "/security", element: <Security /> },
       { path: "/integrations", element: <Integrations /> },
       { path: "/architecture", element: <Architecture /> },
+      { path: "/pricing", element: <Pricing /> },
       { path: "/contact", element: <Contact /> },
       { path: "/blog", element: <Blog /> },
       { path: "/blog/:slug", element: <BlogPost /> },
