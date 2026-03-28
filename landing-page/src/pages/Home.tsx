@@ -354,6 +354,42 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Demo Video Section ── */}
+      <section className="w-full py-20 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-medium text-white mb-3">
+              See It in{" "}
+              <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
+                Action
+              </span>
+            </h2>
+            <p className="text-[rgba(213,219,230,0.6)] text-sm max-w-lg mx-auto">
+              Walk through the full agent lifecycle — register, authenticate, enforce, and audit — in under 2 minutes.
+            </p>
+          </div>
+          <div className="rounded-2xl overflow-hidden border border-[rgba(216,231,242,0.07)]" style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
+            <iframe
+              src="https://www.loom.com/embed/9d2a91d23adc4505b76b02b201fef721?sid=auto&hide_owner=true&hide_share=true&hide_title=true&hideEmbedTopBar=true"
+              frameBorder="0"
+              allowFullScreen
+              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
+            />
+          </div>
+          <div className="text-center mt-6">
+            <a
+              href="/demo"
+              className="inline-flex items-center gap-2 text-sm text-[rgb(166,218,255)] hover:underline"
+            >
+              Try it yourself — Interactive API Playground
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* ── Security & Compliance Section ── */}
       <section className="w-full py-20 px-6">
         <div className="max-w-[1200px] mx-auto">
