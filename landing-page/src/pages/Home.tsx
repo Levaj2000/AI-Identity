@@ -420,6 +420,89 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Comparison Section — Why AI Identity ── */}
+      <section className="w-full py-20 px-6">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-12">
+            <div className="flex justify-center mb-4">
+              <BadgeFramerComponent.Responsive content="COMPARISON" />
+            </div>
+            <h2 className="text-3xl md:text-[44px] font-medium text-white mb-4 leading-[1.2]">
+              Why AI Identity{" "}
+              <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
+                Over Others
+              </span>
+            </h2>
+            <p className="text-[rgba(213,219,230,0.6)] max-w-xl mx-auto">
+              See how purpose-built agent infrastructure compares to DIY or generic solutions.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {/* AI Identity column */}
+            <div className="rounded-2xl border border-[rgb(166,218,255)]/20 bg-[rgb(16,19,28)]/50 p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 flex items-center justify-center">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(166,218,255)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+                  </svg>
+                </div>
+                <span className="text-white font-medium">AI Identity</span>
+              </div>
+              <ul className="space-y-4">
+                {[
+                  "Per-agent keys with deny-by-default gateway",
+                  "Tamper-proof audit chain — cryptographically verifiable",
+                  "One API call to register, rotate, or revoke",
+                  "Built-in compliance engine (SOC 2, EU AI Act, NIST)",
+                  "Forensic replay of any agent session",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5 text-[rgb(166,218,255)]">
+                      <path d="M13.3 4.3L6 11.6 2.7 8.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <span className="text-sm text-[rgba(213,219,230,0.7)]">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Others column */}
+            <div className="rounded-2xl border border-[rgba(216,231,242,0.07)] bg-[rgb(16,19,28)]/30 p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(213,219,230,0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                  </svg>
+                </div>
+                <span className="text-[rgba(213,219,230,0.5)] font-medium font-['Instrument_Serif'] italic">DIY &amp; Legacy IAM</span>
+              </div>
+              <ul className="space-y-4">
+                {[
+                  "Shared API keys or manual token management",
+                  "Mutable logs with no tamper-proof guarantees",
+                  "No chain-of-thought capture or forensic replay",
+                  "Human IAM tools retrofitted for agent workflows",
+                  "Enterprise-first pricing and 6-month sales cycles",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5 text-[rgba(213,219,230,0.25)]">
+                      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                    <span className="text-sm text-[rgba(213,219,230,0.4)]">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <p className="text-center mt-8 text-xs text-[rgba(213,219,230,0.35)] max-w-2xl mx-auto">
+            Traditional IAM platforms like Okta are adding agent identity features — but they're extending human-first architectures.
+            AI Identity is built from the ground up for autonomous agents: cryptographic audit chains, chain-of-thought forensics, and a developer-first API you can integrate in minutes, not months.
+          </p>
+        </div>
+      </section>
+
       {/* ── Forensics Section ── */}
       <section className="w-full py-20 px-6">
         <div className="max-w-[1200px] mx-auto">
