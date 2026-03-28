@@ -68,6 +68,27 @@ export default function Home() {
               <a href="/privacy" className="text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">GDPR Compliant</a>
               <a href="/security" className="text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">ISO 27001</a>
             </div>
+
+            {/* Dashboard preview image */}
+            <div className="mt-20 relative max-w-4xl mx-auto">
+              {/* Glow behind the image */}
+              <div className="absolute -inset-4 bg-[radial-gradient(ellipse_at_center,rgba(166,218,255,0.08)_0%,transparent_70%)] blur-[20px] pointer-events-none" />
+              {/* Glass card with perspective */}
+              <div
+                className="relative rounded-xl overflow-hidden border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
+                style={{ perspective: '1000px' }}
+              >
+                <div style={{ transform: 'rotateX(2deg)' }}>
+                  <img
+                    src="/images/dashboard-preview.jpg"
+                    alt="AI Identity Dashboard — Agent management, audit trails, and compliance monitoring"
+                    className="w-full h-auto"
+                  />
+                  {/* Bottom gradient fade */}
+                  <div className="absolute bottom-0 left-0 right-0 h-[30%] bg-gradient-to-t from-[rgb(4,7,13)] to-transparent pointer-events-none" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
