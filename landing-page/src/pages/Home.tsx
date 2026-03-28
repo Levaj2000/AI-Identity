@@ -12,17 +12,10 @@ export default function Home() {
     <div className="flex flex-col items-center">
       {/* ── Hero Section ── */}
       <section className="relative w-full overflow-hidden pt-32 pb-20 px-6 min-h-[90vh] flex items-center justify-center">
-        {/* Atmospheric background layers */}
-        {/* Base gradient - steel blue tint */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0a1628] via-[#0d1f3c] to-[rgb(4,7,13)] pointer-events-none" />
-        {/* Mist layer - left */}
-        <div className="absolute top-[20%] -left-[10%] w-[60%] h-[60%] bg-[radial-gradient(ellipse_at_center,rgba(120,160,200,0.08)_0%,transparent_70%)] pointer-events-none blur-[40px]" />
-        {/* Mist layer - right */}
-        <div className="absolute top-[30%] -right-[10%] w-[50%] h-[50%] bg-[radial-gradient(ellipse_at_center,rgba(100,140,180,0.06)_0%,transparent_70%)] pointer-events-none blur-[60px]" />
-        {/* Central glow */}
-        <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[900px] h-[700px] bg-[radial-gradient(ellipse_at_center,rgba(166,218,255,0.06)_0%,transparent_60%)] pointer-events-none" />
-        {/* Bottom fog */}
-        <div className="absolute bottom-0 left-0 right-0 h-[300px] bg-gradient-to-t from-[rgb(4,7,13)] via-[rgba(4,7,13,0.8)] to-transparent pointer-events-none" />
+        {/* Subtle atmospheric depth - very dark with minimal blue hint */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#060a12] via-[rgb(4,7,13)] to-[rgb(4,7,13)] pointer-events-none" />
+        {/* Very subtle mist - barely visible */}
+        <div className="absolute top-[30%] left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-[radial-gradient(ellipse_at_center,rgba(150,180,210,0.03)_0%,transparent_70%)] pointer-events-none" />
         {/* Floating particles */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           {Array.from({ length: 30 }).map((_, i) => (
