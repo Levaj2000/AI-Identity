@@ -11,7 +11,7 @@ export function AgentCard({ agent }: AgentCardProps) {
   return (
     <Link
       to={`/dashboard/agents/${agent.id}`}
-      className="block rounded-xl border border-gray-200 bg-white p-5 transition-colors hover:border-gray-300 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl dark:hover:border-[#F59E0B]/25"
+      className="block rounded-xl border border-gray-200 bg-white p-5 transition-colors hover:border-gray-300 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl dark:hover:border-[#A6DAFF]/25"
     >
       {/* Top row: name + status */}
       <div className="mb-2 flex items-start justify-between gap-3">

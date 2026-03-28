@@ -184,7 +184,7 @@ function RunDetail({
         <SignoffBadge label="Customer" by={run.customer_signoff_by} at={run.customer_signoff_at} />
         <SignoffBadge label="Staff" by={run.staff_signoff_by} at={run.staff_signoff_at} />
         {fullySignedOff && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#F59E0B]/10 px-3 py-1 text-xs font-medium text-[#F59E0B]">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#A6DAFF]/10 px-3 py-1 text-xs font-medium text-[#A6DAFF]">
             Fully Validated
           </span>
         )}
@@ -197,7 +197,7 @@ function RunDetail({
             <button
               onClick={() => onSignoff('customer')}
               disabled={signingOff}
-              className="rounded-lg bg-[#F59E0B] px-4 py-2 text-sm font-medium text-black hover:bg-[#D97706] disabled:opacity-50"
+              className="rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-medium text-black hover:bg-[#7CC4F5] disabled:opacity-50"
             >
               {signingOff ? 'Signing...' : 'Sign Off as Customer'}
             </button>
@@ -206,7 +206,7 @@ function RunDetail({
             <button
               onClick={() => onSignoff('staff')}
               disabled={signingOff}
-              className="rounded-lg border border-[#F59E0B] px-4 py-2 text-sm font-medium text-[#F59E0B] hover:bg-[#F59E0B]/10 disabled:opacity-50"
+              className="rounded-lg border border-[#A6DAFF] px-4 py-2 text-sm font-medium text-[#A6DAFF] hover:bg-[#A6DAFF]/10 disabled:opacity-50"
             >
               {signingOff ? 'Signing...' : 'Sign Off as AI Identity Staff'}
             </button>
@@ -225,7 +225,7 @@ function RunDetail({
               <h4 className="text-sm font-semibold text-gray-700 dark:text-[#a1a1aa]">{section}</h4>
               <StatusBadge passed={allPassed} />
             </div>
-            <div className="space-y-1 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-[#1a1a1d] dark:bg-[#111113]">
+            <div className="space-y-1 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-[#1a1a1d] dark:bg-[#10131C]">
               {sectionChecks.map((check) => (
                 <CheckRow key={check.step} check={check} />
               ))}
@@ -345,7 +345,7 @@ export function QAChecklistPage() {
           <button
             onClick={() => handleRunQA('admin')}
             disabled={running}
-            className="flex items-center gap-2 rounded-lg border border-[#F59E0B] px-5 py-2.5 text-sm font-medium text-[#F59E0B] hover:bg-[#F59E0B]/10 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 rounded-lg border border-[#A6DAFF] px-5 py-2.5 text-sm font-medium text-[#A6DAFF] hover:bg-[#A6DAFF]/10 disabled:opacity-50 transition-colors"
           >
             {running ? (
               'Running...'
@@ -397,7 +397,7 @@ export function QAChecklistPage() {
                     onClick={() => setSelectedRun(run)}
                     className={`w-full rounded-lg px-3 py-2.5 text-left transition-colors ${
                       isSelected
-                        ? 'bg-[#F59E0B]/10 ring-1 ring-[#F59E0B]/30'
+                        ? 'bg-[#A6DAFF]/10 ring-1 ring-[#A6DAFF]/30'
                         : 'hover:bg-gray-100 dark:hover:bg-[#1a1a1d]'
                     }`}
                   >
@@ -422,7 +422,7 @@ export function QAChecklistPage() {
                       {run.mode === 'onboarding' && (
                         <span className="text-xs text-blue-500 dark:text-blue-400">Onboarding</span>
                       )}
-                      {fullySignedOff && <span className="text-xs text-[#F59E0B]">Validated</span>}
+                      {fullySignedOff && <span className="text-xs text-[#A6DAFF]">Validated</span>}
                     </div>
                   </button>
                 )
@@ -432,7 +432,7 @@ export function QAChecklistPage() {
         </div>
 
         {/* Run detail */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#0A0A0B]">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#04070D]">
           {selectedRun ? (
             <RunDetail run={selectedRun} onSignoff={handleSignoff} signingOff={signingOff} />
           ) : (

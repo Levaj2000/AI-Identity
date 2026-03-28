@@ -160,7 +160,7 @@ export function IncidentReconstructModal({ data, onClose, onExportJSON, onExport
           </button>
           <button
             onClick={onExportJSON}
-            className="px-4 py-2 text-sm font-medium text-zinc-100 bg-amber-600 hover:bg-amber-500 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 rounded-lg transition-colors"
           >
             Export JSON Report
           </button>

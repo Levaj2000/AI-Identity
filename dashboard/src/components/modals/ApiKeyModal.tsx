@@ -60,7 +60,7 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
         aria-modal="true"
         aria-labelledby="api-key-modal-title"
         tabIndex={-1}
-        className="relative z-10 w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl outline-none dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl"
+        className="relative z-10 w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl outline-none dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl"
       >
         {/* Header */}
         <div className="mb-5 flex items-center gap-3">
@@ -170,7 +170,7 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
           </code>
           <p className="mt-3 text-xs text-gray-500 dark:text-[#a1a1aa]">
             Point your agent&rsquo;s base URL here instead of calling OpenAI directly. Use your API
-            key above as the <code className="text-[#F59E0B]">X-API-Key</code> header.
+            key above as the <code className="text-[#A6DAFF]">X-API-Key</code> header.
           </p>
         </div>
 
@@ -180,7 +180,7 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
             type="checkbox"
             checked={acknowledged}
             onChange={(e) => setAcknowledged(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#F59E0B] focus:ring-[#F59E0B] dark:border-[#3a3a3d] dark:bg-[#1a1a1d]"
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#A6DAFF] focus:ring-[#A6DAFF] dark:border-[#3a3a3d] dark:bg-[#1a1a1d]"
           />
           <span className="text-sm text-gray-700 dark:text-[#d4d4d8]">
             I have saved this API key in a secure location
@@ -192,7 +192,7 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
           type="button"
           onClick={onDismiss}
           disabled={!acknowledged}
-          className="w-full rounded-lg bg-[#F59E0B] px-4 py-2.5 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#F59E0B]"
+          className="w-full rounded-lg bg-[#A6DAFF] px-4 py-2.5 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#A6DAFF]"
         >
           Continue to Agent
         </button>

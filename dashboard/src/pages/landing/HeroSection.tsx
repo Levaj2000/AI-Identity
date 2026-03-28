@@ -107,7 +107,7 @@ function NetworkBackground({ mouseX, mouseY }: { mouseX: number; mouseY: number 
                 cx={nx}
                 cy={ny}
                 r="3"
-                fill="#F59E0B"
+                fill="#A6DAFF"
                 opacity="0.7"
                 style={{
                   animation: `node-pulse 3s ease-in-out infinite`,

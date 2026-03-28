@@ -337,7 +337,7 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate }: Props)
           <div className="flex items-center gap-3 pt-2 border-t border-zinc-700">
             <button
               onClick={exportSingleEntry}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-100 bg-amber-600 hover:bg-amber-500 rounded-lg transition-colors text-center"
+              className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 rounded-lg transition-colors text-center"
             >
               Export Entry as JSON
             </button>

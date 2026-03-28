@@ -10,9 +10,9 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isLoaded) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#0A0A0B]">
+      <div className="flex h-screen items-center justify-center bg-[#04070D]">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#F59E0B] border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#A6DAFF] border-t-transparent" />
           <p className="text-sm text-gray-500">Verifying credentials...</p>
         </div>
       </div>

@@ -12,12 +12,12 @@ export function StatsCard({
   label,
   value,
   icon,
-  accent = 'text-[#F59E0B]',
-  glowColor = 'rgba(245,158,11,0.05)',
+  accent = 'text-[#A6DAFF]',
+  glowColor = 'rgba(166,218,255,0.05)',
 }: StatsCardProps) {
   return (
     <div
-      className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6 transition-colors hover:border-gray-300 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl dark:hover:border-[#F59E0B]/25"
+      className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6 transition-colors hover:border-gray-300 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl dark:hover:border-[#A6DAFF]/25"
       style={{
         boxShadow: `0 0 15px ${glowColor}`,
       }}

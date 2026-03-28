@@ -21,11 +21,11 @@ export function OverviewPage() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-[#111113]"
+                className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-[#10131C]"
               />
             ))}
           </div>
-          <div className="h-64 animate-pulse rounded-xl bg-gray-200 dark:bg-[#111113]" />
+          <div className="h-64 animate-pulse rounded-xl bg-gray-200 dark:bg-[#10131C]" />
         </div>
       )}
 
@@ -51,7 +51,7 @@ export function OverviewPage() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
             to="/dashboard/agents/new"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#F59E0B] px-6 py-3 font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/90"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#A6DAFF] px-6 py-3 font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/90"
           >
             Create Agent
             <span aria-hidden="true">+</span>

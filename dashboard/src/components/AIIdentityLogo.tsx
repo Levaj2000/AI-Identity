@@ -7,8 +7,8 @@ interface LogoProps {
 export function AIIdentityLogo5({ className = '', variant = 'primary' }: LogoProps) {
   const colors = {
     light: '#FFFFFF',
-    dark: '#0A0A0B',
-    primary: '#F59E0B',
+    dark: '#04070D',
+    primary: '#A6DAFF',
   }
 
   const fillColor = colors[variant]

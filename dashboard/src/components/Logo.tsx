@@ -74,7 +74,7 @@ export function Logo({ variant = 'full', size = 32, className = '' }: LogoProps)
       />
 
       {/* Agent identity core — amber accent */}
-      <circle cx="16" cy="11" r="1" fill="#F59E0B" />
+      <circle cx="16" cy="11" r="1" fill="#A6DAFF" />
     </svg>
   )
 

@@ -47,7 +47,7 @@ export function ConfirmModal({
   const confirmClasses =
     confirmVariant === 'danger'
       ? 'bg-red-600 text-white hover:bg-red-500 disabled:hover:bg-red-600'
-      : 'bg-[#F59E0B] text-[#0A0A0B] hover:bg-[#F59E0B]/80 disabled:hover:bg-[#F59E0B]'
+      : 'bg-[#A6DAFF] text-[#04070D] hover:bg-[#A6DAFF]/80 disabled:hover:bg-[#A6DAFF]'
 
   const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -65,7 +65,7 @@ export function ConfirmModal({
         aria-modal="true"
         aria-labelledby="confirm-modal-title"
         tabIndex={-1}
-        className="relative z-10 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl outline-none dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl"
+        className="relative z-10 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl outline-none dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl"
       >
         {/* Icon + Title */}
         <div className="mb-4 flex items-center gap-3">
@@ -73,7 +73,7 @@ export function ConfirmModal({
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
               confirmVariant === 'danger'
                 ? 'bg-red-100 dark:bg-red-500/10'
-                : 'bg-[#F59E0B]/15 dark:bg-[#F59E0B]/10'
+                : 'bg-[#A6DAFF]/15 dark:bg-[#A6DAFF]/10'
             }`}
           >
             {confirmVariant === 'danger' ? (
@@ -94,7 +94,7 @@ export function ConfirmModal({
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20"
                 fill="currentColor"
-                className="h-5 w-5 text-[#F59E0B] dark:text-[#F59E0B]"
+                className="h-5 w-5 text-[#A6DAFF] dark:text-[#A6DAFF]"
               >
                 <path
                   fillRule="evenodd"

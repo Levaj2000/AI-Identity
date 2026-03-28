@@ -68,8 +68,8 @@ export function StatsGrid({ stats }: StatsGridProps) {
         label="Total Agents"
         value={stats.totalAgents}
         icon={icons.grid}
-        accent="text-[#F59E0B]"
-        glowColor="rgba(245,158,11,0.05)"
+        accent="text-[#A6DAFF]"
+        glowColor="rgba(166,218,255,0.05)"
       />
       <StatsCard
         label="Active"
@@ -83,7 +83,7 @@ export function StatsGrid({ stats }: StatsGridProps) {
         value={stats.suspendedAgents}
         icon={icons.pause}
         accent="text-amber-500"
-        glowColor="rgba(245,158,11,0.05)"
+        glowColor="rgba(166,218,255,0.05)"
       />
       <StatsCard
         label="Revoked"

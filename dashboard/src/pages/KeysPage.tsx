@@ -11,7 +11,7 @@ export function KeysPage() {
       </div>
 
       {/* Placeholder content */}
-      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-[#2a2a2d] dark:bg-[#111113]/50">
+      <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-[#2a2a2d] dark:bg-[#10131C]/50">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
