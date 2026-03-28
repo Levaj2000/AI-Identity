@@ -6,43 +6,86 @@ import FeatureCard2FramerComponent from "../framer/cards/feature-card-2";
 import FeatureCard3FramerComponent from "../framer/cards/feature-card-3";
 import CtaSectionFramerComponent from "../framer/cta-section";
 import PricingCardFramerComponent from "../framer/pricing-card";
-import ParticleHero from "../components/ParticleHero";
 
 export default function Home() {
   return (
     <div className="flex flex-col items-center">
-      {/* ── Hero Section — tsparticles + smoky atmosphere ── */}
-      <section className="relative w-full overflow-hidden min-h-[100vh]">
-        {/* Full-viewport particle background */}
-        <ParticleHero />
+      {/* ── Hero Section — video background + Landio-style atmosphere ── */}
+      <section className="relative w-full overflow-hidden min-h-[100vh]" style={{ backgroundColor: "rgb(4,7,13)" }}>
+        {/* Video background — dark 3D grid landscape (Landio style) */}
+        <video
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: "saturate(0.25) brightness(0.9) hue-rotate(210deg)" }}
+          autoPlay
+          loop
+          muted
+          playsInline
+          poster="/images/hero-bg.jpg"
+        >
+          <source src="https://framerusercontent.com/assets/1g8IkhtJmlWcC4zEYWKUmeGWzI.mp4" type="video/mp4" />
+        </video>
+        {/* Dark overlay — match Landio's cool atmosphere */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ backgroundColor: "rgba(4,7,13,0.35)" }}
+        />
+        {/* Content vignette overlay — radial fade like Landio */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: "radial-gradient(75% 64%, rgba(255,255,255,0) 17.57%, rgb(4,7,13) 100%)" }}
+        />
 
-        {/* Smoky/misty atmosphere layers */}
-        {/* Bottom fog bank - the key Landio effect */}
-        <div className="absolute bottom-0 left-0 right-0 h-[50%] bg-gradient-to-t from-[rgba(40,50,65,0.4)] via-[rgba(30,40,55,0.2)] to-transparent pointer-events-none z-[1]" />
-        {/* Side mist - left */}
-        <div className="absolute bottom-[10%] -left-[5%] w-[40%] h-[40%] bg-[radial-gradient(ellipse_at_center,rgba(60,75,95,0.25)_0%,transparent_70%)] pointer-events-none blur-[80px] z-[1]" />
-        {/* Side mist - right */}
-        <div className="absolute bottom-[15%] -right-[5%] w-[35%] h-[35%] bg-[radial-gradient(ellipse_at_center,rgba(55,70,90,0.2)_0%,transparent_70%)] pointer-events-none blur-[80px] z-[1]" />
-        {/* Central subtle glow behind text */}
-        <div className="absolute top-[35%] left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[radial-gradient(ellipse_at_center,rgba(80,100,130,0.08)_0%,transparent_60%)] pointer-events-none z-[1]" />
         {/* Bottom edge fade to page background */}
-        <div className="absolute bottom-0 left-0 right-0 h-[120px] bg-gradient-to-t from-[rgb(4,7,13)] to-transparent pointer-events-none z-[2]" />
+        <div className="absolute bottom-0 left-0 right-0 h-[200px] bg-gradient-to-t from-[rgb(4,7,13)] to-transparent pointer-events-none z-[2]" />
 
         {/* Hero content overlaid on top */}
         <div className="relative z-10 pt-40 pb-24 px-6 min-h-[100vh] flex items-center justify-center">
           <div className="max-w-[1200px] mx-auto text-center">
+
+            {/* Pulsing accent dot */}
+            <div className="flex justify-center mb-8">
+              <div className="relative">
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: "rgb(166,218,255)" }}
+                />
+                <div
+                  className="absolute inset-0 w-3 h-3 rounded-full animate-ping"
+                  style={{ backgroundColor: "rgb(148,209,255)", opacity: 0.4 }}
+                />
+              </div>
+            </div>
+
             <div className="flex justify-center mb-8">
               <BadgeFramerComponent.Responsive content="IDENTITY FOR AI AGENTS" />
             </div>
 
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6 max-w-4xl mx-auto drop-shadow-[0_0_30px_rgba(255,255,255,0.05)]">
+            <h1
+              className="text-4xl md:text-6xl lg:text-[80px] font-medium leading-[1.2] mb-6 max-w-4xl mx-auto"
+              style={{
+                background: "radial-gradient(99% 86%, rgb(213,219,230) 28.39%, rgb(4,7,13) 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                letterSpacing: "-1.6px",
+              }}
+            >
               Every AI Agent Deserves an{" "}
-              <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)] drop-shadow-[0_0_20px_rgba(166,218,255,0.3)]">
+              <span
+                className="font-['Instrument_Serif'] italic"
+                style={{
+                  WebkitTextFillColor: "rgb(166,218,255)",
+                  filter: "drop-shadow(0 0 20px rgba(166,218,255,0.3))",
+                }}
+              >
                 Identity
               </span>
             </h1>
 
-            <p className="text-lg md:text-xl text-[rgba(230,235,245,0.75)] max-w-2xl mx-auto mb-10">
+            <p
+              className="text-lg md:text-xl max-w-2xl mx-auto mb-10"
+              style={{ color: "rgba(213,219,230,0.7)", letterSpacing: "-0.32px" }}
+            >
               Per-agent API keys, scoped permissions, and tamper-proof audit trails.
               Know which agent did what, when, and why — before regulators ask.
             </p>
@@ -69,25 +112,11 @@ export default function Home() {
               <a href="/security" className="text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">ISO 27001</a>
             </div>
 
-            {/* Dashboard preview image */}
-            <div className="mt-20 relative max-w-4xl mx-auto">
-              {/* Glow behind the image */}
-              <div className="absolute -inset-4 bg-[radial-gradient(ellipse_at_center,rgba(166,218,255,0.08)_0%,transparent_70%)] blur-[20px] pointer-events-none" />
-              {/* Glass card with perspective */}
-              <div
-                className="relative rounded-xl overflow-hidden border border-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)]"
-                style={{ perspective: '1000px' }}
-              >
-                <div style={{ transform: 'rotateX(2deg)' }}>
-                  <img
-                    src="/images/dashboard-preview.jpg"
-                    alt="AI Identity Dashboard — Agent management, audit trails, and compliance monitoring"
-                    className="w-full h-auto"
-                  />
-                  {/* Bottom gradient fade */}
-                  <div className="absolute bottom-0 left-0 right-0 h-[30%] bg-gradient-to-t from-[rgb(4,7,13)] to-transparent pointer-events-none" />
-                </div>
-              </div>
+            {/* Scroll indicator — down chevron like Landio */}
+            <div className="mt-20 flex justify-center">
+              <svg className="w-6 h-6 animate-bounce opacity-40" fill="none" stroke="rgb(213,219,230)" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
+              </svg>
             </div>
           </div>
         </div>
@@ -100,7 +129,7 @@ export default function Home() {
             <div className="flex justify-center mb-4">
               <BadgeFramerComponent.Responsive content="HOW IT WORKS" />
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-[44px] font-medium text-white mb-4 leading-[1.2]">
               Three Steps to{" "}
               <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
                 Governed
@@ -134,7 +163,7 @@ export default function Home() {
             <div className="flex justify-center mb-4">
               <BadgeFramerComponent.Responsive content="CORE CAPABILITIES" />
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-[44px] font-medium text-white mb-4 leading-[1.2]">
               Built for{" "}
               <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
                 Enterprise
@@ -167,7 +196,7 @@ export default function Home() {
             <div className="flex justify-center mb-4">
               <BadgeFramerComponent.Responsive content="SECURITY" />
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-[44px] font-medium text-white mb-4 leading-[1.2]">
               Zero-Trust Agent{" "}
               <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
                 Security
@@ -217,7 +246,7 @@ export default function Home() {
             <div className="flex justify-center mb-4">
               <BadgeFramerComponent.Responsive content="FORENSICS" />
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-[44px] font-medium text-white mb-4 leading-[1.2]">
               AI Agent{" "}
               <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
                 Forensics
@@ -252,7 +281,7 @@ export default function Home() {
             <div className="flex justify-center mb-4">
               <BadgeFramerComponent.Responsive content="PRICING" />
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-[44px] font-medium text-white mb-4 leading-[1.2]">
               Simple,{" "}
               <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
                 Transparent
