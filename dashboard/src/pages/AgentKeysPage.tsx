@@ -169,14 +169,14 @@ export function AgentKeysPage() {
           <div className="h-4 w-12 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
         </div>
         {/* Header skeleton */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
           <div className="flex items-center gap-4">
             <div className="h-6 w-40 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
             <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-[#1a1a1d]" />
           </div>
         </div>
         {/* Table skeleton */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
           <div className="space-y-4">
             <div className="h-8 w-full animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
             <div className="h-12 w-full animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
@@ -199,7 +199,7 @@ export function AgentKeysPage() {
           <ChevronIcon />
           <span className="text-gray-900 dark:text-[#e4e4e7]">Not Found</span>
         </nav>
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-[#2a2a2d] dark:bg-[#111113]/50">
+        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-[#2a2a2d] dark:bg-[#10131C]/50">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
@@ -221,7 +221,7 @@ export function AgentKeysPage() {
           <div className="mt-6">
             <Link
               to="/dashboard/agents"
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#F59E0B] hover:text-[#F59E0B] dark:text-[#F59E0B] dark:hover:text-[#F59E0B]"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#A6DAFF] hover:text-[#A6DAFF] dark:text-[#A6DAFF] dark:hover:text-[#A6DAFF]"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -288,7 +288,7 @@ export function AgentKeysPage() {
       </nav>
 
       {/* Agent mini-header */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">{agent.name}</h1>
           <AgentStatusBadge status={agent.status} />
@@ -315,9 +315,29 @@ export function AgentKeysPage() {
                 clipRule="evenodd"
               />
             </svg>
-            <p className="text-sm font-medium text-red-600 dark:text-red-400">
-              This agent has been revoked. Key creation and rotation are disabled.
-            </p>
+            <div>
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                This agent has been permanently revoked. Key creation and rotation are disabled.
+              </p>
+              <p className="mt-1 text-sm text-red-500/70 dark:text-red-400/60">
+                Revocation is permanent and cannot be undone. To continue, create a new agent with
+                fresh credentials.
+              </p>
+              <a
+                href="/dashboard/agents"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-3.5 w-3.5"
+                >
+                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                </svg>
+                Create New Agent
+              </a>
+            </div>
           </div>
         </div>
       )}
@@ -333,7 +353,7 @@ export function AgentKeysPage() {
 
       {/* Empty state — no keys at all */}
       {keys.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-[#2a2a2d] dark:bg-[#111113]/50">
+        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-[#2a2a2d] dark:bg-[#10131C]/50">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
@@ -358,7 +378,7 @@ export function AgentKeysPage() {
                 type="button"
                 onClick={handleCreate}
                 disabled={isCreating}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#F59E0B] px-5 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#A6DAFF] px-5 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-busy={isCreating}
               >
                 {isCreating && <Spinner />}
@@ -424,7 +444,7 @@ export function AgentKeysPage() {
                 type="button"
                 onClick={handleCreate}
                 disabled={isCreating || isRevoked}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#F59E0B] px-4 py-2 text-sm font-semibold text-[#0A0A0B] transition-colors hover:bg-[#F59E0B]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#F59E0B]"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#A6DAFF]"
                 title={isRevoked ? 'Agent is revoked' : 'Create a new API key'}
                 aria-busy={isCreating}
               >

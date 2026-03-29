@@ -42,22 +42,30 @@ class QuotaExceeded(HTTPException):
 
 def check_agent_quota(db: Session, user: User) -> None:
     """Raise 429 if user has reached their max_agents limit."""
-    quotas = user.quotas
+    quotas = user.effective_quotas
     max_agents = quotas["max_agents"]
+    tier = user.organization.tier if user.org_id and user.organization else user.tier
 
     if max_agents == -1:  # unlimited
         return
 
-    current_count = (
-        db.query(Agent)
-        .filter(Agent.user_id == user.id, Agent.status != AgentStatus.revoked.value)
-        .count()
-    )
+    if user.org_id:
+        current_count = (
+            db.query(Agent)
+            .filter(Agent.org_id == user.org_id, Agent.status != AgentStatus.revoked.value)
+            .count()
+        )
+    else:
+        current_count = (
+            db.query(Agent)
+            .filter(Agent.user_id == user.id, Agent.status != AgentStatus.revoked.value)
+            .count()
+        )
 
     if current_count >= max_agents:
-        raise QuotaExceeded("agents", max_agents, current_count, user.tier)
+        raise QuotaExceeded("agents", max_agents, current_count, tier)
 
-    logger.debug("Agent quota check: %d/%d (%s tier)", current_count, max_agents, user.tier)
+    logger.debug("Agent quota check: %d/%d (%s tier)", current_count, max_agents, tier)
 
 
 def check_key_quota(db: Session, user: User, agent_id) -> None:
@@ -80,48 +88,59 @@ def check_key_quota(db: Session, user: User, agent_id) -> None:
 
 def check_credential_quota(db: Session, user: User) -> None:
     """Raise 429 if user has reached their max_credentials limit."""
-    quotas = user.quotas
+    quotas = user.effective_quotas
     max_creds = quotas["max_credentials"]
+    tier = user.organization.tier if user.org_id and user.organization else user.tier
 
     if max_creds == -1:  # unlimited
         return
 
-    # Count active credentials across all user's agents
-    current_count = (
+    # Count active credentials across all user's/org's agents
+    query = (
         db.query(UpstreamCredential)
         .join(Agent, UpstreamCredential.agent_id == Agent.id)
-        .filter(
-            Agent.user_id == user.id,
-            UpstreamCredential.status == CredentialStatus.active.value,
-        )
-        .count()
+        .filter(UpstreamCredential.status == CredentialStatus.active.value)
     )
+    if user.org_id:
+        query = query.filter(Agent.org_id == user.org_id)
+    else:
+        query = query.filter(Agent.user_id == user.id)
+    current_count = query.count()
 
     if current_count >= max_creds:
-        raise QuotaExceeded("upstream credentials", max_creds, current_count, user.tier)
+        raise QuotaExceeded("upstream credentials", max_creds, current_count, tier)
 
 
 def check_request_quota(db: Session, user: User) -> None:
     """Raise 429 if user has exceeded monthly request quota.
 
     Also handles monthly counter reset when the reset day is reached.
+    For org users, checks org-level request counter.
     """
-    quotas = user.quotas
+    quotas = user.effective_quotas
     max_requests = quotas["max_requests_per_month"]
+    tier = user.organization.tier if user.org_id and user.organization else user.tier
 
     if max_requests == -1:  # unlimited
         return
 
-    # Check if we need to reset the monthly counter
-    now = datetime.now(UTC)
-    if user.updated_at and user.updated_at.month != now.month:
-        user.requests_this_month = 0
-        db.commit()
-
-    if user.requests_this_month >= max_requests:
-        raise QuotaExceeded(
-            "requests this month", max_requests, user.requests_this_month, user.tier
-        )
+    # Use org-level counter if in an org, otherwise user-level
+    if user.org_id and user.organization:
+        org = user.organization
+        now = datetime.now(UTC)
+        if org.updated_at and org.updated_at.month != now.month:
+            org.requests_this_month = 0
+            db.commit()
+        if org.requests_this_month >= max_requests:
+            raise QuotaExceeded("requests this month", max_requests, org.requests_this_month, tier)
+    else:
+        # Check if we need to reset the monthly counter
+        now = datetime.now(UTC)
+        if user.updated_at and user.updated_at.month != now.month:
+            user.requests_this_month = 0
+            db.commit()
+        if user.requests_this_month >= max_requests:
+            raise QuotaExceeded("requests this month", max_requests, user.requests_this_month, tier)
 
 
 def increment_request_count(db: Session, user: User) -> None:
@@ -131,31 +150,55 @@ def increment_request_count(db: Session, user: User) -> None:
 
 
 def get_usage_summary(db: Session, user: User) -> dict:
-    """Return current usage vs limits for the user's tier."""
-    quotas = user.quotas
+    """Return current usage vs limits for the user's tier (org-aware)."""
+    quotas = user.effective_quotas
+    tier = user.organization.tier if user.org_id and user.organization else user.tier
 
-    active_agents = (
-        db.query(Agent)
-        .filter(Agent.user_id == user.id, Agent.status != AgentStatus.revoked.value)
-        .count()
-    )
-
-    total_active_keys = (
-        db.query(AgentKey)
-        .join(Agent, AgentKey.agent_id == Agent.id)
-        .filter(Agent.user_id == user.id, AgentKey.status == KeyStatus.active.value)
-        .count()
-    )
-
-    active_credentials = (
-        db.query(UpstreamCredential)
-        .join(Agent, UpstreamCredential.agent_id == Agent.id)
-        .filter(
-            Agent.user_id == user.id,
-            UpstreamCredential.status == CredentialStatus.active.value,
+    # Use org-scoped counts if in an org
+    if user.org_id:
+        active_agents = (
+            db.query(Agent)
+            .filter(Agent.org_id == user.org_id, Agent.status != AgentStatus.revoked.value)
+            .count()
         )
-        .count()
-    )
+        total_active_keys = (
+            db.query(AgentKey)
+            .join(Agent, AgentKey.agent_id == Agent.id)
+            .filter(Agent.org_id == user.org_id, AgentKey.status == KeyStatus.active.value)
+            .count()
+        )
+        active_credentials = (
+            db.query(UpstreamCredential)
+            .join(Agent, UpstreamCredential.agent_id == Agent.id)
+            .filter(
+                Agent.org_id == user.org_id,
+                UpstreamCredential.status == CredentialStatus.active.value,
+            )
+            .count()
+        )
+        requests = user.organization.requests_this_month if user.organization else 0
+    else:
+        active_agents = (
+            db.query(Agent)
+            .filter(Agent.user_id == user.id, Agent.status != AgentStatus.revoked.value)
+            .count()
+        )
+        total_active_keys = (
+            db.query(AgentKey)
+            .join(Agent, AgentKey.agent_id == Agent.id)
+            .filter(Agent.user_id == user.id, AgentKey.status == KeyStatus.active.value)
+            .count()
+        )
+        active_credentials = (
+            db.query(UpstreamCredential)
+            .join(Agent, UpstreamCredential.agent_id == Agent.id)
+            .filter(
+                Agent.user_id == user.id,
+                UpstreamCredential.status == CredentialStatus.active.value,
+            )
+            .count()
+        )
+        requests = user.requests_this_month or 0
 
     def _fmt(current: int, limit: int) -> dict:
         return {
@@ -166,14 +209,12 @@ def get_usage_summary(db: Session, user: User) -> dict:
         }
 
     return {
-        "tier": user.tier,
+        "tier": tier,
         "agents": _fmt(active_agents, quotas["max_agents"]),
         "active_keys": _fmt(
             total_active_keys, quotas["max_keys_per_agent"] * max(active_agents, 1)
         ),
         "credentials": _fmt(active_credentials, quotas["max_credentials"]),
-        "requests_this_month": _fmt(
-            user.requests_this_month or 0, quotas["max_requests_per_month"]
-        ),
+        "requests_this_month": _fmt(requests, quotas["max_requests_per_month"]),
         "audit_retention_days": quotas["audit_retention_days"],
     }

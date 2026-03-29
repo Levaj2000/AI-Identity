@@ -50,12 +50,22 @@ class Settings(BaseSettings):
     # Stripe billing
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
-    stripe_price_id_pro: str = ""  # Stripe Price ID for the Pro plan ($49/mo)
-    stripe_price_id_enterprise: str = ""  # Stripe Price ID for Enterprise (custom)
+    # Stripe Price IDs — monthly
+    stripe_price_id_pro: str = ""  # Pro monthly ($79/mo)
+    stripe_price_id_business: str = ""  # Business monthly ($299/mo)
+    stripe_price_id_enterprise: str = ""  # Enterprise (custom)
+    # Stripe Price IDs — annual (15% discount)
+    stripe_price_id_pro_annual: str = ""  # Pro annual ($67/mo → $804/yr)
+    stripe_price_id_business_annual: str = ""  # Business annual ($254/mo → $3,048/yr)
     stripe_success_url: str = (
         "https://dashboard.ai-identity.co/settings?session_id={CHECKOUT_SESSION_ID}"
     )
     stripe_cancel_url: str = "https://dashboard.ai-identity.co/settings"
+
+    # Resend transactional email (leave empty to disable)
+    resend_api_key: str = ""
+    resend_from_email: str = "Jeff Leva <jeff@ai-identity.co>"
+    resend_reply_to: str = "jeff@ai-identity.co"
 
     # Clerk authentication
     # CLERK_ISSUER is the Clerk instance URL (e.g. https://your-app.clerk.accounts.dev)
@@ -96,12 +106,13 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Warn loudly if critical secrets are using default/empty values in production
+# Fail-closed: refuse to start with insecure defaults in production
 if settings.environment != "development":
     if settings.audit_hmac_key == "CHANGE-ME-IN-PRODUCTION":
-        _logger.critical(
-            "AUDIT_HMAC_KEY is using the default value! "
-            "Set a strong random key via environment variable."
+        raise SystemExit(
+            "FATAL: AUDIT_HMAC_KEY is using the default value. "
+            "Set a strong random key via environment variable before starting in production. "
+            'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(64))"'
         )
     if not settings.credential_encryption_key:
         _logger.warning(

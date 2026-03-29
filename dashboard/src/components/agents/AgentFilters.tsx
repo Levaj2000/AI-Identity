@@ -20,7 +20,7 @@ export function AgentFilters({
         value={status || ''}
         onChange={(e) => onStatusChange((e.target.value as AgentStatus) || undefined)}
         aria-label="Filter by status"
-        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors focus:border-[#F59E0B] focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/50 sm:w-44 dark:border-[#2a2a2d] dark:bg-[#111113] dark:text-[#e4e4e7]"
+        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition-colors focus:border-[#A6DAFF] focus:outline-none focus:ring-2 focus:ring-[#A6DAFF]/50 sm:w-44 dark:border-[#2a2a2d] dark:bg-[#10131C] dark:text-[#e4e4e7]"
       >
         <option value="">All statuses</option>
         <option value="active">Active</option>
@@ -49,7 +49,7 @@ export function AgentFilters({
           onChange={(e) => onCapabilityChange(e.target.value)}
           placeholder="Filter by capability..."
           aria-label="Filter by capability"
-          className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 transition-colors focus:border-[#F59E0B] focus:outline-none focus:ring-2 focus:ring-[#F59E0B]/50 dark:border-[#2a2a2d] dark:bg-[#111113] dark:text-[#e4e4e7] dark:placeholder-[#71717a]"
+          className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-700 transition-colors focus:border-[#A6DAFF] focus:outline-none focus:ring-2 focus:ring-[#A6DAFF]/50 dark:border-[#2a2a2d] dark:bg-[#10131C] dark:text-[#e4e4e7] dark:placeholder-[#71717a]"
         />
       </div>
     </div>

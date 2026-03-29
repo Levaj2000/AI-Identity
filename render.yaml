@@ -37,6 +37,21 @@ services:
       - key: PYTHONPATH
         value: /opt/render/project/src
 
+  # ── Keepalive Cron Job ──────────────────────────────────────────────
+  # Pings API + Gateway health endpoints every 10 minutes to prevent
+  # Render Starter cold starts (~15 min idle timeout).
+  - type: cron
+    name: ai-identity-keepalive
+    runtime: python
+    region: oregon
+    plan: starter
+    schedule: "*/10 * * * *"
+    buildCommand: pip install httpx
+    startCommand: python scripts/keepalive_cron.py
+    envVars:
+      - key: INTERNAL_SERVICE_KEY
+        sync: false
+
   # ── Proxy Gateway ────────────────────────────────────────────────────
   - type: web
     name: ai-identity-gateway

@@ -29,7 +29,9 @@ if settings.sentry_dsn:
         environment=settings.environment,
         release=f"ai-identity-api@{settings.app_version}",
         traces_sample_rate=0.2 if settings.environment == "production" else 1.0,
+        profiles_sample_rate=0.1 if settings.environment == "production" else 1.0,
         send_default_pii=False,
+        enable_tracing=True,
     )
 
 # ── Logging ──────────────────────────────────────────────────────────────
@@ -110,6 +112,16 @@ OPENAPI_TAGS = [
         "track results, and collect customer + staff sign-offs for onboarding.",
     },
     {
+        "name": "organizations",
+        "description": "Create and manage organizations — invite team members, "
+        "assign roles, and share agents across your team.",
+    },
+    {
+        "name": "agent-assignments",
+        "description": "Assign users to specific agents with roles — "
+        "owner, operator, or viewer for fine-grained access control.",
+    },
+    {
         "name": "health",
         "description": "Service health and status endpoints.",
     },
@@ -156,6 +168,15 @@ async def lifespan(app: FastAPI):
                     conn.execute(text("CREATE INDEX ix_qa_runs_user_id ON qa_runs (user_id)"))
                 logger.info("Added 'user_id' column to qa_runs table")
 
+        # Defensive migration: email tracking columns on users table
+        if "users" in inspector.get_table_names():
+            user_cols = {c["name"] for c in inspector.get_columns("users")}
+            for col_name in ("welcome_email_sent_at", "followup_email_sent_at"):
+                if col_name not in user_cols:
+                    with engine.begin() as conn:
+                        conn.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} TIMESTAMPTZ"))
+                    logger.info("Added '%s' column to users table", col_name)
+
         # Seed compliance frameworks if empty
         from common.models.base import SessionLocal
 
@@ -182,8 +203,8 @@ app = FastAPI(
     summary="Identity and key management for AI agents",
     description=API_DESCRIPTION,
     version=settings.app_version,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.environment != "production" else None,
+    redoc_url="/redoc" if settings.environment != "production" else None,
     openapi_tags=OPENAPI_TAGS,
     lifespan=lifespan,
     contact={
@@ -218,6 +239,8 @@ async def security_headers_middleware(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
     return response
 
 
@@ -234,20 +257,43 @@ async def request_logging_middleware(request: Request, call_next):
     response = await call_next(request)
     duration_ms = round((time.perf_counter() - start) * 1000, 2)
 
-    logger.info(
-        "%s %s → %s (%sms)",
-        request.method,
-        request.url.path,
-        response.status_code,
-        duration_ms,
-        extra={
-            "request_id": request_id,
-            "method": request.method,
-            "path": request.url.path,
-            "status_code": response.status_code,
-            "duration_ms": duration_ms,
-        },
-    )
+    log_extra = {
+        "request_id": request_id,
+        "method": request.method,
+        "path": request.url.path,
+        "status_code": response.status_code,
+        "duration_ms": duration_ms,
+    }
+
+    # Flag slow requests (P95 alert threshold: 500ms)
+    if duration_ms > 500 and request.url.path != "/health":
+        logger.warning(
+            "SLOW REQUEST: %s %s → %s (%sms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+            extra=log_extra,
+        )
+        if settings.sentry_dsn:
+            sentry_sdk.set_tag("slow_request", True)
+            sentry_sdk.set_context(
+                "performance",
+                {
+                    "duration_ms": duration_ms,
+                    "endpoint": request.url.path,
+                    "method": request.method,
+                },
+            )
+    else:
+        logger.info(
+            "%s %s → %s (%sms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+            extra=log_extra,
+        )
 
     response.headers["X-Request-ID"] = request_id
     return response
@@ -354,28 +400,36 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 # ── Routers ──────────────────────────────────────────────────────────────
 
 from api.app.routers.admin import router as admin_router  # noqa: E402
+from api.app.routers.agent_assignments import router as agent_assignments_router  # noqa: E402
 from api.app.routers.agents import router as agents_router  # noqa: E402
 from api.app.routers.audit import router as audit_router  # noqa: E402
 from api.app.routers.auth import router as auth_router  # noqa: E402
 from api.app.routers.billing import router as billing_router  # noqa: E402
+from api.app.routers.capabilities import router as capabilities_router  # noqa: E402
 from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
+from api.app.routers.email_cron import router as email_cron_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
+from api.app.routers.organizations import router as organizations_router  # noqa: E402
 from api.app.routers.policies import router as policies_router  # noqa: E402
 from api.app.routers.qa import router as qa_router  # noqa: E402
 from api.app.routers.usage import router as usage_router  # noqa: E402
 
 app.include_router(admin_router)
 app.include_router(agents_router)
+app.include_router(capabilities_router)
 app.include_router(audit_router)
 app.include_router(auth_router)
 app.include_router(billing_router)
 app.include_router(compliance_router)
 app.include_router(credentials_router)
+app.include_router(email_cron_router)
 app.include_router(keys_router)
 app.include_router(policies_router)
 app.include_router(qa_router)
 app.include_router(usage_router)
+app.include_router(organizations_router)
+app.include_router(agent_assignments_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────
 

@@ -95,11 +95,13 @@ The program is successful if:
 
 ### AI Identity Design Partner Agreement
 
-**Between:** AI Identity ("Provider") and _________________________ ("Partner")
+**Between:** AI Identity LLC, a Colorado limited liability company ("Provider") and _________________________ ("Partner")
 
-**Program duration:** 90 days from signing
+**Effective date:** _____________ **Program duration:** 90 days from effective date
 
-**Provider commits to:**
+---
+
+**1. Provider commits to:**
 1. Full API access at no cost for the duration of the program
 2. Guaranteed free tier access after program ends (minimum 12 months)
 3. Monthly 30-minute feedback sessions with founder
@@ -107,34 +109,60 @@ The program is successful if:
 5. Dedicated integration support during onboarding
 6. Draft of co-marketing deliverable (blog post or case study) for partner review
 
-**Partner commits to:**
+**2. Partner commits to:**
 1. Integrate AI Identity into at least one agent workflow within 30 days
 2. Attend three monthly feedback calls (30 minutes each)
 3. Provide honest product feedback (bugs, feature gaps, UX issues)
 4. Optionally: approve a quote or case study for co-marketing use
 
-**Intellectual property:**
+**3. Data handling:**
+- Provider stores only the data Partner sends through the API: agent identifiers, key metadata, policy configurations, and audit logs.
+- Provider does not store or log API request/response payloads flowing through the gateway.
+- All data is encrypted at rest (AES-256) and in transit (TLS 1.2+).
+- Data is hosted in the United States on SOC 2-compliant infrastructure.
+- Upon program termination or Partner's written request, Provider will delete Partner's data within 30 days.
+- Provider will not sell, share, or use Partner's data for any purpose beyond delivering the service.
+
+**4. Beta disclaimer:**
+The product is in active development. Partner acknowledges that:
+- The API may have breaking changes with 7 days advance notice
+- Uptime is not guaranteed (no SLA during the design partner period)
+- Provider will communicate planned downtime and breaking changes via email
+- The service is not recommended for Partner's production-critical workflows without Partner's own risk assessment
+
+**5. Intellectual property:**
 Each party retains ownership of their own IP. No license is granted beyond API access for the program duration. Integration code written jointly is MIT-licensed.
 
-**Confidentiality:**
+**6. Confidentiality:**
 Both parties agree not to share the other's proprietary information without written consent. Product feedback and roadmap discussions are confidential. Published co-marketing materials require mutual approval.
 
-**Termination:**
-Either party may end the program at any time with 7 days written notice. No penalties. Partner retains API access through the original 90-day period regardless.
+**7. Termination:**
+Either party may end the program at any time with 7 days written notice. No penalties. Partner retains API access through the original 90-day period regardless. Data deletion follows the process in Section 3.
 
-**Not a legal contract.**
-This is a good-faith agreement between two companies building together. No purchase obligations, no exclusivity, no non-competes.
+**8. Limitation of liability:**
+Provider's total liability under this agreement shall not exceed $0. The service is provided "as is" during the design partner period. Provider is not liable for any damages arising from downtime, data loss, or API changes.
+
+**9. General.**
+This agreement constitutes the entire understanding between the parties. It is governed by the laws of the State of Colorado. No exclusivity, no non-competes, no purchase obligations.
 
 ---
 
-**Provider signature:** _________________________ Date: _________
+**Provider:** AI Identity LLC
 
-**Partner signature:** _________________________ Date: _________
+Signature: _________________________ Date: _________
 
-**Partner company:** _________________________
+Name: Jeff Leva, Founder & CEO
 
-**Partner contact:** _________________________ (name, email)
+**Partner:** _________________________
 
-**Agent framework/stack:** _________________________
+Signature: _________________________ Date: _________
 
-**Number of agents in production:** _________
+Name: _________________________ Title: _________________________
+
+Email: _________________________ Company: _________________________
+
+**Partner technical details:**
+
+Agent framework/stack: _________________________
+
+Number of agents in production: _________

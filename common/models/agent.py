@@ -28,6 +28,12 @@ class Agent(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    org_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
@@ -62,6 +68,12 @@ class Agent(Base):
         primaryjoin="Agent.id == foreign(AuditLog.agent_id)",
     )
     upstream_credentials: Mapped[list["UpstreamCredential"]] = relationship(  # noqa: F821
+        back_populates="agent", cascade="all, delete-orphan"
+    )
+    organization: Mapped["Organization | None"] = relationship(  # noqa: F821
+        back_populates="agents", foreign_keys=[org_id]
+    )
+    assignments: Mapped[list["AgentAssignment"]] = relationship(  # noqa: F821
         back_populates="agent", cascade="all, delete-orphan"
     )
 

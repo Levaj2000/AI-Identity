@@ -50,7 +50,7 @@ function statusColor(status: string): string {
 
 export function AgentHealthGrid({ agents }: AgentHealthGridProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#F59E0B]/10 dark:bg-[#111113]/80 dark:backdrop-blur-xl">
+    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
       <div className="mb-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">Agent Health</h2>
         <p className="text-sm text-gray-500 dark:text-[#71717a]">
@@ -62,7 +62,7 @@ export function AgentHealthGrid({ agents }: AgentHealthGridProps) {
         {agents.map((agent) => (
           <div
             key={agent.id}
-            className="rounded-lg border border-gray-200 bg-gray-50 p-4 transition-all duration-200 hover:border-[#F59E0B]/30 hover:bg-gray-100 dark:border-[#1a1a1d] dark:bg-[#0A0A0B]/50 dark:hover:border-[#F59E0B]/30 dark:hover:bg-[#F59E0B]/5"
+            className="rounded-lg border border-gray-200 bg-gray-50 p-4 transition-all duration-200 hover:border-[#A6DAFF]/30 hover:bg-gray-100 dark:border-[#1a1a1d] dark:bg-[#04070D]/50 dark:hover:border-[#A6DAFF]/30 dark:hover:bg-[#A6DAFF]/5"
           >
             <div className="flex items-center gap-3">
               <StatusDot status={agent.status} />

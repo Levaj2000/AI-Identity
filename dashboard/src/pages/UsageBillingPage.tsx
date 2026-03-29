@@ -20,7 +20,9 @@ function tierLabel(tier: string): string {
 function tierColor(tier: string): string {
   switch (tier) {
     case 'pro':
-      return 'text-[#F59E0B]'
+      return 'text-[#A6DAFF]'
+    case 'business':
+      return 'text-blue-400'
     case 'enterprise':
       return 'text-purple-400'
     default:
@@ -31,7 +33,9 @@ function tierColor(tier: string): string {
 function tierBadgeClasses(tier: string): string {
   switch (tier) {
     case 'pro':
-      return 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20'
+      return 'bg-[#A6DAFF]/10 text-[#A6DAFF] border-[#A6DAFF]/20'
+    case 'business':
+      return 'bg-blue-500/10 text-blue-400 border-blue-500/20'
     case 'enterprise':
       return 'bg-purple-500/10 text-purple-400 border-purple-500/20'
     default:
@@ -54,7 +58,7 @@ function formatDate(ts: number): string {
 function progressColor(pct: number): string {
   if (pct >= 90) return 'bg-red-500'
   if (pct >= 70) return 'bg-yellow-500'
-  return 'bg-[#F59E0B]'
+  return 'bg-[#A6DAFF]'
 }
 
 function subStatusBadge(status: string): string {
@@ -84,7 +88,7 @@ function QuotaBar({
   icon: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+    <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-gray-400">{icon}</span>
@@ -97,7 +101,7 @@ function QuotaBar({
       <div className="mt-3 h-2 rounded-full bg-[#1a1a1d]">
         <div
           className={`h-full rounded-full transition-all duration-500 ${
-            quota.unlimited ? 'bg-[#F59E0B]/30' : progressColor(quota.percentage)
+            quota.unlimited ? 'bg-[#A6DAFF]/30' : progressColor(quota.percentage)
           }`}
           style={{ width: `${quota.unlimited ? 0 : Math.min(quota.percentage, 100)}%` }}
         />
@@ -116,7 +120,7 @@ function DailyChart({ daily }: { daily: UsageAggregation['daily'] }) {
   const maxRequests = Math.max(...daily.map((d) => d.total_requests), 1)
 
   return (
-    <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+    <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
       <h3 className="text-sm font-medium text-white">Daily Requests</h3>
       <p className="mt-1 text-xs text-gray-500">Current billing period</p>
       <div className="mt-4 flex items-end gap-[2px] h-32">
@@ -150,7 +154,7 @@ function DailyChart({ daily }: { daily: UsageAggregation['daily'] }) {
                 style={{ height: `${deniedPct}%` }}
               />
               <div
-                className="w-full rounded-t-sm bg-[#F59E0B] transition-all hover:bg-[#F59E0B]/80"
+                className="w-full rounded-t-sm bg-[#A6DAFF] transition-all hover:bg-[#A6DAFF]/80"
                 style={{ height: `${allowedPct}%`, minHeight: d.total_requests > 0 ? '2px' : '0' }}
               />
             </div>
@@ -165,7 +169,7 @@ function DailyChart({ daily }: { daily: UsageAggregation['daily'] }) {
       {/* Legend */}
       <div className="mt-3 flex items-center gap-4 text-[10px] text-gray-500">
         <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-sm bg-[#F59E0B]" /> Allowed
+          <span className="inline-block h-2 w-2 rounded-sm bg-[#A6DAFF]" /> Allowed
         </span>
         <span className="flex items-center gap-1">
           <span className="inline-block h-2 w-2 rounded-sm bg-red-400/60" /> Denied
@@ -183,7 +187,7 @@ function DailyChart({ daily }: { daily: UsageAggregation['daily'] }) {
 function AgentBreakdown({ agents }: { agents: UsageAggregation['by_agent'] }) {
   if (agents.length === 0) {
     return (
-      <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+      <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
         <h3 className="text-sm font-medium text-white">Per-Agent Breakdown</h3>
         <p className="mt-4 text-center text-sm text-gray-500">
           No agent activity this billing period
@@ -193,7 +197,7 @@ function AgentBreakdown({ agents }: { agents: UsageAggregation['by_agent'] }) {
   }
 
   return (
-    <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+    <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
       <h3 className="text-sm font-medium text-white">Per-Agent Breakdown</h3>
       <p className="mt-1 text-xs text-gray-500">Current billing period</p>
       <div className="mt-4 overflow-x-auto">
@@ -268,18 +272,31 @@ function TierComparison({ currentTier }: { currentTier: string }) {
       name: 'Free',
       key: 'free',
       price: '$0',
-      features: ['3 agents', '5,000 requests/mo', '1 credential', '7-day audit retention'],
+      features: ['5 agents', '2,000 requests/mo', '1 credential', '30-day audit retention'],
     },
     {
       name: 'Pro',
       key: 'pro',
-      price: '$49/mo',
+      price: '$79/mo',
       features: [
-        '25 agents',
-        '100,000 requests/mo',
+        '50 agents',
+        '75,000 requests/mo',
         '10 credentials',
         '90-day audit retention',
+        'Basic SSO',
+      ],
+    },
+    {
+      name: 'Business',
+      key: 'business',
+      price: '$299/mo',
+      features: [
+        '200 agents',
+        '500,000 requests/mo',
+        '50 credentials',
+        '1-year audit retention',
         'Priority support',
+        'SAML / SCIM',
       ],
     },
     {
@@ -291,14 +308,14 @@ function TierComparison({ currentTier }: { currentTier: string }) {
         'Unlimited requests',
         'Unlimited credentials',
         'Unlimited audit retention',
-        'Dedicated support',
-        'Custom SLAs',
+        'Dedicated support + SLA',
+        'On-premise / VPC',
       ],
     },
   ]
 
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {tiers.map((t) => {
         const isCurrent = t.key === currentTier
 
@@ -307,14 +324,14 @@ function TierComparison({ currentTier }: { currentTier: string }) {
             key={t.key}
             className={`rounded-xl border p-5 transition-colors ${
               isCurrent
-                ? 'border-[#F59E0B]/40 bg-[#F59E0B]/5'
-                : 'border-[#1a1a1d] bg-[#111113]/80 hover:border-[#2a2a2d]'
+                ? 'border-[#A6DAFF]/40 bg-[#A6DAFF]/5'
+                : 'border-[#1a1a1d] bg-[#10131C]/80 hover:border-[#2a2a2d]'
             }`}
           >
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-semibold text-white">{t.name}</h4>
               {isCurrent && (
-                <span className="rounded-full border border-[#F59E0B]/30 bg-[#F59E0B]/10 px-2 py-0.5 text-[10px] font-medium text-[#F59E0B]">
+                <span className="rounded-full border border-[#A6DAFF]/30 bg-[#A6DAFF]/10 px-2 py-0.5 text-[10px] font-medium text-[#A6DAFF]">
                   Current
                 </span>
               )}
@@ -328,7 +345,7 @@ function TierComparison({ currentTier }: { currentTier: string }) {
                     height="12"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke={isCurrent ? '#F59E0B' : '#10b981'}
+                    stroke={isCurrent ? '#A6DAFF' : '#10b981'}
                     strokeWidth="2"
                   >
                     <polyline points="20 6 9 17 4 12" />
@@ -434,13 +451,13 @@ export function UsageBillingPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 animate-bounce rounded-full bg-[#F59E0B]" />
+          <div className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]" />
           <div
-            className="h-2 w-2 animate-bounce rounded-full bg-[#F59E0B]"
+            className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]"
             style={{ animationDelay: '0.15s' }}
           />
           <div
-            className="h-2 w-2 animate-bounce rounded-full bg-[#F59E0B]"
+            className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]"
             style={{ animationDelay: '0.3s' }}
           />
         </div>
@@ -470,7 +487,7 @@ export function UsageBillingPage() {
             <button
               onClick={handleUpgrade}
               disabled={checkoutLoading}
-              className="rounded-lg bg-[#F59E0B] px-4 py-2 text-sm font-medium text-black hover:bg-[#F59E0B]/90 transition-colors disabled:opacity-50"
+              className="rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-medium text-black hover:bg-[#A6DAFF]/90 transition-colors disabled:opacity-50"
             >
               {checkoutLoading ? 'Redirecting...' : 'Upgrade to Pro'}
             </button>
@@ -479,7 +496,7 @@ export function UsageBillingPage() {
             <button
               onClick={handleManageSubscription}
               disabled={portalLoading}
-              className="rounded-lg border border-[#1a1a1d] bg-[#111113] px-4 py-2 text-sm text-gray-300 hover:border-[#F59E0B]/30 hover:text-white transition-colors disabled:opacity-50"
+              className="rounded-lg border border-[#1a1a1d] bg-[#10131C] px-4 py-2 text-sm text-gray-300 hover:border-[#A6DAFF]/30 hover:text-white transition-colors disabled:opacity-50"
             >
               {portalLoading ? 'Opening...' : 'Manage Subscription'}
             </button>
@@ -510,7 +527,7 @@ export function UsageBillingPage() {
 
       {/* Subscription status card (if subscribed) */}
       {billing?.subscription && (
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-3">
@@ -609,7 +626,7 @@ export function UsageBillingPage() {
       {/* Billing period summary */}
       {aggregation?.billing_period && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+          <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
               Billing Period
             </p>
@@ -618,11 +635,14 @@ export function UsageBillingPage() {
               {aggregation.billing_period.period_end.slice(5)}
             </p>
             <p className="mt-1 text-xs text-gray-500">
-              {aggregation.billing_period.active_agents} active agent
-              {aggregation.billing_period.active_agents !== 1 ? 's' : ''}
+              {usage ? `${usage.agents.current} active` : ''}
+              {usage && aggregation.billing_period.agents_seen > 0 ? ' · ' : ''}
+              {aggregation.billing_period.agents_seen > 0
+                ? `${aggregation.billing_period.agents_seen} seen in logs`
+                : 'No agents seen in logs'}
             </p>
           </div>
-          <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+          <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
               Total Requests
             </p>
@@ -640,14 +660,14 @@ export function UsageBillingPage() {
               )}
             </div>
           </div>
-          <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+          <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Peak Daily</p>
             <p className="mt-2 text-2xl font-bold text-white">
               {aggregation.billing_period.peak_daily_requests.toLocaleString()}
             </p>
             <p className="mt-1 text-xs text-gray-500">requests in a single day</p>
           </div>
-          <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+          <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
             <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
               Daily Average
             </p>
@@ -682,7 +702,7 @@ export function UsageBillingPage() {
 
       {/* Audit retention info */}
       {usage && (
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 backdrop-blur-xl p-5">
+        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium text-white">Audit Log Retention</h3>

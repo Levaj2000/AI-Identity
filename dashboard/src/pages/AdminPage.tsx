@@ -9,6 +9,7 @@ import {
   type AdminHealth,
 } from '../services/api/admin'
 import { isApiError } from '../services/api/client'
+import { StatDetailDrawer, type StatDrawerMode } from '../components/admin/StatDetailDrawer'
 
 type TierFilter = '' | 'free' | 'pro' | 'enterprise'
 
@@ -28,6 +29,9 @@ export function AdminPage() {
 
   // Tier change state
   const [changingTier, setChangingTier] = useState<string | null>(null)
+
+  // Stat detail drawer
+  const [selectedStat, setSelectedStat] = useState<StatDrawerMode | null>(null)
 
   const loadData = async (currentSearch?: string, currentTier?: string, currentPage?: number) => {
     try {
@@ -152,30 +156,38 @@ export function AdminPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Total Users" value={stats.total_users} icon="👥" />
+          <StatCard
+            label="Total Users"
+            value={stats.total_users}
+            icon="👥"
+            onClick={() => setSelectedStat('users')}
+          />
           <StatCard
             label="Total Agents"
             value={stats.total_agents}
             sublabel={`${stats.total_active_agents} active`}
             icon="🤖"
+            onClick={() => setSelectedStat('agents')}
           />
           <StatCard
             label="Requests This Month"
             value={stats.total_requests.toLocaleString()}
             icon="📊"
+            onClick={() => setSelectedStat('requests')}
           />
           <StatCard
             label="System Health"
             value={health?.status === 'healthy' ? 'Healthy' : 'Unknown'}
             sublabel={health ? `${health.db_latency_ms}ms DB` : undefined}
             icon={health?.status === 'healthy' ? '✅' : '⚠️'}
+            onClick={() => setSelectedStat('health')}
           />
         </div>
       )}
 
       {/* Tier Distribution */}
       {stats && (
-        <div className="bg-[#111113] border border-[#1a1a1d] rounded-xl p-5">
+        <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl p-5">
           <h3 className="text-sm font-medium text-gray-400 mb-3">Users by Tier</h3>
           <div className="flex gap-4">
             {['free', 'pro', 'enterprise'].map((tier) => (
@@ -190,7 +202,7 @@ export function AdminPage() {
 
       {/* Table Counts */}
       {health && (
-        <div className="bg-[#111113] border border-[#1a1a1d] rounded-xl p-5">
+        <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl p-5">
           <h3 className="text-sm font-medium text-gray-400 mb-3">Database Tables</h3>
           <div className="flex gap-6">
             {Object.entries(health.table_counts).map(([table, count]) => (
@@ -204,7 +216,7 @@ export function AdminPage() {
       )}
 
       {/* User Management */}
-      <div className="bg-[#111113] border border-[#1a1a1d] rounded-xl overflow-hidden">
+      <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl overflow-hidden">
         <div className="p-5 border-b border-[#1a1a1d]">
           <h3 className="text-lg font-medium text-white mb-3">User Management</h3>
           <div className="flex flex-wrap gap-3">
@@ -216,11 +228,11 @@ export function AdminPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="px-3 py-1.5 bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#F59E0B]/50 w-64"
+                className="px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#A6DAFF]/50 w-64"
               />
               <button
                 onClick={handleSearch}
-                className="px-3 py-1.5 bg-[#F59E0B]/10 text-[#F59E0B] rounded-lg text-sm hover:bg-[#F59E0B]/20 transition-colors"
+                className="px-3 py-1.5 bg-[#A6DAFF]/10 text-[#A6DAFF] rounded-lg text-sm hover:bg-[#A6DAFF]/20 transition-colors"
               >
                 Search
               </button>
@@ -230,7 +242,7 @@ export function AdminPage() {
             <select
               value={tierFilter}
               onChange={(e) => handleTierFilter(e.target.value as TierFilter)}
-              className="px-3 py-1.5 bg-[#0A0A0B] border border-[#1a1a1d] rounded-lg text-sm text-white focus:outline-none focus:border-[#F59E0B]/50"
+              className="px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white focus:outline-none focus:border-[#A6DAFF]/50"
             >
               <option value="">All tiers</option>
               <option value="free">Free</option>
@@ -285,7 +297,7 @@ export function AdminPage() {
                       value={user.tier}
                       disabled={changingTier === user.id}
                       onChange={(e) => handleTierChange(user.id, e.target.value)}
-                      className="px-2 py-1 bg-[#0A0A0B] border border-[#1a1a1d] rounded text-xs text-white focus:outline-none focus:border-[#F59E0B]/50 disabled:opacity-50"
+                      className="px-2 py-1 bg-[#04070D] border border-[#1a1a1d] rounded text-xs text-white focus:outline-none focus:border-[#A6DAFF]/50 disabled:opacity-50"
                     >
                       <option value="free">Free</option>
                       <option value="pro">Pro</option>
@@ -331,6 +343,11 @@ export function AdminPage() {
           </div>
         )}
       </div>
+
+      {/* Stat detail drawer */}
+      {selectedStat && (
+        <StatDetailDrawer mode={selectedStat} onClose={() => setSelectedStat(null)} />
+      )}
     </div>
   )
 }
@@ -342,14 +359,19 @@ function StatCard({
   value,
   sublabel,
   icon,
+  onClick,
 }: {
   label: string
   value: string | number
   sublabel?: string
   icon: string
+  onClick?: () => void
 }) {
   return (
-    <div className="bg-[#111113] border border-[#1a1a1d] rounded-xl p-5">
+    <div
+      className="bg-[#10131C] border border-[#1a1a1d] rounded-xl p-5 cursor-pointer hover:border-[#A6DAFF]/40 transition-colors"
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-gray-400">{label}</p>
@@ -365,7 +387,7 @@ function StatCard({
 function TierBadge({ tier }: { tier: string }) {
   const colors: Record<string, string> = {
     free: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-    pro: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20',
+    pro: 'bg-[#A6DAFF]/10 text-[#A6DAFF] border-[#A6DAFF]/20',
     enterprise: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
   }
   return (

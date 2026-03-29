@@ -48,13 +48,13 @@ export function TagInput({
 
   const borderColor = error
     ? 'border-red-500 dark:border-red-500'
-    : 'border-gray-300 dark:border-[#2a2a2d] focus-within:border-[#F59E0B] dark:focus-within:border-[#F59E0B]'
+    : 'border-gray-300 dark:border-[#2a2a2d] focus-within:border-[#A6DAFF] dark:focus-within:border-[#A6DAFF]'
 
   return (
     <div>
       {/* Container styled as a single input field */}
       <div
-        className={`flex min-h-[2.5rem] flex-wrap items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 transition-colors dark:bg-[#0A0A0B] ${borderColor}`}
+        className={`flex min-h-[2.5rem] flex-wrap items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 transition-colors dark:bg-[#04070D] ${borderColor}`}
         onClick={() => inputRef.current?.focus()}
       >
         {/* Tags */}

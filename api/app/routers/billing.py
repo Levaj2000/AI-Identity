@@ -24,10 +24,16 @@ router = APIRouter(prefix="/api/v1/billing", tags=["billing"])
 # Configure Stripe SDK
 stripe.api_key = settings.stripe_secret_key
 
-# Map Stripe Price IDs → tier names
+# Map Stripe Price IDs → tier names (monthly + annual resolve to same tier)
 PRICE_TO_TIER: dict[str, str] = {}
 if settings.stripe_price_id_pro:
     PRICE_TO_TIER[settings.stripe_price_id_pro] = "pro"
+if settings.stripe_price_id_pro_annual:
+    PRICE_TO_TIER[settings.stripe_price_id_pro_annual] = "pro"
+if settings.stripe_price_id_business:
+    PRICE_TO_TIER[settings.stripe_price_id_business] = "business"
+if settings.stripe_price_id_business_annual:
+    PRICE_TO_TIER[settings.stripe_price_id_business_annual] = "business"
 if settings.stripe_price_id_enterprise:
     PRICE_TO_TIER[settings.stripe_price_id_enterprise] = "enterprise"
 
@@ -96,10 +102,15 @@ def _sync_tier_from_subscription(db: Session, subscription: stripe.Subscription)
 )
 def create_checkout_session(
     plan: str = "pro",
+    billing: str = "monthly",
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Create a Stripe Checkout session to upgrade to Pro or Enterprise.
+    """Create a Stripe Checkout session to upgrade to Pro, Business, or Enterprise.
+
+    Args:
+        plan: Target tier — "pro", "business", or "enterprise".
+        billing: Billing interval — "monthly" or "annual".
 
     Returns a `checkout_url` — redirect the user there to complete payment.
     After payment, Stripe redirects to the dashboard with a session ID.
@@ -108,9 +119,15 @@ def create_checkout_session(
     if not settings.stripe_secret_key:
         raise HTTPException(status_code=503, detail="Stripe billing is not configured")
 
-    price_id = (
-        settings.stripe_price_id_pro if plan == "pro" else settings.stripe_price_id_enterprise
-    )
+    price_map = {
+        ("pro", "monthly"): settings.stripe_price_id_pro,
+        ("pro", "annual"): settings.stripe_price_id_pro_annual,
+        ("business", "monthly"): settings.stripe_price_id_business,
+        ("business", "annual"): settings.stripe_price_id_business_annual,
+        ("enterprise", "monthly"): settings.stripe_price_id_enterprise,
+        ("enterprise", "annual"): settings.stripe_price_id_enterprise,
+    }
+    price_id = price_map.get((plan, billing), "")
     if not price_id:
         raise HTTPException(status_code=400, detail=f"No price configured for plan: {plan}")
 

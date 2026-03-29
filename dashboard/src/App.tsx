@@ -14,6 +14,8 @@ import { CompliancePage } from './pages/CompliancePage'
 import { UsageBillingPage } from './pages/UsageBillingPage'
 import { AdminPage } from './pages/AdminPage'
 import { QAChecklistPage } from './pages/QAChecklistPage'
+import { ForensicsPage } from './pages/ForensicsPage'
+import { OrganizationPage } from './pages/OrganizationPage'
 
 function App() {
   return (
@@ -38,8 +40,10 @@ function App() {
         <Route path="agents/:id" element={<AgentDetailPage />} />
         <Route path="agents/:id/keys" element={<AgentKeysPage />} />
         <Route path="keys" element={<KeysPage />} />
+        <Route path="organization" element={<OrganizationPage />} />
         <Route path="usage" element={<UsageBillingPage />} />
         <Route path="compliance" element={<CompliancePage />} />
+        <Route path="forensics" element={<ForensicsPage />} />
         <Route path="qa" element={<QAChecklistPage />} />
         <Route path="admin" element={<AdminPage />} />
       </Route>

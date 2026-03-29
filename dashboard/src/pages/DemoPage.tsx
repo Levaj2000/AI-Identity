@@ -429,7 +429,7 @@ export function DemoPage() {
   const getLineColor = (type: TerminalLine['type']) => {
     switch (type) {
       case 'command':
-        return 'text-[#F59E0B]'
+        return 'text-[#A6DAFF]'
       case 'response':
         return 'text-gray-300'
       case 'info':
@@ -442,25 +442,25 @@ export function DemoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] font-[Inter,system-ui,sans-serif]">
+    <div className="min-h-screen bg-[#04070D] font-[Inter,system-ui,sans-serif]">
       {/* Gradient accent line */}
       <div className="absolute top-0 left-0 right-0">
-        <div className="h-[2px] w-full bg-gradient-to-r from-[#F59E0B] via-[#F59E0B]/50 to-transparent" />
+        <div className="h-[2px] w-full bg-gradient-to-r from-[#A6DAFF] via-[#A6DAFF]/50 to-transparent" />
       </div>
 
       {/* Header */}
       <header className="border-b border-[#1a1a1d] px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <a href="https://ai-identity.co" className="flex items-center gap-2">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-[#F59E0B]">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-[#A6DAFF]">
               <rect x="3" y="12" width="4" height="8" rx="1" fill="currentColor" opacity="0.6" />
               <rect x="10" y="8" width="4" height="12" rx="1" fill="currentColor" opacity="0.8" />
               <rect x="17" y="4" width="4" height="16" rx="1" fill="currentColor" />
             </svg>
-            <span className="text-lg font-semibold text-[#F59E0B]">AI Identity</span>
+            <span className="text-lg font-semibold text-[#A6DAFF]">AI Identity</span>
           </a>
           <div className="flex items-center gap-4">
-            <span className="rounded-full border border-[#F59E0B]/30 bg-[#F59E0B]/10 px-3 py-1 text-xs font-medium text-[#F59E0B]">
+            <span className="rounded-full border border-[#A6DAFF]/30 bg-[#A6DAFF]/10 px-3 py-1 text-xs font-medium text-[#A6DAFF]">
               Live API Demo
             </span>
             <a href="/login" className="text-sm text-gray-400 hover:text-white transition-colors">
@@ -474,7 +474,7 @@ export function DemoPage() {
         {/* Title */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-white md:text-4xl">
-            Interactive API <span className="text-[#F59E0B]">Playground</span>
+            Interactive API <span className="text-[#A6DAFF]">Playground</span>
           </h1>
           <p className="mt-2 text-gray-400">
             Execute real API calls against the live AI Identity backend. No mock data.
@@ -483,11 +483,11 @@ export function DemoPage() {
 
         {/* API Key Input */}
         {showKeyInput && (
-          <div className="mx-auto mb-8 max-w-xl rounded-xl border border-[#1a1a1d] bg-[#111113]/80 p-6">
+          <div className="mx-auto mb-8 max-w-xl rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 p-6">
             <label className="mb-2 block text-sm font-medium text-gray-300">Your API Key</label>
             <p className="mb-3 text-xs text-gray-500">
               Enter your user API key to make authenticated requests. Don't have one?{' '}
-              <a href="/login" className="text-[#F59E0B] hover:underline">
+              <a href="/login" className="text-[#A6DAFF] hover:underline">
                 Sign up free
               </a>
             </p>
@@ -497,13 +497,13 @@ export function DemoPage() {
                 value={userKey}
                 onChange={(e) => setUserKey(e.target.value)}
                 placeholder="your-api-key-here"
-                className="flex-1 rounded-lg border border-[#1a1a1d] bg-[#0A0A0B] px-4 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-[#F59E0B]/50 focus:outline-none"
+                className="flex-1 rounded-lg border border-[#1a1a1d] bg-[#04070D] px-4 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-[#A6DAFF]/50 focus:outline-none"
               />
               <button
                 onClick={() => {
                   if (userKey) setShowKeyInput(false)
                 }}
-                className="rounded-lg bg-[#F59E0B] px-4 py-2.5 text-sm font-medium text-[#0A0A0B] hover:bg-[#F59E0B]/80 transition-colors"
+                className="rounded-lg bg-[#A6DAFF] px-4 py-2.5 text-sm font-medium text-[#04070D] hover:bg-[#A6DAFF]/80 transition-colors"
               >
                 Save
               </button>
@@ -521,11 +521,11 @@ export function DemoPage() {
                 disabled={loading || (!s.active && i > step)}
                 className={`w-full rounded-xl border p-4 text-left transition-all ${
                   s.active
-                    ? 'border-[#F59E0B]/50 bg-[#F59E0B]/10'
+                    ? 'border-[#A6DAFF]/50 bg-[#A6DAFF]/10'
                     : i < step
                       ? 'border-emerald-500/30 bg-emerald-500/5'
-                      : 'border-[#1a1a1d] bg-[#111113]/50 opacity-50'
-                } ${loading ? 'cursor-wait' : i <= step ? 'cursor-pointer hover:border-[#F59E0B]/30' : 'cursor-not-allowed'}`}
+                      : 'border-[#1a1a1d] bg-[#10131C]/50 opacity-50'
+                } ${loading ? 'cursor-wait' : i <= step ? 'cursor-pointer hover:border-[#A6DAFF]/30' : 'cursor-not-allowed'}`}
               >
                 <div className="flex items-center gap-2">
                   {i < step ? (
@@ -540,13 +540,13 @@ export function DemoPage() {
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   ) : s.active ? (
-                    <div className="h-2 w-2 animate-pulse rounded-full bg-[#F59E0B]" />
+                    <div className="h-2 w-2 animate-pulse rounded-full bg-[#A6DAFF]" />
                   ) : (
                     <div className="h-2 w-2 rounded-full bg-gray-600" />
                   )}
                   <span
                     className={`text-sm font-medium ${
-                      s.active ? 'text-[#F59E0B]' : i < step ? 'text-emerald-400' : 'text-gray-500'
+                      s.active ? 'text-[#A6DAFF]' : i < step ? 'text-emerald-400' : 'text-gray-500'
                     }`}
                   >
                     {s.label}
@@ -589,7 +589,7 @@ export function DemoPage() {
           </div>
 
           {/* Terminal */}
-          <div className="rounded-xl border border-[#1a1a1d] bg-[#0A0A0B] overflow-hidden">
+          <div className="rounded-xl border border-[#1a1a1d] bg-[#04070D] overflow-hidden">
             {/* Terminal header */}
             <div className="flex items-center gap-2 border-b border-[#1a1a1d] px-4 py-3">
               <div className="h-3 w-3 rounded-full bg-red-500/80" />
@@ -598,13 +598,13 @@ export function DemoPage() {
               <span className="ml-2 text-xs text-gray-500">ai-identity-demo — bash</span>
               {loading && (
                 <div className="ml-auto flex items-center gap-1.5">
-                  <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#F59E0B]" />
+                  <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#A6DAFF]" />
                   <div
-                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#F59E0B]"
+                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#A6DAFF]"
                     style={{ animationDelay: '0.15s' }}
                   />
                   <div
-                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#F59E0B]"
+                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#A6DAFF]"
                     style={{ animationDelay: '0.3s' }}
                   />
                 </div>
@@ -623,7 +623,7 @@ export function DemoPage() {
                   {line.text}
                 </pre>
               ))}
-              {loading && <span className="inline-block h-4 w-2 animate-pulse bg-[#F59E0B]" />}
+              {loading && <span className="inline-block h-4 w-2 animate-pulse bg-[#A6DAFF]" />}
             </div>
           </div>
         </div>
@@ -632,7 +632,7 @@ export function DemoPage() {
         {(agent || apiKey) && (
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {agent && (
-              <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 p-4">
+              <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 p-4">
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">
                   Demo Agent
                 </p>
@@ -650,11 +650,11 @@ export function DemoPage() {
               </div>
             )}
             {apiKey && (
-              <div className="rounded-xl border border-[#1a1a1d] bg-[#111113]/80 p-4">
+              <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 p-4">
                 <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">
                   Agent API Key
                 </p>
-                <p className="mt-1 text-sm font-mono text-[#F59E0B] truncate">
+                <p className="mt-1 text-sm font-mono text-[#A6DAFF] truncate">
                   {apiKey.key_prefix}...
                 </p>
                 <p className="mt-0.5 text-xs text-gray-500">Runtime key — shown only once</p>
@@ -667,7 +667,7 @@ export function DemoPage() {
         <div className="mt-12 border-t border-[#1a1a1d] pt-6 text-center">
           <p className="text-sm text-gray-500">
             All API calls hit the live production backend at{' '}
-            <code className="text-[#F59E0B]">{API_BASE}</code>
+            <code className="text-[#A6DAFF]">{API_BASE}</code>
           </p>
           <div className="mt-3 flex items-center justify-center gap-4">
             <a
@@ -676,7 +676,7 @@ export function DemoPage() {
             >
               &larr; Back to site
             </a>
-            <a href="/dashboard" className="text-sm text-[#F59E0B] hover:underline">
+            <a href="/dashboard" className="text-sm text-[#A6DAFF] hover:underline">
               Open Dashboard
             </a>
           </div>
