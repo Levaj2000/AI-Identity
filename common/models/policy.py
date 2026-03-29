@@ -3,7 +3,7 @@
 import datetime
 import uuid
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,3 +41,8 @@ class Policy(Base):
 
     # Relationships
     agent: Mapped["Agent"] = relationship(back_populates="policies")  # noqa: F821
+
+    # Composite index: gateway policy lookup (agent + active + latest version)
+    __table_args__ = (
+        Index("ix_policies_agent_active_version", "agent_id", "is_active", version.desc()),
+    )
