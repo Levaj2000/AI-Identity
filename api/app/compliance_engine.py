@@ -114,6 +114,7 @@ def _check_all_agents_have_policies(
     db: Session, user_id: uuid.UUID, agent_id: uuid.UUID | None
 ) -> dict:
     """Every active agent should have at least one active policy."""
+
     query = db.query(Agent).filter(Agent.user_id == user_id, Agent.status == "active")
     if agent_id:
         query = query.filter(Agent.id == agent_id)
@@ -126,13 +127,19 @@ def _check_all_agents_have_policies(
             "remediation": None,
         }
 
-    missing = []
-    for agent in agents:
-        policy_count = (
-            db.query(Policy).filter(Policy.agent_id == agent.id, Policy.is_active.is_(True)).count()
-        )
-        if policy_count == 0:
-            missing.append({"agent_id": str(agent.id), "name": agent.name})
+    # Single query: get agent_ids that have at least one active policy
+    agent_ids = [a.id for a in agents]
+    agents_with_policies = set(
+        row[0]
+        for row in db.query(Policy.agent_id)
+        .filter(Policy.agent_id.in_(agent_ids), Policy.is_active.is_(True))
+        .group_by(Policy.agent_id)
+        .all()
+    )
+
+    missing = [
+        {"agent_id": str(a.id), "name": a.name} for a in agents if a.id not in agents_with_policies
+    ]
 
     if missing:
         return {
@@ -318,28 +325,44 @@ def _check_key_rotation_within_90_days(
 
 def _check_key_type_separation(db: Session, user_id: uuid.UUID, agent_id: uuid.UUID | None) -> dict:
     """Agents should not have both runtime and admin keys active simultaneously."""
+
     query = db.query(Agent).filter(Agent.user_id == user_id, Agent.status == "active")
     if agent_id:
         query = query.filter(Agent.id == agent_id)
 
-    violations = []
-    for agent in query.all():
-        key_types = set()
-        for key in (
-            db.query(AgentKey)
-            .filter(AgentKey.agent_id == agent.id, AgentKey.status == "active")
-            .all()
-        ):
-            key_types.add(key.key_type)
+    agents = query.all()
+    agent_ids = [a.id for a in agents]
 
-        if "runtime" in key_types and "admin" in key_types:
-            violations.append(
-                {
-                    "agent_id": str(agent.id),
-                    "agent_name": agent.name,
-                    "active_key_types": list(key_types),
-                }
-            )
+    if not agent_ids:
+        return {
+            "status": "pass",
+            "evidence": {"key_separation_clean": True},
+            "remediation": None,
+        }
+
+    # Single query: get distinct key_types per agent
+    key_type_rows = (
+        db.query(AgentKey.agent_id, AgentKey.key_type)
+        .filter(AgentKey.agent_id.in_(agent_ids), AgentKey.status == "active")
+        .distinct()
+        .all()
+    )
+
+    # Group key types by agent
+    agent_key_types: dict[uuid.UUID, set[str]] = {}
+    for aid, kt in key_type_rows:
+        agent_key_types.setdefault(aid, set()).add(kt)
+
+    agent_map = {a.id: a for a in agents}
+    violations = [
+        {
+            "agent_id": str(aid),
+            "agent_name": agent_map[aid].name,
+            "active_key_types": list(types),
+        }
+        for aid, types in agent_key_types.items()
+        if "runtime" in types and "admin" in types
+    ]
 
     if violations:
         return {
@@ -358,25 +381,40 @@ def _check_no_revoked_agents_with_active_keys(
     db: Session, user_id: uuid.UUID, agent_id: uuid.UUID | None
 ) -> dict:
     """Revoked agents should not have any active keys."""
+    from sqlalchemy import func as sqla_func
+
     query = db.query(Agent).filter(Agent.user_id == user_id, Agent.status == "revoked")
     if agent_id:
         query = query.filter(Agent.id == agent_id)
 
-    violations = []
-    for agent in query.all():
-        active_keys = (
-            db.query(AgentKey)
-            .filter(AgentKey.agent_id == agent.id, AgentKey.status == "active")
-            .count()
-        )
-        if active_keys > 0:
-            violations.append(
-                {
-                    "agent_id": str(agent.id),
-                    "agent_name": agent.name,
-                    "active_keys": active_keys,
-                }
-            )
+    agents = query.all()
+    agent_ids = [a.id for a in agents]
+
+    if not agent_ids:
+        return {
+            "status": "pass",
+            "evidence": {"no_orphaned_keys": True},
+            "remediation": None,
+        }
+
+    # Single query: count active keys per revoked agent
+    key_counts = dict(
+        db.query(AgentKey.agent_id, sqla_func.count(AgentKey.id))
+        .filter(AgentKey.agent_id.in_(agent_ids), AgentKey.status == "active")
+        .group_by(AgentKey.agent_id)
+        .all()
+    )
+
+    agent_map = {a.id: a for a in agents}
+    violations = [
+        {
+            "agent_id": str(aid),
+            "agent_name": agent_map[aid].name,
+            "active_keys": count,
+        }
+        for aid, count in key_counts.items()
+        if count > 0
+    ]
 
     if violations:
         return {
@@ -397,34 +435,40 @@ def _check_audit_entries_exist(db: Session, user_id: uuid.UUID, agent_id: uuid.U
     if agent_id:
         query = query.filter(Agent.id == agent_id)
 
-    agents_without_audit = []
-    for agent in query.all():
-        audit_count = db.query(AuditLog).filter(AuditLog.agent_id == agent.id).count()
-        if audit_count == 0:
-            agents_without_audit.append(
-                {
-                    "agent_id": str(agent.id),
-                    "agent_name": agent.name,
-                }
-            )
-
-    total = query.count()
-    if not total:
+    agents = query.all()
+    if not agents:
         return {
             "status": "not_applicable",
             "evidence": {"reason": "No active agents"},
             "remediation": None,
         }
 
+    agent_ids = [a.id for a in agents]
+
+    # Single query: get agent_ids that have at least one audit entry
+    agents_with_audit = set(
+        row[0]
+        for row in db.query(AuditLog.agent_id)
+        .filter(AuditLog.agent_id.in_(agent_ids))
+        .distinct()
+        .all()
+    )
+
+    agents_without_audit = [
+        {"agent_id": str(a.id), "agent_name": a.name}
+        for a in agents
+        if a.id not in agents_with_audit
+    ]
+
     if agents_without_audit:
         return {
             "status": "warning",
-            "evidence": {"agents_without_audit": agents_without_audit, "total_agents": total},
+            "evidence": {"agents_without_audit": agents_without_audit, "total_agents": len(agents)},
             "remediation": "Route traffic through the gateway to generate audit trail entries.",
         }
     return {
         "status": "pass",
-        "evidence": {"total_agents": total, "all_have_audit_entries": True},
+        "evidence": {"total_agents": len(agents), "all_have_audit_entries": True},
         "remediation": None,
     }
 

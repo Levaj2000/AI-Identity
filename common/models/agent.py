@@ -4,7 +4,7 @@ import datetime
 import enum
 import uuid
 
-from sqlalchemy import DateTime, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -76,3 +76,6 @@ class Agent(Base):
     assignments: Mapped[list["AgentAssignment"]] = relationship(  # noqa: F821
         back_populates="agent", cascade="all, delete-orphan"
     )
+
+    # Composite index: agent listing filtered by user + status
+    __table_args__ = (Index("ix_agents_user_status", "user_id", "status"),)
