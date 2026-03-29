@@ -29,22 +29,23 @@ def main():
     now = datetime.datetime.utcnow()
     print(f"{ts} Keepalive ping starting...")
 
-    for name, url in SERVICES:
-        try:
-            r = httpx.head(url, timeout=TIMEOUT)
-            status = "healthy" if r.status_code == 200 else f"status {r.status_code}"
-            print(f"{ts} {name}: {status}")
-        except Exception as e:
-            print(f"{ts} {name}: error - {e}")
+    with httpx.Client(timeout=TIMEOUT) as client:
+        for name, url in SERVICES:
+            try:
+                r = client.head(url)
+                status = "healthy" if r.status_code == 200 else f"status {r.status_code}"
+                print(f"{ts} {name}: {status}")
+            except Exception as e:
+                print(f"{ts} {name}: error - {e}")
 
-    # Run follow-up email check once per day (first run in the 16:00 UTC hour)
-    if now.hour == 16 and now.minute < 10:
-        _send_followup_emails(ts)
+        # Run follow-up email check once per day (first run in the 16:00 UTC hour)
+        if now.hour == 16 and now.minute < 10:
+            _send_followup_emails(ts, client)
 
     print(f"{ts} Keepalive complete.")
 
 
-def _send_followup_emails(ts: str):
+def _send_followup_emails(ts: str, client: httpx.Client):
     """Trigger the follow-up email endpoint on the API."""
     internal_key = os.environ.get("INTERNAL_SERVICE_KEY", "")
     if not internal_key:
@@ -52,10 +53,9 @@ def _send_followup_emails(ts: str):
         return
 
     try:
-        r = httpx.post(
+        r = client.post(
             FOLLOWUP_URL,
             headers={"x-internal-key": internal_key},
-            timeout=TIMEOUT,
         )
         if r.status_code == 200:
             data = r.json()

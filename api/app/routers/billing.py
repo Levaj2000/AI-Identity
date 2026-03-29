@@ -23,6 +23,7 @@ router = APIRouter(prefix="/api/v1/billing", tags=["billing"])
 
 # Configure Stripe SDK
 stripe.api_key = settings.stripe_secret_key
+stripe.max_network_retries = 2
 
 # Map Stripe Price IDs → tier names (monthly + annual resolve to same tier)
 PRICE_TO_TIER: dict[str, str] = {}

@@ -23,6 +23,15 @@ from common.config.settings import settings
 
 # ── Sentry ───────────────────────────────────────────────────────────────
 
+
+def _filter_transactions(event, hint):
+    """Drop health/root transactions — monitoring noise, not actionable."""
+    url = event.get("request", {}).get("url", "")
+    if url.endswith(("/health", "/")):
+        return None
+    return event
+
+
 if settings.sentry_dsn:
     sentry_sdk.init(
         dsn=settings.sentry_dsn,
@@ -32,6 +41,7 @@ if settings.sentry_dsn:
         profiles_sample_rate=0.1 if settings.environment == "production" else 1.0,
         send_default_pii=False,
         enable_tracing=True,
+        before_send_transaction=_filter_transactions,
     )
 
 # ── Logging ──────────────────────────────────────────────────────────────
