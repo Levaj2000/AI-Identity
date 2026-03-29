@@ -506,19 +506,23 @@ def circuit_breaker_status():
 
 # ── Health ───────────────────────────────────────────────────────────────
 
+# Cached DB probe — avoids opening a connection on every health check.
+_db_probe_cache: dict = {"ok": False, "error": None, "ts": 0.0}
+_DB_PROBE_TTL = 10.0  # seconds
 
-@app.api_route("/health", methods=["GET", "HEAD"], tags=["health"], summary="Health check")
-async def health():
-    """Returns service status, version, and circuit breaker state.
 
-    Includes a lightweight DB connectivity check: executes SELECT 1
-    to verify the database is reachable. Reports 'degraded' if the
-    circuit breaker is open OR the database is unreachable.
+def _probe_db() -> tuple[bool, str | None]:
+    """Run SELECT 1 with a 10-second TTL cache.
+
+    Returns (db_ok, db_error_name). Repeated calls within the TTL
+    window return the cached result without touching the database.
     """
-    breaker_state = policy_circuit_breaker.state
+    now = time.perf_counter()
+    if now - _db_probe_cache["ts"] < _DB_PROBE_TTL:
+        return _db_probe_cache["ok"], _db_probe_cache["error"]
+
     db_ok = False
     db_error = None
-
     try:
         db: Session = SessionLocal()
         try:
@@ -529,6 +533,24 @@ async def health():
     except Exception as exc:
         db_error = type(exc).__name__
         logger.warning("Health check DB probe failed: %s", exc)
+
+    _db_probe_cache["ok"] = db_ok
+    _db_probe_cache["error"] = db_error
+    _db_probe_cache["ts"] = now
+    return db_ok, db_error
+
+
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["health"], summary="Health check")
+async def health():
+    """Returns service status, version, and circuit breaker state.
+
+    Includes a lightweight DB connectivity check: executes SELECT 1
+    to verify the database is reachable (cached for 10 seconds).
+    Reports 'degraded' if the circuit breaker is open OR the database
+    is unreachable.
+    """
+    breaker_state = policy_circuit_breaker.state
+    db_ok, db_error = _probe_db()
 
     is_healthy = db_ok and breaker_state != CircuitState.OPEN
     result = {
