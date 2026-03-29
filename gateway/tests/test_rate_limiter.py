@@ -168,10 +168,11 @@ class TestStaleEntryCleanup:
             rl.check_ip("3.3.3.3")  # triggers cleanup (threshold=2, now 3 keys)
 
         # The internal dict should have been cleaned
-        with rl._lock:
-            assert "1.1.1.1" not in rl._ip_windows
-            assert "2.2.2.2" not in rl._ip_windows
-            assert "3.3.3.3" in rl._ip_windows
+        backend = rl._fallback
+        with backend._lock:
+            assert "1.1.1.1" not in backend._ip_windows
+            assert "2.2.2.2" not in backend._ip_windows
+            assert "3.3.3.3" in backend._ip_windows
 
 
 # ── Thread Safety ───────────────────────────────────────────────────────
