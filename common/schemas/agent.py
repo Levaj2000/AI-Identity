@@ -100,6 +100,7 @@ class AgentResponse(BaseModel):
 
     id: uuid.UUID = Field(description="Unique agent identifier")
     user_id: uuid.UUID = Field(description="ID of the owning user")
+    org_id: uuid.UUID | None = Field(None, description="ID of the owning organization")
     name: str = Field(description="Human-readable agent name")
     description: str | None = Field(description="Agent description")
     status: str = Field(description="Current status: active, suspended, or revoked")
@@ -150,6 +151,19 @@ class AgentCreateResponse(BaseModel):
         description="Plaintext API key (aid_sk_…) — shown only once at creation time",
         examples=["aid_sk_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"],
     )
+
+
+# ── Capability Schemas ───────────────────────────────────────────────────
+
+
+class CapabilityResponse(BaseModel):
+    """A predefined capability with its endpoint permission mappings."""
+
+    id: str = Field(description="Capability identifier (e.g. openai_chat)")
+    name: str = Field(description="Human-readable name")
+    description: str = Field(description="What this capability grants access to")
+    endpoints: list[str] = Field(description="Allowed API endpoint patterns")
+    methods: list[str] = Field(description="Allowed HTTP methods")
 
 
 # ── Agent Key Schemas ────────────────────────────────────────────────────
@@ -300,3 +314,53 @@ class AuditChainVerifyResponse(BaseModel):
         None, description="ID of the first entry with a broken hash (if any)"
     )
     message: str = Field(description="Human-readable verification result")
+
+
+# ── Forensics Schemas ────────────────────────────────────────────────────
+
+
+class TopEndpoint(BaseModel):
+    """An endpoint with its request count."""
+
+    endpoint: str
+    count: int
+
+
+class AuditStatsResponse(BaseModel):
+    """Aggregated statistics for audit log entries over a time window."""
+
+    total_events: int = Field(description="Total audit entries in window")
+    allowed_count: int = Field(description="Number of allowed requests")
+    denied_count: int = Field(description="Number of denied requests")
+    error_count: int = Field(description="Number of error requests")
+    total_cost_usd: float = Field(description="Sum of cost_estimate_usd")
+    avg_latency_ms: float | None = Field(description="Average latency in ms")
+    top_endpoints: list[TopEndpoint] = Field(description="Top 10 endpoints by request count")
+
+
+class AuditReconstructResponse(BaseModel):
+    """Incident reconstruction: events + context for a time window."""
+
+    agent_id: uuid.UUID
+    agent_name: str | None = None
+    start_date: datetime
+    end_date: datetime
+    events: list[AuditLogResponse] = Field(description="All events in window")
+    chain_verification: AuditChainVerifyResponse
+    active_policy: PolicyResponse | None = Field(
+        None, description="Active policy at time of investigation"
+    )
+    stats: AuditStatsResponse
+
+
+class ForensicsReportResponse(BaseModel):
+    """Exportable forensics report with chain-of-custody certificate."""
+
+    report_id: str = Field(description="Unique report identifier")
+    generated_at: datetime
+    agent: dict = Field(description="Agent details")
+    time_window: dict = Field(description="Start and end timestamps")
+    events: list[AuditLogResponse]
+    chain_verification: AuditChainVerifyResponse
+    active_policy: PolicyResponse | None = None
+    stats: AuditStatsResponse

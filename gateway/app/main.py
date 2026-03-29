@@ -35,13 +35,25 @@ from gateway.app.rate_limiter import RateLimitResult, rate_limiter
 
 # ── Sentry ───────────────────────────────────────────────────────────────
 
+
+def _filter_transactions(event, hint):
+    """Drop health/root transactions — monitoring noise, not actionable."""
+    url = event.get("request", {}).get("url", "")
+    if url.endswith(("/health", "/")):
+        return None
+    return event
+
+
 if settings.sentry_dsn:
     sentry_sdk.init(
         dsn=settings.sentry_dsn,
         environment=settings.environment,
         release=f"ai-identity-gateway@{settings.app_version}",
         traces_sample_rate=0.2 if settings.environment == "production" else 1.0,
+        profiles_sample_rate=0.1 if settings.environment == "production" else 1.0,
         send_default_pii=False,
+        enable_tracing=True,
+        before_send_transaction=_filter_transactions,
     )
 
 # ── Logging ──────────────────────────────────────────────────────────────
@@ -126,6 +138,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Security Headers Middleware ─────────────────────────────────────────
+
+
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+    """Add standard security headers to every response."""
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
+    return response
+
+
 # ── Request Logging Middleware ───────────────────────────────────────────
 
 
@@ -139,20 +168,43 @@ async def request_logging_middleware(request: Request, call_next):
     response = await call_next(request)
     duration_ms = round((time.perf_counter() - start) * 1000, 2)
 
-    logger.info(
-        "%s %s → %s (%sms)",
-        request.method,
-        request.url.path,
-        response.status_code,
-        duration_ms,
-        extra={
-            "request_id": request_id,
-            "method": request.method,
-            "path": request.url.path,
-            "status_code": response.status_code,
-            "duration_ms": duration_ms,
-        },
-    )
+    log_extra = {
+        "request_id": request_id,
+        "method": request.method,
+        "path": request.url.path,
+        "status_code": response.status_code,
+        "duration_ms": duration_ms,
+    }
+
+    # Flag slow requests (P95 alert threshold: 500ms)
+    if duration_ms > 500 and request.url.path != "/health":
+        logger.warning(
+            "SLOW REQUEST: %s %s → %s (%sms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+            extra=log_extra,
+        )
+        if settings.sentry_dsn:
+            sentry_sdk.set_tag("slow_request", True)
+            sentry_sdk.set_context(
+                "performance",
+                {
+                    "duration_ms": duration_ms,
+                    "endpoint": request.url.path,
+                    "method": request.method,
+                },
+            )
+    else:
+        logger.info(
+            "%s %s → %s (%sms)",
+            request.method,
+            request.url.path,
+            response.status_code,
+            duration_ms,
+            extra=log_extra,
+        )
 
     response.headers["X-Request-ID"] = request_id
     return response
@@ -383,41 +435,49 @@ def enforce_request(
 
     # ── Post-policy quota check ──────────────────────────────────────
     # Only count requests that pass policy enforcement.
+    # Uses atomic UPDATE to avoid read-modify-write race and reduce lock contention.
     try:
         from common.models import Agent, User
         from common.models.user import TIER_QUOTAS
 
-        agent = db.query(Agent).filter(Agent.id == agent_id).first()
-        if agent:
-            user = db.query(User).filter(User.id == agent.user_id).first()
-            if user:
-                quotas = TIER_QUOTAS.get(user.tier, TIER_QUOTAS["free"])
-                max_req = quotas["max_requests_per_month"]
+        # Single query: join agent → user to avoid two round-trips
+        row = (
+            db.query(User.id, User.tier, User.requests_this_month)
+            .join(Agent, Agent.user_id == User.id)
+            .filter(Agent.id == agent_id)
+            .first()
+        )
+        if row:
+            user_id, tier, requests_used = row
+            quotas = TIER_QUOTAS.get(tier, TIER_QUOTAS["free"])
+            max_req = quotas["max_requests_per_month"]
 
-                if max_req != -1 and (user.requests_this_month or 0) >= max_req:
-                    return JSONResponse(
-                        status_code=429,
-                        content={
-                            "decision": "deny",
-                            "status_code": 429,
-                            "message": (
-                                f"Monthly request quota exceeded ({max_req} requests). "
-                                f"Upgrade at https://ai-identity.co/#pricing"
-                            ),
-                            "deny_reason": "quota_exceeded",
-                        },
-                    )
+            if max_req != -1 and (requests_used or 0) >= max_req:
+                return JSONResponse(
+                    status_code=429,
+                    content={
+                        "decision": "deny",
+                        "status_code": 429,
+                        "message": (
+                            f"Monthly request quota exceeded ({max_req} requests). "
+                            f"Upgrade at https://ai-identity.co/#pricing"
+                        ),
+                        "deny_reason": "quota_exceeded",
+                    },
+                )
 
-                # Increment counter
-                user.requests_this_month = (user.requests_this_month or 0) + 1
-                db.commit()
+            # Atomic increment — no row lock contention
+            db.query(User).filter(User.id == user_id).update(
+                {User.requests_this_month: (User.requests_this_month or 0) + 1},
+                synchronize_session=False,
+            )
+            db.commit()
 
-                # Add quota headers to response
-                response["quota"] = {
-                    "tier": user.tier,
-                    "requests_used": user.requests_this_month,
-                    "requests_limit": max_req if max_req != -1 else None,
-                }
+            response["quota"] = {
+                "tier": tier,
+                "requests_used": (requests_used or 0) + 1,
+                "requests_limit": max_req if max_req != -1 else None,
+            }
     except Exception as e:
         # Quota check is non-blocking — log and allow
         logger.warning("Quota check failed (allowing request): %s", e)
@@ -456,19 +516,23 @@ def circuit_breaker_status():
 
 # ── Health ───────────────────────────────────────────────────────────────
 
+# Cached DB probe — avoids opening a connection on every health check.
+_db_probe_cache: dict = {"ok": False, "error": None, "ts": 0.0}
+_DB_PROBE_TTL = 10.0  # seconds
 
-@app.api_route("/health", methods=["GET", "HEAD"], tags=["health"], summary="Health check")
-async def health():
-    """Returns service status, version, and circuit breaker state.
 
-    Includes a lightweight DB connectivity check: executes SELECT 1
-    to verify the database is reachable. Reports 'degraded' if the
-    circuit breaker is open OR the database is unreachable.
+def _probe_db() -> tuple[bool, str | None]:
+    """Run SELECT 1 with a 10-second TTL cache.
+
+    Returns (db_ok, db_error_name). Repeated calls within the TTL
+    window return the cached result without touching the database.
     """
-    breaker_state = policy_circuit_breaker.state
+    now = time.perf_counter()
+    if now - _db_probe_cache["ts"] < _DB_PROBE_TTL:
+        return _db_probe_cache["ok"], _db_probe_cache["error"]
+
     db_ok = False
     db_error = None
-
     try:
         db: Session = SessionLocal()
         try:
@@ -479,6 +543,24 @@ async def health():
     except Exception as exc:
         db_error = type(exc).__name__
         logger.warning("Health check DB probe failed: %s", exc)
+
+    _db_probe_cache["ok"] = db_ok
+    _db_probe_cache["error"] = db_error
+    _db_probe_cache["ts"] = now
+    return db_ok, db_error
+
+
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["health"], summary="Health check")
+async def health():
+    """Returns service status, version, and circuit breaker state.
+
+    Includes a lightweight DB connectivity check: executes SELECT 1
+    to verify the database is reachable (cached for 10 seconds).
+    Reports 'degraded' if the circuit breaker is open OR the database
+    is unreachable.
+    """
+    breaker_state = policy_circuit_breaker.state
+    db_ok, db_error = _probe_db()
 
     is_healthy = db_ok and breaker_state != CircuitState.OPEN
     result = {

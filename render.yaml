@@ -9,7 +9,7 @@ services:
     region: oregon
     plan: starter
     buildCommand: pip install -r api/requirements.txt && pip install -e common/
-    startCommand: uvicorn api.app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: gunicorn api.app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -37,6 +37,21 @@ services:
       - key: PYTHONPATH
         value: /opt/render/project/src
 
+  # ── Keepalive Cron Job ──────────────────────────────────────────────
+  # Pings API + Gateway health endpoints every 10 minutes to prevent
+  # Render Starter cold starts (~15 min idle timeout).
+  - type: cron
+    name: ai-identity-keepalive
+    runtime: python
+    region: oregon
+    plan: starter
+    schedule: "*/10 * * * *"
+    buildCommand: pip install httpx
+    startCommand: python scripts/keepalive_cron.py
+    envVars:
+      - key: INTERNAL_SERVICE_KEY
+        sync: false
+
   # ── Proxy Gateway ────────────────────────────────────────────────────
   - type: web
     name: ai-identity-gateway
@@ -44,7 +59,7 @@ services:
     region: oregon
     plan: starter
     buildCommand: pip install -r gateway/requirements.txt && pip install -e common/
-    startCommand: uvicorn gateway.app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: gunicorn gateway.app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -62,6 +77,8 @@ services:
       - key: CREDENTIAL_ENCRYPTION_KEY
         sync: false
       - key: INTERNAL_SERVICE_KEY
+        sync: false
+      - key: REDIS_URL
         sync: false
       - key: PYTHON_VERSION
         value: "3.11.11"

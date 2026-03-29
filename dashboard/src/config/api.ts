@@ -12,6 +12,9 @@ export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || PROD_AP
 
 export const API_KEY: string = import.meta.env.VITE_API_KEY || 'test-dev-key-12345678'
 
+export const GATEWAY_URL: string =
+  import.meta.env.VITE_GATEWAY_URL || 'https://ai-identity-gateway.onrender.com'
+
 export const ENDPOINTS = {
   HEALTH: '/health',
   AGENTS: '/api/v1/agents',

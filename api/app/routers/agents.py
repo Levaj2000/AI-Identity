@@ -11,7 +11,9 @@ from api.app.auth import get_current_user
 from api.app.quota import check_agent_quota
 from common.audit.writer import create_audit_entry
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
-from common.models import Agent, AgentKey, AgentStatus, KeyStatus, KeyType, User, get_db
+from common.capabilities import build_policy_rules_from_capabilities
+from common.models import Agent, AgentKey, AgentStatus, KeyStatus, KeyType, Policy, User, get_db
+from common.models.agent_assignment import AgentAssignment, AgentRole
 from common.queries import get_user_agent
 from common.schemas.agent import (
     AgentCreate,
@@ -20,10 +22,65 @@ from common.schemas.agent import (
     AgentResponse,
     AgentUpdate,
 )
+from common.validation.policy import PolicyValidator
 
 logger = logging.getLogger("ai_identity.api.agents")
 
 router = APIRouter(prefix="/api/v1/agents", tags=["agents"])
+
+_policy_validator = PolicyValidator()
+
+
+def _sync_capability_policy(db: Session, agent_id: uuid.UUID, capabilities: list) -> None:
+    """Auto-generate a gateway policy from predefined capabilities.
+
+    If the capabilities list contains at least one predefined capability ID,
+    deactivate any existing active policy and create a new one from the union
+    of all matched capabilities' endpoint/method mappings.
+
+    If no predefined capabilities are found (all legacy free-text), do nothing.
+    """
+    rules = build_policy_rules_from_capabilities(capabilities)
+    if rules is None:
+        return
+
+    # Defense-in-depth: validate the auto-generated rules
+    result = _policy_validator.validate(rules)
+    if not result.valid:
+        logger.warning(
+            "Auto-generated policy rules failed validation for agent %s: %s",
+            agent_id,
+            "; ".join(f"{e.field}: {e.message}" for e in result.errors),
+        )
+        return
+
+    # Deactivate existing active policies
+    db.query(Policy).filter(
+        Policy.agent_id == agent_id,
+        Policy.is_active.is_(True),
+    ).update({"is_active": False})
+
+    # Determine next version
+    max_version = (
+        db.query(Policy.version)
+        .filter(Policy.agent_id == agent_id)
+        .order_by(Policy.version.desc())
+        .first()
+    )
+    next_version = (max_version[0] + 1) if max_version else 1
+
+    policy = Policy(
+        agent_id=agent_id,
+        rules=rules,
+        version=next_version,
+        is_active=True,
+    )
+    db.add(policy)
+    logger.info(
+        "Auto-generated policy v%d for agent %s from capabilities",
+        next_version,
+        agent_id,
+    )
 
 
 # ── POST /api/v1/agents ─────────────────────────────────────────────────
@@ -64,7 +121,19 @@ def create_agent(
         capabilities=body.capabilities,
         metadata_=body.metadata,
     )
+    # If user belongs to an org, assign agent to that org
+    if user.org_id:
+        agent.org_id = user.org_id
     db.add(agent)
+
+    # Create owner assignment for the creator
+    assignment = AgentAssignment(
+        id=uuid.uuid4(),
+        agent_id=agent.id,
+        user_id=user.id,
+        role=AgentRole.owner.value,
+    )
+    db.add(assignment)
 
     # Generate the initial API key (always runtime — admin keys must be created explicitly)
     plaintext_key = generate_api_key(key_type=KeyType.runtime.value)
@@ -76,6 +145,10 @@ def create_agent(
         status=KeyStatus.active.value,
     )
     db.add(agent_key)
+
+    # Auto-generate gateway policy from predefined capabilities
+    if body.capabilities:
+        _sync_capability_policy(db, agent.id, body.capabilities)
 
     db.commit()
     db.refresh(agent)
@@ -135,7 +208,10 @@ def list_agents(
     """
     query = db.query(Agent)
     if user.role != "admin":
-        query = query.filter(Agent.user_id == user.id)
+        if user.org_id:
+            query = query.filter((Agent.user_id == user.id) | (Agent.org_id == user.org_id))
+        else:
+            query = query.filter(Agent.user_id == user.id)
 
     if status:
         query = query.filter(Agent.status == status)
@@ -222,6 +298,10 @@ def update_agent(
 
     for field, value in update_data.items():
         setattr(agent, field, value)
+
+    # Re-sync gateway policy if capabilities changed
+    if "capabilities" in update_data:
+        _sync_capability_policy(db, agent.id, agent.capabilities)
 
     db.commit()
     db.refresh(agent)
@@ -323,6 +403,7 @@ def _agent_to_response(agent: Agent) -> AgentResponse:
     return AgentResponse(
         id=agent.id,
         user_id=agent.user_id,
+        org_id=agent.org_id,
         name=agent.name,
         description=agent.description,
         status=agent.status,
