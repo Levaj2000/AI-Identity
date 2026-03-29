@@ -78,6 +78,8 @@ services:
         sync: false
       - key: INTERNAL_SERVICE_KEY
         sync: false
+      - key: REDIS_URL
+        sync: false
       - key: PYTHON_VERSION
         value: "3.11.11"
       - key: PYTHONPATH
