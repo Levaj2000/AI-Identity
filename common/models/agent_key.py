@@ -4,7 +4,7 @@ import datetime
 import enum
 import uuid
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -65,3 +65,6 @@ class AgentKey(Base):
 
     # Relationships
     agent: Mapped["Agent"] = relationship(back_populates="keys")  # noqa: F821
+
+    # Composite index: key lookups by agent + status
+    __table_args__ = (Index("ix_agent_keys_agent_status", "agent_id", "status"),)

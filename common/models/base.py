@@ -8,6 +8,11 @@ from common.config.settings import settings
 engine = create_engine(
     settings.database_url,
     echo=settings.debug,
+    pool_size=10,
+    max_overflow=20,
+    pool_timeout=30,
+    pool_pre_ping=True,
+    pool_recycle=300,
     connect_args={"sslmode": "require"} if "neon.tech" in settings.database_url else {},
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

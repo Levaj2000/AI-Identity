@@ -69,5 +69,8 @@ class AuditLog(Base):
         primaryjoin="Agent.id == foreign(AuditLog.agent_id)",
     )
 
-    # Composite index for query performance: filter by agent + time range
-    __table_args__ = (Index("ix_audit_log_agent_created", "agent_id", "created_at"),)
+    # Composite indexes for query performance
+    __table_args__ = (
+        Index("ix_audit_log_agent_created", "agent_id", "created_at"),
+        Index("ix_audit_log_user_created", "user_id", "created_at"),
+    )
