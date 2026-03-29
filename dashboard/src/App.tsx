@@ -14,6 +14,7 @@ import { CompliancePage } from './pages/CompliancePage'
 import { UsageBillingPage } from './pages/UsageBillingPage'
 import { AdminPage } from './pages/AdminPage'
 import { QAChecklistPage } from './pages/QAChecklistPage'
+import { WebPropertiesPage } from './pages/WebPropertiesPage'
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
         <Route path="usage" element={<UsageBillingPage />} />
         <Route path="compliance" element={<CompliancePage />} />
         <Route path="qa" element={<QAChecklistPage />} />
+        <Route path="properties" element={<WebPropertiesPage />} />
         <Route path="admin" element={<AdminPage />} />
       </Route>
 
