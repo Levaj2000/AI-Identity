@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   getAdminStats,
   getAdminUsers,
@@ -272,7 +273,12 @@ export function AdminPage() {
                   className="border-b border-[#1a1a1d]/50 hover:bg-[#1a1a1d]/30 transition-colors"
                 >
                   <td className="px-5 py-3">
-                    <div className="text-white">{user.email || '—'}</div>
+                    <Link
+                      to={`/dashboard/admin/users/${user.id}`}
+                      className="text-[#A6DAFF] hover:underline"
+                    >
+                      {user.email || '—'}
+                    </Link>
                     <div className="text-xs text-gray-500">{user.id.slice(0, 8)}...</div>
                   </td>
                   <td className="px-5 py-3">
