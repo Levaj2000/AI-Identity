@@ -58,6 +58,46 @@ export interface AdminAgentList {
   offset: number
 }
 
+// ── User Detail ────────────────────────────────────────────────
+
+export interface AdminUserAgent {
+  id: string
+  name: string
+  status: string
+  key_count: number
+  created_at: string | null
+}
+
+export interface AdminUserAuditEntry {
+  id: number
+  agent_id: string
+  agent_name: string | null
+  endpoint: string
+  method: string
+  decision: string
+  latency_ms: number | null
+  created_at: string | null
+}
+
+export interface AdminUserDetail {
+  id: string
+  email: string | null
+  role: string | null
+  tier: string
+  requests_this_month: number
+  agent_count: number
+  has_subscription: boolean
+  stripe_customer_id: string | null
+  stripe_subscription_id: string | null
+  welcome_email_sent_at: string | null
+  followup_email_sent_at: string | null
+  created_at: string | null
+  updated_at: string | null
+  quotas: Record<string, number>
+  agents: AdminUserAgent[]
+  recent_audit_logs: AdminUserAuditEntry[]
+}
+
 // ── API Functions ───────────────────────────────────────────────────
 
 export function getAdminStats(): Promise<AdminStats> {
@@ -82,6 +122,10 @@ export function updateUserTier(userId: string, tier: string): Promise<AdminUserS
 
 export function getAdminHealth(): Promise<AdminHealth> {
   return apiFetch<AdminHealth>('/api/v1/admin/health')
+}
+
+export function getAdminUserDetail(userId: string): Promise<AdminUserDetail> {
+  return apiFetch<AdminUserDetail>(`/api/v1/admin/users/${userId}`)
 }
 
 export function getAdminAgents(params: {

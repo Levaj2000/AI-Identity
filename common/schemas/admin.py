@@ -96,3 +96,60 @@ class AdminAgentListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+# ── User Detail (admin drill-down) ─────────────────────────────
+
+
+class AdminUserAgent(BaseModel):
+    """Agent summary within a user detail view."""
+
+    id: str
+    name: str
+    status: str
+    key_count: int
+    created_at: datetime.datetime | None
+
+    model_config = {"from_attributes": True}
+
+
+class AdminUserAuditEntry(BaseModel):
+    """Single audit log entry for a user detail view."""
+
+    id: int
+    agent_id: str
+    agent_name: str | None = None
+    endpoint: str
+    method: str
+    decision: str
+    latency_ms: int | None = None
+    created_at: datetime.datetime | None
+
+    model_config = {"from_attributes": True}
+
+
+class AdminUserDetail(BaseModel):
+    """Full user profile for admin drill-down."""
+
+    id: str
+    email: str | None
+    role: str | None
+    tier: str
+    requests_this_month: int
+    agent_count: int
+    has_subscription: bool
+    stripe_customer_id: str | None = None
+    stripe_subscription_id: str | None = None
+    welcome_email_sent_at: datetime.datetime | None = None
+    followup_email_sent_at: datetime.datetime | None = None
+    created_at: datetime.datetime | None
+    updated_at: datetime.datetime | None
+
+    # Tier quota info
+    quotas: dict[str, int]
+
+    # Nested data
+    agents: list[AdminUserAgent]
+    recent_audit_logs: list[AdminUserAuditEntry]
+
+    model_config = {"from_attributes": True}

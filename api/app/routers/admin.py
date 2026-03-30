@@ -17,12 +17,16 @@ from common.models import User, get_db
 from common.models.agent import Agent, AgentStatus
 from common.models.agent_key import AgentKey
 from common.models.audit_log import AuditLog
+from common.models.user import TIER_QUOTAS
 from common.schemas.admin import (
     AdminAgentListResponse,
     AdminAgentSummary,
     AdminHealthResponse,
     AdminStatsResponse,
     AdminTierUpdate,
+    AdminUserAgent,
+    AdminUserAuditEntry,
+    AdminUserDetail,
     AdminUserListResponse,
     AdminUserSummary,
 )
@@ -222,6 +226,95 @@ async def update_user_tier(
         has_subscription=user.stripe_subscription_id is not None,
         stripe_customer_id=user.stripe_customer_id,
         created_at=user.created_at,
+    )
+
+
+# ── User Detail ────────────────────────────────────────────────────
+
+
+@router.get(
+    "/users/{user_id}",
+    response_model=AdminUserDetail,
+    summary="Get detailed user profile (admin)",
+)
+async def get_user_detail(
+    user_id: str,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminUserDetail:
+    """Return full user profile with agents and recent audit logs."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Agents with key counts
+    key_count_sq = (
+        db.query(AgentKey.agent_id, func.count(AgentKey.id).label("key_count"))
+        .group_by(AgentKey.agent_id)
+        .subquery()
+    )
+    agent_rows = (
+        db.query(Agent, func.coalesce(key_count_sq.c.key_count, 0))
+        .outerjoin(key_count_sq, Agent.id == key_count_sq.c.agent_id)
+        .filter(Agent.user_id == user.id)
+        .order_by(Agent.created_at.desc())
+        .all()
+    )
+    agents = [
+        AdminUserAgent(
+            id=str(agent.id),
+            name=agent.name,
+            status=agent.status,
+            key_count=key_count,
+            created_at=agent.created_at,
+        )
+        for agent, key_count in agent_rows
+    ]
+
+    # Build agent name lookup for audit logs
+    agent_name_map = {str(a.id): a.name for a, _ in agent_rows}
+
+    # Recent audit logs (last 50)
+    audit_rows = (
+        db.query(AuditLog)
+        .filter(AuditLog.user_id == user.id)
+        .order_by(AuditLog.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    recent_audit_logs = [
+        AdminUserAuditEntry(
+            id=entry.id,
+            agent_id=str(entry.agent_id),
+            agent_name=agent_name_map.get(str(entry.agent_id)),
+            endpoint=entry.endpoint,
+            method=entry.method,
+            decision=entry.decision,
+            latency_ms=entry.latency_ms,
+            created_at=entry.created_at,
+        )
+        for entry in audit_rows
+    ]
+
+    quotas = TIER_QUOTAS.get(user.tier, TIER_QUOTAS["free"])
+
+    return AdminUserDetail(
+        id=str(user.id),
+        email=user.email,
+        role=user.role,
+        tier=user.tier,
+        requests_this_month=user.requests_this_month,
+        agent_count=len(agents),
+        has_subscription=user.stripe_subscription_id is not None,
+        stripe_customer_id=user.stripe_customer_id,
+        stripe_subscription_id=user.stripe_subscription_id,
+        welcome_email_sent_at=user.welcome_email_sent_at,
+        followup_email_sent_at=user.followup_email_sent_at,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+        quotas=quotas,
+        agents=agents,
+        recent_audit_logs=recent_audit_logs,
     )
 
 

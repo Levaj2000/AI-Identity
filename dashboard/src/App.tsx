@@ -13,6 +13,7 @@ import { DemoPage } from './pages/DemoPage'
 import { CompliancePage } from './pages/CompliancePage'
 import { UsageBillingPage } from './pages/UsageBillingPage'
 import { AdminPage } from './pages/AdminPage'
+import { AdminUserDetailPage } from './pages/AdminUserDetailPage'
 import { QAChecklistPage } from './pages/QAChecklistPage'
 import { WebPropertiesPage } from './pages/WebPropertiesPage'
 import { ForensicsPage } from './pages/ForensicsPage'
@@ -48,6 +49,7 @@ function App() {
         <Route path="qa" element={<QAChecklistPage />} />
         <Route path="properties" element={<WebPropertiesPage />} />
         <Route path="admin" element={<AdminPage />} />
+        <Route path="admin/users/:id" element={<AdminUserDetailPage />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
