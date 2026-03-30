@@ -19,52 +19,32 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "approval_requests",
-        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("agent_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("endpoint", sa.String(2048), nullable=False),
-        sa.Column("method", sa.String(10), nullable=False),
-        sa.Column("request_metadata", postgresql.JSONB(), nullable=False, server_default="{}"),
-        sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
-        sa.Column("reviewer_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("reviewer_note", sa.Text(), nullable=True),
-        sa.Column("resolved_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            nullable=False,
-            server_default=sa.func.now(),
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
+    # Use raw SQL with IF NOT EXISTS for idempotent migration
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS approval_requests (
+            id UUID NOT NULL PRIMARY KEY,
+            agent_id UUID NOT NULL,
+            user_id UUID NOT NULL,
+            endpoint VARCHAR(2048) NOT NULL,
+            method VARCHAR(10) NOT NULL,
+            request_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+            status VARCHAR(20) NOT NULL DEFAULT 'pending',
+            reviewer_id UUID,
+            reviewer_note TEXT,
+            resolved_at TIMESTAMP WITH TIME ZONE,
+            expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+        )
+    """)
 
-    # Standard lookup indexes
-    op.create_index("ix_approval_requests_agent_id", "approval_requests", ["agent_id"])
-    op.create_index("ix_approval_requests_user_id", "approval_requests", ["user_id"])
-    op.create_index("ix_approval_requests_status", "approval_requests", ["status"])
-
-    # Composite indexes for workflow queries
-    op.create_index(
-        "ix_approval_agent_status", "approval_requests", ["agent_id", "status"]
-    )
-    op.create_index(
-        "ix_approval_user_status", "approval_requests", ["user_id", "status"]
-    )
-
-    # Partial index for expire cleanup (only pending rows)
-    op.execute(
-        "CREATE INDEX ix_approval_expires_pending ON approval_requests (expires_at) "
-        "WHERE status = 'pending'"
-    )
+    # All indexes use IF NOT EXISTS for safety
+    op.execute("CREATE INDEX IF NOT EXISTS ix_approval_requests_agent_id ON approval_requests (agent_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_approval_requests_user_id ON approval_requests (user_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_approval_requests_status ON approval_requests (status)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_approval_agent_status ON approval_requests (agent_id, status)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_approval_user_status ON approval_requests (user_id, status)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_approval_expires_pending ON approval_requests (expires_at) WHERE status = 'pending'")
 
 
 def downgrade() -> None:
