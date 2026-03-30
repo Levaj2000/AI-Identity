@@ -22,6 +22,11 @@ from gateway.app.enforce import _endpoint_matches
 logger = logging.getLogger("ai_identity.gateway.hitl")
 
 
+def _utcnow() -> datetime.datetime:
+    """Return current UTC time as naive datetime (compatible with both PostgreSQL and SQLite)."""
+    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+
+
 @dataclass
 class HitlResult:
     """Result of HITL check."""
@@ -75,9 +80,7 @@ def check_hitl(
         return HitlResult(action="allow")
 
     # 5. Create a pending approval request
-    expires_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
-        seconds=settings.hitl_default_timeout_seconds
-    )
+    expires_at = _utcnow() + datetime.timedelta(seconds=settings.hitl_default_timeout_seconds)
 
     approval = ApprovalRequest(
         id=uuid.uuid4(),
@@ -136,10 +139,7 @@ def _validate_review(
         return HitlResult(action="allow")  # Not found — skip (don't block)
 
     # Lazy expire if past deadline
-    if (
-        approval.status == ApprovalStatus.pending.value
-        and approval.expires_at < datetime.datetime.now(datetime.UTC)
-    ):
+    if approval.status == ApprovalStatus.pending.value and approval.expires_at < _utcnow():
         approval.status = ApprovalStatus.expired.value
         db.commit()
 
@@ -169,7 +169,7 @@ def expire_stale(db: Session) -> int:
     Returns the count of expired rows. Called lazily on reads
     and (future) via a background cron.
     """
-    now = datetime.datetime.now(datetime.UTC)
+    now = _utcnow()
     count = (
         db.query(ApprovalRequest)
         .filter(
