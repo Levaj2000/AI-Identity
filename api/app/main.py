@@ -273,8 +273,12 @@ async def security_headers_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):
-    """Log every request with timing and a unique request ID."""
-    request_id = str(uuid.uuid4())[:8]
+    """Log every request with timing and a unique request ID.
+
+    Propagates X-Request-ID from upstream if present, otherwise generates one.
+    This enables end-to-end correlation across Gateway → API during incidents.
+    """
+    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())[:8]
     request.state.request_id = request_id
 
     start = time.perf_counter()
