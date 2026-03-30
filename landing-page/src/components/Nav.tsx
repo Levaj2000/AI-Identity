@@ -6,9 +6,14 @@ const navLinks = [
   { label: "How It Works", path: "/how-it-works" },
   { label: "Security", path: "/security" },
   { label: "Pricing", path: "/pricing" },
-  { label: "Solutions", path: "/use-cases/customer-support" },
   { label: "Blog", path: "/blog" },
   { label: "Docs", path: "/docs" },
+];
+
+const solutionLinks = [
+  { label: "Customer Support Agents", path: "/use-cases/customer-support" },
+  { label: "Coding Assistants", path: "/use-cases/coding-assistant" },
+  { label: "Financial Compliance", path: "/use-cases/financial-compliance" },
 ];
 
 export default function Nav() {
@@ -58,6 +63,38 @@ export default function Nav() {
               {link.label}
             </Link>
           ))}
+          {/* Solutions dropdown */}
+          <div className="relative group">
+            <button
+              className={`text-sm transition-colors flex items-center gap-1 ${
+                location.pathname.startsWith("/use-cases")
+                  ? "text-white"
+                  : "text-[rgba(213,219,230,0.7)] hover:text-white"
+              }`}
+            >
+              Solutions
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 transition-transform group-hover:rotate-180">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+              <div className="bg-[rgb(16,19,28)] border border-white/10 rounded-xl py-2 min-w-[220px] shadow-xl shadow-black/40">
+                {solutionLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={`block px-4 py-2.5 text-sm transition-colors ${
+                      location.pathname === link.path
+                        ? "text-[rgb(166,218,255)] bg-[rgb(166,218,255)]/5"
+                        : "text-[rgba(213,219,230,0.7)] hover:text-white hover:bg-white/[0.03]"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
           <a
             href="https://dashboard.ai-identity.co"
             className="text-sm text-[rgba(213,219,230,0.7)] hover:text-white transition-colors"
@@ -113,6 +150,24 @@ export default function Nav() {
               {link.label}
             </Link>
           ))}
+          <div className="py-2">
+            <span className="text-sm text-white font-medium">Solutions</span>
+            <div className="mt-1 ml-3 space-y-1">
+              {solutionLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`block text-sm py-1.5 ${
+                    location.pathname === link.path
+                      ? "text-[rgb(166,218,255)]"
+                      : "text-[rgba(213,219,230,0.5)]"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
           <a
             href="https://dashboard.ai-identity.co"
             className="block text-sm py-2 text-[rgba(213,219,230,0.7)]"
