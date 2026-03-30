@@ -22,6 +22,8 @@ logger = logging.getLogger("ai_identity.audit.sanitizer")
 
 ALLOWED_METADATA_KEYS: frozenset[str] = frozenset(
     {
+        # Correlation (propagated across Gateway → API for incident investigation)
+        "request_id",
         # Decision context (set by gateway enforce.py)
         "deny_reason",
         "status_code",
