@@ -3,6 +3,7 @@
 from common.models.agent import Agent, AgentStatus
 from common.models.agent_assignment import AgentAssignment, AgentRole
 from common.models.agent_key import AgentKey, KeyStatus, KeyType
+from common.models.approval_request import ApprovalRequest, ApprovalStatus
 from common.models.audit_log import AuditLog
 from common.models.base import Base, SessionLocal, engine, get_db
 from common.models.compliance import (
@@ -50,4 +51,6 @@ __all__ = [
     "OrgRole",
     "AgentAssignment",
     "AgentRole",
+    "ApprovalRequest",
+    "ApprovalStatus",
 ]
