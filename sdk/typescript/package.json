@@ -1,0 +1,36 @@
+{
+  "name": "@ai-identity/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the AI Identity API — identity, governance, and forensics for AI agents",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["ai", "identity", "agents", "governance", "compliance", "forensics"],
+  "author": "AI Identity <jeff@ai-identity.co>",
+  "license": "MIT",
+  "homepage": "https://ai-identity.co",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Levaj2000/AI-Identity"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  }
+}

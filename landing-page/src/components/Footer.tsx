@@ -12,6 +12,12 @@ const productLinks = [
   { label: "Dashboard", path: "https://dashboard.ai-identity.co", external: true },
 ];
 
+const solutionLinks = [
+  { label: "Customer Support Agents", path: "/use-cases/customer-support" },
+  { label: "Coding Assistants", path: "/use-cases/coding-assistant" },
+  { label: "Financial Compliance", path: "/use-cases/financial-compliance" },
+];
+
 const companyLinks = [
   { label: "Blog", path: "/blog" },
   { label: "Careers", path: "/careers" },
@@ -113,6 +119,18 @@ export default function Footer() {
                   ) : (
                     <Link to={link.path} className="text-sm text-[rgba(213,219,230,0.5)] hover:text-white transition-colors">{link.label}</Link>
                   )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Solutions Links */}
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-4">Solutions</h4>
+            <ul className="space-y-3">
+              {solutionLinks.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.path} className="text-sm text-[rgba(213,219,230,0.5)] hover:text-white transition-colors">{link.label}</Link>
                 </li>
               ))}
             </ul>
