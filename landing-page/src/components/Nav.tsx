@@ -15,6 +15,8 @@ const solutionLinks = [
   { label: "Customer Support Agents", path: "/use-cases/customer-support" },
   { label: "Coding Assistants", path: "/use-cases/coding-assistant" },
   { label: "Financial Compliance", path: "/use-cases/financial-compliance" },
+  { label: "divider", path: "" },
+  { label: "EU AI Act Checklist", path: "/eu-ai-act-checklist" },
 ];
 
 export default function Nav() {
@@ -68,7 +70,7 @@ export default function Nav() {
           <div className="relative group">
             <button
               className={`text-sm transition-colors flex items-center gap-1 ${
-                location.pathname.startsWith("/use-cases")
+                location.pathname.startsWith("/use-cases") || location.pathname === "/eu-ai-act-checklist"
                   ? "text-white"
                   : "text-[rgba(213,219,230,0.7)] hover:text-white"
               }`}
@@ -80,19 +82,23 @@ export default function Nav() {
             </button>
             <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
               <div className="bg-[rgb(16,19,28)] border border-white/10 rounded-xl py-2 min-w-[220px] shadow-xl shadow-black/40">
-                {solutionLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`block px-4 py-2.5 text-sm transition-colors ${
-                      location.pathname === link.path
-                        ? "text-[rgb(166,218,255)] bg-[rgb(166,218,255)]/5"
-                        : "text-[rgba(213,219,230,0.7)] hover:text-white hover:bg-white/[0.03]"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+                {solutionLinks.map((link, i) =>
+                  link.label === "divider" ? (
+                    <div key={`divider-${i}`} className="my-1 border-t border-white/5" />
+                  ) : (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      className={`block px-4 py-2.5 text-sm transition-colors ${
+                        location.pathname === link.path
+                          ? "text-[rgb(166,218,255)] bg-[rgb(166,218,255)]/5"
+                          : "text-[rgba(213,219,230,0.7)] hover:text-white hover:bg-white/[0.03]"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -154,19 +160,23 @@ export default function Nav() {
           <div className="py-2">
             <span className="text-sm text-white font-medium">Solutions</span>
             <div className="mt-1 ml-3 space-y-1">
-              {solutionLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`block text-sm py-1.5 ${
-                    location.pathname === link.path
-                      ? "text-[rgb(166,218,255)]"
-                      : "text-[rgba(213,219,230,0.5)]"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {solutionLinks.map((link, i) =>
+                link.label === "divider" ? (
+                  <div key={`divider-${i}`} className="my-1 border-t border-white/5" />
+                ) : (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={`block text-sm py-1.5 ${
+                      location.pathname === link.path
+                        ? "text-[rgb(166,218,255)]"
+                        : "text-[rgba(213,219,230,0.5)]"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                )
+              )}
             </div>
           </div>
           <a
