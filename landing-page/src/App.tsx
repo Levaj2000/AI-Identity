@@ -14,6 +14,9 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Careers from "./pages/Careers";
 import Pricing from "./pages/Pricing";
+import UseCaseCustomerSupport from "./pages/UseCaseCustomerSupport";
+import UseCaseCodingAssistant from "./pages/UseCaseCodingAssistant";
+import UseCaseFinancialAgent from "./pages/UseCaseFinancialAgent";
 
 const router = createBrowserRouter([
   {
@@ -30,6 +33,9 @@ const router = createBrowserRouter([
       { path: "/blog/:slug", element: <BlogPost /> },
       { path: "/docs", element: <Docs /> },
       { path: "/eu-ai-act-checklist", element: <EUAIActChecklist /> },
+      { path: "/use-cases/customer-support", element: <UseCaseCustomerSupport /> },
+      { path: "/use-cases/coding-assistant", element: <UseCaseCodingAssistant /> },
+      { path: "/use-cases/financial-compliance", element: <UseCaseFinancialAgent /> },
       { path: "/privacy", element: <Privacy /> },
       { path: "/terms", element: <Terms /> },
       { path: "/careers", element: <Careers /> },
