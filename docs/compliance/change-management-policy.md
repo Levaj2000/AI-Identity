@@ -2,7 +2,7 @@
 
 **Document Owner:** Jeff Leva, CEO
 **Version:** 1.0
-**Last Reviewed:** March 25, 2026
+**Last Reviewed:** March 30, 2026
 **Next Review:** June 25, 2026
 
 ---
@@ -86,7 +86,31 @@ Both jobs must pass before a PR can be merged. Failed CI blocks the merge button
 **DNS/CDN rollback (Cloudflare):**
 - Revert DNS changes in the Cloudflare dashboard. Changes propagate within seconds due to low TTL settings.
 
-## 9. Emergency Hotfix Process
+## 9. Change Windows
+
+**Current policy (< 50 users, free tier):** No formal change window. All deployments are continuous via CI/CD with zero-downtime deploys. Standard releases, bug fixes, and feature additions deploy on merge to `main` at any time.
+
+**Formal change window trigger — established when ANY of these conditions are met:**
+- First paying customer is onboarded
+- Monthly active users exceed 100
+- Enterprise contract is signed
+
+**Planned future change window:** Tuesdays 6:00-10:00 AM ET for:
+- Breaking API changes (response shape changes, endpoint deprecation)
+- Destructive database migrations (column drops, type changes)
+- Infrastructure changes (scaling, region changes, provider switches)
+
+Standard deploys (bug fixes, new features, additive migrations) remain continuous and are not restricted to the change window.
+
+**Customer notification requirements:**
+
+| Change Type | Notice Period | Channel |
+|-------------|--------------|---------|
+| Breaking API change | 14 days | Email + dashboard banner + API deprecation header |
+| Planned maintenance | 48 hours | Email + status page |
+| Emergency hotfix | Best effort | Status page updated in real-time |
+
+## 10. Emergency Hotfix Process
 
 When a P1 or P2 incident requires an immediate fix:
 
@@ -99,7 +123,7 @@ When a P1 or P2 incident requires an immediate fix:
 
 For P1 incidents where CI is too slow, Render's manual deploy can be triggered from a specific commit. This is logged and reviewed in the postmortem.
 
-## 10. Change Log and Audit Trail
+## 11. Change Log and Audit Trail
 
 - **Git history** provides a complete, immutable record of every code change, including author, timestamp, and PR reference.
 - **Render deploy events** log every deployment with commit SHA, timestamp, and success/failure status.
