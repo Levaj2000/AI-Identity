@@ -6,16 +6,16 @@ Adds composite indexes on hot-path queries:
 - agent_keys(agent_id, status) — key lookups and compliance checks
 - audit_log(user_id, created_at) — usage aggregation by user
 
-Revision ID: i9d0e1f2g3h4
-Revises: h8c9d0e1f2g3
+Revision ID: i9d0e1f2g3h5
+Revises: i9d0e1f2g3h4
 Create Date: 2026-03-28 00:00:00.000000
 """
 
 from alembic import op
 import sqlalchemy as sa
 
-revision = "i9d0e1f2g3h4"
-down_revision = "h8c9d0e1f2g3"
+revision = "i9d0e1f2g3h5"
+down_revision = "i9d0e1f2g3h4"
 branch_labels = None
 depends_on = None
 
