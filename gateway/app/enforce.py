@@ -48,6 +48,7 @@ class Decision(enum.StrEnum):
     ALLOW = "allow"
     DENY = "deny"
     ERROR = "error"
+    PENDING_APPROVAL = "pending_approval"
 
 
 class DenyReason(enum.StrEnum):
@@ -73,11 +74,17 @@ class EnforcementResult:
     status_code: int = 200
     message: str = "Request allowed"
     agent_id: uuid.UUID | None = None
+    review_id: str | None = None  # Set when HITL approval is required
 
     @property
     def allowed(self) -> bool:
         """Convenience check — only explicit ALLOW permits the request."""
         return self.decision == Decision.ALLOW
+
+    @property
+    def pending(self) -> bool:
+        """Check if request is waiting for human approval."""
+        return self.decision == Decision.PENDING_APPROVAL
 
 
 # ── Policy Evaluation (Timeout-Bounded) ──────────────────────────────

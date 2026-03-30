@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
     redis_url: str = ""  # Redis URL for shared rate limiting (empty = in-memory fallback)
 
+    # Gateway — human-in-the-loop approval (enterprise tier)
+    hitl_default_timeout_seconds: int = 300  # 5 minutes, then auto-expire (fail-closed)
+
     # Audit debug logging — opt-in, PII-redacted, auto-expiring
     audit_debug_logging: bool = False
     audit_debug_ttl_hours: int = 24

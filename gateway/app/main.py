@@ -392,6 +392,10 @@ def enforce_request(
         description="Key type: runtime (aid_sk_) or admin (aid_admin_). "
         "Runtime keys are rejected on management endpoints; admin keys on proxy endpoints.",
     ),
+    review_id: str | None = Query(
+        None,
+        description="Approval review ID for human-in-the-loop resubmission (enterprise tier).",
+    ),
     db: Session = Depends(get_db),
 ):
     """Evaluate whether an agent's request should be allowed or denied.
@@ -433,20 +437,53 @@ def enforce_request(
             content=response,
         )
 
+    # ── Fetch user context (shared by HITL + quota) ──────────────────
+    from common.models import Agent, User
+    from common.models.user import TIER_QUOTAS
+
+    row = (
+        db.query(User.id, User.tier, User.requests_this_month)
+        .join(Agent, Agent.user_id == User.id)
+        .filter(Agent.id == agent_id)
+        .first()
+    )
+
+    # ── HITL approval check (enterprise tier) ────────────────────────
+    # Runs after policy ALLOW, before quota increment.
+    # If the policy has require_approval patterns matching this endpoint,
+    # the request is paused (202) until an admin approves.
+    if row:
+        try:
+            from gateway.app.hitl import check_hitl
+
+            user_id, tier, _requests_used = row
+            hitl_result = check_hitl(
+                db=db,
+                agent_id=agent_id,
+                user_id=user_id,
+                endpoint=endpoint,
+                method=method,
+                review_id=review_id,
+                user_tier=tier,
+            )
+            if hitl_result.action == "pending":
+                return JSONResponse(
+                    status_code=202,
+                    content={
+                        "decision": "pending_approval",
+                        "status_code": 202,
+                        "message": hitl_result.message,
+                        "review_id": hitl_result.review_id,
+                    },
+                )
+        except Exception as e:
+            # HITL check is non-blocking on error — log and allow
+            logger.warning("HITL check failed (allowing request): %s", e)
+
     # ── Post-policy quota check ──────────────────────────────────────
     # Only count requests that pass policy enforcement.
     # Uses atomic UPDATE to avoid read-modify-write race and reduce lock contention.
     try:
-        from common.models import Agent, User
-        from common.models.user import TIER_QUOTAS
-
-        # Single query: join agent → user to avoid two round-trips
-        row = (
-            db.query(User.id, User.tier, User.requests_this_month)
-            .join(Agent, Agent.user_id == User.id)
-            .filter(Agent.id == agent_id)
-            .first()
-        )
         if row:
             user_id, tier, requests_used = row
             quotas = TIER_QUOTAS.get(tier, TIER_QUOTAS["free"])
