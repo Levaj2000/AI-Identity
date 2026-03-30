@@ -110,6 +110,8 @@ def _welcome_html(name: str) -> str:
 
 <p>Welcome to AI Identity. Your account is ready and you can start building right away.</p>
 
+<p>Thanks for signing up &mdash; I'm genuinely excited to have you here. AI Identity is still early, and every new user's feedback directly shapes the product.</p>
+
 <p><strong>Your free tier includes:</strong></p>
 <ul style="padding-left:20px;color:#374151;">
   <li>5 AI agents</li>
@@ -132,7 +134,7 @@ def _welcome_html(name: str) -> str:
   Quick path: Create an agent &rarr; Store your API key &rarr; Set a policy &rarr; Run a compliance check.
 </p>
 
-<p>I'll check in with you in a few days. In the meantime, just reply to this email if you have any questions.</p>
+<p>If you run into anything confusing or have ideas for what we should build next, just reply to this email. I read every one.</p>
 
 <p>
   Jeff Leva<br>
