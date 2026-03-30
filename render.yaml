@@ -8,7 +8,7 @@ services:
     runtime: python
     region: oregon
     plan: starter
-    buildCommand: pip install -r api/requirements.txt && pip install -e common/
+    buildCommand: pip install -r api/requirements.txt && pip install -e common/ && alembic upgrade head
     startCommand: gunicorn api.app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5
     healthCheckPath: /health
     envVars:
