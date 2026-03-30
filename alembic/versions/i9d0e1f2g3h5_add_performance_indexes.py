@@ -21,32 +21,31 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # All indexes use IF NOT EXISTS — safe to re-run if they were
+    # previously created before the migration chain was fixed.
+
     # Critical: policy lookup in gateway enforce — every request hits this
-    # Uses raw SQL for DESC index on version column
     op.execute(
-        "CREATE INDEX ix_policies_agent_active_version "
+        "CREATE INDEX IF NOT EXISTS ix_policies_agent_active_version "
         "ON policies (agent_id, is_active, version DESC)"
     )
 
     # Agent listing filtered by user + status
-    op.create_index(
-        "ix_agents_user_status",
-        "agents",
-        ["user_id", "status"],
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_agents_user_status "
+        "ON agents (user_id, status)"
     )
 
     # Key lookups by agent + status (compliance checks, key validation)
-    op.create_index(
-        "ix_agent_keys_agent_status",
-        "agent_keys",
-        ["agent_id", "status"],
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_agent_keys_agent_status "
+        "ON agent_keys (agent_id, status)"
     )
 
     # Usage aggregation queries filter by user_id + date range
-    op.create_index(
-        "ix_audit_log_user_created",
-        "audit_log",
-        ["user_id", "created_at"],
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_audit_log_user_created "
+        "ON audit_log (user_id, created_at)"
     )
 
 
