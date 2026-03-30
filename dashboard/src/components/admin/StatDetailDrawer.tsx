@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   getAdminUsers,
   getAdminAgents,
@@ -140,7 +141,12 @@ function UsersPanel() {
                 className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between"
               >
                 <div className="min-w-0">
-                  <div className="text-sm text-white truncate">{u.email || '--'}</div>
+                  <Link
+                    to={`/dashboard/admin/users/${u.id}`}
+                    className="text-sm text-[#A6DAFF] hover:underline truncate block"
+                  >
+                    {u.email || '--'}
+                  </Link>
                   <div className="text-xs text-gray-500 mt-0.5 flex gap-3">
                     <span>{u.agent_count} agents</span>
                     <span>{u.requests_this_month.toLocaleString()} reqs</span>
