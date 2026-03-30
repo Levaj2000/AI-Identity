@@ -438,6 +438,7 @@ from api.app.routers.keys import router as keys_router  # noqa: E402
 from api.app.routers.organizations import router as organizations_router  # noqa: E402
 from api.app.routers.policies import router as policies_router  # noqa: E402
 from api.app.routers.qa import router as qa_router  # noqa: E402
+from api.app.routers.shadow import router as shadow_router  # noqa: E402
 from api.app.routers.usage import router as usage_router  # noqa: E402
 
 app.include_router(admin_router)
@@ -456,6 +457,7 @@ app.include_router(usage_router)
 app.include_router(organizations_router)
 app.include_router(agent_assignments_router)
 app.include_router(approvals_router)
+app.include_router(shadow_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────
 
