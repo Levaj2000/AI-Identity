@@ -26,7 +26,7 @@ def upgrade() -> None:
     )
 
     # Temporarily disable immutability trigger for backfill
-    op.execute("ALTER TABLE audit_log DISABLE TRIGGER audit_log_immutable")
+    op.execute("ALTER TABLE audit_log DISABLE TRIGGER audit_log_no_update")
 
     # Backfill from agents table
     op.execute(
@@ -35,7 +35,7 @@ def upgrade() -> None:
     )
 
     # Re-enable immutability trigger
-    op.execute("ALTER TABLE audit_log ENABLE TRIGGER audit_log_immutable")
+    op.execute("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update")
 
 
 def downgrade() -> None:
