@@ -425,13 +425,19 @@ async def purge_revoked_agents(
 
         agent_names.append(agent.name)
 
-    # Re-enable immutability trigger
+    # Re-enable trigger after denormalization
     db.execute(text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update"))
 
-    # Hard-delete (cascades keys, policies, credentials, assignments)
-    agent_ids = [a.id for a in eligible]
-    db.query(Agent).filter(Agent.id.in_(agent_ids)).delete(synchronize_session="fetch")
+    # Hard-delete via raw SQL to avoid ORM cascade nullifying audit_log.agent_id
+    agent_ids = [str(a.id) for a in eligible]
+    for aid in agent_ids:
+        db.execute(text("DELETE FROM agent_assignments WHERE agent_id = :aid"), {"aid": aid})
+        db.execute(text("DELETE FROM upstream_credentials WHERE agent_id = :aid"), {"aid": aid})
+        db.execute(text("DELETE FROM policies WHERE agent_id = :aid"), {"aid": aid})
+        db.execute(text("DELETE FROM agent_keys WHERE agent_id = :aid"), {"aid": aid})
+        db.execute(text("DELETE FROM agents WHERE id = :aid"), {"aid": aid})
     db.commit()
+    db.expire_all()
 
     logger.info(
         "Purged %d revoked agents (retention_days=%d): %s",
@@ -471,20 +477,31 @@ async def purge_single_agent(
         raise HTTPException(status_code=404, detail="Agent not found")
 
     agent_name = agent.name
+    agent_id_val = str(agent.id)
 
     # Denormalize agent_name into audit_log rows before deletion
     db.execute(text("ALTER TABLE audit_log DISABLE TRIGGER audit_log_no_update"))
-
-    db.query(AuditLog).filter(
-        AuditLog.agent_id == agent.id,
-        AuditLog.agent_name.is_(None),
-    ).update({"agent_name": agent_name}, synchronize_session="fetch")
-
+    db.execute(
+        text(
+            "UPDATE audit_log SET agent_name = :name WHERE agent_id = :aid AND agent_name IS NULL"
+        ),
+        {"name": agent_name, "aid": agent_id_val},
+    )
     db.execute(text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update"))
 
-    # Hard-delete (cascades keys, policies, credentials, assignments)
-    db.delete(agent)
+    # Hard-delete via raw SQL to avoid ORM cascade nullifying audit_log.agent_id
+    # (audit_log has no FK constraint — rows are preserved with original agent_id)
+    db.execute(text("DELETE FROM agent_assignments WHERE agent_id = :aid"), {"aid": agent_id_val})
+    db.execute(
+        text("DELETE FROM upstream_credentials WHERE agent_id = :aid"), {"aid": agent_id_val}
+    )
+    db.execute(text("DELETE FROM policies WHERE agent_id = :aid"), {"aid": agent_id_val})
+    db.execute(text("DELETE FROM agent_keys WHERE agent_id = :aid"), {"aid": agent_id_val})
+    db.execute(text("DELETE FROM agents WHERE id = :aid"), {"aid": agent_id_val})
     db.commit()
+
+    # Expire ORM cache
+    db.expire_all()
 
     logger.info("Purged agent: %s (%s)", agent_name, agent_id)
 
