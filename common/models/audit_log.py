@@ -42,6 +42,9 @@ class AuditLog(Base):
     cost_estimate_usd: Mapped[float | None] = mapped_column(Numeric(10, 6), nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
+    # Denormalized agent name — survives agent hard-deletion during purge
+    agent_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     # Flexible request context
     request_metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 

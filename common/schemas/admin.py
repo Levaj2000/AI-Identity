@@ -98,6 +98,13 @@ class AdminAgentListResponse(BaseModel):
     offset: int
 
 
+class AdminPurgeResponse(BaseModel):
+    """Result of purging revoked agents."""
+
+    purged_count: int
+    agent_names: list[str]
+
+
 # ── User Detail (admin drill-down) ─────────────────────────────
 
 

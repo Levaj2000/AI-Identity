@@ -6,6 +6,7 @@ All endpoints require admin role (user.role == "admin").
 import logging
 import time
 import uuid
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -22,6 +23,7 @@ from common.schemas.admin import (
     AdminAgentListResponse,
     AdminAgentSummary,
     AdminHealthResponse,
+    AdminPurgeResponse,
     AdminStatsResponse,
     AdminTierUpdate,
     AdminUserAgent,
@@ -369,6 +371,69 @@ async def list_agents(
     ]
 
     return AdminAgentListResponse(items=items, total=total, limit=limit, offset=offset)
+
+
+# ── Agent Purge ──────────────────────────────────────────────────────
+
+
+@router.post(
+    "/agents/purge",
+    response_model=AdminPurgeResponse,
+    summary="Hard-delete revoked agents past retention period",
+)
+async def purge_revoked_agents(
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+    retention_days: int = Query(
+        30, ge=0, le=365, description="Purge agents revoked more than N days ago"
+    ),
+) -> AdminPurgeResponse:
+    """Permanently delete revoked agents whose retention period has expired.
+
+    Before deletion, denormalizes agent_name into any audit_log rows that
+    still have it NULL, so audit history remains meaningful.
+    Cascades: keys, policies, credentials, assignments are deleted.
+    Audit logs are preserved (soft FK, no cascade).
+    """
+    cutoff = datetime.now(UTC) - timedelta(days=retention_days)
+
+    # Find eligible agents
+    eligible = (
+        db.query(Agent)
+        .filter(
+            Agent.status == AgentStatus.revoked.value,
+            Agent.revoked_at.isnot(None),
+            Agent.revoked_at <= cutoff,
+        )
+        .all()
+    )
+
+    if not eligible:
+        return AdminPurgeResponse(purged_count=0, agent_names=[])
+
+    agent_names = []
+    for agent in eligible:
+        # Denormalize agent_name into audit_log rows before deletion
+        db.query(AuditLog).filter(
+            AuditLog.agent_id == agent.id,
+            AuditLog.agent_name.is_(None),
+        ).update({"agent_name": agent.name}, synchronize_session="fetch")
+
+        agent_names.append(agent.name)
+
+    # Hard-delete (cascades keys, policies, credentials, assignments)
+    agent_ids = [a.id for a in eligible]
+    db.query(Agent).filter(Agent.id.in_(agent_ids)).delete(synchronize_session="fetch")
+    db.commit()
+
+    logger.info(
+        "Purged %d revoked agents (retention_days=%d): %s",
+        len(agent_names),
+        retention_days,
+        ", ".join(agent_names),
+    )
+
+    return AdminPurgeResponse(purged_count=len(agent_names), agent_names=agent_names)
 
 
 # ── System Health ────────────────────────────────────────────────────

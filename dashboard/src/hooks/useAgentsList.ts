@@ -67,6 +67,8 @@ interface UseAgentsListReturn extends DataState {
   setPage: (p: number) => void
   totalPages: number
   pageSize: number
+  // Manual refresh
+  refetch: () => void
 }
 
 // ─── Hook ─────────────────────────────────────────────────────
@@ -94,6 +96,8 @@ export function useAgentsList(): UseAgentsListReturn {
 
   // Data state via reducer (avoids synchronous setState in effects)
   const [data, dispatch] = useReducer(dataReducer, INITIAL_STATE)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const refetch = useCallback(() => setRefreshKey((k) => k + 1), [])
 
   // ── Setters that also update URL params ───────────────────
 
@@ -193,7 +197,7 @@ export function useAgentsList(): UseAgentsListReturn {
     return () => {
       cancelled = true
     }
-  }, [statusFilter, debouncedCapability, page])
+  }, [statusFilter, debouncedCapability, page, refreshKey])
 
   return {
     ...data,
@@ -205,5 +209,6 @@ export function useAgentsList(): UseAgentsListReturn {
     setPage,
     totalPages: Math.max(1, Math.ceil(data.total / PAGE_SIZE)),
     pageSize: PAGE_SIZE,
+    refetch,
   }
 }

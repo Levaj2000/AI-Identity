@@ -136,3 +136,15 @@ export function getAdminAgents(params: {
 }): Promise<AdminAgentList> {
   return apiFetch<AdminAgentList>(`/api/v1/admin/agents${toQueryString(params)}`)
 }
+
+export interface PurgeResponse {
+  purged_count: number
+  agent_names: string[]
+}
+
+export function purgeRevokedAgents(retentionDays: number = 30): Promise<PurgeResponse> {
+  return apiFetch<PurgeResponse>(
+    `/api/v1/admin/agents/purge${toQueryString({ retention_days: retentionDays })}`,
+    { method: 'POST' },
+  )
+}

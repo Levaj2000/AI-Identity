@@ -4,7 +4,7 @@ import logging
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import String, cast
+from sqlalchemy import String, cast, func
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
@@ -356,6 +356,7 @@ def delete_agent(
 
     # Revoke the agent
     agent.status = AgentStatus.revoked.value
+    agent.revoked_at = func.now()
 
     # Revoke all active/rotated keys
     revoked_count = (
