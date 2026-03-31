@@ -148,3 +148,9 @@ export function purgeRevokedAgents(retentionDays: number = 30): Promise<PurgeRes
     { method: 'POST' },
   )
 }
+
+export function purgeSingleAgent(agentId: string): Promise<PurgeResponse> {
+  return apiFetch<PurgeResponse>(`/api/v1/admin/agents/${agentId}/purge`, {
+    method: 'DELETE',
+  })
+}
