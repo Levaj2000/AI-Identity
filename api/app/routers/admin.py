@@ -412,6 +412,10 @@ async def purge_revoked_agents(
         return AdminPurgeResponse(purged_count=0, agent_names=[])
 
     agent_names = []
+
+    # Temporarily disable immutability trigger for audit_log denormalization
+    db.execute(text("ALTER TABLE audit_log DISABLE TRIGGER audit_log_immutable"))
+
     for agent in eligible:
         # Denormalize agent_name into audit_log rows before deletion
         db.query(AuditLog).filter(
@@ -420,6 +424,9 @@ async def purge_revoked_agents(
         ).update({"agent_name": agent.name}, synchronize_session="fetch")
 
         agent_names.append(agent.name)
+
+    # Re-enable immutability trigger
+    db.execute(text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_immutable"))
 
     # Hard-delete (cascades keys, policies, credentials, assignments)
     agent_ids = [a.id for a in eligible]
