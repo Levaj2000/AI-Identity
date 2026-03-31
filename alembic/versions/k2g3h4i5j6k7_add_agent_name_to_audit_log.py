@@ -25,11 +25,17 @@ def upgrade() -> None:
         sa.Column("agent_name", sa.String(255), nullable=True),
     )
 
+    # Temporarily disable immutability trigger for backfill
+    op.execute("ALTER TABLE audit_log DISABLE TRIGGER audit_log_immutable")
+
     # Backfill from agents table
     op.execute(
         "UPDATE audit_log SET agent_name = agents.name "
         "FROM agents WHERE audit_log.agent_id = agents.id AND audit_log.agent_name IS NULL"
     )
+
+    # Re-enable immutability trigger
+    op.execute("ALTER TABLE audit_log ENABLE TRIGGER audit_log_immutable")
 
 
 def downgrade() -> None:
