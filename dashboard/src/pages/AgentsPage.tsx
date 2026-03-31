@@ -219,7 +219,7 @@ export function AgentsPage() {
         <>
           {/* Desktop table */}
           <div className="hidden md:block">
-            <AgentTable agents={agents} />
+            <AgentTable agents={agents} isAdmin={isAdmin} onAgentDeleted={refetch} />
           </div>
           {/* Mobile cards */}
           <div className="md:hidden">

@@ -443,6 +443,54 @@ async def purge_revoked_agents(
     return AdminPurgeResponse(purged_count=len(agent_names), agent_names=agent_names)
 
 
+# ── Single Agent Purge ───────────────────────────────────────────────
+
+
+@router.delete(
+    "/agents/{agent_id}/purge",
+    response_model=AdminPurgeResponse,
+    summary="Hard-delete a single agent",
+    responses={
+        404: {"description": "Agent not found"},
+    },
+)
+async def purge_single_agent(
+    agent_id: str,
+    _admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+) -> AdminPurgeResponse:
+    """Permanently delete a single agent regardless of status.
+
+    If the agent is active or suspended, it is revoked first.
+    Denormalizes agent_name into audit_log rows before deletion.
+    Cascades: keys, policies, credentials, assignments are deleted.
+    Audit logs are preserved (soft FK, no cascade).
+    """
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    agent_name = agent.name
+
+    # Denormalize agent_name into audit_log rows before deletion
+    db.execute(text("ALTER TABLE audit_log DISABLE TRIGGER audit_log_no_update"))
+
+    db.query(AuditLog).filter(
+        AuditLog.agent_id == agent.id,
+        AuditLog.agent_name.is_(None),
+    ).update({"agent_name": agent_name}, synchronize_session="fetch")
+
+    db.execute(text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update"))
+
+    # Hard-delete (cascades keys, policies, credentials, assignments)
+    db.delete(agent)
+    db.commit()
+
+    logger.info("Purged agent: %s (%s)", agent_name, agent_id)
+
+    return AdminPurgeResponse(purged_count=1, agent_names=[agent_name])
+
+
 # ── System Health ────────────────────────────────────────────────────
 
 
