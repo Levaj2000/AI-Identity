@@ -148,12 +148,14 @@ def create_audit_entry(
     # Sanitize metadata — allowlist only, PII blocked
     metadata = sanitize_metadata(request_metadata)
 
-    # Resolve user_id from agent if not provided (for RLS tenant isolation)
-    if user_id is None:
-        from common.models.agent import Agent
+    # Resolve user_id and agent_name from agent (for RLS tenant isolation + denormalization)
+    agent_name: str | None = None
+    from common.models.agent import Agent
 
-        agent = db.query(Agent).filter(Agent.id == agent_id).first()
-        if agent:
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if agent:
+        agent_name = agent.name
+        if user_id is None:
             user_id = agent.user_id
 
     # Opt-in debug logging (PII-redacted, separate from audit trail)
@@ -185,6 +187,7 @@ def create_audit_entry(
     entry = AuditLog(
         agent_id=agent_id,
         user_id=user_id,
+        agent_name=agent_name,
         endpoint=endpoint,
         method=method,
         decision=decision,

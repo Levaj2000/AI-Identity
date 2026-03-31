@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAgentsList } from '../hooks/useAgentsList'
+import { useAuth } from '../hooks/useAuth'
+import { purgeRevokedAgents } from '../services/api/admin'
 import { AgentFilters } from '../components/agents/AgentFilters'
 import { AgentTable } from '../components/agents/AgentTable'
 import { AgentCardGrid } from '../components/agents/AgentCardGrid'
@@ -7,6 +10,7 @@ import { AgentEmptyState } from '../components/agents/AgentEmptyState'
 import { Pagination } from '../components/Pagination'
 
 export function AgentsPage() {
+  const { user } = useAuth()
   const {
     agents,
     total,
@@ -20,7 +24,29 @@ export function AgentsPage() {
     setPage,
     totalPages,
     pageSize,
+    refetch,
   } = useAgentsList()
+
+  const [purging, setPurging] = useState(false)
+  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false)
+  const [purgeResult, setPurgeResult] = useState<{ count: number; names: string[] } | null>(null)
+
+  const isAdmin = user?.role === 'admin'
+  const showPurgeButton = isAdmin && statusFilter === 'revoked' && agents.length > 0
+
+  const handlePurge = async () => {
+    setPurging(true)
+    setShowPurgeConfirm(false)
+    try {
+      const result = await purgeRevokedAgents(0)
+      setPurgeResult({ count: result.purged_count, names: result.agent_names })
+      refetch()
+    } catch {
+      // Error handled by UI
+    } finally {
+      setPurging(false)
+    }
+  }
 
   const hasFilters = statusFilter !== undefined || capabilityFilter !== ''
 
@@ -62,6 +88,76 @@ export function AgentsPage() {
         capability={capabilityFilter}
         onCapabilityChange={setCapabilityFilter}
       />
+
+      {/* Purge revoked agents (admin only) */}
+      {showPurgeButton && (
+        <div className="flex items-center justify-between rounded-xl border border-red-300/20 bg-red-500/5 px-4 py-3 dark:border-red-500/10 dark:bg-red-500/5">
+          <p className="text-sm text-red-400">
+            {total} revoked agent{total !== 1 ? 's' : ''} found.
+          </p>
+          <button
+            onClick={() => setShowPurgeConfirm(true)}
+            disabled={purging}
+            className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          >
+            {purging ? 'Purging...' : 'Purge All'}
+          </button>
+        </div>
+      )}
+
+      {/* Purge confirmation modal */}
+      {showPurgeConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="mx-4 w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-[#A6DAFF]/10 dark:bg-[#10131C]">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">
+              Purge Revoked Agents
+            </h3>
+            <p className="mt-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
+              This will permanently delete {total} revoked agent{total !== 1 ? 's' : ''} and all
+              associated keys, policies, and credentials. Audit logs will be preserved.
+            </p>
+            <p className="mt-2 text-sm font-medium text-red-500">This action cannot be undone.</p>
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                onClick={() => setShowPurgeConfirm(false)}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#A6DAFF]/10 dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePurge}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+              >
+                Purge {total} Agent{total !== 1 ? 's' : ''}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Purge result toast */}
+      {purgeResult && (
+        <div className="rounded-xl border border-green-300/20 bg-green-500/10 px-4 py-3 dark:border-green-500/10">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-green-400">
+              Purged {purgeResult.count} agent{purgeResult.count !== 1 ? 's' : ''}.
+            </p>
+            <button
+              onClick={() => setPurgeResult(null)}
+              className="text-green-400 hover:text-green-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4 w-4"
+              >
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Loading skeleton */}
       {isLoading && (

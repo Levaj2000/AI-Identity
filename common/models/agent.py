@@ -54,6 +54,9 @@ class Agent(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+    revoked_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Relationships
     user: Mapped["User"] = relationship(back_populates="agents")  # noqa: F821
