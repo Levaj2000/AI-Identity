@@ -10,7 +10,7 @@ from __future__ import annotations
 import functools
 import logging
 import warnings
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any
 
 import httpx
 from langchain_core.tools import BaseTool, ToolException
@@ -29,7 +29,7 @@ def _check_gateway(
     method: str = "POST",
     fail_closed: bool = True,
     timeout: float = _DEFAULT_TIMEOUT,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Call the AI Identity gateway enforce endpoint.
 
     Args:
@@ -86,7 +86,7 @@ async def _check_gateway_async(
     method: str = "POST",
     fail_closed: bool = True,
     timeout: float = _DEFAULT_TIMEOUT,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Async version of :func:`_check_gateway`."""
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -145,9 +145,7 @@ def _wrap_tool(
         decision = result.get("decision", "deny")
         if decision != "allow":
             reason = result.get("reason", "No reason provided by policy engine")
-            raise ToolException(
-                f"[AI Identity] Tool '{tool.name}' denied by policy: {reason}"
-            )
+            raise ToolException(f"[AI Identity] Tool '{tool.name}' denied by policy: {reason}")
         return original_run(*args, **kwargs)
 
     @functools.wraps(original_arun)
@@ -162,9 +160,7 @@ def _wrap_tool(
         decision = result.get("decision", "deny")
         if decision != "allow":
             reason = result.get("reason", "No reason provided by policy engine")
-            raise ToolException(
-                f"[AI Identity] Tool '{tool.name}' denied by policy: {reason}"
-            )
+            raise ToolException(f"[AI Identity] Tool '{tool.name}' denied by policy: {reason}")
         return await original_arun(*args, **kwargs)
 
     # Bind the new methods onto the tool instance without touching the class
@@ -204,7 +200,7 @@ class AIIdentityToolkit:
 
     def __init__(
         self,
-        tools: List[BaseTool],
+        tools: list[BaseTool],
         agent_id: str,
         api_key: str,
         fail_closed: bool = True,
@@ -215,9 +211,9 @@ class AIIdentityToolkit:
         self.fail_closed = fail_closed
         self.timeout = timeout
         self._original_tools = tools
-        self._wrapped_tools: Optional[List[BaseTool]] = None
+        self._wrapped_tools: list[BaseTool] | None = None
 
-    def get_tools(self) -> List[BaseTool]:
+    def get_tools(self) -> list[BaseTool]:
         """Return the list of tools, each wrapped with AI Identity enforcement.
 
         Wrapping is lazy and cached — calling this method multiple times returns
@@ -239,7 +235,7 @@ class AIIdentityToolkit:
             ]
         return self._wrapped_tools
 
-    def check_tool_access(self, tool_name: str) -> Dict[str, Any]:
+    def check_tool_access(self, tool_name: str) -> dict[str, Any]:
         """Synchronously check gateway access for a named tool without executing it.
 
         Useful for pre-flight checks or debugging policy decisions.

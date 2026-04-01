@@ -7,16 +7,14 @@ everything your agent did.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 import warnings
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from uuid import UUID
 
 import httpx
 from langchain_core.callbacks import AsyncCallbackHandler, BaseCallbackHandler
-from langchain_core.messages import BaseMessage
 from langchain_core.outputs import LLMResult
 
 logger = logging.getLogger(__name__)
@@ -32,8 +30,8 @@ def _post_audit_sync(
     event_type: str,
     endpoint: str,
     decision: str,
-    metadata: Optional[Dict[str, Any]] = None,
-    latency_ms: Optional[float] = None,
+    metadata: dict[str, Any] | None = None,
+    latency_ms: float | None = None,
     fail_closed: bool = True,
 ) -> None:
     """Fire-and-forget synchronous audit POST to AI Identity.
@@ -49,7 +47,7 @@ def _post_audit_sync(
         fail_closed: If ``True``, re-raises errors from the audit call.
                      If ``False``, logs a warning and continues silently.
     """
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "agent_id": agent_id,
         "event_type": event_type,
         "endpoint": endpoint,
@@ -81,12 +79,12 @@ async def _post_audit_async(
     event_type: str,
     endpoint: str,
     decision: str,
-    metadata: Optional[Dict[str, Any]] = None,
-    latency_ms: Optional[float] = None,
+    metadata: dict[str, Any] | None = None,
+    latency_ms: float | None = None,
     fail_closed: bool = True,
 ) -> None:
     """Async version of :func:`_post_audit_sync`."""
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "agent_id": agent_id,
         "event_type": event_type,
         "endpoint": endpoint,
@@ -151,7 +149,7 @@ class AIIdentityCallbackHandler(BaseCallbackHandler):
         self.api_key = api_key
         self.fail_closed = fail_closed
         self.timeout = timeout
-        self._llm_start_times: Dict[str, float] = {}
+        self._llm_start_times: dict[str, float] = {}
 
     # ------------------------------------------------------------------
     # LLM events
@@ -159,11 +157,11 @@ class AIIdentityCallbackHandler(BaseCallbackHandler):
 
     def on_llm_start(
         self,
-        serialized: Dict[str, Any],
-        prompts: List[str],
+        serialized: dict[str, Any],
+        prompts: list[str],
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         """Record the start of an LLM call."""
@@ -187,7 +185,7 @@ class AIIdentityCallbackHandler(BaseCallbackHandler):
         response: LLMResult,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         """Record a successful LLM completion."""
@@ -216,11 +214,11 @@ class AIIdentityCallbackHandler(BaseCallbackHandler):
 
     def on_tool_start(
         self,
-        serialized: Dict[str, Any],
+        serialized: dict[str, Any],
         input_str: str,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         """Record the start of a tool invocation."""
@@ -245,7 +243,7 @@ class AIIdentityCallbackHandler(BaseCallbackHandler):
         output: str,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         """Record a successful tool completion."""
@@ -267,10 +265,10 @@ class AIIdentityCallbackHandler(BaseCallbackHandler):
 
     def on_chain_error(
         self,
-        error: Union[Exception, KeyboardInterrupt],
+        error: Exception | KeyboardInterrupt,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         """Record a chain error — always logs, regardless of fail_closed."""
@@ -290,10 +288,10 @@ class AIIdentityCallbackHandler(BaseCallbackHandler):
 
     def on_tool_error(
         self,
-        error: Union[Exception, KeyboardInterrupt],
+        error: Exception | KeyboardInterrupt,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         """Record a tool error."""
@@ -338,15 +336,15 @@ class AIIdentityAsyncCallbackHandler(AsyncCallbackHandler):
         self.api_key = api_key
         self.fail_closed = fail_closed
         self.timeout = timeout
-        self._llm_start_times: Dict[str, float] = {}
+        self._llm_start_times: dict[str, float] = {}
 
     async def on_llm_start(
         self,
-        serialized: Dict[str, Any],
-        prompts: List[str],
+        serialized: dict[str, Any],
+        prompts: list[str],
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         self._llm_start_times[str(run_id)] = time.monotonic()
@@ -369,7 +367,7 @@ class AIIdentityAsyncCallbackHandler(AsyncCallbackHandler):
         response: LLMResult,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         start = self._llm_start_times.pop(str(run_id), None)
@@ -393,11 +391,11 @@ class AIIdentityAsyncCallbackHandler(AsyncCallbackHandler):
 
     async def on_tool_start(
         self,
-        serialized: Dict[str, Any],
+        serialized: dict[str, Any],
         input_str: str,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         self._llm_start_times[f"tool_{run_id}"] = time.monotonic()
@@ -421,7 +419,7 @@ class AIIdentityAsyncCallbackHandler(AsyncCallbackHandler):
         output: str,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         start = self._llm_start_times.pop(f"tool_{run_id}", None)
@@ -439,10 +437,10 @@ class AIIdentityAsyncCallbackHandler(AsyncCallbackHandler):
 
     async def on_chain_error(
         self,
-        error: Union[Exception, KeyboardInterrupt],
+        error: Exception | KeyboardInterrupt,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         await _post_audit_async(
@@ -461,10 +459,10 @@ class AIIdentityAsyncCallbackHandler(AsyncCallbackHandler):
 
     async def on_tool_error(
         self,
-        error: Union[Exception, KeyboardInterrupt],
+        error: Exception | KeyboardInterrupt,
         *,
         run_id: UUID,
-        parent_run_id: Optional[UUID] = None,
+        parent_run_id: UUID | None = None,
         **kwargs: Any,
     ) -> None:
         await _post_audit_async(

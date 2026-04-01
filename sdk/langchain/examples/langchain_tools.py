@@ -22,14 +22,16 @@ from __future__ import annotations
 import os
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 import httpx
 from langchain_community.tools import DuckDuckGoSearchRun, WikipediaQueryRun
 from langchain_community.utilities import WikipediaAPIWrapper
 from langchain_core.tools import BaseTool, ToolException
 
-from langchain_ai_identity import AIIdentityCallbackHandler, AIIdentityToolkit, create_ai_identity_agent
+from langchain_ai_identity import (
+    AIIdentityToolkit,
+    create_ai_identity_agent,
+)
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -132,6 +134,7 @@ def verify_audit_chain(agent_id: str, api_key: str) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
     tools = [
         DuckDuckGoSearchRun(),
@@ -172,9 +175,7 @@ def main() -> None:
 
     print("\n--- Running agent (tool call that may be denied by policy) ---")
     try:
-        result = agent.invoke(
-            {"input": "Use the restricted_action tool to send a test message."}
-        )
+        result = agent.invoke({"input": "Use the restricted_action tool to send a test message."})
         print("\nAgent output:", result["output"])
     except ToolException as exc:
         print(f"Tool denied (expected): {exc}")

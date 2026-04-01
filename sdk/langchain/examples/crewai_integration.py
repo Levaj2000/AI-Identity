@@ -32,7 +32,6 @@ enforcement and are recorded in the tamper-proof audit log.
 from __future__ import annotations
 
 import os
-from typing import List
 
 from langchain_core.tools import BaseTool
 
@@ -46,7 +45,7 @@ AI_IDENTITY_API_KEY = os.environ.get("AI_IDENTITY_API_KEY", "aid_sk_...")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "sk-...")
 
 
-def build_secured_tools(raw_tools: List[BaseTool]) -> List[BaseTool]:
+def build_secured_tools(raw_tools: list[BaseTool]) -> list[BaseTool]:
     """Wrap any list of LangChain-compatible tools with AI Identity enforcement.
 
     Args:
@@ -177,6 +176,7 @@ def run_crew() -> None:
 # ---------------------------------------------------------------------------
 # Alternative: minimal manual integration without CrewAI
 # ---------------------------------------------------------------------------
+
 
 def manual_integration_example() -> None:
     """Show that AIIdentityToolkit works with any framework that uses BaseTool.

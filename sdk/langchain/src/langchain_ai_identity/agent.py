@@ -6,8 +6,6 @@ enforcement, and the identity-aware chat model in a single function call.
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
-
 from langchain.agents import AgentExecutor, create_openai_tools_agent
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import BaseTool
@@ -23,7 +21,7 @@ _DEFAULT_SYSTEM_PROMPT = (
 
 
 def create_ai_identity_agent(
-    tools: List[BaseTool],
+    tools: list[BaseTool],
     agent_id: str,
     ai_identity_api_key: str,
     openai_api_key: str,
@@ -34,8 +32,8 @@ def create_ai_identity_agent(
     verbose: bool = False,
     max_iterations: int = 10,
     return_intermediate_steps: bool = False,
-    extra_llm_kwargs: Optional[dict] = None,
-    extra_executor_kwargs: Optional[dict] = None,
+    extra_llm_kwargs: dict | None = None,
+    extra_executor_kwargs: dict | None = None,
 ) -> AgentExecutor:
     """Create a LangChain AgentExecutor secured by AI Identity.
 

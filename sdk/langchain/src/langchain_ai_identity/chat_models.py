@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import logging
 import warnings
-from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
+from collections.abc import AsyncIterator, Iterator
+from typing import Any
 
 import httpx
 from langchain_core.messages import BaseMessage
-from langchain_core.outputs import ChatGeneration, ChatResult
+from langchain_core.outputs import ChatResult
 from langchain_openai import ChatOpenAI
 
 from langchain_ai_identity.callback import AIIdentityCallbackHandler
@@ -63,10 +64,7 @@ def _enforce_llm_access(
             resp.raise_for_status()
             data = resp.json()
     except httpx.HTTPStatusError as exc:
-        msg = (
-            f"[AI Identity] Gateway returned HTTP {exc.response.status_code} "
-            f"for {_LLM_ENDPOINT}"
-        )
+        msg = f"[AI Identity] Gateway returned HTTP {exc.response.status_code} for {_LLM_ENDPOINT}"
         logger.error(msg)
         if fail_closed:
             raise PermissionError(msg) from exc
@@ -111,10 +109,7 @@ async def _enforce_llm_access_async(
             resp.raise_for_status()
             data = resp.json()
     except httpx.HTTPStatusError as exc:
-        msg = (
-            f"[AI Identity] Gateway returned HTTP {exc.response.status_code} "
-            f"for {_LLM_ENDPOINT}"
-        )
+        msg = f"[AI Identity] Gateway returned HTTP {exc.response.status_code} for {_LLM_ENDPOINT}"
         logger.error(msg)
         if fail_closed:
             raise PermissionError(msg) from exc
@@ -214,8 +209,8 @@ class AIIdentityChatOpenAI(ChatOpenAI):
 
     def _generate(
         self,
-        messages: List[BaseMessage],
-        stop: Optional[List[str]] = None,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
         run_manager: Any = None,
         **kwargs: Any,
     ) -> ChatResult:
@@ -230,8 +225,8 @@ class AIIdentityChatOpenAI(ChatOpenAI):
 
     async def _agenerate(
         self,
-        messages: List[BaseMessage],
-        stop: Optional[List[str]] = None,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
         run_manager: Any = None,
         **kwargs: Any,
     ) -> ChatResult:
@@ -246,8 +241,8 @@ class AIIdentityChatOpenAI(ChatOpenAI):
 
     def _stream(
         self,
-        messages: List[BaseMessage],
-        stop: Optional[List[str]] = None,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
         run_manager: Any = None,
         **kwargs: Any,
     ) -> Iterator[Any]:
@@ -262,8 +257,8 @@ class AIIdentityChatOpenAI(ChatOpenAI):
 
     async def _astream(
         self,
-        messages: List[BaseMessage],
-        stop: Optional[List[str]] = None,
+        messages: list[BaseMessage],
+        stop: list[str] | None = None,
         run_manager: Any = None,
         **kwargs: Any,
     ) -> AsyncIterator[Any]:
