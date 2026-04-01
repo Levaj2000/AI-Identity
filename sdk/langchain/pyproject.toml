@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "langchain-ai-identity"
+version = "0.1.0"
+description = "Secure your LangChain agents with per-agent identity, policy enforcement, and tamper-proof audit logs."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "AI Identity", email = "jeff@ai-identity.co" }
+]
+keywords = ["langchain", "ai-agents", "identity", "security", "guardrails"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "langchain>=0.3",
+    "langchain-openai>=0.2",
+    "ai-identity>=0.1.0",
+    "httpx>=0.25",
+]
+
+[project.optional-dependencies]
+crewai = ["crewai>=0.28"]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-mock>=3.0",
+    "ruff>=0.1",
+    "mypy>=1.0",
+]
+
+[project.urls]
+Homepage = "https://ai-identity.co"
+Documentation = "https://ai-identity.co/docs/langchain"
+Repository = "https://github.com/ai-identity/langchain-ai-identity"
+"Bug Tracker" = "https://github.com/ai-identity/langchain-ai-identity/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/langchain_ai_identity"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
