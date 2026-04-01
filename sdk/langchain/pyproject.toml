@@ -45,8 +45,8 @@ dev = [
 [project.urls]
 Homepage = "https://ai-identity.co"
 Documentation = "https://ai-identity.co/docs/langchain"
-Repository = "https://github.com/ai-identity/langchain-ai-identity"
-"Bug Tracker" = "https://github.com/ai-identity/langchain-ai-identity/issues"
+Repository = "https://github.com/Levaj2000/AI-Identity"
+"Bug Tracker" = "https://github.com/Levaj2000/AI-Identity/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/langchain_ai_identity"]

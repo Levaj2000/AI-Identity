@@ -1,0 +1,40 @@
+name: Publish langchain-ai-identity to PyPI
+
+on:
+  push:
+    tags:
+      - "langchain-v*"   # trigger on tags like langchain-v0.1.0, langchain-v0.2.0
+
+jobs:
+  build-and-publish:
+    name: Build and publish to PyPI
+    runs-on: ubuntu-latest
+    environment: pypi-publish
+    permissions:
+      id-token: write   # required for trusted publishing (no API key needed)
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tools
+        run: pip install hatchling build twine
+
+      - name: Build package
+        working-directory: sdk/langchain
+        run: python -m build
+
+      - name: Check distribution
+        working-directory: sdk/langchain
+        run: twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: sdk/langchain/dist/
