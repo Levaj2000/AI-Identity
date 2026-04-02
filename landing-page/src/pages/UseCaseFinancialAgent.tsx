@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import SEO from "../components/SEO";
 
 const challenges = [
   {
@@ -68,6 +69,11 @@ export default function UseCaseFinancialAgent() {
     <>
       {/* Hero */}
       <section className="pt-32 pb-16 px-6 md:px-12">
+      <SEO
+        title="AI Agent Identity for Financial Compliance"
+        description="Govern AI agents in financial services. SOC 2 and EU AI Act compliant audit trails, per-agent credentials, and policy enforcement for regulated environments."
+        path="/use-cases/financial-compliance"
+      />
         <div className="max-w-[900px] mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 rounded-full mb-8">
             <span className="text-[rgb(166,218,255)] text-sm font-medium">Use Case</span>

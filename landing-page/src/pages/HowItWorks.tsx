@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import SEO, { makeHowToSchema } from "../components/SEO";
 
 const steps = [
   {
@@ -32,6 +33,12 @@ export default function HowItWorks() {
     <>
       {/* Hero */}
       <section className="pt-32 pb-16 px-6 md:px-12">
+      <SEO
+        title="How AI Agent Authentication Works"
+        description="See how AI Identity registers agents, enforces policies, and captures audit logs — in 3 steps and under 15 minutes. One-line integration."
+        path="/how-it-works"
+        jsonLd={makeHowToSchema()}
+      />
         <div className="max-w-[900px] mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 rounded-full mb-8">
             <span className="text-[rgb(166,218,255)] text-sm font-medium">How It Works</span>

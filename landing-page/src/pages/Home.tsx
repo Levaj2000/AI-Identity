@@ -1,6 +1,7 @@
 import { useState } from "react";
 import BadgeFramerComponent from "../framer/elements/badge";
 import MainButtonFramerComponent from "../framer/main-button";
+import SEO, { organizationSchema, softwareApplicationSchema, websiteSchema } from "../components/SEO";
 
 const steps = [
   {
@@ -96,6 +97,12 @@ function HowItWorksSteps() {
 export default function Home() {
   return (
     <div className="flex flex-col items-center">
+      <SEO
+        title="AI Identity — Identity Infrastructure for AI Agents"
+        description="Per-agent API keys, scoped permissions, and tamper-proof audit trails for autonomous AI agents. SOC 2, EU AI Act, NIST compliant. Deploy in 15 minutes. Free trial."
+        path="/"
+        jsonLd={[organizationSchema, softwareApplicationSchema, websiteSchema]}
+      />
       {/* ── Hero Section — video background + Landio-style atmosphere ── */}
       <section className="relative w-full overflow-hidden min-h-[100vh]" style={{ backgroundColor: "rgb(4,7,13)" }}>
         {/* Video background — dark 3D grid landscape (Landio style) */}

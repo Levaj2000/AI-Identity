@@ -1,6 +1,7 @@
 import React from "react";
 import { useParams, Link } from "react-router";
 import { blogPosts } from "../data/blog-posts";
+import SEO, { makeArticleSchema } from "../components/SEO";
 
 /**
  * Renders paragraph text with support for markdown-style inline links.
@@ -58,6 +59,18 @@ export default function BlogPost() {
 
   return (
     <article className="pt-32 pb-24 px-6 md:px-12">
+      <SEO
+        title={post.title}
+        description={post.excerpt}
+        path={`/blog/${post.slug}`}
+        ogType="article"
+        article={{
+          publishedTime: new Date(post.date).toISOString(),
+          tags: post.tags,
+          author: "Jeff Leva",
+        }}
+        jsonLd={makeArticleSchema(post)}
+      />
       <div className="max-w-[700px] mx-auto">
         {/* Back link */}
         <Link

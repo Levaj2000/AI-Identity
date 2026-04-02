@@ -1,3 +1,4 @@
+import SEO from "../components/SEO";
 const lastUpdated = "March 21, 2026";
 
 const sections = [
@@ -106,6 +107,12 @@ const sections = [
 export default function Terms() {
   return (
     <section className="pt-32 pb-24 px-6 md:px-12">
+      <SEO
+        title="Terms of Service"
+        description="AI Identity terms of service. Usage terms, limitations, and legal agreements."
+        path="/terms"
+        noIndex
+      />
       <div className="max-w-[800px] mx-auto">
         {/* Header */}
         <div className="mb-16 text-center">

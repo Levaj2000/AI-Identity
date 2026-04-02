@@ -1,6 +1,12 @@
+import SEO from "../components/SEO";
 export default function Careers() {
   return (
     <section className="pt-32 pb-24 px-6 md:px-12">
+      <SEO
+        title="Careers at AI Identity"
+        description="Join AI Identity and help build the identity infrastructure for autonomous AI agents. Open positions in engineering, security, and go-to-market."
+        path="/careers"
+      />
       <div className="max-w-[700px] mx-auto text-center">
         {/* Rocket */}
         <div className="mb-10">

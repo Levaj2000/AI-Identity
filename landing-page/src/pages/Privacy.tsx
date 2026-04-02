@@ -1,3 +1,4 @@
+import SEO from "../components/SEO";
 const lastUpdated = "March 21, 2026";
 
 const sections = [
@@ -70,6 +71,12 @@ const sections = [
 export default function Privacy() {
   return (
     <section className="pt-32 pb-24 px-6 md:px-12">
+      <SEO
+        title="Privacy Policy"
+        description="AI Identity privacy policy. How we collect, use, and protect your data."
+        path="/privacy"
+        noIndex
+      />
       <div className="max-w-[800px] mx-auto">
         {/* Header */}
         <div className="mb-16 text-center">

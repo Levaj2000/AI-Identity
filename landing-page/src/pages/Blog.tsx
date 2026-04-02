@@ -1,11 +1,17 @@
 import { Link } from "react-router";
 import { blogPosts } from "../data/blog-posts";
+import SEO from "../components/SEO";
 
 export default function Blog() {
   return (
     <>
       {/* Hero */}
       <section className="pt-32 pb-16 px-6 md:px-12">
+      <SEO
+        title="Blog — AI Agent Identity, Security & Compliance"
+        description="Insights on AI agent identity management, security best practices, EU AI Act compliance, and the future of autonomous AI governance."
+        path="/blog"
+      />
         <div className="max-w-[800px] mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 rounded-full mb-8">
             <span className="text-[rgb(166,218,255)] text-sm font-medium">

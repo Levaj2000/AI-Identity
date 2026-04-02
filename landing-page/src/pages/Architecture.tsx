@@ -1,3 +1,4 @@
+import SEO from "../components/SEO";
 /* ─── tiny helper ─── */
 function Badge({ children }: { children: React.ReactNode }) {
   return (
@@ -59,6 +60,11 @@ export default function Architecture() {
     <>
       {/* Hero */}
       <section className="pt-32 pb-16 px-6 md:px-12">
+      <SEO
+        title="AI Agent Security Architecture: Gateway & Zero Trust"
+        description="Explore AI Identity’s gateway architecture: per-agent credential vaults, JWT auth, AES-256 encryption, HMAC-SHA256 audit chains, and row-level tenant isolation."
+        path="/architecture"
+      />
         <div className="max-w-[900px] mx-auto text-center">
           <Badge>For Design Partners</Badge>
           <h1 className="mt-6 text-4xl md:text-5xl font-extrabold text-white leading-tight">Platform Architecture</h1>

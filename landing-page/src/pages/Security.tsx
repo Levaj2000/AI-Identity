@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import SEO from "../components/SEO";
 
 const securityFeatures = [
   {
@@ -44,6 +45,11 @@ export default function Security() {
     <>
       {/* Hero */}
       <section className="pt-32 pb-16 px-6 md:px-12">
+      <SEO
+        title="Zero-Trust Security for AI Agents"
+        description="Enterprise-grade security for autonomous AI agents. Fail-closed enforcement, AES-256 encrypted credential vault, tamper-evident audit trails, and tenant isolation."
+        path="/security"
+      />
         <div className="max-w-[900px] mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 rounded-full mb-8">
             <span className="text-[rgb(166,218,255)] text-sm font-medium">Security</span>

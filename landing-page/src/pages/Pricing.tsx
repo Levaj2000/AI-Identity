@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
+import SEO from "../components/SEO";
 
 // ── Tier Data ───────────────────────────────────────────────────────
 
@@ -300,6 +301,11 @@ export default function Pricing() {
 
   return (
     <div className="py-24 px-6">
+      <SEO
+        title="Pricing — AI Agent Identity & Compliance"
+        description="Simple, transparent pricing for AI agent identity infrastructure. Free tier for 5 agents. Pro from $79/mo. Business from $299/mo. Enterprise custom."
+        path="/pricing"
+      />
       <div className="max-w-[1200px] mx-auto">
         {/* Header */}
         <motion.div
