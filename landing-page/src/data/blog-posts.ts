@@ -14,7 +14,7 @@ export const blogPosts: BlogPost[] = [
     title:
       "How to Prepare Your AI Agents for the August 2026 EU AI Act Deadline",
     date: "March 27, 2026",
-    readTime: "10 min read",
+    readTime: "12 min read",
     excerpt:
       "The EU AI Act's high-risk provisions take effect August 2, 2026. If your AI agents operate in hiring, finance, healthcare, or critical infrastructure, you have four months to get compliant. Here's exactly what you need to do.",
     tags: ["EU AI Act", "Compliance", "AI Agents", "Regulation"],
@@ -93,6 +93,24 @@ export const blogPosts: BlogPost[] = [
           "The deadline is August 2, 2026. The time to prepare is now.",
         ],
       },
+      {
+        heading: "What Other Frameworks Should You Consider?",
+        content: [
+          "The EU AI Act does not exist in a vacuum. Organizations deploying AI agents in production should also evaluate their posture against NIST AI RMF (the US framework for AI risk management, which maps closely to the EU AI Act's risk categories), SOC 2 Type II (increasingly relevant as auditors add AI-specific controls to their evaluations), GDPR (which applies whenever your agents process personal data of EU residents, regardless of your AI Act classification), and ISO 42001 (the new standard for AI management systems, published in 2023 and gaining traction as a certification path).",
+          "The good news is that the technical controls required by these frameworks overlap significantly. Per-agent identity, scoped permissions, tamper-proof audit trails, and human oversight capabilities satisfy requirements across all of them. Invest in the infrastructure once and you have compliance evidence for multiple frameworks. AI Identity's [compliance dashboard](/pricing) maps your agent fleet's posture against EU AI Act, SOC 2, NIST AI RMF, and GDPR simultaneously.",
+        ],
+      },
+      {
+        heading: "Frequently Asked Questions",
+        content: [
+          "Does the EU AI Act apply to companies outside the EU? Yes. The Act has extraterritorial reach. If your AI system's output is used within the EU — even if your company and servers are outside the EU — you are subject to its requirements. This is the same jurisdictional model as GDPR.",
+          "What if my agent uses a third-party model like GPT-4 or Claude? You are still responsible for compliance as the deployer. The model provider has separate obligations under the Act's general-purpose AI provisions, but the deployment-side requirements (documentation, logging, human oversight, risk management) fall on you.",
+          "Can I use the same compliance evidence for SOC 2 and the EU AI Act? Largely, yes. The technical controls overlap significantly — per-agent identity, scoped permissions, audit trails, and incident response capabilities satisfy requirements across both frameworks. AI Identity's compliance assessments generate evidence mapped to each framework's specific requirements.",
+          "What happens if I miss the August 2026 deadline? Enforcement begins immediately. National supervisory authorities can conduct audits, investigate complaints, and issue fines. Unlike GDPR's early years, regulators have signaled they intend to enforce actively from day one — the two-year transition period was the grace period.",
+          "Is the free tier of AI Identity sufficient for EU AI Act compliance? The free tier supports up to five agents with full audit trails and compliance assessments, which is sufficient for prototyping and initial compliance work. Teams with more than five high-risk agents in production should evaluate the [Pro or Business tiers](/pricing) for expanded agent limits and advanced compliance features.",
+          "How long should I retain audit logs for EU AI Act compliance? The Act does not specify an exact retention period, but Article 12 requires logs to be kept for a period appropriate to the intended purpose of the high-risk AI system and applicable legal obligations. Industry guidance suggests a minimum of 12 months, with longer retention for systems in highly regulated domains like finance and healthcare.",
+        ],
+      },
     ],
   },
   {
@@ -100,7 +118,7 @@ export const blogPosts: BlogPost[] = [
     title:
       "AI Forensics vs. Observability: Why Monitoring Your Agents Isn't Enough",
     date: "March 24, 2026",
-    readTime: "8 min read",
+    readTime: "12 min read",
     excerpt:
       "Your APM dashboard shows an agent made 2,000 API calls last Tuesday. But can you prove which calls were authorized, reconstruct the decision chain, and hand an auditor evidence that hasn't been tampered with? That's the line between observability and forensics.",
     tags: ["AI Forensics", "Observability", "Security", "DevOps"],
@@ -157,6 +175,25 @@ export const blogPosts: BlogPost[] = [
           "If you're already running agents in production with observability in place, adding forensics is a 15-minute integration. AI Identity's gateway proxies your existing API calls, adding per-agent identity, policy enforcement, and forensic logging without changing your agent code.",
           "Start by registering your agents — each gets a unique identity with scoped permissions. Route their API calls through the AI Identity gateway. Every action is now authenticated, policy-checked, and logged to a tamper-evident audit trail. Your observability stack keeps doing what it does. Forensics fills the gaps it was never designed to cover.",
           "Read our [introduction to the AI Forensics framework](/blog/introducing-ai-forensics) to understand the four pillars of agent governance, or check out the [API documentation](https://ai-identity-api.onrender.com/docs) to start integrating today.",
+        ],
+      },
+      {
+        heading: "Real-World Scenarios: When the Gap Hurts",
+        content: [
+          "Consider three scenarios that illustrate exactly where observability alone fails. Scenario one: a fintech company discovers that one of its AI agents approved a loan that violated internal credit policy. The observability dashboard shows the API call was made, but it cannot answer whether the policy was active at the time of the decision, which version of the agent was running, or whether the agent had been granted an exception. The forensic audit trail captures all of this — the agent's identity, the policy evaluation result (with the specific rule that matched), and the cryptographic proof that the record has not been altered since the event occurred.",
+          "Scenario two: a healthcare organization receives a HIPAA audit request for all AI agent access to patient records in Q1 2026. Their Datadog logs show API calls to the patient database, but these logs are stored in a mutable datastore with no chain of custody. An auditor can reasonably question whether logs were modified after the fact. A forensic system with HMAC-SHA256 hash chains provides independently verifiable proof that every record is unaltered — exactly what regulators need to see.",
+          "Scenario three: a multi-agent system processes a customer complaint, and the outcome is disputed. Three agents were involved — a triage agent, a research agent, and a response agent. Observability shows three separate traces. Forensics reconstructs the complete decision chain: what the triage agent decided, what context it passed to the research agent, what the research agent found, and how the response agent synthesized its reply. This is the difference between three data points and a complete narrative.",
+          "According to Gravitee's 2026 State of AI Agent Security report, only 21.9% of organizations treat AI agents as independent identity-bearing entities. The other 78.1% are operating with shared credentials, fragmented logs, and no forensic capability. These are the organizations most exposed when an incident, audit, or regulatory inquiry requires evidence that observability tools cannot provide.",
+        ],
+      },
+      {
+        heading: "Frequently Asked Questions",
+        content: [
+          "Do I need to replace my observability tools with forensics? No. Forensics layers on top of your existing observability stack. Keep your Datadog, Grafana, or New Relic for performance monitoring and alerting. Add forensics for evidence integrity, policy enforcement, decision chain reconstruction, and audit-ready exports. The two systems serve different audiences and answer different questions.",
+          "How much latency does a forensic gateway add? AI Identity's gateway adds sub-50ms overhead per request. For most agent workloads — where the downstream LLM call takes 500ms to 5 seconds — this is negligible. The gateway processes identity verification, policy evaluation, and forensic logging in parallel to minimize impact.",
+          "Can I add forensics to agents that are already in production? Yes. AI Identity is a transparent proxy — you change the base_url in your agent's configuration from the LLM provider's endpoint to the AI Identity gateway. No SDK changes, no code modifications, no redeployment of the agent itself. Registration and routing take about 15 minutes.",
+          "What happens if the forensic gateway goes down? AI Identity's gateway is designed to fail closed. If the gateway is unreachable, agent requests are denied rather than allowed without logging. This prevents any gap in the forensic record. For high-availability requirements, the gateway supports multi-region deployment with automatic failover.",
+          "Is forensic logging the same as immutable logging? Related but distinct. Immutable logging means records cannot be deleted or modified — this is a storage property. Forensic logging adds cryptographic verification (hash chains that prove records are unaltered), decision context (why an action was taken, not just that it happened), and evidence export (formats suitable for legal and regulatory proceedings). Immutability is a necessary condition for forensics, but not sufficient on its own.",
         ],
       },
     ],
