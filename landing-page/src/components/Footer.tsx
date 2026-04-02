@@ -1,4 +1,6 @@
-import { Link } from "react-router";
+"use client";
+
+import Link from "next/link";
 import { useState } from "react";
 
 const productLinks = [
@@ -58,7 +60,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand + Newsletter */}
           <div className="md:col-span-2">
-            <Link to="/" className="flex items-center gap-2 mb-4">
+            <Link href="/" className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 flex items-center justify-center">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(166,218,255)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
                   <path d="M12 2L2 7l10 5 10-5-10-5z"/>
@@ -120,7 +122,7 @@ export default function Footer() {
                   {"external" in link ? (
                     <a href={link.path} target="_blank" rel="noopener noreferrer" className="text-sm text-[rgba(213,219,230,0.5)] hover:text-white transition-colors">{link.label}</a>
                   ) : (
-                    <Link to={link.path} className="text-sm text-[rgba(213,219,230,0.5)] hover:text-white transition-colors">{link.label}</Link>
+                    <Link href={link.path} className="text-sm text-[rgba(213,219,230,0.5)] hover:text-white transition-colors">{link.label}</Link>
                   )}
                 </li>
               ))}
@@ -133,7 +135,7 @@ export default function Footer() {
             <ul className="space-y-3">
               {solutionLinks.map((link) => (
                 <li key={link.label}>
-                  <Link to={link.path} className="text-sm text-[rgba(213,219,230,0.5)] hover:text-white transition-colors">{link.label}</Link>
+                  <Link href={link.path} className="text-sm text-[rgba(213,219,230,0.5)] hover:text-white transition-colors">{link.label}</Link>
                 </li>
               ))}
             </ul>
@@ -145,7 +147,7 @@ export default function Footer() {
             <ul className="space-y-3">
               {companyLinks.map((link) => (
                 <li key={link.label}>
-                  <Link to={link.path} className="text-sm text-[rgba(213,219,230,0.5)] hover:text-white transition-colors">{link.label}</Link>
+                  <Link href={link.path} className="text-sm text-[rgba(213,219,230,0.5)] hover:text-white transition-colors">{link.label}</Link>
                 </li>
               ))}
             </ul>
@@ -159,8 +161,8 @@ export default function Footer() {
         <div className="mt-16 pt-8 border-t border-[rgba(216,231,242,0.07)] flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-[rgba(213,219,230,0.55)]">&copy; {new Date().getFullYear()} AI Identity. All rights reserved.</p>
           <div className="flex gap-6">
-            <Link to="/privacy" className="text-xs text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">Privacy</Link>
-            <Link to="/terms" className="text-xs text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">Terms</Link>
+            <Link href="/privacy" className="text-xs text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">Privacy</Link>
+            <Link href="/terms" className="text-xs text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">Terms</Link>
           </div>
         </div>
       </div>
