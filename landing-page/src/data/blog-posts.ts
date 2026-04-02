@@ -187,6 +187,14 @@ export const blogPosts: BlogPost[] = [
         ],
       },
       {
+        heading: "Building Your Forensics Stack: What to Evaluate",
+        content: [
+          "If you are evaluating forensic tooling for your agent fleet, there are five capabilities to benchmark against. First, identity granularity: does the system issue per-agent credentials, or does it rely on shared keys? Tools like Portkey and Helicone provide gateway-level logging, but without per-agent identity, attribution is impossible. Second, evidence integrity: are logs stored with cryptographic verification (hash chains, digital signatures), or in a standard mutable database? As Kiteworks documents, a log stored in a writable database with access controls is not tamper-evident — and regulators know the difference.",
+          "Third, decision context: does the forensic record capture why an action was taken (policy evaluation, agent reasoning, input context), or just that it happened? Observability traces capture the what — timestamps, status codes, latency. Forensics must capture the why. Fourth, export and verification: can the evidence be exported in formats that legal counsel and external auditors can independently verify? A dashboard is not evidence. A JSON export with a chain-of-custody verification certificate is.",
+          "Fifth, regulatory mapping: does the system map its evidence to specific regulatory requirements? The [EU AI Act](/blog/prepare-ai-agents-eu-ai-act-2026) has different requirements than [SOC 2 Type II](/blog/compliance-in-the-age-of-autonomous-ai) or NIST AI RMF. A forensic system that generates evidence without mapping it to the frameworks your auditors care about creates work instead of eliminating it.",
+        ],
+      },
+      {
         heading: "Frequently Asked Questions",
         content: [
           "Do I need to replace my observability tools with forensics? No. Forensics layers on top of your existing observability stack. Keep your Datadog, Grafana, or New Relic for performance monitoring and alerting. Add forensics for evidence integrity, policy enforcement, decision chain reconstruction, and audit-ready exports. The two systems serve different audiences and answer different questions.",
@@ -202,7 +210,7 @@ export const blogPosts: BlogPost[] = [
     slug: "introducing-ai-forensics",
     title: "Introducing AI Forensics: The Missing Layer in Agent Governance",
     date: "March 22, 2026",
-    readTime: "7 min read",
+    readTime: "13 min read",
     excerpt:
       "Identity tells you who an agent is. Policy tells you what it can do. Compliance proves the rules were followed. But when something goes wrong, you need forensics — the ability to reconstruct exactly what happened, with cryptographic proof.",
     tags: ["AI Forensics", "Security", "Governance", "Compliance"],
@@ -213,6 +221,7 @@ export const blogPosts: BlogPost[] = [
           "When a production incident hits a traditional software system, the playbook is well-established. You check the logs, trace the request, identify the root cause, and fix it. The tooling is mature — APM dashboards, distributed tracing, log aggregation. Decades of engineering have made incident response a solved problem.",
           "AI agents break this playbook. An agent doesn't follow a predetermined code path. It makes decisions, chains actions, and interacts with other agents and systems in ways that are difficult to predict and harder to reconstruct after the fact. When an agent makes a bad decision at 3 AM — approving a transaction it shouldn't have, accessing data outside its scope, or cascading a failure across dependent systems — the question isn't just what happened. It's can you prove what happened?",
           "This is the gap that AI Forensics fills. Not monitoring, not alerting, not compliance checklists — forensics. The ability to reconstruct an agent's complete decision chain with tamper-evident proof that the evidence hasn't been altered.",
+          "The distinction matters more than most teams realize. According to the Gravitee 2026 State of API-AI Integration report, 45.6% of organizations still use shared API keys for their AI agents, and only 21.9% have implemented per-agent credentials. That means nearly half of all enterprise agent deployments cannot attribute a specific action to a specific agent. When an incident occurs, these teams are left guessing — sifting through shared logs, hoping timestamps and context clues can reconstruct what happened. Forensics eliminates the guesswork, but only if the underlying infrastructure supports per-agent identity and immutable logging from the start.",
         ],
       },
       {
@@ -226,23 +235,71 @@ export const blogPosts: BlogPost[] = [
         ],
       },
       {
+        heading: "How Tamper-Evident Capture Works in Practice",
+        content: [
+          "The cryptographic foundation of AI Forensics deserves a deeper explanation, because it is what separates genuine forensics from glorified logging.",
+          "Every audit entry in AI Identity's [forensic layer](/forensics) contains the agent's unique identity, a timestamp, the action requested, the policy evaluation result (allowed or denied, with the specific rule that matched), the downstream API response metadata, and an HMAC-SHA256 hash that incorporates the hash of the previous entry. This creates a hash chain — a linked sequence where each record depends on every record that came before it.",
+          "If someone modifies a single field in a single record — changing an 'allowed' to 'denied,' altering a timestamp, or deleting an entry — the hash chain breaks. Every subsequent record's hash becomes invalid. The tampering is not just detectable; it is precisely locatable. You can identify exactly which record was altered and when the chain diverged from its expected state.",
+          "This is the same principle behind blockchain ledgers and certificate transparency logs, applied to agent behavior. The difference is that AI Identity's implementation is optimized for the forensic use case: fast append-only writes during normal operation, with cryptographic verification available on demand for incident response and audits.",
+          "Contrast this with standard application logs. A traditional log aggregation pipeline — Elasticsearch, Splunk, CloudWatch — stores events, but provides no mechanism to prove those events have not been modified after the fact. An attacker or a careless administrator can alter log entries, and the system has no way to detect the change. In regulated industries governed by the EU AI Act (Article 12) and SOC 2 Type II controls, this is a disqualifying gap.",
+        ],
+      },
+      {
+        heading: "Incident Replay: Reconstructing Agent Behavior",
+        content: [
+          "When something goes wrong with a traditional microservice, you trace the request. A distributed trace shows you the path through your system: service A called service B, which called service C, total latency 340ms, error in service C. The trace tells a clear story because the code path is deterministic.",
+          "Agent behavior is not deterministic. An LLM-powered agent might receive a user request, interpret it in context, choose from available tools, call an API, evaluate the response, decide to call a different API based on that response, and then synthesize a final answer. The same user request might produce a completely different action sequence on the next invocation.",
+          "Incident replay reconstructs this non-deterministic behavior into a coherent narrative. Given an agent ID and a time range, AI Identity's forensic API returns the complete sequence of events: what the agent was asked to do, what policy was in effect at that moment, what actions the agent took, which actions were allowed and which were blocked, and what downstream systems responded. Each event is linked to the next, forming a decision chain that an incident responder or auditor can follow from start to finish.",
+          "This is not the same as searching logs for a request ID. Log search gives you fragments — individual events that you must mentally stitch together. Incident replay gives you the complete, ordered narrative with all context preserved. For a security team investigating a data access incident, or a compliance team responding to a regulatory inquiry under GDPR Article 33's 72-hour breach notification window, this difference is the difference between hours of investigation and minutes.",
+        ],
+      },
+      {
         heading: "The Four Pillars of Agent Governance",
         content: [
           "AI Forensics completes the governance model that enterprises need to deploy agents with confidence. We think about it as four pillars.",
-          "Identity answers the question: who is this agent? Every agent gets a unique, verifiable identity with scoped API keys and lifecycle management. Without identity, there is no accountability.",
-          "Policy answers: what is this agent allowed to do? A fail-closed gateway evaluates every request against the agent's policy before it proceeds. No policy evaluation, no access — no exceptions.",
-          "Compliance answers: can we prove the rules were followed? Automated compliance evaluators map agent behavior to frameworks like SOC 2, NIST AI RMF, and the EU AI Act. Evidence is generated continuously, not assembled retroactively before an audit.",
-          "Forensics answers: what happened, and can we reconstruct it? When an incident occurs, forensics provides the complete, verifiable record. Not what you think happened based on dashboards — what actually happened, backed by cryptographic proof.",
-          "Each pillar depends on the others. Identity without policy is authentication without authorization. Policy without compliance is enforcement without evidence. And compliance without forensics is a paper trail that can't withstand scrutiny.",
+          "[Identity](/agents) answers the question: who is this agent? Every agent gets a unique, verifiable identity with scoped API keys and lifecycle management. Without identity, there is no accountability. AI Identity's agent registry provides each agent with a cryptographic fingerprint, structured metadata, and a complete version history — the foundation that every other pillar builds on.",
+          "[Policy](/policies) answers: what is this agent allowed to do? A fail-closed gateway evaluates every request against the agent's policy before it proceeds. No policy evaluation, no access — no exceptions. Policies are versioned and immutable — when you update a policy, the previous version is preserved in the audit trail, so you can always determine what rules were in effect at any point in time.",
+          "[Compliance](/compliance) answers: can we prove the rules were followed? Automated compliance evaluators map agent behavior to frameworks like SOC 2 Type II, NIST AI RMF, and the EU AI Act. Evidence is generated continuously, not assembled retroactively before an audit. The EU AI Act alone carries fines of up to 35 million EUR or 7% of global annual turnover for violations of prohibited practices — these are not theoretical penalties.",
+          "[Forensics](/forensics) answers: what happened, and can we reconstruct it? When an incident occurs, forensics provides the complete, verifiable record. Not what you think happened based on dashboards — what actually happened, backed by cryptographic proof.",
+          "Each pillar depends on the others. Identity without policy is authentication without authorization. Policy without compliance is enforcement without evidence. And compliance without forensics is a paper trail that can't withstand scrutiny. The four pillars together form a closed loop: identity enables attribution, policy enables enforcement, compliance enables evidence, and forensics enables trust.",
+        ],
+      },
+      {
+        heading: "How Forensics Compares to Existing Observability Tools",
+        content: [
+          "If you are already using tools like Portkey, LangSmith, or Helicone for LLM observability, you might wonder whether forensics is redundant. It is not — but it is complementary. For a detailed comparison, see our post on [AI forensics vs. observability](/blog/ai-forensics-vs-observability).",
+          "Observability tools excel at operational visibility: token usage, latency distributions, prompt-response pairs, cost tracking. They answer questions like 'why is my agent slow?' and 'how much am I spending on GPT-4 calls?' These are essential for running agents in production, and you should keep using them.",
+          "Forensics answers a fundamentally different set of questions: 'Can I prove this agent was authorized to access customer PII on March 12th?' and 'Has this evidence been tampered with since the incident?' Observability platforms do not create tamper-evident records. They do not enforce policy at the request level. They do not produce audit-ready evidence packages with chain-of-custody verification. These are not features they are missing — they are outside the problem domain these tools were designed to solve.",
+          "Enterprise platforms like CrowdStrike and SGNL are approaching the agent governance problem from the IAM side, adding agent-aware identity and access controls to their existing security infrastructure. This is valuable, but IAM alone does not provide forensic reconstruction of agent behavior. You need both: IAM for access control, and forensics for post-incident investigation and compliance evidence.",
+          "The practical architecture is straightforward. Your observability stack (Portkey, LangSmith, Helicone, Datadog) monitors operational health. Your IAM stack (CrowdStrike, SGNL, Okta) manages access. AI Identity sits at the gateway layer, adding per-agent identity, policy enforcement, and forensic logging to every request. The three layers serve different audiences — SRE, security, and compliance — but share the same event stream.",
         ],
       },
       {
         heading: "Why Now",
         content: [
-          "Three forces are converging to make AI Forensics essential. The first is regulatory pressure. The EU AI Act, NIST AI RMF, and evolving SOC 2 guidance all point toward requirements for explainability, auditability, and incident reconstruction for AI systems. Companies deploying agents in regulated industries will need forensic capabilities — not eventually, but soon.",
-          "The second is the scale of agent deployments. When you have three agents in production, you can investigate incidents manually. When you have three hundred, you need automated forensic tooling. The companies deploying agents today are the ones who will need this infrastructure tomorrow.",
-          "The third is the trust gap. Enterprises are hesitant to give AI agents more autonomy because they can't verify what agents did after the fact. Forensics closes this gap. When you can prove exactly what an agent did — and prove the evidence hasn't been tampered with — you can confidently expand what agents are allowed to do.",
+          "Three forces are converging to make AI Forensics essential. The first is regulatory pressure. The EU AI Act's high-risk system requirements take effect August 2, 2026, mandating automatic logging (Article 12), human oversight (Article 14), and risk management (Article 9) for AI systems in regulated domains. NIST AI RMF calls for documentation of AI system provenance and lineage. SOC 2 Type II auditors are increasingly asking about AI system controls. Companies deploying agents in regulated industries will need forensic capabilities — not eventually, but within months. For a detailed compliance preparation plan, see our [EU AI Act readiness guide](/blog/prepare-ai-agents-eu-ai-act-2026).",
+          "The second is the scale of agent deployments. When you have three agents in production, you can investigate incidents manually. When you have three hundred, you need automated forensic tooling. The companies deploying agents today are the ones who will need this infrastructure tomorrow. Enterprise agent fleets are growing rapidly — many organizations that started with a handful of agents in 2025 are now running dozens across multiple business units, with plans to scale to hundreds by year-end.",
+          "The third is the trust gap. Enterprises are hesitant to give AI agents more autonomy because they can't verify what agents did after the fact. Forensics closes this gap. When you can prove exactly what an agent did — and prove the evidence hasn't been tampered with — you can confidently expand what agents are allowed to do. This is the unlock that transforms agents from supervised assistants into autonomous operators.",
           "The companies that build forensic capabilities into their agent infrastructure now won't just be compliant. They'll be the ones that enterprises trust to handle their most sensitive workloads.",
+        ],
+      },
+      {
+        heading: "Getting Started with AI Forensics",
+        content: [
+          "If you are running AI agents in production today, adding forensic capabilities is a 15-minute integration. AI Identity's gateway sits between your agents and the APIs they call, adding per-agent identity, policy enforcement, and tamper-evident logging without requiring changes to your agent code.",
+          "Start by [registering your agents](https://dashboard.ai-identity.co) — each gets a unique identity with scoped permissions. Define policies that govern what each agent can access. Route their API calls through the AI Identity gateway. Every action is now authenticated, policy-checked, and logged to a tamper-evident audit trail with HMAC-SHA256 chain verification.",
+          "The [free tier](/pricing) includes five agents with full forensic capabilities — tamper-evident audit trail, incident replay, chain verification, and forensic export. No credit card required, no time limit. Start building forensic-ready agent infrastructure today, and you will be prepared when regulators, auditors, or your own security team come asking for proof.",
+        ],
+      },
+      {
+        heading: "Frequently Asked Questions",
+        content: [
+          "How is AI Forensics different from traditional application logging? Traditional logging captures events but provides no mechanism to prove those events have not been altered. AI Forensics uses HMAC-SHA256 hash chains to create tamper-evident records — modify one entry and the entire chain breaks. This is the difference between a record and evidence. Traditional logs answer 'what happened' while forensics answers 'what happened, and here is the cryptographic proof.'",
+          "Does AI Forensics replace my observability stack? No. Observability tools like Portkey, LangSmith, Helicone, and Datadog solve operational problems — latency, cost, error rates. Forensics solves governance problems — incident reconstruction, compliance evidence, audit readiness. The two are complementary, not competing. See our detailed comparison in [AI Forensics vs. Observability](/blog/ai-forensics-vs-observability).",
+          "What compliance frameworks does AI Forensics support? AI Identity's forensic layer produces evidence that maps to EU AI Act requirements (Articles 9, 11, 12, and 14), NIST AI RMF documentation standards, SOC 2 Type II controls for AI systems, and GDPR data processing accountability requirements. The [compliance assessment](/compliance) feature generates scored reports against each framework.",
+          "How long does integration take? Most teams complete integration in under 15 minutes. You register your agents, define policies, and route API calls through the AI Identity gateway. No changes to your agent code are required — the gateway is a transparent proxy that adds identity, policy enforcement, and forensic logging to every request.",
+          "Can I verify the forensic chain independently? Yes. AI Identity exposes a chain verification API that allows any party — internal security teams, external auditors, or regulatory authorities — to independently verify that the forensic record is complete and unaltered. The verification is cryptographic, not trust-based: the math either checks out or it does not.",
+          "What happens if my agent fleet grows beyond the free tier? The free tier covers five agents with full forensic capabilities. Beyond that, the Pro tier supports unlimited agents with extended retention, priority support, and advanced compliance reporting. See [pricing](/pricing) for details. There is no degradation of forensic capability at any tier — every plan includes the full tamper-evident audit trail.",
         ],
       },
     ],
@@ -251,7 +308,7 @@ export const blogPosts: BlogPost[] = [
     slug: "why-ai-agents-need-identity",
     title: "Why AI Agents Need Identity",
     date: "March 21, 2026",
-    readTime: "6 min read",
+    readTime: "12 min read",
     excerpt:
       "AI agents are moving from demos to production, but there's a fundamental gap: no standard way to verify who — or what — an agent is. Here's why that needs to change.",
     tags: ["AI Agents", "Identity", "Infrastructure"],
@@ -271,6 +328,16 @@ export const blogPosts: BlogPost[] = [
           "The most common approach today is giving agents an API key and calling it done. But API keys were designed for server-to-server communication, not for autonomous entities that make independent decisions.",
           "An API key tells you which application is making a request. It doesn't tell you which agent within that application is acting, what permissions that specific agent should have, whether the agent has been revoked or compromised, or who is responsible for the agent's actions.",
           "When something goes wrong — and in production, things always go wrong — you need answers to all of these questions. API keys can't give them to you.",
+          "The data confirms the problem is widespread. According to the Gravitee 2026 State of API-AI Integration report, 45.6% of organizations still use shared API keys across multiple AI agents, and only 21.9% have implemented per-agent credentials. That means the vast majority of enterprise agent deployments have no way to distinguish between agents at the infrastructure level. Every agent looks the same to the system — a single API key, a single identity, a single set of permissions shared across agents with fundamentally different roles and risk profiles.",
+        ],
+      },
+      {
+        heading: "The Real-World Consequences of Anonymous Agents",
+        content: [
+          "Without agent identity, every governance problem compounds. Consider what happens when an agent is compromised. With shared API keys, you cannot revoke one agent's access without revoking access for every agent using that key. There is no surgical response — only a full shutdown that takes down all agents sharing the credential.",
+          "Or consider the audit scenario. A SOC 2 Type II auditor asks for evidence that your customer service agent only accesses customer records it is authorized to view. With shared API keys, your logs show API calls from a single credential. You cannot distinguish between your customer service agent reading a single customer's record and your analytics agent running a batch query across the entire database. Both look identical in your logs.",
+          "Incident investigation is equally compromised. When a downstream system reports unexpected behavior — a database write that should not have occurred, an API call to a service outside the agent's intended scope — you need to determine which agent was responsible. With shared credentials, this is impossible. You are left correlating timestamps and inferring causation from circumstantial evidence, which is exactly the opposite of what a forensic investigation requires.",
+          "These are not hypothetical risks. They are the daily reality for the 78.1% of organizations that have not implemented per-agent identity. The gap between how enterprises manage human identity (SSO, MFA, RBAC, SCIM provisioning) and how they manage agent identity (shared API keys, no lifecycle management) is the single largest governance gap in modern AI deployments.",
         ],
       },
       {
@@ -279,14 +346,56 @@ export const blogPosts: BlogPost[] = [
           "Agent identity isn't just authentication with a different name. It's a fundamentally different problem that requires new thinking.",
           "A proper agent identity system needs to answer four questions. First, authentication: is this agent who it claims to be? Second, authorization: what is this agent allowed to do? Third, accountability: who deployed this agent and who is responsible for its actions? Fourth, auditability: what has this agent done, and can we prove it?",
           "These questions become even more complex in multi-agent systems, where agents from different organizations need to interact. How does Company A's purchasing agent verify that Company B's sales agent is legitimate? How do you enforce spending limits across organizational boundaries?",
+          "At AI Identity, we solve this with a [gateway-based architecture](/agents) that assigns every agent a unique cryptographic identity. Each agent gets its own API key, its own set of scoped permissions defined by [policy](/policies), and its own entry in the agent registry with structured metadata — name, description, capabilities, version history, and policy bindings. The gateway sits between the agent and the APIs it calls, verifying identity and enforcing policy on every single request.",
+          "This is not an SDK you bolt onto your agent framework. It is a transparent proxy — you change your agent's base URL from the LLM provider's endpoint to the AI Identity gateway, and every request is now authenticated, authorized, and logged to a [tamper-evident audit trail](/forensics). The agent's code does not change. The identity layer is infrastructure, not application logic.",
+        ],
+      },
+      {
+        heading: "Per-Agent Identity vs. Application-Level Authentication",
+        content: [
+          "A common objection is that application-level authentication is sufficient — you authenticate the application, and the application manages its agents internally. This misses the point in several important ways.",
+          "Application-level authentication tells you that a request came from your application. It does not tell you which agent within that application initiated the request, what that agent's specific permissions should be, or whether that particular agent has been revoked or updated since deployment. For compliance purposes, this is the equivalent of logging into a bank's internal system with a single shared account — the audit trail is meaningless because you cannot attribute actions to individuals.",
+          "Per-agent identity pushes authentication and authorization down to the agent level. Each agent authenticates independently. Each agent has its own permission scope. Each agent's actions are individually attributable in the audit trail. When an agent is compromised, you revoke its specific credentials without affecting any other agent. When an auditor asks who accessed what, you have a definitive answer.",
+          "Enterprise IAM platforms like CrowdStrike and SGNL are beginning to extend their identity frameworks to cover non-human entities, including AI agents. This is a positive development, but the agent identity problem has unique requirements that generic IAM does not address out of the box: agents need policy enforcement at the API gateway level, not just access control at the identity provider level. They need forensic-grade audit trails, not just access logs. And they need lifecycle management that accounts for the fact that agents are deployed, updated, versioned, and retired on a fundamentally different cadence than human users.",
+        ],
+      },
+      {
+        heading: "The Lifecycle of an Agent Identity",
+        content: [
+          "Human identity has a well-understood lifecycle: provisioning, authentication, authorization, monitoring, and deprovisioning. Agent identity follows a similar pattern, but with critical differences at each stage.",
+          "Provisioning: when a new agent is deployed, it is registered in the [agent registry](https://dashboard.ai-identity.co) with structured metadata — its name, purpose, capabilities, owning team, and the policies that govern its behavior. This registration creates the agent's identity and generates its unique API credentials.",
+          "Policy binding: each agent is bound to one or more [policies](/policies) that define exactly what it can do. A customer service agent might be allowed to call the GPT-4 API with a specific system prompt but blocked from accessing any other model or endpoint. Policies are evaluated at the gateway level, not the application level — the agent cannot bypass its own restrictions.",
+          "Active monitoring: while the agent is in production, every request passes through the AI Identity gateway, which logs the agent's identity, the action taken, the policy evaluation result, and a cryptographic hash chain for tamper evidence. This creates the [forensic audit trail](/forensics) that compliance teams and auditors require.",
+          "Rotation and updates: agent credentials can be rotated without downtime. When an agent's capabilities change — it gains access to a new tool, or its scope is narrowed — the policy is updated and the change is recorded in the audit trail. You can always determine what permissions an agent had at any point in time.",
+          "Revocation: when an agent is compromised, retired, or no longer needed, its credentials are revoked instantly. The revocation is effective immediately at the gateway — the agent's next request is denied, regardless of whether cached credentials exist downstream. Unlike shared API keys, revoking one agent's identity has zero impact on any other agent.",
         ],
       },
       {
         heading: "Why Now",
         content: [
           "The window for establishing agent identity standards is narrow. Right now, the ecosystem is small enough that ad-hoc solutions work. But as agent deployments scale from hundreds to millions, the lack of identity infrastructure will become a critical bottleneck.",
+          "Regulatory pressure is accelerating this timeline. The EU AI Act's high-risk system requirements take effect August 2, 2026, requiring documentation (Article 11), automatic logging (Article 12), and human oversight (Article 14) for AI systems in regulated domains. None of these requirements can be met without per-agent identity. You cannot document an agent you cannot identify. You cannot log actions you cannot attribute. You cannot oversee an agent you cannot distinguish from its peers. For a detailed preparation guide, see our post on [preparing for the EU AI Act deadline](/blog/prepare-ai-agents-eu-ai-act-2026).",
           "Enterprises are already asking the right questions: How do we govern our agents? How do we audit their actions? How do we revoke access when an agent is compromised? These questions don't have good answers yet — but they will, and the companies that build that infrastructure now will define how the agent economy works.",
-          "That's why we built AI Identity. Not because identity is exciting — but because without it, the autonomous agent future everyone is building toward simply won't work.",
+          "That's why we built AI Identity. Not because identity is exciting — but because without it, the autonomous agent future everyone is building toward simply won't work. Identity is the foundation layer. [Policy](/policies), [compliance](/compliance), and [forensics](/forensics) all depend on it. Without knowing who an agent is, you cannot enforce what it's allowed to do, prove it followed the rules, or reconstruct what happened when something went wrong.",
+        ],
+      },
+      {
+        heading: "Getting Started",
+        content: [
+          "Adding per-agent identity to your existing agent deployment takes about 15 minutes. Register your agents in the [AI Identity dashboard](https://dashboard.ai-identity.co), define their policies, and route their API calls through the gateway. Each agent gets its own credentials, its own permissions, and its own entry in the tamper-evident audit trail.",
+          "The [free tier](/pricing) includes five agents with full identity, policy enforcement, and forensic logging. No credit card required. Start with your most critical agents — the ones handling sensitive data, making consequential decisions, or operating in regulated environments — and expand from there.",
+          "If you want to understand how identity fits into the broader governance picture, read about the [four pillars of agent governance](/blog/introducing-ai-forensics) or explore how AI Identity handles [compliance](/compliance) across EU AI Act, SOC 2, NIST AI RMF, and GDPR frameworks.",
+        ],
+      },
+      {
+        heading: "Frequently Asked Questions",
+        content: [
+          "How is agent identity different from OAuth or service accounts? OAuth and service accounts authenticate applications or services. Agent identity authenticates individual agents within an application, each with their own permissions, lifecycle, and audit trail. A single application might contain ten agents, each with different roles and risk profiles — agent identity distinguishes between them where OAuth cannot.",
+          "Does per-agent identity work with multi-agent frameworks like LangGraph, CrewAI, or AutoGen? Yes. AI Identity is framework-agnostic because it operates at the API gateway level, not the application level. Each agent in your framework gets its own API key and routes its LLM calls through the AI Identity gateway. The framework continues to orchestrate agents as before — the identity layer is transparent to the agent code.",
+          "What happens if I have hundreds of agents? The AI Identity agent registry supports bulk registration via the [API](https://ai-identity-api.onrender.com/docs). You can programmatically create agents, assign policies, and manage credentials. The Pro tier supports unlimited agents with no per-agent fees.",
+          "Can I migrate from shared API keys to per-agent identity incrementally? Yes. You can migrate agents one at a time. Start by registering a single agent, routing its calls through the gateway, and verifying that everything works. Then migrate additional agents at your own pace. There is no requirement to migrate all agents simultaneously.",
+          "How does agent identity work across organizational boundaries? AI Identity's agent registry supports multi-tenant configurations. Each organization manages its own agents and policies. When agents from different organizations need to interact, each agent authenticates independently against the gateway, and cross-organization policies govern what interactions are allowed.",
+          "What data does AI Identity store about my agents? AI Identity stores agent metadata (name, description, capabilities, policy bindings), authentication credentials (encrypted at rest), and audit trail entries (every request, policy evaluation, and outcome). AI Identity does not store prompt content or model responses by default — only metadata about the request. Prompt logging can be enabled per-agent for organizations that require it for compliance purposes.",
         ],
       },
     ],
@@ -295,7 +404,7 @@ export const blogPosts: BlogPost[] = [
     slug: "compliance-in-the-age-of-autonomous-ai",
     title: "Compliance in the Age of Autonomous AI",
     date: "March 18, 2026",
-    readTime: "5 min read",
+    readTime: "12 min read",
     excerpt:
       "Existing compliance frameworks weren't built for AI agents. As enterprises deploy autonomous systems, the gap between what regulators expect and what companies can prove is growing fast.",
     tags: ["Compliance", "Enterprise", "Governance"],
@@ -306,6 +415,7 @@ export const blogPosts: BlogPost[] = [
           "Every enterprise compliance framework assumes one thing: that a human is making decisions. SOC 2 controls reference authorized personnel. HIPAA requires individuals to acknowledge data access. Financial regulations demand personal accountability for transactions.",
           "AI agents break all of these assumptions. When an agent autonomously processes a healthcare claim, who acknowledged the data access? When an agent executes a financial transaction, who is personally accountable? When an auditor asks for access logs, can you show which agent accessed what data and why?",
           "Most companies deploying AI agents today cannot answer these questions. They're operating in a compliance gray zone — technically functional, but one audit away from a serious problem.",
+          "The scale of the gap is significant. According to the Gravitee 2026 State of API-AI Integration report, 45.6% of organizations still use shared API keys across multiple AI agents — meaning nearly half of enterprise agent deployments cannot even attribute an action to a specific agent, let alone prove that agent was authorized to take that action. Only 21.9% have implemented per-agent credentials, the foundational requirement for any meaningful compliance posture.",
         ],
       },
       {
@@ -314,23 +424,63 @@ export const blogPosts: BlogPost[] = [
           "Regulatory bodies are catching up. The EU AI Act requires transparency about AI systems making consequential decisions. US financial regulators are publishing guidance on AI governance. Industry-specific frameworks are being updated to account for autonomous systems.",
           "The common thread across all of these is accountability. Regulators want to know who deployed an agent, what it's authorized to do, what it actually did, and whether appropriate controls were in place.",
           "Companies that can answer these questions clearly and with evidence will have a significant advantage. Companies that can't will face increasing regulatory friction.",
+          "The penalties for non-compliance are not abstract. The EU AI Act, with high-risk system requirements taking effect August 2, 2026, imposes fines of up to 35 million EUR or 7% of global annual turnover for violations of prohibited practices, and up to 15 million EUR or 3% of turnover for violations of high-risk system requirements under Articles 9, 11, 12, and 14. GDPR fines for mishandling personal data processed by AI agents can reach 20 million EUR or 4% of global turnover. SOC 2 Type II audit failures, while not carrying direct fines, result in lost enterprise contracts and damaged trust that can take years to rebuild. For a detailed EU AI Act preparation timeline, see our [compliance readiness guide](/blog/prepare-ai-agents-eu-ai-act-2026).",
+        ],
+      },
+      {
+        heading: "Framework-by-Framework: Where Agents Create Compliance Risk",
+        content: [
+          "Understanding exactly where AI agents create compliance exposure requires examining each major framework individually.",
+          "SOC 2 Type II evaluates controls over a review period, typically 6 to 12 months. The trust service criteria most affected by agent deployments are CC6 (Logical and Physical Access Controls) — how do you prove that only authorized agents accessed specific systems? — CC7 (System Operations) — can you demonstrate that agent behavior is monitored and anomalies are detected? — and CC8 (Change Management) — when an agent's capabilities or policies change, is the change documented and authorized? Without per-agent identity and audit trails, none of these controls can be evidenced for agent workloads.",
+          "The EU AI Act (Articles 9, 11, 12, and 14) requires risk management systems, technical documentation, automatic logging, and human oversight for high-risk AI systems. Article 12 specifically mandates that logs be attributable to a specific AI system and its operator — shared API keys fail this test by definition. Article 14's human oversight requirements demand that a human can monitor the system in real time and intervene at any point, which requires per-agent dashboards and instant revocation capabilities.",
+          "NIST AI RMF organizes AI risk management around four functions: Govern, Map, Measure, and Manage. The Govern function calls for accountability structures that map AI system actions to responsible parties. The Measure function requires documentation of AI system performance and behavior. The Manage function specifies incident response capabilities for AI systems. All three depend on knowing which agent did what — identity is the prerequisite.",
+          "GDPR applies whenever your agents process personal data of EU residents, regardless of your AI Act classification. Article 5's accountability principle requires you to demonstrate compliance — not just claim it. Article 30 requires records of processing activities, which must identify the purposes of processing and the categories of data processed. When an agent processes personal data, these records must attribute the processing to a specific agent with specific permissions, not to a generic application credential.",
         ],
       },
       {
         heading: "The Three Pillars of Agent Compliance",
         content: [
           "Based on conversations with enterprises deploying AI agents, we see three core requirements emerging.",
-          "The first is scoped permissions. Every agent should operate under the principle of least privilege. A customer service agent shouldn't have access to financial systems. A data analysis agent shouldn't be able to modify production databases. Permissions should be granular, enforceable, and auditable.",
-          "The second is tamper-proof audit trails. Every action an agent takes should be logged with its identity, timestamp, the action performed, and the policy that authorized it. These logs need to be immutable — you can't prove compliance if the evidence can be altered.",
-          "The third is policy enforcement at the infrastructure level. Compliance can't depend on agents behaving correctly. It needs to be enforced at the gateway level, before requests reach their destination. If an agent exceeds its permissions, the request should be blocked, logged, and flagged — automatically.",
+          "The first is scoped permissions. Every agent should operate under the principle of least privilege. A customer service agent shouldn't have access to financial systems. A data analysis agent shouldn't be able to modify production databases. Permissions should be granular, enforceable, and auditable. AI Identity's [policy engine](/policies) implements this at the gateway level — each agent's permissions are defined declaratively, evaluated on every request, and enforced before the request reaches the downstream API. The agent cannot exceed its own permissions, regardless of what its application code attempts.",
+          "The second is tamper-proof audit trails. Every action an agent takes should be logged with its identity, timestamp, the action performed, and the policy that authorized it. These logs need to be immutable — you can't prove compliance if the evidence can be altered. AI Identity's [forensic layer](/forensics) uses HMAC-SHA256 hash chains to create a tamper-evident record where any modification to any entry breaks the cryptographic chain and is immediately detectable. This is the standard required by digital forensics — the same evidentiary standard used in cybersecurity incident response and legal proceedings.",
+          "The third is policy enforcement at the infrastructure level. Compliance can't depend on agents behaving correctly. It needs to be enforced at the gateway level, before requests reach their destination. If an agent exceeds its permissions, the request should be blocked, logged, and flagged — automatically. This is the fail-closed design principle: any request that cannot be positively authorized against a defined policy is denied. There are no implicit permissions, no default-allow rules, and no exceptions that bypass the gateway.",
+        ],
+      },
+      {
+        heading: "Continuous Compliance vs. Point-in-Time Audits",
+        content: [
+          "Traditional compliance operates on a point-in-time model. You prepare for an audit, assemble evidence, pass the review, and then operate normally until the next audit cycle. This model was designed for relatively static systems where controls change infrequently.",
+          "AI agents break this model. Agent behavior is dynamic — agents make different decisions based on different inputs, and the risk profile of an agent can change from one request to the next. A point-in-time audit tells you that controls were in place on the day the auditor reviewed them. It tells you nothing about the 364 days between audits.",
+          "Continuous compliance generates evidence as a byproduct of normal operation. Every request through the AI Identity gateway produces a compliance-relevant record: which agent made the request, what policy governed the request, whether the request was allowed or denied, and the cryptographic proof that the record has not been altered. This evidence accumulates continuously, not just during audit preparation windows.",
+          "The practical benefit is significant. When an auditor requests evidence — or when a regulator sends an inquiry — you can produce a complete, verified compliance record within minutes, not weeks. AI Identity's [compliance assessment](/compliance) feature runs evaluations against EU AI Act, SOC 2, NIST AI RMF, and GDPR requirements at any time, producing scored reports with specific findings and remediation guidance. Schedule these assessments weekly or monthly to maintain continuous visibility into your compliance posture.",
         ],
       },
       {
         heading: "Building for the Compliance-First Future",
         content: [
           "The companies that will win in enterprise AI aren't necessarily the ones with the best models or the fastest inference. They're the ones that can deploy AI agents in regulated environments with confidence.",
-          "This means investing in identity and governance infrastructure now, before regulators mandate it. It means treating compliance not as a checkbox exercise but as a competitive advantage.",
-          "At AI Identity, we're building the infrastructure that makes this possible — per-agent identity, scoped permissions, tamper-proof audit trails, and policy enforcement at the gateway level. Because the future of enterprise AI isn't just about what agents can do. It's about proving what they did.",
+          "This means investing in identity and governance infrastructure now, before regulators mandate it. It means treating compliance not as a checkbox exercise but as a competitive advantage. When a prospect asks 'how do you govern your AI agents?' and you can show them per-agent identity, scoped permissions, tamper-proof audit trails, and automated compliance assessments — that is a sales advantage that no model benchmark can match.",
+          "At AI Identity, we're building the infrastructure that makes this possible — [per-agent identity](/agents), [scoped permissions](/policies), [tamper-proof audit trails](/forensics), and policy enforcement at the gateway level. Because the future of enterprise AI isn't just about what agents can do. It's about proving what they did.",
+          "The compliance landscape for AI agents will only become more demanding. The EU AI Act is the first major regulation, but it will not be the last. US federal agencies are publishing AI governance guidance. Industry regulators in finance, healthcare, and legal services are updating their frameworks. The organizations that build compliance infrastructure now will be prepared for every framework that follows. The organizations that wait will be scrambling to retrofit governance onto agent deployments that were never designed for it.",
+        ],
+      },
+      {
+        heading: "Getting Started",
+        content: [
+          "If you are deploying AI agents in any regulated environment — or expect to be subject to compliance requirements in the future — the time to build governance infrastructure is now, not six months before your next audit.",
+          "Start by [registering your agents](https://dashboard.ai-identity.co) with unique identities and scoped permissions. Route their API calls through the AI Identity gateway so every action is authenticated, authorized, and logged. Run a [compliance assessment](/compliance) against the frameworks that apply to your organization — EU AI Act, SOC 2, NIST AI RMF, GDPR — and identify gaps before an auditor does.",
+          "The [free tier](/pricing) includes five agents with full compliance capabilities — per-agent identity, policy enforcement, tamper-evident audit trails, and compliance assessments. No credit card required. For organizations with larger agent fleets or advanced compliance needs, the Pro and Business tiers provide unlimited agents, extended audit trail retention, and priority support.",
+        ],
+      },
+      {
+        heading: "Frequently Asked Questions",
+        content: [
+          "Which compliance frameworks does AI Identity support? AI Identity generates compliance evidence mapped to EU AI Act (Articles 9, 11, 12, and 14), SOC 2 Type II trust service criteria, NIST AI RMF (Govern, Map, Measure, Manage functions), and GDPR data processing accountability requirements. The compliance assessment feature produces scored reports with specific findings and remediation guidance for each framework.",
+          "Can I use AI Identity's audit trail as evidence in a SOC 2 audit? Yes. The tamper-evident audit trail is designed to meet the evidentiary standards required by SOC 2 Type II auditors. Each record includes the agent identity, action, policy evaluation result, timestamp, and HMAC-SHA256 hash chain verification. The audit trail is exportable as JSON or CSV with a chain-of-custody verification certificate.",
+          "How does AI Identity handle GDPR data processing requirements? When agents process personal data, AI Identity logs which agent accessed what data, under what policy authorization, and at what time. This supports GDPR Article 30 (records of processing activities) and Article 5 (accountability principle). Prompt content is not logged by default — only request metadata — which minimizes the personal data stored in the audit trail itself.",
+          "Do I need separate compliance infrastructure for each framework? No. The technical controls required by major compliance frameworks overlap significantly. Per-agent identity, scoped permissions, tamper-proof audit trails, and policy enforcement satisfy requirements across EU AI Act, SOC 2, NIST AI RMF, and GDPR. AI Identity generates framework-specific evidence from the same underlying infrastructure.",
+          "How often should I run compliance assessments? For organizations subject to regulatory requirements, we recommend weekly assessments during the initial implementation phase and at least monthly once controls are established. AI Identity's compliance assessments can be triggered on-demand via the dashboard or API, and can be automated on a schedule.",
+          "What is the difference between compliance and forensics? Compliance proves that rules were followed on an ongoing basis — it is prospective and continuous. Forensics reconstructs what happened after an incident — it is retrospective and investigative. Both depend on the same underlying infrastructure (per-agent identity, policy enforcement, tamper-evident logging), but they serve different audiences and answer different questions. Read more about the forensic layer in our post on [introducing AI forensics](/blog/introducing-ai-forensics).",
         ],
       },
     ],
