@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
-import SEO from "../components/SEO";
+import SEO, { softwareApplicationSchema } from "../components/SEO";
 
 // ── Tier Data ───────────────────────────────────────────────────────
 
@@ -305,6 +305,7 @@ export default function Pricing() {
         title="Pricing — AI Agent Identity & Compliance"
         description="Simple, transparent pricing for AI agent identity infrastructure. Free tier for 5 agents. Pro from $79/mo. Business from $299/mo. Enterprise custom."
         path="/pricing"
+        jsonLd={softwareApplicationSchema}
       />
       <div className="max-w-[1200px] mx-auto">
         {/* Header */}

@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 const BASE_URL = "https://www.ai-identity.co";
 const SITE_NAME = "AI Identity";
 const DEFAULT_OG_IMAGE = `${BASE_URL}/images/og-default.png`;
-const TWITTER_HANDLE = "@AIIdentityCo";
+const TWITTER_HANDLE = "@ai_identity_co";
 
 interface SEOProps {
   title: string;
@@ -101,7 +101,7 @@ export const organizationSchema = {
   description:
     "AI Identity is an identity infrastructure platform for autonomous AI agents. It provides per-agent API keys, scoped permissions, policy-as-code enforcement, and tamper-proof cryptographic audit trails.",
   sameAs: [
-    "https://twitter.com/AIIdentityCo",
+    "https://x.com/ai_identity_co",
     "https://www.linkedin.com/company/ai-identity",
     "https://github.com/Levaj2000/AI-Identity",
   ],
