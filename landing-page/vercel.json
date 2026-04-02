@@ -23,25 +23,25 @@
     {
       "source": "/:path(.*)",
       "has": [{ "type": "host", "value": "aiforensic.tech" }],
-      "destination": "https://ai-identity.co/:path",
+      "destination": "https://www.ai-identity.co/:path",
       "permanent": true
     },
     {
       "source": "/:path(.*)",
       "has": [{ "type": "host", "value": "www.aiforensic.tech" }],
-      "destination": "https://ai-identity.co/:path",
+      "destination": "https://www.ai-identity.co/:path",
       "permanent": true
     },
     {
       "source": "/:path(.*)",
       "has": [{ "type": "host", "value": "aiforensictech.com" }],
-      "destination": "https://ai-identity.co/:path",
+      "destination": "https://www.ai-identity.co/:path",
       "permanent": true
     },
     {
       "source": "/:path(.*)",
       "has": [{ "type": "host", "value": "www.aiforensictech.com" }],
-      "destination": "https://ai-identity.co/:path",
+      "destination": "https://www.ai-identity.co/:path",
       "permanent": true
     }
   ],

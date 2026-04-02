@@ -154,20 +154,23 @@ export default function Home() {
             </div>
 
             <h1
-              className="text-4xl md:text-6xl lg:text-[80px] font-medium leading-[1.2] mb-6 max-w-4xl mx-auto"
+              className="text-4xl md:text-6xl lg:text-[80px] font-medium leading-[1.2] mb-6 max-w-4xl mx-auto text-[rgb(213,219,230)]"
               style={{
                 background: "radial-gradient(99% 86%, rgb(213,219,230) 28.39%, rgb(4,7,13) 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
                 backgroundClip: "text",
+                color: "transparent",
                 letterSpacing: "-1.6px",
               }}
+              aria-label="Every AI Agent Deserves an Identity"
             >
               Every AI Agent Deserves an{" "}
               <span
                 className="font-['Instrument_Serif'] italic"
                 style={{
                   WebkitTextFillColor: "rgb(166,218,255)",
+                  color: "rgb(166,218,255)",
                   filter: "drop-shadow(0 0 20px rgba(166,218,255,0.3))",
                 }}
               >
