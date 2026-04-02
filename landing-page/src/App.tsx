@@ -22,6 +22,11 @@ const Pricing = lazy(() => import("./pages/Pricing"));
 const UseCaseCustomerSupport = lazy(() => import("./pages/UseCaseCustomerSupport"));
 const UseCaseCodingAssistant = lazy(() => import("./pages/UseCaseCodingAssistant"));
 const UseCaseFinancialAgent = lazy(() => import("./pages/UseCaseFinancialAgent"));
+const IndustryFinance = lazy(() => import("./pages/IndustryFinance"));
+const IndustryHealthcare = lazy(() => import("./pages/IndustryHealthcare"));
+const ComparePortkey = lazy(() => import("./pages/ComparePortkey"));
+const CompareCredoAI = lazy(() => import("./pages/CompareCredoAI"));
+const CompareGenericIAM = lazy(() => import("./pages/CompareGenericIAM"));
 
 function PageFallback() {
   return (
@@ -57,6 +62,11 @@ const router = createBrowserRouter([
       { path: "/use-cases/customer-support", element: lazySuspense(UseCaseCustomerSupport) },
       { path: "/use-cases/coding-assistant", element: lazySuspense(UseCaseCodingAssistant) },
       { path: "/use-cases/financial-compliance", element: lazySuspense(UseCaseFinancialAgent) },
+      { path: "/industries/finance", element: lazySuspense(IndustryFinance) },
+      { path: "/industries/healthcare", element: lazySuspense(IndustryHealthcare) },
+      { path: "/vs/portkey", element: lazySuspense(ComparePortkey) },
+      { path: "/vs/credo-ai", element: lazySuspense(CompareCredoAI) },
+      { path: "/vs/traditional-iam", element: lazySuspense(CompareGenericIAM) },
       { path: "/privacy", element: lazySuspense(Privacy) },
       { path: "/terms", element: lazySuspense(Terms) },
       { path: "/careers", element: lazySuspense(Careers) },
