@@ -119,10 +119,11 @@ export default function Contact() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label htmlFor="contact-name" className="block text-sm font-medium text-gray-300 mb-2">
                         Name
                       </label>
                       <input
+                        id="contact-name"
                         type="text"
                         required
                         value={name}
@@ -132,10 +133,11 @@ export default function Contact() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                      <label htmlFor="contact-email" className="block text-sm font-medium text-gray-300 mb-2">
                         Email
                       </label>
                       <input
+                        id="contact-email"
                         type="email"
                         required
                         value={email}
@@ -146,10 +148,11 @@ export default function Contact() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label htmlFor="contact-subject" className="block text-sm font-medium text-gray-300 mb-2">
                       Subject
                     </label>
                     <select
+                      id="contact-subject"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       className="w-full px-4 py-3 bg-[rgb(16,19,28)] border border-white/10 rounded-xl text-sm text-white focus:outline-none focus:border-[rgb(166,218,255)]/40 transition-colors appearance-none cursor-pointer"
@@ -163,10 +166,11 @@ export default function Contact() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <label htmlFor="contact-message" className="block text-sm font-medium text-gray-300 mb-2">
                       Message
                     </label>
                     <textarea
+                      id="contact-message"
                       required
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
