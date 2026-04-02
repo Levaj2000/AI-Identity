@@ -1,4 +1,7 @@
-import { Link, useLocation } from "react-router";
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 
 const navLinks = [
@@ -22,7 +25,7 @@ export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [solutionsOpen, setSolutionsOpen] = useState(false);
-  const location = useLocation();
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -33,7 +36,7 @@ export default function Nav() {
   useEffect(() => {
     setMobileOpen(false);
     setSolutionsOpen(false);
-  }, [location.pathname]);
+  }, [pathname]);
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -41,7 +44,7 @@ export default function Nav() {
     }`}>
       <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 flex items-center justify-center">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(166,218,255)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
               <path d="M12 2L2 7l10 5 10-5-10-5z"/>
@@ -57,9 +60,9 @@ export default function Nav() {
           {navLinks.map((link) => (
             <Link
               key={link.path}
-              to={link.path}
+              href={link.path}
               className={`text-sm transition-colors ${
-                location.pathname === link.path
+                pathname === link.path
                   ? "text-white"
                   : "text-[rgba(213,219,230,0.7)] hover:text-white"
               }`}
@@ -82,7 +85,7 @@ export default function Nav() {
                 if (e.key === "Escape") setSolutionsOpen(false);
               }}
               className={`text-sm transition-colors flex items-center gap-1 ${
-                location.pathname.startsWith("/use-cases") || location.pathname === "/eu-ai-act-checklist"
+                pathname.startsWith("/use-cases") || pathname === "/eu-ai-act-checklist"
                   ? "text-white"
                   : "text-[rgba(213,219,230,0.7)] hover:text-white"
               }`}
@@ -107,13 +110,13 @@ export default function Nav() {
                   ) : (
                     <Link
                       key={link.path}
-                      to={link.path}
+                      href={link.path}
                       role="menuitem"
                       onKeyDown={(e) => {
                         if (e.key === "Escape") setSolutionsOpen(false);
                       }}
                       className={`block px-4 py-2.5 text-sm transition-colors ${
-                        location.pathname === link.path
+                        pathname === link.path
                           ? "text-[rgb(166,218,255)] bg-[rgb(166,218,255)]/5"
                           : "text-[rgba(213,219,230,0.7)] hover:text-white hover:bg-white/[0.03]"
                       }`}
@@ -172,9 +175,9 @@ export default function Nav() {
           {navLinks.map((link) => (
             <Link
               key={link.path}
-              to={link.path}
+              href={link.path}
               className={`block text-sm py-2 ${
-                location.pathname === link.path
+                pathname === link.path
                   ? "text-white"
                   : "text-[rgba(213,219,230,0.7)]"
               }`}
@@ -191,9 +194,9 @@ export default function Nav() {
                 ) : (
                   <Link
                     key={link.path}
-                    to={link.path}
+                    href={link.path}
                     className={`block text-sm py-1.5 ${
-                      location.pathname === link.path
+                      pathname === link.path
                         ? "text-[rgb(166,218,255)]"
                         : "text-[rgba(213,219,230,0.5)]"
                     }`}
