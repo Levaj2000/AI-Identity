@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { docSections } from "../data/docs-content";
 import type { DocBlock } from "../data/docs-content";
+import SEO from "../components/SEO";
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -243,6 +244,11 @@ export default function Docs() {
 
   return (
     <div className="pt-[72px]">
+      <SEO
+        title="Documentation — AI Identity API & SDK"
+        description="API reference, SDK guides, and integration documentation for AI Identity. Get started in 15 minutes with per-agent keys and audit trails."
+        path="/docs"
+      />
       {/* Header */}
       <section className="px-6 md:px-12 pt-16 pb-10">
         <div className="max-w-[1100px] mx-auto">

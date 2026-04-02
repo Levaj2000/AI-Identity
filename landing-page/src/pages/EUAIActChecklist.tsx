@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
+import SEO from "../components/SEO";
 
 type Answer = "yes" | "no" | "not-sure";
 
@@ -257,6 +258,11 @@ export default function EUAIActChecklist() {
 
       {/* Hero */}
       <section className="pt-32 pb-16 px-6 md:px-12">
+      <SEO
+        title="EU AI Act Compliance Checklist for AI Agents"
+        description="Free self-assessment for EU AI Act compliance. Check your AI agents against Articles 9, 11, 12, 14, and Annex III requirements before the August 2026 deadline."
+        path="/eu-ai-act-checklist"
+      />
         <div className="max-w-[900px] mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

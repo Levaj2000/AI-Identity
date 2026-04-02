@@ -1,0 +1,40 @@
+# AI Identity — llms.txt
+# https://ai-identity.co
+
+## About
+AI Identity is an identity infrastructure platform for autonomous AI agents. It provides per-agent API keys, scoped permissions, policy-as-code enforcement, and tamper-proof cryptographic audit trails, enabling enterprise teams to govern AI agents at scale and comply with SOC 2, EU AI Act, NIST AI RMF, and GDPR requirements.
+
+## Key Pages
+- Homepage: https://www.ai-identity.co/
+- How It Works: https://www.ai-identity.co/how-it-works
+- Security: https://www.ai-identity.co/security
+- Architecture: https://www.ai-identity.co/architecture
+- Pricing: https://www.ai-identity.co/pricing
+- EU AI Act Checklist: https://www.ai-identity.co/eu-ai-act-checklist
+- Integrations: https://www.ai-identity.co/integrations
+- Documentation: https://www.ai-identity.co/docs
+- Blog: https://www.ai-identity.co/blog
+
+## Core Features
+- Per-agent API keys (aid_sk_ prefix) with scoped permissions (read-only, write, admin, custom)
+- HMAC-SHA256 hash-chained tamper-proof audit trails
+- Policy-as-code enforcement at the gateway layer
+- Chain-of-thought forensic replay for incident investigation
+- Compliance dashboards for SOC 2 Type II, EU AI Act, NIST AI RMF, and GDPR
+- Human-in-the-loop approval gates for high-risk actions
+- Real-time anomaly detection for out-of-scope agent behavior
+- AES-256 encrypted credential vault — agents never see raw provider keys
+- Sub-50ms gateway overhead per request
+- Drop-in integration: change one URL (base_url), no SDK lock-in
+
+## Pricing
+- Free: $0/mo for up to 5 agents
+- Pro: $79/mo for up to 50 agents
+- Business: $299/mo for up to 200 agents
+- Enterprise: Custom pricing for unlimited agents
+
+## Company
+- Founded: 2026
+- Founder: Jeff Leva
+- Website: https://www.ai-identity.co
+- GitHub: https://github.com/Levaj2000/AI-Identity

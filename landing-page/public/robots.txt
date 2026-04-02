@@ -1,4 +1,23 @@
 User-agent: *
 Allow: /
 
+# AI crawlers — explicitly permitted
+User-agent: GPTBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Anthropic-ai
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
 Sitemap: https://www.ai-identity.co/sitemap.xml
