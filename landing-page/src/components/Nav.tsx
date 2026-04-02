@@ -21,6 +21,7 @@ const solutionLinks = [
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [solutionsOpen, setSolutionsOpen] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -31,6 +32,7 @@ export default function Nav() {
 
   useEffect(() => {
     setMobileOpen(false);
+    setSolutionsOpen(false);
   }, [location.pathname]);
 
   return (
@@ -41,7 +43,7 @@ export default function Nav() {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(166,218,255)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(166,218,255)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
               <path d="M12 2L2 7l10 5 10-5-10-5z"/>
               <path d="M2 17l10 5 10-5"/>
               <path d="M2 12l10 5 10-5"/>
@@ -66,8 +68,19 @@ export default function Nav() {
             </Link>
           ))}
           {/* Solutions dropdown */}
-          <div className="relative group">
+          <div
+            className="relative"
+            onMouseEnter={() => setSolutionsOpen(true)}
+            onMouseLeave={() => setSolutionsOpen(false)}
+          >
             <button
+              aria-haspopup="menu"
+              aria-expanded={solutionsOpen}
+              aria-controls="solutions-menu"
+              onClick={() => setSolutionsOpen(!solutionsOpen)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setSolutionsOpen(false);
+              }}
               className={`text-sm transition-colors flex items-center gap-1 ${
                 location.pathname.startsWith("/use-cases") || location.pathname === "/eu-ai-act-checklist"
                   ? "text-white"
@@ -75,19 +88,30 @@ export default function Nav() {
               }`}
             >
               Solutions
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 transition-transform group-hover:rotate-180">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" className={`mt-0.5 transition-transform ${solutionsOpen ? "rotate-180" : ""}`}>
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
-            <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+            <div
+              id="solutions-menu"
+              role="menu"
+              aria-label="Solutions submenu"
+              className={`absolute top-full left-1/2 -translate-x-1/2 pt-2 transition-all duration-200 ${
+                solutionsOpen ? "opacity-100 visible" : "opacity-0 invisible"
+              }`}
+            >
               <div className="bg-[rgb(16,19,28)] border border-white/10 rounded-xl py-2 min-w-[220px] shadow-xl shadow-black/40">
                 {solutionLinks.map((link, i) =>
                   link.label === "divider" ? (
-                    <div key={`divider-${i}`} className="my-1 border-t border-white/5" />
+                    <div key={`divider-${i}`} className="my-1 border-t border-white/5" role="separator" />
                   ) : (
                     <Link
                       key={link.path}
                       to={link.path}
+                      role="menuitem"
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") setSolutionsOpen(false);
+                      }}
                       className={`block px-4 py-2.5 text-sm transition-colors ${
                         location.pathname === link.path
                           ? "text-[rgb(166,218,255)] bg-[rgb(166,218,255)]/5"
@@ -121,6 +145,8 @@ export default function Nav() {
             onClick={() => setMobileOpen(!mobileOpen)}
             className="md:hidden text-white p-2"
             aria-label="Toggle menu"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               {mobileOpen ? (
@@ -142,7 +168,7 @@ export default function Nav() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-[rgb(4,7,13)] border-t border-white/5 px-6 py-4 space-y-3">
+        <div id="mobile-nav" className="md:hidden bg-[rgb(4,7,13)] border-t border-white/5 px-6 py-4 space-y-3">
           {navLinks.map((link) => (
             <Link
               key={link.path}

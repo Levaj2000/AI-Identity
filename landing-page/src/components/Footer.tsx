@@ -60,7 +60,7 @@ export default function Footer() {
           <div className="md:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 flex items-center justify-center">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(166,218,255)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(166,218,255)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
                   <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                   <path d="M2 17l10 5 10-5"/>
                   <path d="M2 12l10 5 10-5"/>
@@ -77,12 +77,15 @@ export default function Footer() {
               <p className="text-sm text-[rgb(166,218,255)]">Thanks for subscribing!</p>
             ) : (
               <form onSubmit={handleSubscribe} className="flex gap-2 max-w-sm">
+                <label htmlFor="newsletter-email" className="sr-only">Email address for newsletter</label>
                 <input
+                  id="newsletter-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
-                  className="flex-1 px-4 py-2 rounded-lg bg-[rgb(16,19,28)] border border-[rgba(216,231,242,0.07)] text-sm text-white placeholder-[rgba(213,219,230,0.3)] focus:outline-none focus:border-[rgb(166,218,255)]/30"
+                  aria-label="Email address for newsletter"
+                  className="flex-1 px-4 py-2 rounded-lg bg-[rgb(16,19,28)] border border-[rgba(216,231,242,0.07)] text-sm text-white placeholder-[rgba(213,219,230,0.55)] focus:outline-none focus:border-[rgb(166,218,255)]/30"
                 />
                 <button
                   type="submit"
@@ -154,10 +157,10 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-16 pt-8 border-t border-[rgba(216,231,242,0.07)] flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-[rgba(213,219,230,0.3)]">&copy; {new Date().getFullYear()} AI Identity. All rights reserved.</p>
+          <p className="text-xs text-[rgba(213,219,230,0.55)]">&copy; {new Date().getFullYear()} AI Identity. All rights reserved.</p>
           <div className="flex gap-6">
-            <Link to="/privacy" className="text-xs text-[rgba(213,219,230,0.3)] hover:text-white transition-colors">Privacy</Link>
-            <Link to="/terms" className="text-xs text-[rgba(213,219,230,0.3)] hover:text-white transition-colors">Terms</Link>
+            <Link to="/privacy" className="text-xs text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">Privacy</Link>
+            <Link to="/terms" className="text-xs text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">Terms</Link>
           </div>
         </div>
       </div>
