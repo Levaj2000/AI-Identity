@@ -10,6 +10,7 @@ import {
   type ShadowAgentList,
   type ShadowAgentDetail,
   type ShadowAgentSummary,
+  type ShadowEvent,
 } from '../services/api/shadow'
 import { isApiError } from '../services/api/client'
 import { ConfirmModal } from '../components/modals/ConfirmModal'
@@ -443,23 +444,23 @@ function ShadowDetailDrawer({
 
           {/* Recent Events */}
           <div className="bg-[#04070D] border border-[#1a1a1d] rounded-xl p-4 space-y-3">
-            <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider">
-              Recent Events ({detail.recent_events.length})
-            </h3>
-            <div className="space-y-2 max-h-80 overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider">
+                Recent Events ({detail.recent_events.length})
+              </h3>
+              <a
+                href="/dashboard/forensics"
+                className="inline-flex items-center gap-1 text-xs text-[#A6DAFF] hover:text-[#A6DAFF]/80 transition-colors"
+              >
+                View in Forensics
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 17L17 7M17 7H7M17 7v10" />
+                </svg>
+              </a>
+            </div>
+            <div className="space-y-1 max-h-[480px] overflow-y-auto">
               {detail.recent_events.map((event) => (
-                <div
-                  key={event.id}
-                  className="flex items-center justify-between text-xs border-b border-[#1a1a1d]/50 pb-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <MethodBadge method={event.method} />
-                    <span className="font-mono text-gray-400">{event.endpoint}</span>
-                  </div>
-                  <span className="text-gray-500 whitespace-nowrap">
-                    {formatDateTime(event.created_at)}
-                  </span>
-                </div>
+                <ExpandableEvent key={event.id} event={event} />
               ))}
             </div>
           </div>
@@ -631,4 +632,106 @@ function formatDateTime(iso: string | null): string {
     minute: '2-digit',
     hour12: true,
   })
+}
+
+/** Expandable event row — click to reveal request_metadata details. */
+function ExpandableEvent({ event }: { event: ShadowEvent }) {
+  const [expanded, setExpanded] = useState(false)
+  const meta = event.request_metadata || {}
+
+  // Extract useful fields from metadata
+  const ip = (meta.client_ip || meta.ip || meta.x_forwarded_for || '') as string
+  const statusCode = meta.status_code as number | undefined
+  const keyType = meta.key_type as string | undefined
+  const userAgent = meta.user_agent as string | undefined
+  const denyReason = meta.deny_reason as string | undefined
+
+  // Remaining metadata (everything we didn't pull out explicitly)
+  const knownKeys = new Set(['client_ip', 'ip', 'x_forwarded_for', 'status_code', 'key_type', 'user_agent', 'deny_reason'])
+  const extraEntries = Object.entries(meta).filter(([k]) => !knownKeys.has(k))
+
+  return (
+    <div className="border-b border-[#1a1a1d]/50 last:border-0">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between text-xs py-2 hover:bg-white/[0.02] transition-colors rounded px-1 -mx-1"
+      >
+        <div className="flex items-center gap-2">
+          <MethodBadge method={event.method} />
+          <span className="font-mono text-gray-400">{event.endpoint}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500 whitespace-nowrap">
+            {formatDateTime(event.created_at)}
+          </span>
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={`text-gray-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="pb-3 pt-1 px-1 space-y-2">
+          <div className="bg-[#10131C] border border-[#1a1a1d] rounded-lg p-3 space-y-1.5 text-xs">
+            {ip && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">IP Address</span>
+                <span className="font-mono text-gray-300">{ip}</span>
+              </div>
+            )}
+            {statusCode && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Status Code</span>
+                <span className="font-mono text-gray-300">{statusCode}</span>
+              </div>
+            )}
+            {denyReason && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Deny Reason</span>
+                <span className="font-mono text-gray-300">{denyReason}</span>
+              </div>
+            )}
+            {keyType && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Key Type</span>
+                <span className="font-mono text-gray-300">{keyType}</span>
+              </div>
+            )}
+            {userAgent && (
+              <div className="flex justify-between items-start">
+                <span className="text-gray-500 shrink-0">User Agent</span>
+                <span className="font-mono text-gray-300 text-right ml-4 break-all">{userAgent}</span>
+              </div>
+            )}
+            {extraEntries.length > 0 && (
+              <>
+                <div className="border-t border-[#1a1a1d] my-1.5" />
+                {extraEntries.map(([key, value]) => (
+                  <div key={key} className="flex justify-between items-start">
+                    <span className="text-gray-500 shrink-0">{key}</span>
+                    <span className="font-mono text-gray-300 text-right ml-4 break-all">
+                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                    </span>
+                  </div>
+                ))}
+              </>
+            )}
+            {!ip && !statusCode && !denyReason && !keyType && !userAgent && extraEntries.length === 0 && (
+              <span className="text-gray-500">No metadata captured</span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
