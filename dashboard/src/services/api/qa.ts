@@ -81,3 +81,8 @@ export function signoffQARun(
     body: JSON.stringify({ role, note: note || null }),
   })
 }
+
+/** Check if there are QA runs awaiting staff sign-off. */
+export function getQAHasPending(): Promise<{ has_pending: boolean }> {
+  return apiFetch<{ has_pending: boolean }>(`${BASE}/has-pending`)
+}

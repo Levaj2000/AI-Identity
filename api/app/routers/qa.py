@@ -235,6 +235,32 @@ def list_qa_runs(
     return QARunListResponse(items=runs, total=total)
 
 
+# ── GET /api/v1/qa/has-pending — check for un-validated runs ────────────
+
+
+class QAHasPendingResponse(BaseModel):
+    has_pending: bool
+
+
+@router.get(
+    "/has-pending",
+    response_model=QAHasPendingResponse,
+    summary="Check for pending QA runs",
+)
+def qa_has_pending(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return true if there are QA runs awaiting staff sign-off."""
+    exists = (
+        db.query(QARun.id)
+        .filter(QARun.staff_signoff_by.is_(None), QARun.status == "passed")
+        .limit(1)
+        .first()
+    )
+    return QAHasPendingResponse(has_pending=exists is not None)
+
+
 # ── GET /api/v1/qa/runs/{run_id} — get a single QA run ─────────────────
 
 

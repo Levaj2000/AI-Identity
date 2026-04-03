@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useClerk } from '@clerk/react'
 import { ThemeToggle } from './ThemeToggle'
 import { AIIdentityLogo5 } from '../components/AIIdentityLogo'
 import { useAuth } from '../hooks/useAuth'
+import { getQAHasPending } from '../services/api/qa'
 
 interface SidebarProps {
   open: boolean
@@ -212,6 +214,14 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const { signOut } = useClerk()
   const navigate = useNavigate()
 
+  // QA pending indicator
+  const [qaPending, setQaPending] = useState(false)
+  useEffect(() => {
+    getQAHasPending()
+      .then((r) => setQaPending(r.has_pending))
+      .catch(() => {})
+  }, [])
+
   function handleLogout() {
     signOut(() => navigate('/login'))
   }
@@ -255,6 +265,9 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             >
               {item.icon}
               {item.label}
+              {item.label === 'QA Checklist' && qaPending && (
+                <span className="ml-auto h-2 w-2 rounded-full bg-red-500" />
+              )}
             </NavLink>
           ))}
 
