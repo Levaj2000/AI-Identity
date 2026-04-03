@@ -280,13 +280,19 @@ class TestForensicsEndpoints:
         assert data["total_events"] == 6  # 5 manual + 1 creation
 
     def test_audit_stats_wrong_agent(self, client, auth_headers):
-        """GET /api/v1/audit/stats returns 404 for non-owned agent."""
+        """GET /api/v1/audit/stats returns empty stats for non-owned agent.
+
+        Non-owned agent IDs now return 200 with zero counts instead of 404,
+        because shadow agent denied entries may exist for unregistered agents.
+        """
         fake_id = uuid.uuid4()
         resp = client.get(
             f"/api/v1/audit/stats?agent_id={fake_id}",
             headers=auth_headers,
         )
-        assert resp.status_code == 404
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total_events"] == 0
 
     def test_audit_reconstruct(self, client, auth_headers, db_session):
         """GET /api/v1/audit/reconstruct returns events + chain + policy."""
