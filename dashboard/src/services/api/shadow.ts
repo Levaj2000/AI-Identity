@@ -11,6 +11,8 @@ export interface ShadowAgentStats {
   total_shadow_hits: number
   agents_not_found: number
   agents_inactive: number
+  agents_blocked: number
+  agents_dismissed: number
 }
 
 export interface ShadowAgentSummary {
@@ -20,6 +22,8 @@ export interface ShadowAgentSummary {
   first_seen: string
   last_seen: string
   top_endpoints: string[]
+  is_blocked: boolean
+  is_dismissed: boolean
 }
 
 export interface ShadowAgentList {
@@ -53,6 +57,20 @@ export interface ShadowAgentDetail {
   last_seen: string
   top_endpoints: TopEndpointHit[]
   recent_events: ShadowEvent[]
+  is_blocked: boolean
+  blocked_at: string | null
+  is_dismissed: boolean
+}
+
+export interface BlockAgentResponse {
+  agent_id: string
+  blocked: boolean
+  blocked_at: string
+}
+
+export interface DismissResponse {
+  agent_id: string
+  dismissed: boolean
 }
 
 // ── API Functions ───────────────────────────────────────────────────
@@ -71,6 +89,7 @@ export function getShadowAgents(params: {
   end_date?: string
   min_hits?: number
   deny_reason?: string
+  include_dismissed?: boolean
 }): Promise<ShadowAgentList> {
   return apiFetch<ShadowAgentList>(`/api/v1/shadow-agents${toQueryString(params)}`)
 }
@@ -82,4 +101,23 @@ export function getShadowAgentDetail(
   return apiFetch<ShadowAgentDetail>(
     `/api/v1/shadow-agents/${agentId}${toQueryString(params || {})}`,
   )
+}
+
+export function blockShadowAgent(agentId: string, reason?: string): Promise<BlockAgentResponse> {
+  return apiFetch<BlockAgentResponse>(`/api/v1/shadow-agents/${agentId}/block`, {
+    method: 'POST',
+    body: JSON.stringify(reason ? { reason } : {}),
+  })
+}
+
+export function unblockShadowAgent(agentId: string): Promise<void> {
+  return apiFetch<void>(`/api/v1/shadow-agents/${agentId}/block`, { method: 'DELETE' })
+}
+
+export function dismissShadowAgent(agentId: string): Promise<DismissResponse> {
+  return apiFetch<DismissResponse>(`/api/v1/shadow-agents/${agentId}/dismiss`, { method: 'POST' })
+}
+
+export function undismissShadowAgent(agentId: string): Promise<void> {
+  return apiFetch<void>(`/api/v1/shadow-agents/${agentId}/dismiss`, { method: 'DELETE' })
 }

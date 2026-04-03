@@ -3,6 +3,8 @@
 Surfaces unmanaged/unregistered agents hitting the gateway.
 Customer-facing: account owners see their own shadow agents,
 admins see all.
+
+Action flows: block (gateway enforcement), dismiss (UI hide).
 """
 
 import datetime
@@ -14,7 +16,12 @@ from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
 from common.models import AuditLog, User, get_db
+from common.models.blocked_agent import BlockedAgent
+from common.models.dismissed_shadow import DismissedShadowAgent
 from common.schemas.shadow import (
+    BlockAgentRequest,
+    BlockAgentResponse,
+    DismissResponse,
     ShadowAgentDetail,
     ShadowAgentListResponse,
     ShadowAgentStats,
@@ -28,7 +35,7 @@ logger = logging.getLogger("ai_identity.api.shadow")
 router = APIRouter(prefix="/api/v1/shadow-agents", tags=["shadow-agents"])
 
 # Deny reasons that indicate shadow/unmanaged agents
-SHADOW_DENY_REASONS = ("agent_not_found", "agent_inactive")
+SHADOW_DENY_REASONS = ("agent_not_found", "agent_inactive", "agent_blocked")
 
 
 def _deny_reason_col():
@@ -63,6 +70,32 @@ def _default_start() -> datetime.datetime:
 def _default_end() -> datetime.datetime:
     """Default end date: now."""
     return datetime.datetime.now(datetime.UTC)
+
+
+def _get_blocked_set(db: Session, user: User, agent_ids: list[str]) -> set[str]:
+    """Return set of agent_ids that are blocked by this user."""
+    if not agent_ids:
+        return set()
+    rows = (
+        db.query(BlockedAgent.agent_id)
+        .filter(BlockedAgent.user_id == user.id, BlockedAgent.agent_id.in_(agent_ids))
+        .all()
+    )
+    return {r.agent_id for r in rows}
+
+
+def _get_dismissed_set(db: Session, user: User, agent_ids: list[str]) -> set[str]:
+    """Return set of agent_ids that are dismissed by this user."""
+    if not agent_ids:
+        return set()
+    rows = (
+        db.query(DismissedShadowAgent.agent_id)
+        .filter(
+            DismissedShadowAgent.user_id == user.id, DismissedShadowAgent.agent_id.in_(agent_ids)
+        )
+        .all()
+    )
+    return {r.agent_id for r in rows}
 
 
 # ── Stats ───────────────────────────────────────────────────────────
@@ -103,11 +136,19 @@ async def shadow_stats(
         .count()
     )
 
+    # Blocked + dismissed counts
+    blocked_count = db.query(BlockedAgent).filter(BlockedAgent.user_id == user.id).count()
+    dismissed_count = (
+        db.query(DismissedShadowAgent).filter(DismissedShadowAgent.user_id == user.id).count()
+    )
+
     return ShadowAgentStats(
         total_shadow_agents=total_agents,
         total_shadow_hits=total_hits,
         agents_not_found=not_found,
         agents_inactive=inactive,
+        agents_blocked=blocked_count,
+        agents_dismissed=dismissed_count,
     )
 
 
@@ -125,7 +166,10 @@ async def list_shadow_agents(
     start_date: datetime.datetime | None = Query(None),
     end_date: datetime.datetime | None = Query(None),
     min_hits: int = Query(1, ge=1, description="Minimum hit count threshold"),
-    deny_reason: str | None = Query(None, description="Filter: agent_not_found or agent_inactive"),
+    deny_reason: str | None = Query(
+        None, description="Filter: agent_not_found, agent_inactive, or agent_blocked"
+    ),
+    include_dismissed: bool = Query(False, description="Include dismissed shadow agents"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ) -> ShadowAgentListResponse:
@@ -159,11 +203,11 @@ async def list_shadow_agents(
     rows = agg.order_by(func.count(AuditLog.id).desc()).offset(offset).limit(limit).all()
 
     # Batch-fetch top endpoints for the page
-    agent_ids = [r.agent_id for r in rows]
+    agent_ids = [str(r.agent_id) for r in rows]
     top_endpoints_map: dict[str, list[str]] = {}
     if agent_ids:
         endpoint_rows = (
-            base.filter(AuditLog.agent_id.in_(agent_ids))
+            base.filter(AuditLog.agent_id.in_([r.agent_id for r in rows]))
             .with_entities(
                 AuditLog.agent_id,
                 AuditLog.endpoint,
@@ -180,6 +224,10 @@ async def list_shadow_agents(
             if len(top_endpoints_map[aid]) < 3:
                 top_endpoints_map[aid].append(ep_row.endpoint)
 
+    # Batch-fetch blocked + dismissed status
+    blocked_set = _get_blocked_set(db, user, agent_ids)
+    dismissed_set = _get_dismissed_set(db, user, agent_ids)
+
     items = [
         ShadowAgentSummary(
             agent_id=str(r.agent_id),
@@ -188,9 +236,15 @@ async def list_shadow_agents(
             first_seen=r.first_seen,
             last_seen=r.last_seen,
             top_endpoints=top_endpoints_map.get(str(r.agent_id), []),
+            is_blocked=str(r.agent_id) in blocked_set,
+            is_dismissed=str(r.agent_id) in dismissed_set,
         )
         for r in rows
     ]
+
+    # Filter out dismissed unless requested
+    if not include_dismissed:
+        items = [item for item in items if not item.is_dismissed]
 
     return ShadowAgentListResponse(
         items=items,
@@ -254,6 +308,18 @@ async def shadow_agent_detail(
     # Recent events
     recent = base.order_by(AuditLog.created_at.desc()).limit(50).all()
 
+    # Blocked + dismissed status
+    blocked = (
+        db.query(BlockedAgent)
+        .filter(BlockedAgent.user_id == user.id, BlockedAgent.agent_id == agent_id)
+        .first()
+    )
+    dismissed = (
+        db.query(DismissedShadowAgent)
+        .filter(DismissedShadowAgent.user_id == user.id, DismissedShadowAgent.agent_id == agent_id)
+        .first()
+    )
+
     return ShadowAgentDetail(
         agent_id=agent_id,
         deny_reason=stats.deny_reason,
@@ -274,4 +340,123 @@ async def shadow_agent_detail(
             )
             for e in recent
         ],
+        is_blocked=blocked is not None,
+        blocked_at=blocked.created_at if blocked else None,
+        is_dismissed=dismissed is not None,
     )
+
+
+# ── Block / Unblock ────────────────────────────────────────────────
+
+
+@router.post(
+    "/{agent_id}/block",
+    response_model=BlockAgentResponse,
+    summary="Block a shadow agent",
+)
+async def block_shadow_agent(
+    agent_id: str,
+    body: BlockAgentRequest | None = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> BlockAgentResponse:
+    """Explicitly block this agent_id at the gateway."""
+    existing = (
+        db.query(BlockedAgent)
+        .filter(BlockedAgent.user_id == user.id, BlockedAgent.agent_id == agent_id)
+        .first()
+    )
+    if existing:
+        return BlockAgentResponse(agent_id=agent_id, blocked=True, blocked_at=existing.created_at)
+
+    blocked = BlockedAgent(
+        agent_id=agent_id,
+        user_id=user.id,
+        reason=body.reason if body else None,
+    )
+    db.add(blocked)
+    db.commit()
+    db.refresh(blocked)
+
+    logger.info("Shadow agent blocked: agent_id=%s user_id=%s", agent_id, user.id)
+
+    return BlockAgentResponse(agent_id=agent_id, blocked=True, blocked_at=blocked.created_at)
+
+
+@router.delete(
+    "/{agent_id}/block",
+    status_code=204,
+    summary="Unblock a shadow agent",
+)
+async def unblock_shadow_agent(
+    agent_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Remove this agent_id from the blocklist."""
+    deleted = (
+        db.query(BlockedAgent)
+        .filter(BlockedAgent.user_id == user.id, BlockedAgent.agent_id == agent_id)
+        .delete()
+    )
+    db.commit()
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Agent is not blocked")
+
+    logger.info("Shadow agent unblocked: agent_id=%s user_id=%s", agent_id, user.id)
+
+
+# ── Dismiss / Un-dismiss ───────────────────────────────────────────
+
+
+@router.post(
+    "/{agent_id}/dismiss",
+    response_model=DismissResponse,
+    summary="Dismiss a shadow agent",
+)
+async def dismiss_shadow_agent(
+    agent_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DismissResponse:
+    """Hide this shadow agent from the default list view."""
+    existing = (
+        db.query(DismissedShadowAgent)
+        .filter(DismissedShadowAgent.user_id == user.id, DismissedShadowAgent.agent_id == agent_id)
+        .first()
+    )
+    if existing:
+        return DismissResponse(agent_id=agent_id, dismissed=True)
+
+    dismissed = DismissedShadowAgent(agent_id=agent_id, user_id=user.id)
+    db.add(dismissed)
+    db.commit()
+
+    logger.info("Shadow agent dismissed: agent_id=%s user_id=%s", agent_id, user.id)
+
+    return DismissResponse(agent_id=agent_id, dismissed=True)
+
+
+@router.delete(
+    "/{agent_id}/dismiss",
+    status_code=204,
+    summary="Un-dismiss a shadow agent",
+)
+async def undismiss_shadow_agent(
+    agent_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Restore this shadow agent to the default list view."""
+    deleted = (
+        db.query(DismissedShadowAgent)
+        .filter(DismissedShadowAgent.user_id == user.id, DismissedShadowAgent.agent_id == agent_id)
+        .delete()
+    )
+    db.commit()
+
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Agent is not dismissed")
+
+    logger.info("Shadow agent un-dismissed: agent_id=%s user_id=%s", agent_id, user.id)

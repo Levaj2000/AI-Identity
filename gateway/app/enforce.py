@@ -11,6 +11,7 @@ Fail-closed guarantees:
   - No active policy found for agent → DENY
   - Circuit breaker open (5 failures in 60s) → DENY ALL + alert
   - Agent not found or revoked → DENY (401)
+  - Agent on blocklist → DENY (403)
 
 Only an explicit ALLOW from a successful policy evaluation permits a request.
 """
@@ -26,6 +27,7 @@ from sqlalchemy.orm import Session
 from common.audit import create_audit_entry
 from common.config.settings import settings
 from common.models import Agent, Policy
+from common.models.blocked_agent import BlockedAgent
 from gateway.app.circuit_breaker import CircuitBreaker
 
 logger = logging.getLogger("ai_identity.gateway.enforce")
@@ -61,6 +63,7 @@ class DenyReason(enum.StrEnum):
     POLICY_DENIED = "policy_denied"
     AGENT_NOT_FOUND = "agent_not_found"
     AGENT_INACTIVE = "agent_inactive"
+    AGENT_BLOCKED = "agent_blocked"
     RUNTIME_KEY_ON_MANAGEMENT = "runtime_key_on_management_endpoint"
     ADMIN_KEY_ON_RUNTIME = "admin_key_on_runtime_endpoint"
 
@@ -264,6 +267,7 @@ def enforce(
     This is the fail-closed gateway core. The evaluation flow:
 
     1. Check circuit breaker — if OPEN, deny immediately (503)
+    1b. Check blocklist — if agent is blocked, deny (403)
     2. Verify agent exists and is active
     3. Load + evaluate policy (with timeout)
        - Timeout → record failure, deny
@@ -302,6 +306,21 @@ def enforce(
             deny_reason=DenyReason.CIRCUIT_BREAKER_OPEN,
             status_code=503,
             message="Service unavailable: policy engine circuit breaker is open",
+            agent_id=agent_id,
+        )
+        _audit_decision(db, result, endpoint, method, metadata)
+        return result
+
+    # ── 1b. Blocklist check ──────────────────────────────────────
+    blocked = db.query(BlockedAgent).filter(BlockedAgent.agent_id == str(agent_id)).first()
+    if blocked is not None:
+        metadata["blocked_reason"] = blocked.reason or "no reason provided"
+        metadata["shadow_agent"] = True
+        result = EnforcementResult(
+            decision=Decision.DENY,
+            deny_reason=DenyReason.AGENT_BLOCKED,
+            status_code=403,
+            message="Agent is blocked — requests not permitted",
             agent_id=agent_id,
         )
         _audit_decision(db, result, endpoint, method, metadata)

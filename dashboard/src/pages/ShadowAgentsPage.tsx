@@ -3,14 +3,19 @@ import {
   getShadowAgentStats,
   getShadowAgents,
   getShadowAgentDetail,
+  blockShadowAgent,
+  unblockShadowAgent,
+  dismissShadowAgent,
   type ShadowAgentStats,
   type ShadowAgentList,
   type ShadowAgentDetail,
   type ShadowAgentSummary,
 } from '../services/api/shadow'
 import { isApiError } from '../services/api/client'
+import { ConfirmModal } from '../components/modals/ConfirmModal'
+import { RegisterAgentModal } from '../components/modals/RegisterAgentModal'
 
-type DenyReasonFilter = '' | 'agent_not_found' | 'agent_inactive'
+type DenyReasonFilter = '' | 'agent_not_found' | 'agent_inactive' | 'agent_blocked'
 
 export function ShadowAgentsPage() {
   const [stats, setStats] = useState<ShadowAgentStats | null>(null)
@@ -19,6 +24,7 @@ export function ShadowAgentsPage() {
   const [error, setError] = useState<string | null>(null)
   const [denyReasonFilter, setDenyReasonFilter] = useState<DenyReasonFilter>('')
   const [minHits, setMinHits] = useState(1)
+  const [showDismissed, setShowDismissed] = useState(false)
   const [page, setPage] = useState(0)
   const [selectedAgent, setSelectedAgent] = useState<ShadowAgentDetail | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
@@ -29,13 +35,14 @@ export function ShadowAgentsPage() {
       try {
         setLoading(true)
         setError(null)
-        const params: Record<string, string | number> = {
+        const params: Record<string, string | number | boolean> = {
           limit: pageSize,
           offset: (currentPage ?? page) * pageSize,
           min_hits: minHits,
         }
         const r = reason ?? denyReasonFilter
         if (r) params.deny_reason = r
+        if (showDismissed) params.include_dismissed = true
 
         const [statsRes, listRes] = await Promise.allSettled([
           getShadowAgentStats(),
@@ -57,7 +64,7 @@ export function ShadowAgentsPage() {
         setLoading(false)
       }
     },
-    [page, denyReasonFilter, minHits, pageSize],
+    [page, denyReasonFilter, minHits, showDismissed, pageSize],
   )
 
   useEffect(() => {
@@ -84,6 +91,16 @@ export function ShadowAgentsPage() {
       // Silently fail — drawer just doesn't open
     } finally {
       setLoadingDetail(false)
+    }
+  }
+
+  const handleActionComplete = () => {
+    loadData()
+    // Re-fetch the selected agent detail to reflect updated state
+    if (selectedAgent) {
+      getShadowAgentDetail(selectedAgent.agent_id)
+        .then(setSelectedAgent)
+        .catch(() => {})
     }
   }
 
@@ -142,6 +159,7 @@ export function ShadowAgentsPage() {
             <option value="">All</option>
             <option value="agent_not_found">Not Found</option>
             <option value="agent_inactive">Inactive</option>
+            <option value="agent_blocked">Blocked</option>
           </select>
         </div>
         <div>
@@ -155,6 +173,15 @@ export function ShadowAgentsPage() {
             className="px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white focus:outline-none focus:border-[#A6DAFF]/50 w-20"
           />
         </div>
+        <label className="flex items-center gap-2 text-sm text-[#a1a1aa]">
+          <input
+            type="checkbox"
+            checked={showDismissed}
+            onChange={(e) => setShowDismissed(e.target.checked)}
+            className="h-4 w-4 rounded border-[#3a3a3d] bg-[#1a1a1d] text-[#A6DAFF] focus:ring-[#A6DAFF]"
+          />
+          Show dismissed
+        </label>
         <div className="text-xs text-gray-500">Last 7 days</div>
       </div>
 
@@ -194,7 +221,19 @@ export function ShadowAgentsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3">
-                      <DenyReasonBadge reason={agent.deny_reason} />
+                      <div className="flex items-center gap-1.5">
+                        <DenyReasonBadge reason={agent.deny_reason} />
+                        {agent.is_blocked && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-400">
+                            Blocked
+                          </span>
+                        )}
+                        {agent.is_dismissed && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-[#2a2a2d] bg-[#1a1a1d] px-2 py-0.5 text-xs font-medium text-[#71717a]">
+                            Dismissed
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3">
                       <span
@@ -262,7 +301,11 @@ export function ShadowAgentsPage() {
 
       {/* Detail Drawer */}
       {selectedAgent && (
-        <ShadowDetailDrawer detail={selectedAgent} onClose={() => setSelectedAgent(null)} />
+        <ShadowDetailDrawer
+          detail={selectedAgent}
+          onClose={() => setSelectedAgent(null)}
+          onActionComplete={handleActionComplete}
+        />
       )}
 
       {/* Loading overlay for detail fetch */}
@@ -280,10 +323,47 @@ export function ShadowAgentsPage() {
 function ShadowDetailDrawer({
   detail,
   onClose,
+  onActionComplete,
 }: {
   detail: ShadowAgentDetail
   onClose: () => void
+  onActionComplete: () => void
 }) {
+  const [showRegisterModal, setShowRegisterModal] = useState(false)
+  const [showBlockConfirm, setShowBlockConfirm] = useState(false)
+  const [showDismissConfirm, setShowDismissConfirm] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
+
+  const handleBlock = async () => {
+    setActionLoading(true)
+    try {
+      if (detail.is_blocked) {
+        await unblockShadowAgent(detail.agent_id)
+      } else {
+        await blockShadowAgent(detail.agent_id)
+      }
+      onActionComplete()
+    } catch {
+      // Silently fail
+    } finally {
+      setActionLoading(false)
+      setShowBlockConfirm(false)
+    }
+  }
+
+  const handleDismiss = async () => {
+    setActionLoading(true)
+    try {
+      await dismissShadowAgent(detail.agent_id)
+      onActionComplete()
+    } catch {
+      // Silently fail
+    } finally {
+      setActionLoading(false)
+      setShowDismissConfirm(false)
+    }
+  }
+
   return (
     <>
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
@@ -292,7 +372,14 @@ function ShadowDetailDrawer({
         {/* Header */}
         <div className="sticky top-0 bg-[#10131C]/95 backdrop-blur border-b border-[#1a1a1d] px-6 py-4 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-lg font-semibold text-white">Shadow Agent</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-white">Shadow Agent</h2>
+              {detail.is_blocked && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-400">
+                  Blocked
+                </span>
+              )}
+            </div>
             <p className="text-xs text-gray-500 font-mono mt-0.5">{detail.agent_id}</p>
           </div>
           <button
@@ -377,7 +464,76 @@ function ShadowDetailDrawer({
             </div>
           </div>
         </div>
+
+        {/* Action Bar */}
+        <div className="border-t border-[#1a1a1d] p-4 flex gap-3">
+          <button
+            onClick={() => setShowRegisterModal(true)}
+            className="flex-1 rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-semibold text-[#04070D] hover:bg-[#A6DAFF]/80 transition-colors"
+          >
+            Register Agent
+          </button>
+          <button
+            onClick={() => setShowBlockConfirm(true)}
+            className="rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+          >
+            {detail.is_blocked ? 'Unblock' : 'Block'}
+          </button>
+          <button
+            onClick={() => setShowDismissConfirm(true)}
+            className="rounded-lg border border-[#2a2a2d] px-4 py-2 text-sm font-medium text-[#a1a1aa] hover:bg-[#1a1a1d] transition-colors"
+          >
+            {detail.is_dismissed ? 'Un-dismiss' : 'Dismiss'}
+          </button>
+        </div>
       </div>
+
+      {/* Register Agent Modal */}
+      {showRegisterModal && (
+        <RegisterAgentModal
+          shadowAgentId={detail.agent_id}
+          topEndpoints={detail.top_endpoints}
+          onComplete={() => {
+            setShowRegisterModal(false)
+            onActionComplete()
+          }}
+          onCancel={() => setShowRegisterModal(false)}
+        />
+      )}
+
+      {/* Block Confirm Modal */}
+      {showBlockConfirm && (
+        <ConfirmModal
+          title={detail.is_blocked ? 'Unblock Shadow Agent' : 'Block Shadow Agent'}
+          message={
+            detail.is_blocked
+              ? `Unblock agent ${detail.agent_id.slice(0, 12)}...? This agent will no longer be explicitly denied at the gateway.`
+              : `Block agent ${detail.agent_id.slice(0, 12)}...? All future requests from this agent ID will be denied at the gateway with reason "agent_blocked".`
+          }
+          confirmLabel={detail.is_blocked ? 'Unblock' : 'Block'}
+          confirmVariant={detail.is_blocked ? 'primary' : 'danger'}
+          isLoading={actionLoading}
+          onConfirm={handleBlock}
+          onCancel={() => setShowBlockConfirm(false)}
+        />
+      )}
+
+      {/* Dismiss Confirm Modal */}
+      {showDismissConfirm && (
+        <ConfirmModal
+          title={detail.is_dismissed ? 'Un-dismiss Shadow Agent' : 'Dismiss Shadow Agent'}
+          message={
+            detail.is_dismissed
+              ? `Un-dismiss agent ${detail.agent_id.slice(0, 12)}...? This agent will appear in the default shadow agents list again.`
+              : `Dismiss agent ${detail.agent_id.slice(0, 12)}...? This will hide it from the default view. You can still see dismissed agents by enabling "Show dismissed".`
+          }
+          confirmLabel={detail.is_dismissed ? 'Un-dismiss' : 'Dismiss'}
+          confirmVariant="primary"
+          isLoading={actionLoading}
+          onConfirm={handleDismiss}
+          onCancel={() => setShowDismissConfirm(false)}
+        />
+      )}
     </>
   )
 }
@@ -413,12 +569,23 @@ function StatCard({
 
 function DenyReasonBadge({ reason, large }: { reason: string; large?: boolean }) {
   const isNotFound = reason === 'agent_not_found'
+  const isBlocked = reason === 'agent_blocked'
   const bg = isNotFound
     ? 'bg-red-500/10 border-red-500/20'
-    : 'bg-yellow-500/10 border-yellow-500/20'
-  const text = isNotFound ? 'text-red-400' : 'text-yellow-400'
-  const dot = isNotFound ? 'bg-red-400' : 'bg-yellow-400'
-  const label = isNotFound ? 'Not Found' : 'Inactive'
+    : isBlocked
+      ? 'bg-purple-500/10 border-purple-500/20'
+      : 'bg-yellow-500/10 border-yellow-500/20'
+  const text = isNotFound
+    ? 'text-red-400'
+    : isBlocked
+      ? 'text-purple-400'
+      : 'text-yellow-400'
+  const dot = isNotFound
+    ? 'bg-red-400'
+    : isBlocked
+      ? 'bg-purple-400'
+      : 'bg-yellow-400'
+  const label = isNotFound ? 'Not Found' : isBlocked ? 'Blocked' : 'Inactive'
   const size = large ? 'px-3 py-1 text-sm' : 'px-2 py-0.5 text-xs'
 
   return (

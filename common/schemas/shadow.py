@@ -35,6 +35,8 @@ class ShadowAgentSummary(BaseModel):
     first_seen: datetime.datetime
     last_seen: datetime.datetime
     top_endpoints: list[str]
+    is_blocked: bool = False
+    is_dismissed: bool = False
 
 
 class ShadowAgentListResponse(BaseModel):
@@ -60,6 +62,9 @@ class ShadowAgentDetail(BaseModel):
     last_seen: datetime.datetime
     top_endpoints: list[TopEndpointHit]
     recent_events: list[ShadowEvent]
+    is_blocked: bool = False
+    blocked_at: datetime.datetime | None = None
+    is_dismissed: bool = False
 
 
 # ── Stats ───────────────────────────────────────────────────────────
@@ -72,3 +77,29 @@ class ShadowAgentStats(BaseModel):
     total_shadow_hits: int
     agents_not_found: int
     agents_inactive: int
+    agents_blocked: int = 0
+    agents_dismissed: int = 0
+
+
+# ── Action requests/responses ───────────────────────────────────────
+
+
+class BlockAgentRequest(BaseModel):
+    """Request body for blocking a shadow agent."""
+
+    reason: str | None = None
+
+
+class BlockAgentResponse(BaseModel):
+    """Response after blocking a shadow agent."""
+
+    agent_id: str
+    blocked: bool
+    blocked_at: datetime.datetime
+
+
+class DismissResponse(BaseModel):
+    """Response after dismissing a shadow agent."""
+
+    agent_id: str
+    dismissed: bool

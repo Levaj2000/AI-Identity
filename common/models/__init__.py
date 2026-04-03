@@ -6,12 +6,14 @@ from common.models.agent_key import AgentKey, KeyStatus, KeyType
 from common.models.approval_request import ApprovalRequest, ApprovalStatus
 from common.models.audit_log import AuditLog
 from common.models.base import Base, SessionLocal, engine, get_db
+from common.models.blocked_agent import BlockedAgent
 from common.models.compliance import (
     ComplianceCheck,
     ComplianceFramework,
     ComplianceReport,
     ComplianceResult,
 )
+from common.models.dismissed_shadow import DismissedShadowAgent
 from common.models.org_membership import OrgMembership, OrgRole
 from common.models.organization import Organization
 from common.models.policy import Policy
@@ -53,4 +55,6 @@ __all__ = [
     "AgentRole",
     "ApprovalRequest",
     "ApprovalStatus",
+    "BlockedAgent",
+    "DismissedShadowAgent",
 ]
