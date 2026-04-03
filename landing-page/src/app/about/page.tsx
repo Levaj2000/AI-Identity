@@ -48,12 +48,12 @@ export default function About() {
           <div className="flex flex-col md:flex-row gap-10 items-start">
             {/* Photo */}
             <div className="flex-shrink-0 mx-auto md:mx-0">
-              <div className="w-64 h-72 rounded-2xl overflow-hidden border border-white/10">
+              <div className="w-80 h-96 rounded-2xl overflow-hidden border border-white/10">
                 <Image
                   src="/images/jeff-leva.jpg"
                   alt="Jeff Leva, Founder of AI Identity"
-                  width={256}
-                  height={288}
+                  width={320}
+                  height={384}
                   className="w-full h-full object-cover"
                   priority
                 />
