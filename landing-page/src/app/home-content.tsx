@@ -736,6 +736,39 @@ export default function HomeContent() {
         </div>
       </section>
 
+      {/* ── Technology in Service of People ── */}
+      <section className="w-full py-20 px-6">
+        <div className="max-w-[800px] mx-auto text-center">
+          <div className="flex justify-center mb-4">
+            <span className="inline-block px-3 py-1 text-xs font-semibold text-[rgb(166,218,255)] bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 rounded-full uppercase tracking-wider">
+              Our Mission
+            </span>
+          </div>
+          <h2 className="text-3xl md:text-[44px] font-medium text-white mb-4 leading-[1.2]">
+            Technology in{" "}
+            <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
+              Service
+            </span>{" "}
+            of People
+          </h2>
+          <p className="text-[rgba(213,219,230,0.6)] max-w-[640px] mx-auto mb-6 leading-relaxed">
+            AI Identity was created to solve a technical problem, but not only a technical problem. Behind the infrastructure is a deeper motivation: helping organizations use AI in ways that are responsible, auditable, and genuinely useful to people.
+          </p>
+          <p className="text-[rgba(213,219,230,0.4)] max-w-[640px] mx-auto mb-8 text-sm leading-relaxed">
+            A portion of AI Identity&apos;s business sales will be directed to organizations working with people and communities in need. As the company grows, we want the business itself to be a small force for good.
+          </p>
+          <a
+            href="/about"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-[rgba(216,231,242,0.12)] text-sm text-[rgba(213,219,230,0.8)] hover:text-white hover:border-[rgb(166,218,255)]/30 transition-colors"
+          >
+            Read our story
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </section>
+
       {/* ── CTA Section ── */}
       <section className="w-full py-24 px-6">
         <div className="max-w-3xl mx-auto text-center">

@@ -21,6 +21,7 @@ const solutionLinks = [
 ];
 
 const companyLinks = [
+  { label: "About", path: "/about" },
   { label: "Blog", path: "/blog" },
   { label: "Careers", path: "/careers" },
   { label: "Contact", path: "/contact" },

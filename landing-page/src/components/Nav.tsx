@@ -10,6 +10,7 @@ const navLinks = [
   { label: "Security", path: "/security" },
   { label: "Pricing", path: "/pricing" },
   { label: "Blog", path: "/blog" },
+  { label: "About", path: "/about" },
   { label: "Docs", path: "/docs" },
 ];
 
