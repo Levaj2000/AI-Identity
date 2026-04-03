@@ -56,13 +56,30 @@ def _build_audit_query(
     model: str | None = None,
     cost_min: float | None = None,
     cost_max: float | None = None,
+    user_id: uuid.UUID | None = None,
 ):
-    """Build a filtered audit log query scoped to user's agents."""
-    query = db.query(AuditLog).filter(AuditLog.agent_id.in_(user_agent_ids))
+    """Build a filtered audit log query scoped to user's agents.
+
+    Also includes shadow agent entries (denied requests where audit_log.user_id
+    matches the current user) so the Forensics page can display them.
+    """
+    from sqlalchemy import or_
+
+    # Base scope: entries for registered agents OR entries owned by this user
+    # (shadow agent denials from inactive agents have user_id set)
+    if user_id:
+        query = db.query(AuditLog).filter(
+            or_(
+                AuditLog.agent_id.in_(user_agent_ids),
+                AuditLog.user_id == user_id,
+            )
+        )
+    else:
+        query = db.query(AuditLog).filter(AuditLog.agent_id.in_(user_agent_ids))
 
     if agent_id:
-        if agent_id not in user_agent_ids:
-            return None  # Agent not owned by user
+        # Allow filtering by any agent_id the user has visibility into
+        # (registered agents via ownership, shadow agents via user_id on audit entries)
         query = query.filter(AuditLog.agent_id == agent_id)
 
     if decision:
@@ -99,9 +116,17 @@ def _compute_stats(
     agent_id: uuid.UUID | None = None,
     start_date: datetime | None = None,
     end_date: datetime | None = None,
+    user_id: uuid.UUID | None = None,
 ) -> AuditStatsResponse:
     """Compute aggregated statistics for a filtered audit window."""
-    base = db.query(AuditLog).filter(AuditLog.agent_id.in_(user_agent_ids))
+    from sqlalchemy import or_
+
+    if user_id:
+        base = db.query(AuditLog).filter(
+            or_(AuditLog.agent_id.in_(user_agent_ids), AuditLog.user_id == user_id)
+        )
+    else:
+        base = db.query(AuditLog).filter(AuditLog.agent_id.in_(user_agent_ids))
 
     if agent_id:
         base = base.filter(AuditLog.agent_id == agent_id)
@@ -193,10 +218,8 @@ def list_audit_logs(
         model=model,
         cost_min=cost_min,
         cost_max=cost_max,
+        user_id=user.id,
     )
-
-    if query is None:
-        return AuditLogListResponse(items=[], total=0, limit=limit, offset=offset)
 
     total = query.count()
     entries = query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit).all()
@@ -233,11 +256,13 @@ def audit_stats(
     """
     user_agents = _user_agent_ids(db, user)
 
-    if agent_id and agent_id not in user_agents:
-        raise HTTPException(status_code=404, detail="Agent not found")
-
     return _compute_stats(
-        db, user_agents, agent_id=agent_id, start_date=start_date, end_date=end_date
+        db,
+        user_agents,
+        agent_id=agent_id,
+        start_date=start_date,
+        end_date=end_date,
+        user_id=user.id,
     )
 
 
