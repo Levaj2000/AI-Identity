@@ -93,7 +93,10 @@ export function ForensicsPage() {
   const [reconstructData, setReconstructData] = useState<AuditReconstructResponse | null>(null)
   const [reconstructing, setReconstructing] = useState(false)
 
-  // Hydrate from URL search params (e.g. linked from Shadow Agents page)
+  // Deep-linked agent_id (e.g. from Shadow Agents page) — may not be a registered agent
+  const [deepLinkedAgentId, setDeepLinkedAgentId] = useState<string | null>(null)
+
+  // Hydrate from URL search params
   const [searchParams] = useSearchParams()
   const hydrated = useRef(false)
   useEffect(() => {
@@ -102,10 +105,26 @@ export function ForensicsPage() {
     const qAgent = searchParams.get('agent_id')
     const qStart = searchParams.get('start')
     const qEnd = searchParams.get('end')
-    if (qAgent) setSelectedAgent(qAgent)
+    if (qAgent) {
+      // Check if this agent_id is a registered agent (will be resolved after agents load)
+      setDeepLinkedAgentId(qAgent)
+    }
     if (qStart) setStartDate(qStart)
     if (qEnd) setEndDate(qEnd)
   }, [searchParams])
+
+  // Once agents load, resolve deep-linked agent: if registered, use the dropdown; otherwise keep as direct filter
+  useEffect(() => {
+    if (!deepLinkedAgentId) return
+    const isRegistered = agents.some((a) => a.id === deepLinkedAgentId)
+    if (isRegistered) {
+      setSelectedAgent(deepLinkedAgentId)
+      setDeepLinkedAgentId(null)
+    }
+  }, [agents, deepLinkedAgentId])
+
+  // The effective agent_id filter: dropdown selection OR deep-linked unregistered agent
+  const effectiveAgentId = selectedAgent || deepLinkedAgentId || ''
 
   // Event detail drawer
   const [selectedEvent, setSelectedEvent] = useState<AuditLogEntry | null>(null)
@@ -133,7 +152,7 @@ export function ForensicsPage() {
         limit,
         offset,
       }
-      if (selectedAgent) params.agent_id = selectedAgent
+      if (effectiveAgentId) params.agent_id = effectiveAgentId
       if (filterDecision) params.decision = filterDecision
       if (startDate) params.start_date = new Date(startDate).toISOString()
       if (endDate) params.end_date = new Date(endDate).toISOString()
@@ -153,7 +172,7 @@ export function ForensicsPage() {
       setLoading(false)
     }
   }, [
-    selectedAgent,
+    effectiveAgentId,
     filterDecision,
     startDate,
     endDate,
@@ -173,14 +192,14 @@ export function ForensicsPage() {
 
   useEffect(() => {
     const params: Record<string, string | undefined> = {}
-    if (selectedAgent) params.agent_id = selectedAgent
+    if (effectiveAgentId) params.agent_id = effectiveAgentId
     if (startDate) params.start_date = new Date(startDate).toISOString()
     if (endDate) params.end_date = new Date(endDate).toISOString()
 
     fetchAuditStats(params)
       .then(setStats)
       .catch(() => setStats(null))
-  }, [selectedAgent, startDate, endDate])
+  }, [effectiveAgentId, startDate, endDate])
 
   // ── Verify chain (on-demand only — expensive call) ────────────
 
@@ -189,7 +208,7 @@ export function ForensicsPage() {
   const handleVerifyChain = useCallback(async () => {
     setChainVerifying(true)
     try {
-      const r = await verifyAuditChain(selectedAgent || undefined)
+      const r = await verifyAuditChain(effectiveAgentId || undefined)
       setChainValid(r.valid)
       setChainMessage(r.message)
     } catch {
@@ -198,22 +217,22 @@ export function ForensicsPage() {
     } finally {
       setChainVerifying(false)
     }
-  }, [selectedAgent])
+  }, [effectiveAgentId])
 
   // Reset chain status when agent changes
   useEffect(() => {
     setChainValid(null)
     setChainMessage('')
-  }, [selectedAgent])
+  }, [effectiveAgentId])
 
   // ── Incident reconstruction ───────────────────────────────────
 
   const handleReconstruct = async () => {
-    if (!selectedAgent) return
+    if (!effectiveAgentId) return
     setReconstructing(true)
     try {
       const data = await fetchAuditReconstruct({
-        agent_id: selectedAgent,
+        agent_id: effectiveAgentId,
         start_date: new Date(startDate).toISOString(),
         end_date: new Date(endDate).toISOString(),
       })
@@ -374,6 +393,27 @@ export function ForensicsPage() {
           </button>
         </div>
       </div>
+
+      {/* Deep-linked shadow agent banner */}
+      {deepLinkedAgentId && (
+        <div className="flex items-center justify-between bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-400">
+              Shadow Agent
+            </span>
+            <span className="text-sm font-mono text-zinc-300">{deepLinkedAgentId}</span>
+          </div>
+          <button
+            onClick={() => {
+              setDeepLinkedAgentId(null)
+              setOffset(0)
+            }}
+            className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
@@ -538,7 +578,7 @@ export function ForensicsPage() {
         </div>
 
         {/* Investigate button */}
-        {selectedAgent && (
+        {effectiveAgentId && (
           <div className="mt-3 pt-3 border-t border-zinc-700">
             <button
               onClick={handleReconstruct}
