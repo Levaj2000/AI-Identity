@@ -449,7 +449,14 @@ function ShadowDetailDrawer({
                 Recent Events ({detail.recent_events.length})
               </h3>
               <a
-                href={`/dashboard/forensics?agent_id=${encodeURIComponent(detail.agent_id)}&start=${encodeURIComponent(new Date(detail.first_seen).toISOString().slice(0, 16))}&end=${encodeURIComponent(new Date(detail.last_seen).toISOString().slice(0, 16))}`}
+                href={(() => {
+                  // Pad the date range by 1 hour on each side so single-event agents are visible
+                  const start = new Date(detail.first_seen)
+                  start.setHours(start.getHours() - 1)
+                  const end = new Date(detail.last_seen)
+                  end.setHours(end.getHours() + 1)
+                  return `/dashboard/forensics?agent_id=${encodeURIComponent(detail.agent_id)}&start=${encodeURIComponent(start.toISOString().slice(0, 16))}&end=${encodeURIComponent(end.toISOString().slice(0, 16))}`
+                })()}
                 className="inline-flex items-center gap-1 text-xs text-[#A6DAFF] hover:text-[#A6DAFF]/80 transition-colors"
               >
                 View in Forensics
