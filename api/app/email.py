@@ -173,32 +173,38 @@ def _welcome_html(name: str) -> str:
 
 
 def _followup_html(name: str) -> str:
-    """5-day follow-up email — check-in and quick questions."""
+    """5-day follow-up email — check-in, system health, and questions."""
     return _email_wrapper(f"""\
 <p>Hi {name},</p>
 
-<p>It's been a few days since you signed up. I wanted to check in and see how things are going.</p>
+<p>How have your first few days on the AI Identity platform been? I wanted to check in and share a quick update.</p>
 
-<p><strong>Three quick questions</strong> (just reply inline):</p>
+<p><strong>Your system health check</strong></p>
+
+<p>As a courtesy, we've completed our 15-point production validation on your account. This covers infrastructure health, authentication, gateway policy enforcement, audit logging, and compliance readiness.</p>
+
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin:16px 0;">
+  <p style="margin:0;color:#166534;font-weight:600;">&#10003; 15/15 checks passed</p>
+  <p style="margin:4px 0 0;color:#166534;font-size:13px;">Your account is seeing optimal performance across all systems.</p>
+</div>
+
+<p style="font-size:13px;color:#6b7280;">
+  You can view the full results anytime in your dashboard under <strong>QA Checklist</strong> in the sidebar.
+</p>
+
+<p><strong>A few quick questions</strong> (just reply inline):</p>
 <ol style="padding-left:20px;color:#374151;">
-  <li>Have you created your first agent yet?</li>
+  <li>Have you had a chance to create your first agent yet?</li>
   <li>What's your biggest question so far?</li>
   <li>Is anything missing or confusing?</li>
 </ol>
 
-<p>If you haven't had a chance to explore yet, here's the fastest path:</p>
-<ol style="padding-left:20px;color:#374151;font-size:14px;">
-  <li>Log into the <a href="https://dashboard.ai-identity.co" style="color:#F59E0B;">dashboard</a></li>
-  <li>Create an agent (takes 30 seconds)</li>
-  <li>Set a gateway policy for your agent</li>
-  <li>Run the automated compliance check</li>
-</ol>
-
-<p>Your feedback directly shapes the product. I read every reply.</p>
+<p>If you run into any issues at all, please reach out to me personally &mdash; I read and reply to every message.</p>
 
 <p>
-  Jeff<br>
-  <span style="color:#6b7280;font-size:13px;">Founder, AI Identity</span>
+  Jeff Leva<br>
+  <span style="color:#6b7280;font-size:13px;">Founder, AI Identity</span><br>
+  <a href="mailto:jeff@ai-identity.co" style="color:#F59E0B;text-decoration:none;font-size:13px;">jeff@ai-identity.co</a>
 </p>""")
 
 
