@@ -1,4 +1,22 @@
+import { useAuth } from '../hooks/useAuth'
+
 export function WebPropertiesPage() {
+  const { user } = useAuth()
+
+  if (user && user.role !== 'admin') {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <span className="text-5xl mb-4">&#128274;</span>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          Admin Access Required
+        </h2>
+        <p className="text-gray-500 dark:text-gray-400 max-w-md">
+          This page is restricted to platform administrators.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
