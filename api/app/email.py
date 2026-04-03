@@ -5,6 +5,7 @@ Gracefully no-ops when RESEND_API_KEY is not configured.
 """
 
 import logging
+from datetime import UTC
 
 import resend
 
@@ -74,6 +75,35 @@ def send_followup_email(email: str, first_name: str | None = None) -> str | None
         return email_id
     except Exception as e:
         logger.error("Failed to send follow-up email to %s: %s", email, e)
+        return None
+
+
+def send_new_signup_notification(user_email: str) -> str | None:
+    """Notify the founder when a new user signs up.
+
+    Fire-and-forget — never blocks auth flow.
+    Returns the Resend email ID on success, None otherwise.
+    """
+    if not _is_configured():
+        logger.info("Resend not configured — skipping signup notification for %s", user_email)
+        return None
+
+    resend.api_key = settings.resend_api_key
+
+    try:
+        result = resend.Emails.send(
+            {
+                "from": settings.resend_from_email,
+                "to": [settings.resend_reply_to],  # Goes to Jeff
+                "subject": f"New signup: {user_email}",
+                "html": _signup_notification_html(user_email),
+            }
+        )
+        email_id = result.get("id") if isinstance(result, dict) else getattr(result, "id", None)
+        logger.info("Signup notification sent for %s, resend_id=%s", user_email, email_id)
+        return email_id
+    except Exception as e:
+        logger.error("Failed to send signup notification for %s: %s", user_email, e)
         return None
 
 
@@ -169,4 +199,40 @@ def _followup_html(name: str) -> str:
 <p>
   Jeff<br>
   <span style="color:#6b7280;font-size:13px;">Founder, AI Identity</span>
+</p>""")
+
+
+def _signup_notification_html(user_email: str) -> str:
+    """Internal notification — new user signed up."""
+    from datetime import datetime
+
+    now = datetime.now(UTC).strftime("%b %d, %Y at %I:%M %p UTC")
+    return _email_wrapper(f"""\
+<p style="font-size:16px;font-weight:600;color:#10B981;">New User Signup</p>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr>
+    <td style="padding:8px 0;color:#6b7280;font-size:14px;">Email</td>
+    <td style="padding:8px 0;font-weight:600;">{user_email}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#6b7280;font-size:14px;">Time</td>
+    <td style="padding:8px 0;">{now}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#6b7280;font-size:14px;">Tier</td>
+    <td style="padding:8px 0;">Free</td>
+  </tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;">
+  <tr>
+    <td style="background:#F59E0B;border-radius:6px;padding:10px 20px;">
+      <a href="https://dashboard.ai-identity.co/dashboard/qa" style="color:#0A0A0B;text-decoration:none;font-weight:600;font-size:14px;">View QA Checklist</a>
+    </td>
+  </tr>
+</table>
+
+<p style="font-size:13px;color:#6b7280;">
+  A welcome email has been sent to the user. Check the QA Checklist for their onboarding run when ready.
 </p>""")
