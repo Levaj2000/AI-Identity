@@ -251,7 +251,14 @@ def qa_has_pending(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Return true if there are QA runs awaiting staff sign-off."""
+    """Return true if there are QA runs awaiting staff sign-off.
+
+    Non-admin users always get has_pending=false — the indicator
+    is only meaningful for staff who validate onboarding runs.
+    """
+    if user.role != "admin":
+        return QAHasPendingResponse(has_pending=False)
+
     exists = (
         db.query(QARun.id)
         .filter(QARun.staff_signoff_by.is_(None), QARun.status == "passed")
