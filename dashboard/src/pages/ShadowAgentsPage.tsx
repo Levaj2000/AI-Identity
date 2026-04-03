@@ -444,36 +444,9 @@ function ShadowDetailDrawer({
 
           {/* Recent Events */}
           <div className="bg-[#04070D] border border-[#1a1a1d] rounded-xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider">
-                Recent Events ({detail.recent_events.length})
-              </h3>
-              <a
-                href={(() => {
-                  // Pad the date range by 1 hour on each side so single-event agents are visible
-                  const start = new Date(detail.first_seen)
-                  start.setHours(start.getHours() - 1)
-                  const end = new Date(detail.last_seen)
-                  end.setHours(end.getHours() + 1)
-                  return `/dashboard/forensics?agent_id=${encodeURIComponent(detail.agent_id)}&start=${encodeURIComponent(start.toISOString().slice(0, 16))}&end=${encodeURIComponent(end.toISOString().slice(0, 16))}`
-                })()}
-                className="inline-flex items-center gap-1 text-xs text-[#A6DAFF] hover:text-[#A6DAFF]/80 transition-colors"
-              >
-                View in Forensics
-                <svg
-                  width="12"
-                  height="12"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M7 17L17 7M17 7H7M17 7v10" />
-                </svg>
-              </a>
-            </div>
+            <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider">
+              Recent Events ({detail.recent_events.length})
+            </h3>
             <div className="space-y-1 max-h-[480px] overflow-y-auto">
               {detail.recent_events.map((event) => (
                 <ExpandableEvent key={event.id} event={event} />
