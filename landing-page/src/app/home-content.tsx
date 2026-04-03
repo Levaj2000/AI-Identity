@@ -754,9 +754,11 @@ export default function HomeContent() {
           <p className="text-[rgba(213,219,230,0.6)] max-w-[640px] mx-auto mb-6 leading-relaxed">
             AI Identity was created to solve a technical problem, but not only a technical problem. Behind the infrastructure is a deeper motivation: helping organizations use AI in ways that are responsible, auditable, and genuinely useful to people.
           </p>
-          <p className="text-[rgba(213,219,230,0.4)] max-w-[640px] mx-auto mb-8 text-sm leading-relaxed">
-            A portion of AI Identity&apos;s business sales will be directed to organizations working with people and communities in need. As the company grows, we want the business itself to be a small force for good.
-          </p>
+          <div className="max-w-[640px] mx-auto mb-8 bg-[rgb(166,218,255)]/[0.04] border border-[rgb(166,218,255)]/15 rounded-xl px-6 py-5">
+            <p className="text-sm text-gray-300 leading-relaxed text-center">
+              <span className="text-[rgb(166,218,255)]">&#10038;</span>&ensp;A portion of AI Identity&apos;s business sales will be directed to organizations working with people and communities in need. As the company grows, we want the business itself to be a small force for good.&ensp;<span className="text-[rgb(166,218,255)]">&#10038;</span>
+            </p>
+          </div>
           <a
             href="/about"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-[rgba(216,231,242,0.12)] text-sm text-[rgba(213,219,230,0.8)] hover:text-white hover:border-[rgb(166,218,255)]/30 transition-colors"
