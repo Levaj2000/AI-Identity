@@ -6,8 +6,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "dev:vite": "vite",
-    "build:vite": "tsc && vite build",
     "framer": "unframer 5d5a53b2b7b03258 --outDir src/framer"
   },
   "dependencies": {

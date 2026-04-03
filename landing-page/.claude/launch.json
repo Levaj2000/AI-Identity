@@ -4,8 +4,8 @@
     {
       "name": "landing",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite"],
-      "port": 5173
+      "runtimeArgs": ["next", "dev"],
+      "port": 3000
     }
   ]
 }
