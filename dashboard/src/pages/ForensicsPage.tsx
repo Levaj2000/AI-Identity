@@ -182,18 +182,28 @@ export function ForensicsPage() {
       .catch(() => setStats(null))
   }, [selectedAgent, startDate, endDate])
 
-  // ── Verify chain ──────────────────────────────────────────────
+  // ── Verify chain (on-demand only — expensive call) ────────────
 
+  const [chainVerifying, setChainVerifying] = useState(false)
+
+  const handleVerifyChain = useCallback(async () => {
+    setChainVerifying(true)
+    try {
+      const r = await verifyAuditChain(selectedAgent || undefined)
+      setChainValid(r.valid)
+      setChainMessage(r.message)
+    } catch {
+      setChainValid(null)
+      setChainMessage('')
+    } finally {
+      setChainVerifying(false)
+    }
+  }, [selectedAgent])
+
+  // Reset chain status when agent changes
   useEffect(() => {
-    verifyAuditChain(selectedAgent || undefined)
-      .then((r) => {
-        setChainValid(r.valid)
-        setChainMessage(r.message)
-      })
-      .catch(() => {
-        setChainValid(null)
-        setChainMessage('')
-      })
+    setChainValid(null)
+    setChainMessage('')
   }, [selectedAgent])
 
   // ── Incident reconstruction ───────────────────────────────────
@@ -285,8 +295,8 @@ export function ForensicsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Chain verification badge */}
-          {chainValid !== null && (
+          {/* Chain verification — on-demand */}
+          {chainValid !== null ? (
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
                 chainValid
@@ -300,6 +310,54 @@ export function ForensicsPage() {
               Chain {chainValid ? 'Intact' : 'Broken'}
               {chainMessage && <span className="sr-only">{chainMessage}</span>}
             </span>
+          ) : (
+            <button
+              onClick={handleVerifyChain}
+              disabled={chainVerifying}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border border-zinc-600 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 transition-colors disabled:opacity-50"
+            >
+              {chainVerifying ? (
+                <>
+                  <svg
+                    className="h-3 w-3 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-3.5 w-3.5"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.403 12.652a3 3 0 000-5.304 3 3 0 00-3.75-3.751 3 3 0 00-5.305 0 3 3 0 00-3.751 3.75 3 3 0 000 5.305 3 3 0 003.75 3.751 3 3 0 005.305 0 3 3 0 003.751-3.75zm-2.546-4.46a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Verify Chain
+                </>
+              )}
+            </button>
           )}
 
           <button
