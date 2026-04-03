@@ -449,7 +449,7 @@ function ShadowDetailDrawer({
                 Recent Events ({detail.recent_events.length})
               </h3>
               <a
-                href="/dashboard/forensics"
+                href={`/dashboard/forensics?agent_id=${encodeURIComponent(detail.agent_id)}&start=${encodeURIComponent(new Date(detail.first_seen).toISOString().slice(0, 16))}&end=${encodeURIComponent(new Date(detail.last_seen).toISOString().slice(0, 16))}`}
                 className="inline-flex items-center gap-1 text-xs text-[#A6DAFF] hover:text-[#A6DAFF]/80 transition-colors"
               >
                 View in Forensics

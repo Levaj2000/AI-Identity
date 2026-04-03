@@ -5,7 +5,8 @@
  * and exportable forensics reports with chain-of-custody verification.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useSearchParams } from 'react-router'
 import type {
   Agent,
   AuditLogEntry,
@@ -91,6 +92,20 @@ export function ForensicsPage() {
   // Incident reconstruction
   const [reconstructData, setReconstructData] = useState<AuditReconstructResponse | null>(null)
   const [reconstructing, setReconstructing] = useState(false)
+
+  // Hydrate from URL search params (e.g. linked from Shadow Agents page)
+  const [searchParams] = useSearchParams()
+  const hydrated = useRef(false)
+  useEffect(() => {
+    if (hydrated.current) return
+    hydrated.current = true
+    const qAgent = searchParams.get('agent_id')
+    const qStart = searchParams.get('start')
+    const qEnd = searchParams.get('end')
+    if (qAgent) setSelectedAgent(qAgent)
+    if (qStart) setStartDate(qStart)
+    if (qEnd) setEndDate(qEnd)
+  }, [searchParams])
 
   // Event detail drawer
   const [selectedEvent, setSelectedEvent] = useState<AuditLogEntry | null>(null)
