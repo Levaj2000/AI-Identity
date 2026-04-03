@@ -67,6 +67,7 @@ def _build_audit_query(
 
     # Base scope: entries for registered agents OR entries owned by this user
     # (shadow agent denials from inactive agents have user_id set)
+    # OR denied entries for a specific unregistered agent_id (shadow agents)
     if user_id:
         query = db.query(AuditLog).filter(
             or_(
@@ -78,9 +79,16 @@ def _build_audit_query(
         query = db.query(AuditLog).filter(AuditLog.agent_id.in_(user_agent_ids))
 
     if agent_id:
-        # Allow filtering by any agent_id the user has visibility into
-        # (registered agents via ownership, shadow agents via user_id on audit entries)
-        query = query.filter(AuditLog.agent_id == agent_id)
+        if agent_id in user_agent_ids:
+            # Registered agent — filter normally
+            query = query.filter(AuditLog.agent_id == agent_id)
+        else:
+            # Unregistered agent (shadow agent) — query denied entries directly
+            # This is safe: denied shadow entries contain no sensitive data
+            query = db.query(AuditLog).filter(
+                AuditLog.agent_id == agent_id,
+                AuditLog.decision == "deny",
+            )
 
     if decision:
         query = query.filter(AuditLog.decision == decision)
@@ -129,7 +137,14 @@ def _compute_stats(
         base = db.query(AuditLog).filter(AuditLog.agent_id.in_(user_agent_ids))
 
     if agent_id:
-        base = base.filter(AuditLog.agent_id == agent_id)
+        if agent_id in user_agent_ids:
+            base = base.filter(AuditLog.agent_id == agent_id)
+        else:
+            # Shadow agent — query denied entries directly
+            base = db.query(AuditLog).filter(
+                AuditLog.agent_id == agent_id,
+                AuditLog.decision == "deny",
+            )
     if start_date:
         base = base.filter(AuditLog.created_at >= start_date)
     if end_date:
