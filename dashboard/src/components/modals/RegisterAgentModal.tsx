@@ -69,7 +69,9 @@ export function RegisterAgentModal({
 
   // Step 2: Show API key
   if (result) {
-    return <ApiKeyModal apiKey={result.api_key} agentName={result.agent.name} onDismiss={onComplete} />
+    return (
+      <ApiKeyModal apiKey={result.api_key} agentName={result.agent.name} onDismiss={onComplete} />
+    )
   }
 
   // Step 1: Registration form

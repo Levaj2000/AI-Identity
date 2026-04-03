@@ -453,7 +453,16 @@ function ShadowDetailDrawer({
                 className="inline-flex items-center gap-1 text-xs text-[#A6DAFF] hover:text-[#A6DAFF]/80 transition-colors"
               >
                 View in Forensics
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M7 17L17 7M17 7H7M17 7v10" />
                 </svg>
               </a>
@@ -576,16 +585,8 @@ function DenyReasonBadge({ reason, large }: { reason: string; large?: boolean })
     : isBlocked
       ? 'bg-purple-500/10 border-purple-500/20'
       : 'bg-yellow-500/10 border-yellow-500/20'
-  const text = isNotFound
-    ? 'text-red-400'
-    : isBlocked
-      ? 'text-purple-400'
-      : 'text-yellow-400'
-  const dot = isNotFound
-    ? 'bg-red-400'
-    : isBlocked
-      ? 'bg-purple-400'
-      : 'bg-yellow-400'
+  const text = isNotFound ? 'text-red-400' : isBlocked ? 'text-purple-400' : 'text-yellow-400'
+  const dot = isNotFound ? 'bg-red-400' : isBlocked ? 'bg-purple-400' : 'bg-yellow-400'
   const label = isNotFound ? 'Not Found' : isBlocked ? 'Blocked' : 'Inactive'
   const size = large ? 'px-3 py-1 text-sm' : 'px-2 py-0.5 text-xs'
 
@@ -647,7 +648,15 @@ function ExpandableEvent({ event }: { event: ShadowEvent }) {
   const denyReason = meta.deny_reason as string | undefined
 
   // Remaining metadata (everything we didn't pull out explicitly)
-  const knownKeys = new Set(['client_ip', 'ip', 'x_forwarded_for', 'status_code', 'key_type', 'user_agent', 'deny_reason'])
+  const knownKeys = new Set([
+    'client_ip',
+    'ip',
+    'x_forwarded_for',
+    'status_code',
+    'key_type',
+    'user_agent',
+    'deny_reason',
+  ])
   const extraEntries = Object.entries(meta).filter(([k]) => !knownKeys.has(k))
 
   return (
@@ -710,7 +719,9 @@ function ExpandableEvent({ event }: { event: ShadowEvent }) {
             {userAgent && (
               <div className="flex justify-between items-start">
                 <span className="text-gray-500 shrink-0">User Agent</span>
-                <span className="font-mono text-gray-300 text-right ml-4 break-all">{userAgent}</span>
+                <span className="font-mono text-gray-300 text-right ml-4 break-all">
+                  {userAgent}
+                </span>
               </div>
             )}
             {extraEntries.length > 0 && (
@@ -726,9 +737,14 @@ function ExpandableEvent({ event }: { event: ShadowEvent }) {
                 ))}
               </>
             )}
-            {!ip && !statusCode && !denyReason && !keyType && !userAgent && extraEntries.length === 0 && (
-              <span className="text-gray-500">No metadata captured</span>
-            )}
+            {!ip &&
+              !statusCode &&
+              !denyReason &&
+              !keyType &&
+              !userAgent &&
+              extraEntries.length === 0 && (
+                <span className="text-gray-500">No metadata captured</span>
+              )}
           </div>
         </div>
       )}
