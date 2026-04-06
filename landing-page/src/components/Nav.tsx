@@ -19,6 +19,9 @@ const solutionLinks = [
   { label: "Coding Assistants", path: "/use-cases/coding-assistant" },
   { label: "Financial Compliance", path: "/use-cases/financial-compliance" },
   { label: "divider", path: "" },
+  { label: "Healthcare", path: "/industries/healthcare" },
+  { label: "Finance", path: "/industries/finance" },
+  { label: "divider", path: "" },
   { label: "EU AI Act Checklist", path: "/eu-ai-act-checklist" },
 ];
 
