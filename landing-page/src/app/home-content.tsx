@@ -669,6 +669,50 @@ export default function HomeContent() {
               </p>
             </div>
           </div>
+
+          {/* Four Pillars Table */}
+          <div className="mt-16 max-w-[900px] mx-auto">
+            <h3 className="text-xl md:text-2xl font-medium text-white mb-2 text-center">
+              The Four Pillars of AI Agent Governance
+            </h3>
+            <p className="text-sm text-[rgba(213,219,230,0.5)] text-center mb-8">
+              Most solutions cover one or two. AI Identity covers all four.
+            </p>
+            <div className="overflow-hidden rounded-xl border border-[rgba(216,231,242,0.07)]">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-white/[0.05]">
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-[rgb(166,218,255)] uppercase tracking-wider">Pillar</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-[rgb(166,218,255)] uppercase tracking-wider">Core Question</th>
+                    <th className="px-5 py-3 text-left text-xs font-semibold text-[rgb(166,218,255)] uppercase tracking-wider hidden md:table-cell">Capability</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { pillar: "Identity", question: "Who is this agent?", capability: "Per-agent API keys, lifecycle management, scoped credentials." },
+                    { pillar: "Policy", question: "What is it allowed to do?", capability: "Fail-closed gateway, deny-by-default policy evaluation." },
+                    { pillar: "Compliance", question: "Can we prove rules were followed?", capability: "HMAC-verifiable audit logs, automated assessments." },
+                    { pillar: "Forensics", question: "What happened, provably?", capability: "Hash-chained logs, incident replay, export, verify." },
+                  ].map((p, i) => (
+                    <tr key={p.pillar} className={`${i % 2 === 0 ? "bg-white/[0.02]" : ""} ${p.pillar === "Forensics" ? "border-l-2 border-l-[rgb(166,218,255)]" : ""}`}>
+                      <td className="px-5 py-3 font-semibold text-white whitespace-nowrap">{p.pillar}</td>
+                      <td className="px-5 py-3 text-[rgba(213,219,230,0.5)] italic">{p.question}</td>
+                      <td className="px-5 py-3 text-[rgba(213,219,230,0.65)] hidden md:table-cell">{p.capability}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="text-center mt-6">
+              <Link
+                href="/forensics"
+                className="inline-flex items-center gap-2 text-sm text-[rgb(166,218,255)] hover:text-[rgb(166,218,255)]/80 transition-colors"
+              >
+                Learn more about AI Forensics
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
