@@ -20,6 +20,7 @@ SERVICES = [
 ]
 
 FOLLOWUP_URL = "https://ai-identity-api.onrender.com/api/internal/email/send-followups"
+CLEANUP_URL = "https://ai-identity-api.onrender.com/api/internal/cleanup/inactive-users"
 
 TIMEOUT = 30
 
@@ -41,6 +42,10 @@ def main():
         # Run follow-up email check once per day (first run in the 16:00 UTC hour)
         if now.hour == 16 and now.minute < 10:
             _send_followup_emails(ts, client)
+
+        # Run inactive user cleanup weekly (Sundays at 04:00 UTC)
+        if now.weekday() == 6 and now.hour == 4 and now.minute < 10:
+            _cleanup_inactive_users(ts, client)
 
     print(f"{ts} Keepalive complete.")
 
@@ -66,6 +71,31 @@ def _send_followup_emails(ts: str, client: httpx.Client):
             print(f"{ts} Follow-up emails: status {r.status_code}")
     except Exception as e:
         print(f"{ts} Follow-up emails: error - {e}")
+
+
+def _cleanup_inactive_users(ts: str, client: httpx.Client):
+    """Trigger inactive free-tier user cleanup on the API."""
+    internal_key = os.environ.get("INTERNAL_SERVICE_KEY", "")
+    if not internal_key:
+        print(f"{ts} User cleanup: skipped (no INTERNAL_SERVICE_KEY)")
+        return
+
+    try:
+        r = client.post(
+            CLEANUP_URL,
+            headers={"x-internal-key": internal_key},
+            params={"inactivity_days": 90, "dry_run": False},
+        )
+        if r.status_code == 200:
+            data = r.json()
+            print(
+                f"{ts} User cleanup: deleted={data.get('deleted', 0)}, "
+                f"eligible={data.get('eligible', 0)}"
+            )
+        else:
+            print(f"{ts} User cleanup: status {r.status_code}")
+    except Exception as e:
+        print(f"{ts} User cleanup: error - {e}")
 
 
 if __name__ == "__main__":
