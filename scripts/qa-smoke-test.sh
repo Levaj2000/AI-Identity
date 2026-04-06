@@ -44,9 +44,21 @@ fail() {
 cleanup() {
   # Revoke the QA agent if it was created
   if [ -n "${AGENT_ID:-}" ]; then
-    curl -sf -X DELETE "$API/api/v1/agents/$AGENT_ID" -H "X-API-Key: $KEY" > /dev/null 2>&1 || true
     echo ""
-    echo "🧹 Cleaned up QA agent $AGENT_ID"
+    local retries=3
+    local delay=2
+    for i in $(seq 1 $retries); do
+      HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API/api/v1/agents/$AGENT_ID" -H "X-API-Key: $KEY" 2>/dev/null || echo "000")
+      if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "400" ]; then
+        # 200 = revoked, 400 = already revoked — both mean success
+        echo "🧹 Cleaned up QA agent $AGENT_ID (HTTP $HTTP_CODE)"
+        return
+      fi
+      echo "⚠️  Cleanup attempt $i/$retries failed (HTTP $HTTP_CODE), retrying in ${delay}s..."
+      sleep $delay
+      delay=$((delay * 2))
+    done
+    echo "❌ Failed to clean up QA agent $AGENT_ID after $retries attempts — manual cleanup needed"
   fi
 }
 trap cleanup EXIT
