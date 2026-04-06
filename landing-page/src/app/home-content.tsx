@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import BadgeFramerComponent from "@/framer/elements/badge";
 import MainButtonFramerComponent from "@/framer/main-button";
 
