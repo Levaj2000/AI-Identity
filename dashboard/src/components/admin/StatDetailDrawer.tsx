@@ -270,9 +270,10 @@ function AgentsPanel() {
           <div className="text-xs text-gray-500">{data?.total ?? 0} total agents</div>
           <div className="space-y-2">
             {data?.items.map((a) => (
-              <div
+              <Link
                 key={a.id}
-                className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between"
+                to={`/dashboard/agents/${a.id}`}
+                className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between cursor-pointer hover:border-[#A6DAFF]/30 transition-colors block"
               >
                 <div className="min-w-0">
                   <div className="text-sm text-white truncate">{a.name}</div>
@@ -283,7 +284,7 @@ function AgentsPanel() {
                   </div>
                 </div>
                 <StatusBadge status={a.status} />
-              </div>
+              </Link>
             ))}
             {data?.items.length === 0 && (
               <div className="text-gray-500 text-sm py-8 text-center">No agents found</div>
