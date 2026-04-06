@@ -57,26 +57,32 @@ def delete_users_with_cascade(
     agent_count = len(agents)
 
     try:
-        # 1. Denormalize agent_name into audit_log before cascade delete
+        # 1. Disable immutability trigger for all audit_log updates
         db.execute(text("ALTER TABLE audit_log DISABLE TRIGGER audit_log_no_update"))
 
+        # 2. Denormalize agent_name into audit_log before cascade delete
         for agent in agents:
             db.query(AuditLog).filter(
                 AuditLog.agent_id == agent.id,
                 AuditLog.agent_name.is_(None),
             ).update({"agent_name": agent.name}, synchronize_session="fetch")
 
+        # 3. Nullify audit_log.user_id (soft FK, preserved for history)
+        for uid in user_ids:
+            db.execute(
+                text("UPDATE audit_log SET user_id = NULL WHERE user_id = :uid"), {"uid": uid}
+            )
+
+        # 4. Re-enable trigger
         db.execute(text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update"))
     except Exception:
-        # Re-enable trigger even on error
         with contextlib.suppress(Exception):
             db.execute(text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update"))
         raise
 
-    # 2. Nullify soft-FK references that would block deletion
+    # 5. Nullify qa_runs.user_id (FK with no ondelete = RESTRICT)
     for uid in user_ids:
         db.execute(text("UPDATE qa_runs SET user_id = NULL WHERE user_id = :uid"), {"uid": uid})
-        db.execute(text("UPDATE audit_log SET user_id = NULL WHERE user_id = :uid"), {"uid": uid})
 
     # 3. Delete soft-FK rows (no cascade, orphans are useless)
     for uid in user_ids:
