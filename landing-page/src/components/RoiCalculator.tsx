@@ -138,7 +138,6 @@ export default function RoiCalculator() {
               min={5}
               max={50}
               step={1}
-              type="range"
               suffix="%"
             />
 
@@ -151,7 +150,6 @@ export default function RoiCalculator() {
               min={1}
               max={25}
               step={1}
-              type="range"
               suffix="%"
             />
 
