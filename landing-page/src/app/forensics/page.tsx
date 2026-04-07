@@ -3,9 +3,9 @@ import Link from "next/link";
 import { generatePageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "AI Agent Forensics — Reconstruct, Verify, Export",
+  title: "AI Agent Forensics — Replay Any Session, Prove Every Decision",
   description:
-    "AI Forensics reconstructs an agent's entire decision chain, proves it hasn't been altered, and exports it as evidence for security, compliance, and legal teams.",
+    "Replay any agent session step-by-step. Produce tamper-evident timelines regulators can verify independently of the vendor. HMAC-SHA256 hash-chained evidence for every agent action.",
   path: "/forensics",
 });
 

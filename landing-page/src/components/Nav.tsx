@@ -24,6 +24,11 @@ const solutionLinks = [
   { label: "Finance", path: "/industries/finance" },
   { label: "divider", path: "" },
   { label: "EU AI Act Checklist", path: "/eu-ai-act-checklist" },
+  { label: "ROI Calculator", path: "/roi-calculator" },
+  { label: "divider", path: "" },
+  { label: "vs Opal Security", path: "/vs/opal" },
+  { label: "vs Valence Security", path: "/vs/valence" },
+  { label: "vs Holistic AI", path: "/vs/holistic-ai" },
 ];
 
 export default function Nav() {

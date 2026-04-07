@@ -26,9 +26,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/industries/finance`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/industries/healthcare`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     // Comparisons
+    { url: `${BASE_URL}/vs/opal`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE_URL}/vs/valence`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE_URL}/vs/holistic-ai`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/vs/portkey`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/vs/credo-ai`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/vs/traditional-iam`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    // Tools
+    { url: `${BASE_URL}/roi-calculator`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     // Company
     { url: `${BASE_URL}/about`, lastModified: now, changeFrequency: "monthly" as const, priority: 0.8 },
     { url: `${BASE_URL}/contact`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },

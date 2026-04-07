@@ -20,6 +20,15 @@ const solutionLinks = [
   { label: "Financial Compliance", path: "/use-cases/financial-compliance" },
 ];
 
+const compareLinks = [
+  { label: "vs Opal Security", path: "/vs/opal" },
+  { label: "vs Valence Security", path: "/vs/valence" },
+  { label: "vs Holistic AI", path: "/vs/holistic-ai" },
+  { label: "vs Portkey", path: "/vs/portkey" },
+  { label: "vs Credo AI", path: "/vs/credo-ai" },
+  { label: "vs Traditional IAM", path: "/vs/traditional-iam" },
+];
+
 const companyLinks = [
   { label: "About", path: "/about" },
   { label: "Blog", path: "/blog" },
@@ -58,7 +67,7 @@ export default function Footer() {
   return (
     <footer className="border-t border-[rgba(216,231,242,0.07)] bg-[rgb(4,7,13)]">
       <div className="max-w-[1200px] mx-auto px-6 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-12">
           {/* Brand + Newsletter */}
           <div className="md:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
@@ -135,6 +144,18 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-white mb-4">Solutions</h4>
             <ul className="space-y-3">
               {solutionLinks.map((link) => (
+                <li key={link.label}>
+                  <Link href={link.path} className="text-sm text-[rgba(213,219,230,0.5)] hover:text-white transition-colors">{link.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Compare Links */}
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-4">Compare</h4>
+            <ul className="space-y-3">
+              {compareLinks.map((link) => (
                 <li key={link.label}>
                   <Link href={link.path} className="text-sm text-[rgba(213,219,230,0.5)] hover:text-white transition-colors">{link.label}</Link>
                 </li>
