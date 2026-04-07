@@ -32,14 +32,14 @@ const steps = [
   },
   {
     num: "03",
-    title: "Audit Everything",
+    title: "Prove Everything",
     description:
-      "Every agent action is logged to a tamper-proof, append-only audit trail. When regulators or customers ask what happened — you have the answer.",
+      "Every agent action becomes tamper-evident forensic evidence. Replay any session step-by-step. Produce timelines regulators can verify independently of the vendor.",
     details: [
-      "Full chain-of-thought capture: agent ID, timestamp, action, key fingerprint",
-      "Cryptographically verifiable audit chain — tamper-evident by design",
-      "Generate compliance reports for SOC 2, EU AI Act, and GDPR with one click",
-      "Forensic replay: step through any agent session to see exactly what happened",
+      "HMAC-SHA256 hash-chained audit trail — alter one record and the entire chain breaks",
+      "Forensic replay: reconstruct any agent's complete decision path from policy evaluation to action",
+      "Independent verification — regulators and auditors can validate the chain without trusting your infrastructure",
+      "Export audit-ready evidence with chain-of-custody certificates for SOC 2, EU AI Act, and GDPR",
     ],
   },
 ];
@@ -178,8 +178,8 @@ export default function HomeContent() {
               className="text-lg md:text-xl max-w-2xl mx-auto mb-10"
               style={{ color: "rgba(213,219,230,0.7)", letterSpacing: "-0.32px" }}
             >
-              Per-agent API keys, scoped permissions, and tamper-proof audit trails.
-              Know which agent did what, when, and why — before regulators ask.
+              Forensic-grade accountability for every agent decision.
+              Replay any session step-by-step. Produce tamper-evident timelines regulators can verify independently.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -308,9 +308,9 @@ export default function HomeContent() {
                   ))}
                 </div>
               </div>
-              <h3 className="text-lg font-medium text-white mb-2">Real-Time Audit Logs</h3>
+              <h3 className="text-lg font-medium text-white mb-2">Forensic-Grade Audit Trails</h3>
               <p className="text-sm text-[rgba(213,219,230,0.55)] leading-relaxed">
-                Tamper-proof logs for every agent action. Full chain-of-thought capture for forensic replay and analysis.
+                HMAC-SHA256 hash-chained evidence for every agent action. Replay any session step-by-step. Produce tamper-evident timelines regulators can verify independently.
               </p>
             </div>
 
@@ -575,7 +575,7 @@ export default function HomeContent() {
               </span>
             </h2>
             <p className="text-[rgba(213,219,230,0.6)] max-w-xl mx-auto">
-              When something goes wrong, trace the full chain of events -- from the triggering request to every tool call and decision.
+              Replay any agent session step-by-step. Produce a tamper-evident timeline regulators can verify independently of the vendor. No other platform can make this claim.
             </p>
           </div>
 

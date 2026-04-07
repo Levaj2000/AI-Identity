@@ -9,9 +9,9 @@ import JsonLd from "@/components/JsonLd";
 import HomeContent from "./home-content";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "AI Identity — Identity Infrastructure for AI Agents",
+  title: "AI Identity — Forensic-Grade Accountability for Every AI Agent",
   description:
-    "Per-agent API keys, scoped permissions, and tamper-proof audit trails for autonomous AI agents. SOC 2, EU AI Act, NIST compliant. Deploy in 15 minutes. Free trial.",
+    "Replay any agent session step-by-step. Produce tamper-evident timelines regulators can verify independently. Per-agent identity, fail-closed enforcement, and HMAC-SHA256 forensic audit trails. Deploy in 15 minutes.",
   path: "/",
 });
 
