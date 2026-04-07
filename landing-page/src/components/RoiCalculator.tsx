@@ -100,7 +100,6 @@ export default function RoiCalculator() {
               min={1}
               max={500}
               step={1}
-              type="range"
             />
 
             {/* Calls per day */}
@@ -111,7 +110,6 @@ export default function RoiCalculator() {
               min={50}
               max={10000}
               step={50}
-              type="range"
             />
 
             {/* Cost per call */}
@@ -291,7 +289,6 @@ function InputRow({
   min,
   max,
   step,
-  type,
   suffix,
 }: {
   label: string;
@@ -301,7 +298,6 @@ function InputRow({
   min: number;
   max: number;
   step: number;
-  type: "range";
   suffix?: string;
 }) {
   return (
