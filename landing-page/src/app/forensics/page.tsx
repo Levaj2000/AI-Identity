@@ -270,6 +270,9 @@ export default function Forensics() {
               <Link href="/security" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
                 View Security Architecture
               </Link>
+              <Link href="/forensics-pipeline.html" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
+                Explore the Technical Architecture
+              </Link>
             </div>
           </div>
         </div>
