@@ -18,7 +18,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user, require_admin
-from common.audit import verify_chain
+from common.audit import generate_report_signature, verify_chain
 from common.models import Agent, AuditLog, Policy, User, get_db
 from common.schemas.agent import (
     AuditChainVerifyResponse,
@@ -445,13 +445,23 @@ def audit_report(
                 ]
             )
 
-        # Add chain verification as footer
+        # Add chain verification and report signature as footer
+        report_generated_at = datetime.now(tz=UTC)
+        report_sig = generate_report_signature(
+            report_id=f"fr-{agent_id.hex[:8]}-{start_date.strftime('%Y%m%d%H%M')}",
+            generated_at=report_generated_at,
+            chain_valid=chain_result.valid,
+            total_entries=chain_result.total_entries,
+            entries_verified=chain_result.entries_verified,
+        )
         writer.writerow([])
-        writer.writerow(["# Chain Verification Certificate"])
+        writer.writerow(["# Chain-of-Custody Certificate"])
         writer.writerow(["chain_valid", chain_result.valid])
         writer.writerow(["total_entries", chain_result.total_entries])
         writer.writerow(["entries_verified", chain_result.entries_verified])
         writer.writerow(["verification_message", chain_result.message])
+        writer.writerow(["generated_at", report_generated_at.isoformat()])
+        writer.writerow(["report_signature", report_sig])
 
         output.seek(0)
         filename = f"forensics-{agent.name}-{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}.csv"
@@ -463,6 +473,7 @@ def audit_report(
 
     # JSON format
     report_id = f"fr-{agent_id.hex[:8]}-{start_date.strftime('%Y%m%d%H%M')}"
+    report_generated_at = datetime.now(tz=UTC)
     chain_verify = AuditChainVerifyResponse(
         valid=chain_result.valid,
         total_entries=chain_result.total_entries,
@@ -470,10 +481,17 @@ def audit_report(
         first_broken_id=chain_result.first_broken_id,
         message=chain_result.message,
     )
+    report_sig = generate_report_signature(
+        report_id=report_id,
+        generated_at=report_generated_at,
+        chain_valid=chain_result.valid,
+        total_entries=chain_result.total_entries,
+        entries_verified=chain_result.entries_verified,
+    )
 
     return ForensicsReportResponse(
         report_id=report_id,
-        generated_at=datetime.now(tz=UTC),
+        generated_at=report_generated_at,
         agent={
             "id": str(agent.id),
             "name": agent.name,
@@ -488,6 +506,7 @@ def audit_report(
         chain_verification=chain_verify,
         active_policy=PolicyResponse.model_validate(active_policy) if active_policy else None,
         stats=stats,
+        report_signature=report_sig,
     )
 
 

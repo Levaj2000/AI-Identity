@@ -20,7 +20,9 @@ from common.audit.writer import (
     ChainVerificationResult,
     compute_entry_hash,
     create_audit_entry,
+    generate_report_signature,
     verify_chain,
+    verify_report_signature,
 )
 
 __all__ = [
@@ -30,10 +32,12 @@ __all__ = [
     "cleanup_expired_debug_logs",
     "compute_entry_hash",
     "create_audit_entry",
+    "generate_report_signature",
     "is_pii_field",
     "redact_dict",
     "redact_pii",
     "sanitize_metadata",
     "verify_chain",
+    "verify_report_signature",
     "write_debug_entry",
 ]

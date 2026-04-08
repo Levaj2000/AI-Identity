@@ -364,3 +364,10 @@ class ForensicsReportResponse(BaseModel):
     chain_verification: AuditChainVerifyResponse
     active_policy: PolicyResponse | None = None
     stats: AuditStatsResponse
+    report_signature: str = Field(
+        description=(
+            "HMAC-SHA256 signature of report_id + generated_at + chain_verification fields. "
+            "Recompute with verify_report_signature() to confirm this report was produced "
+            "by AI Identity and has not been altered since export."
+        )
+    )
