@@ -26,6 +26,7 @@ ALLOWED_METADATA_KEYS: frozenset[str] = frozenset(
         "request_id",
         # Decision context (set by gateway enforce.py)
         "deny_reason",
+        "deny_rule_id",
         "status_code",
         "key_type",
         # Performance metrics
