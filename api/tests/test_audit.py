@@ -370,7 +370,8 @@ class TestForensicsEndpoints:
         assert "text/csv" in resp.headers["content-type"]
         content = resp.text
         assert "id,agent_id,endpoint" in content
-        assert "Chain Verification Certificate" in content
+        assert "Chain-of-Custody Certificate" in content
+        assert "report_signature" in content
 
     def test_list_audit_logs_date_filter(self, client, auth_headers, db_session):
         """GET /api/v1/audit with start_date/end_date filters by time."""
