@@ -204,6 +204,70 @@ def create_audit_entry(
     return entry
 
 
+# ── Report Signature ─────────────────────────────────────────────────────
+
+
+def generate_report_signature(
+    report_id: str,
+    generated_at: datetime,
+    chain_valid: bool,
+    total_entries: int,
+    entries_verified: int,
+    hmac_key: str | None = None,
+) -> str:
+    """Generate an HMAC-SHA256 signature for a forensics report.
+
+    Signs a canonical JSON payload of the report's identity and chain
+    verification result. The recipient can recompute this signature to
+    confirm the report was produced by AI Identity and has not been
+    modified since export.
+
+    The signed fields are intentionally minimal — they capture what
+    matters for chain-of-custody (who generated it, when, and whether
+    the chain was intact) without tying the signature to mutable content
+    like event lists that may be filtered or redacted during review.
+    """
+    key = (hmac_key or settings.audit_hmac_key).encode("utf-8")
+    payload = json.dumps(
+        {
+            "entries_verified": entries_verified,
+            "chain_valid": chain_valid,
+            "generated_at": _ensure_utc(generated_at).isoformat(),
+            "report_id": report_id,
+            "total_entries": total_entries,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hmac.new(key, payload, hashlib.sha256).hexdigest()
+
+
+def verify_report_signature(
+    report_id: str,
+    generated_at: datetime,
+    chain_valid: bool,
+    total_entries: int,
+    entries_verified: int,
+    signature: str,
+    hmac_key: str | None = None,
+) -> bool:
+    """Verify a forensics report signature.
+
+    Returns True if the signature is valid — i.e., the report was generated
+    by AI Identity and the identity/chain fields have not been altered
+    since export. Uses a constant-time comparison to prevent timing attacks.
+    """
+    expected = generate_report_signature(
+        report_id=report_id,
+        generated_at=generated_at,
+        chain_valid=chain_valid,
+        total_entries=total_entries,
+        entries_verified=entries_verified,
+        hmac_key=hmac_key,
+    )
+    return hmac.compare_digest(expected, signature)
+
+
 # ── Chain Verification ───────────────────────────────────────────────────
 
 
