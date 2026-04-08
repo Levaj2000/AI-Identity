@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Identity — Forensics Pipeline</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f1117;
+      --bg2:      #161b27;
+      --bg3:      #1d2535;
+      --border:   #2a3347;
+      --cyan:     #00d4ff;
+      --cyan-dim: rgba(0,212,255,0.12);
+      --cyan-glow:rgba(0,212,255,0.35);
+      --amber:    #f59e0b;
+      --amber-dim:rgba(245,158,11,0.15);
+      --green:    #22c55e;
+      --green-dim:rgba(34,197,94,0.15);
+      --red:      #ef4444;
+      --red-dim:  rgba(239,68,68,0.15);
+      --muted:    #64748b;
+      --text:     #e2e8f0;
+      --text-dim: #94a3b8;
+      --radius:   8px;
+      --font-mono:"JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+      --font-sans:-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ─── HEADER ─────────────────────────────────────────────── */
+    header {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-logo {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--cyan), #0ea5e9);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; color: #0f1117;
+      flex-shrink: 0;
+    }
+    .header-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.3px;
+    }
+    .header-subtitle {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 1px;
+    }
+    .header-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--cyan-dim);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .pulse-dot {
+      width: 6px; height: 6px;
+      background: var(--cyan);
+      border-radius: 50%;
+      animation: pulse-dot 2s infinite;
+    }
+    @keyframes pulse-dot {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:.4; transform:scale(0.6); }
+    }
+
+    /* ─── MAIN LAYOUT ─────────────────────────────────────────── */
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 40px;
+    }
+
+    section {
+      margin-bottom: 48px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .section-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      letter-spacing: -0.4px;
+    }
+    .section-desc {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 24px;
+    }
+
+    /* ─── PIPELINE DIAGRAM ────────────────────────────────────── */
+    .pipeline-wrapper {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      overflow-x: auto;
+    }
+
+    .pipeline-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      min-width: 780px;
+    }
+
+    .pipe-node {
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s, transform .15s;
+      flex-shrink: 0;
+      min-width: 120px;
+      text-align: center;
+      position: relative;
+      user-select: none;
+    }
+    .pipe-node:hover {
+      border-color: var(--cyan);
+      box-shadow: 0 0 16px var(--cyan-glow);
+      transform: translateY(-2px);
+    }
+    .pipe-node.active {
+      border-color: var(--cyan);
+      background: var(--cyan-dim);
+      box-shadow: 0 0 20px var(--cyan-glow);
+    }
+    .pipe-node .node-icon {
+      font-size: 20px;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .pipe-node .node-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .pipe-node .node-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+    .pipe-node .node-hint {
+      font-size: 9px;
+      color: var(--cyan);
+      margin-top: 4px;
+      opacity: 0.7;
+    }
+
+    /* arrows */
+    .pipe-arrow {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      padding: 0 4px;
+      color: var(--muted);
+      font-size: 18px;
+      position: relative;
+    }
+    .pipe-arrow svg {
+      width: 32px; height: 16px;
+    }
+
+    /* vertical branch section */
+    .pipeline-branches {
+      display: flex;
+      gap: 24px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    .branch-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    .branch-line {
+      width: 1.5px;
+      height: 20px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+    .branch-line.active-line {
+      background: var(--cyan);
+    }
+
+    .branch-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .pipe-node.db-node {
+      border-color: #7c3aed;
+    }
+    .pipe-node.db-node:hover {
+      border-color: #a78bfa;
+      box-shadow: 0 0 16px rgba(167,139,250,0.3);
+    }
+    .pipe-node.db-node.active {
+      background: rgba(124,58,237,0.12);
+      border-color: #a78bfa;
+    }
+
+    .pipe-node.chain-node {
+      border-color: var(--amber);
+    }
+    .pipe-node.chain-node:hover {
+      box-shadow: 0 0 16px rgba(245,158,11,0.3);
+    }
+    .pipe-node.chain-node.active {
+      background: var(--amber-dim);
+    }
+
+    .pipe-node.deny-node {
+      border-color: var(--red);
+    }
+    .pipe-node.deny-node:hover {
+      box-shadow: 0 0 16px rgba(239,68,68,0.3);
+    }
+
+    .pipe-node.allow-node {
+      border-color: var(--green);
+    }
+    .pipe-node.allow-node:hover {
+      box-shadow: 0 0 16px rgba(34,197,94,0.3);
+    }
+
+    /* ─── INFO PANEL ──────────────────────────────────────────── */
+    .info-panel {
+      background: var(--bg3);
+      border: 1px solid var(--cyan);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-top: 20px;
+      min-height: 100px;
+      transition: opacity .25s;
+      animation: panel-in .2s ease;
+    }
+    @keyframes panel-in {
+      from { opacity:0; transform:translateY(6px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .info-panel h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .info-panel .data-fields {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .data-chip {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .data-chip.highlight { border-color: var(--cyan); color: var(--cyan); }
+    .data-chip.val { color: var(--green); }
+
+    /* ─── AUDIT LOG FIELDS ────────────────────────────────────── */
+    .audit-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .audit-group {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .audit-group-header {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .group-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .field-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+    .field-row:last-child { border-bottom: none; }
+
+    .field-name {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text);
+      flex-shrink: 0;
+    }
+    .field-type {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .field-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+    }
+    .field-example {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      text-align: right;
+    }
+    .field-example.allow { color: var(--green); }
+    .field-example.deny  { color: var(--red); }
+    .field-example.hash  { color: #a78bfa; font-size: 10px; }
+    .field-example.cost  { color: var(--amber); }
+
+    /* ── Chain-of-Custody Certificate box ── */
+    .cert-box {
+      margin-top: 32px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--cyan);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+    }
+    .cert-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--cyan);
+      margin-bottom: 12px;
+      letter-spacing: -0.2px;
+    }
+    .cert-body {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.7;
+      margin-bottom: 18px;
+    }
+    .cert-body code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--cyan);
+      background: var(--cyan-dim);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .cert-code {
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 18px 20px;
+      overflow-x: auto;
+    }
+    .cert-code pre {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text);
+      margin: 0;
+    }
+    .code-keyword { color: #c792ea; }
+    .code-fn      { color: var(--cyan); }
+    .code-type    { color: #82aaff; }
+    .code-str     { color: #c3e88d; }
+    .code-comment { color: var(--muted); font-style: italic; }
+
+    /* ── Use-case callout ── */
+    .usecase-box {
+      background: var(--green-dim);
+      border: 1px solid rgba(34,197,94,0.3);
+      border-radius: var(--radius);
+      padding: 18px 24px;
+      margin-bottom: 32px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .usecase-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .usecase-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      color: var(--green);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .usecase-text {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.65;
+    }
+
+    .shipped-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(0,212,255,0.08);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .gap-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--amber-dim);
+      border: 1px solid var(--amber);
+      color: var(--amber);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    /* ─── CHAIN INTEGRITY ─────────────────────────────────────── */
+    .chain-wrapper {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+    }
+
+    .chain-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .chain-block {
+      flex-shrink: 0;
+      width: 170px;
+      background: var(--bg3);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      transition: border-color .3s, box-shadow .3s, background .3s;
+    }
+    .chain-block.genesis {
+      border-color: #7c3aed;
+    }
+    .chain-block.verified {
+      border-color: var(--green) !important;
+      background: var(--green-dim) !important;
+      box-shadow: 0 0 18px rgba(34,197,94,0.35) !important;
+    }
+
+    .chain-arrow {
+      flex-shrink: 0;
+      padding: 0 8px;
+      color: var(--muted);
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+    }
+
+    .chain-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .chain-entry-id {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .chain-decision-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .badge-allow {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid var(--green);
+    }
+    .badge-deny {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid var(--red);
+    }
+    .badge-genesis {
+      background: rgba(124,58,237,0.15);
+      color: #a78bfa;
+      border: 1px solid #7c3aed;
+    }
+
+    .chain-field {
+      margin-top: 6px;
+    }
+    .chain-field-label {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-weight: 600;
+    }
+    .chain-field-value {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: #a78bfa;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+    .chain-field-value.prev {
+      color: var(--text-dim);
+    }
+
+    .chain-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .btn-verify {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--cyan), #0ea5e9);
+      color: #0f1117;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 10px 24px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+      letter-spacing: 0.2px;
+    }
+    .btn-verify:hover { opacity: .88; transform: translateY(-1px); }
+    .btn-verify:active { transform: translateY(0); }
+    .btn-verify:disabled { opacity: .5; cursor: not-allowed; }
+
+    .verify-status {
+      font-size: 13px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 20px;
+    }
+    .verify-status.success { color: var(--green); }
+    .verify-status.running { color: var(--cyan); }
+
+    /* ─── COMPARISON TABLE ────────────────────────────────────── */
+    .comp-wrapper {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      background: var(--bg3);
+      padding: 12px 20px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    th:first-child { min-width: 220px; }
+    th.ai-identity-col {
+      color: var(--cyan);
+      background: var(--cyan-dim);
+    }
+    td {
+      padding: 11px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    td.cap-name {
+      color: var(--text);
+      font-size: 13px;
+    }
+    td.ai-identity-col {
+      background: rgba(0,212,255,0.04);
+    }
+    .cell-yes   { color: var(--green);  font-size: 16px; }
+    .cell-no    { color: var(--red);    font-size: 16px; opacity:.7; }
+    .cell-partial {
+      color: var(--amber);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .cell-backlog {
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* ─── FOOTER ──────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    footer a { color: var(--cyan); text-decoration: none; }
+
+    /* ─── DIVIDER ─────────────────────────────────────────────── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 48px 0;
+    }
+
+    /* ─── RESPONSIVE ──────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      main   { padding: 24px 20px; }
+      header { padding: 16px 20px; flex-wrap: wrap; gap: 12px; }
+      .audit-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ HEADER -->
+<header>
+  <div class="header-brand">
+    <div class="header-logo">AI</div>
+    <div>
+      <div class="header-title">AI Identity</div>
+      <div class="header-subtitle">Forensics Pipeline — Technical Architecture</div>
+    </div>
+  </div>
+  <div class="header-badge">
+    <div class="pulse-dot"></div>
+    Live Audit Chain
+  </div>
+</header>
+
+<main>
+
+  <!-- ═══════════════════════════════════════════════════════ USE CASE CALLOUT -->
+  <div class="usecase-box">
+    <div class="usecase-icon">🔍</div>
+    <div>
+      <div class="usecase-label">When would I use this?</div>
+      <div class="usecase-text">Use this pipeline to investigate:<br><br><strong>Unauthorized data access</strong> by an AI agent<br><strong>Mis-approved financial actions</strong> taken autonomously<br><strong>Anomalous tool calls</strong> outside an agent's declared policy<br><br>Every decision is cryptographically recorded — you can reconstruct exactly what happened, when, under which policy, and prove the record was not altered after the fact.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SECTION 1 -->
+  <section id="pipeline">
+    <div class="section-label">Section 1</div>
+    <div class="section-title">From Request to Evidence (Gateway → Audit Chain)</div>
+    <div class="section-desc">Every agent request flows through the gateway and becomes a cryptographically chained, tamper-proof evidence record. Click any stage to see what data is captured at that point in the pipeline.</div>
+
+    <div class="pipeline-wrapper">
+      <!-- Main horizontal flow -->
+      <div class="pipeline-row">
+        <div class="pipe-node" id="node-agent" onclick="activateNode('agent')">
+          <span class="node-icon">🤖</span>
+          <div class="node-label">AI Agent</div>
+          <div class="node-sub">SDK / API client</div>
+          <div class="node-hint">click to inspect</div>
+        </div>
+
+        <div class="pipe-arrow">
+          <svg viewBox="0 0 32 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="0" y1="8" x2="26" y2="8" stroke="#2a3347" stroke-width="1.5"/>
+            <polyline points="22,4 28,8 22,12" stroke="#2a3347" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+
+        <div class="pipe-node" id="node-gateway" onclick="activateNode('gateway')">
+          <span class="node-icon">🔀</span>
+          <div class="node-label">Gateway</div>
+          <div class="node-sub">:8002</div>
+          <div class="node-hint">click to inspect</div>
+        </div>
+
+        <div class="pipe-arrow">
+          <svg viewBox="0 0 32 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="0" y1="8" x2="26" y2="8" stroke="#2a3347" stroke-width="1.5"/>
+            <polyline points="22,4 28,8 22,12" stroke="#2a3347" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+
+        <div class="pipe-node" id="node-policy" onclick="activateNode('policy')">
+          <span class="node-icon">⚖️</span>
+          <div class="node-label">Policy Engine</div>
+          <div class="node-sub">ALLOW / DENY</div>
+          <div class="node-hint">click to inspect</div>
+        </div>
+
+        <div class="pipe-arrow">
+          <svg viewBox="0 0 32 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="0" y1="8" x2="26" y2="8" stroke="#2a3347" stroke-width="1.5"/>
+            <polyline points="22,4 28,8 22,12" stroke="#2a3347" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+
+        <div class="pipe-node allow-node" id="node-upstream" onclick="activateNode('upstream')">
+          <span class="node-icon">🌐</span>
+          <div class="node-label">Upstream API</div>
+          <div class="node-sub">e.g. OpenAI</div>
+          <div class="node-hint">click to inspect</div>
+        </div>
+      </div>
+
+      <!-- Branch connectors -->
+      <div class="pipeline-branches">
+        <!-- Branch from Gateway -->
+        <div style="display:flex; flex-direction:column; align-items:center; margin-left: 172px;">
+          <div class="branch-line" id="line-audit"></div>
+          <div class="pipe-node" id="node-writer" onclick="activateNode('writer')">
+            <span class="node-icon">✍️</span>
+            <div class="node-label">Audit Writer</div>
+            <div class="node-sub">async worker</div>
+            <div class="node-hint">click to inspect</div>
+          </div>
+          <div class="branch-line" id="line-db"></div>
+          <div class="pipe-node db-node" id="node-db" onclick="activateNode('db')">
+            <span class="node-icon">🗄️</span>
+            <div class="node-label">PostgreSQL</div>
+            <div class="node-sub">append-only + RLS</div>
+            <div class="node-hint">click to inspect</div>
+          </div>
+          <div class="branch-line" id="line-chain"></div>
+          <div class="pipe-node chain-node" id="node-hmac" onclick="activateNode('hmac')">
+            <span class="node-icon">🔐</span>
+            <div class="node-label">HMAC Chain</div>
+            <div class="node-sub">entry_hash = HMAC-SHA256</div>
+            <div class="node-hint">click to inspect</div>
+          </div>
+        </div>
+
+        <!-- Branch from Policy — DENY path -->
+        <div style="display:flex; flex-direction:column; align-items:center; margin-left: 64px;">
+          <div class="branch-line"></div>
+          <div class="pipe-node deny-node" id="node-deny" onclick="activateNode('deny')">
+            <span class="node-icon">🚫</span>
+            <div class="node-label">Decision</div>
+            <div class="node-sub">DENY / ERROR</div>
+            <div class="node-hint">click to inspect</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info panel -->
+      <div class="info-panel" id="info-panel">
+        <h3 id="panel-title">&#x2139;&#xfe0f; Select a stage above to inspect its data</h3>
+        <div class="data-fields" id="panel-fields">
+          <div class="data-chip">agent_id</div>
+          <div class="data-chip">endpoint</div>
+          <div class="data-chip">method</div>
+          <div class="data-chip">decision</div>
+          <div class="data-chip">entry_hash</div>
+          <div class="data-chip">prev_hash</div>
+          <div class="data-chip">latency_ms</div>
+          <div class="data-chip">cost_estimate_usd</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════════ SECTION 2 -->
+  <section id="audit-fields">
+    <div class="section-label">Section 2</div>
+    <div class="section-title">AuditLog Schema — Evidence Record</div>
+    <div class="section-desc">Each row is a forensic evidence record used for incident reconstruction and regulatory response. Every field below is captured on every enforcement decision — allow, deny, or error.</div>
+
+    <div class="audit-grid">
+
+      <!-- Identity -->
+      <div class="audit-group">
+        <div class="audit-group-header">
+          <div class="group-dot" style="background:#00d4ff"></div>
+          Identity
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">agent_id</div>
+            <div class="field-type">uuid · NOT NULL</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example">agt_8f2c1...</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">user_id</div>
+            <div class="field-type">uuid · nullable</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example">usr_3a4d9...</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">agent_name</div>
+            <div class="field-type">text</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example">"billing-agent-v2"</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Request -->
+      <div class="audit-group">
+        <div class="audit-group-header">
+          <div class="group-dot" style="background:#38bdf8"></div>
+          Request
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">endpoint</div>
+            <div class="field-type">text · NOT NULL</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example">"/v1/chat/completions"</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">method</div>
+            <div class="field-type">text</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example">POST</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">created_at</div>
+            <div class="field-type">timestamptz · DEFAULT now()</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example">2026-04-08T14:23:07Z</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Decision -->
+      <div class="audit-group">
+        <div class="audit-group-header">
+          <div class="group-dot" style="background:#22c55e"></div>
+          Decision
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">decision</div>
+            <div class="field-type">enum · NOT NULL</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example allow">ALLOW</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">deny_reason</div>
+            <div class="field-type">text · nullable</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example deny">"rate_limit_exceeded"</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">status_code</div>
+            <div class="field-type">int</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example">200 / 403</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance -->
+      <div class="audit-group">
+        <div class="audit-group-header">
+          <div class="group-dot" style="background:#f59e0b"></div>
+          Performance
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">latency_ms</div>
+            <div class="field-type">int · not null</div>
+          </div>
+          <div class="field-right">
+            <span class="shipped-badge">✓ Shipped</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">upstream_latency_ms</div>
+            <div class="field-type">int · metadata</div>
+          </div>
+          <div class="field-right">
+            <span class="shipped-badge">✓ Shipped</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cost -->
+      <div class="audit-group">
+        <div class="audit-group-header">
+          <div class="group-dot" style="background:#a78bfa"></div>
+          Cost
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">cost_estimate_usd</div>
+            <div class="field-type">numeric(10,6)</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example cost">0.002340</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">token_count</div>
+            <div class="field-type">int</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example">1847</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chain -->
+      <div class="audit-group">
+        <div class="audit-group-header">
+          <div class="group-dot" style="background:#7c3aed"></div>
+          Chain Integrity
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">entry_hash</div>
+            <div class="field-type">text · NOT NULL</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example hash">a3f9b2c...</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">prev_hash</div>
+            <div class="field-type">text · nullable</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example hash">d84e1fa...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Policy -->
+      <div class="audit-group">
+        <div class="audit-group-header">
+          <div class="group-dot" style="background:#f97316"></div>
+          Policy
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">policy_version</div>
+            <div class="field-type">int · Policy snapshot ID at decision time</div>
+          </div>
+          <div class="field-right">
+            <span class="shipped-badge">✓ Shipped</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">deny_rule_id</div>
+            <div class="field-type">text · Exact rule that denied access</div>
+          </div>
+          <div class="field-right">
+            <span class="shipped-badge">✓ Shipped</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════════ SECTION 3 -->
+  <section id="chain">
+    <div class="section-label">Section 3</div>
+    <div class="section-title">Chain Integrity Verification (How Auditors Prove No Tampering)</div>
+    <div class="section-desc">Each audit entry includes its own HMAC-SHA256 hash computed over the full payload plus the previous entry's hash — forming an immutable linked chain. Tampering with any entry breaks all subsequent hashes. Any auditor can independently recompute the chain and confirm it has not been altered.</div>
+
+    <div class="chain-wrapper">
+      <div class="chain-row" id="chain-row">
+
+        <!-- Entry 1 — GENESIS -->
+        <div class="chain-block genesis" id="cb-1">
+          <div class="chain-block-header">
+            <span class="chain-entry-id">#001</span>
+            <span class="chain-decision-badge badge-genesis">GENESIS</span>
+          </div>
+          <div class="chain-field">
+            <div class="chain-field-label">prev_hash</div>
+            <div class="chain-field-value prev">0000000000000000</div>
+          </div>
+          <div class="chain-field">
+            <div class="chain-field-label">entry_hash</div>
+            <div class="chain-field-value">a3f9b2c4d1e8...</div>
+          </div>
+        </div>
+
+        <div class="chain-arrow">&#8594;</div>
+
+        <!-- Entry 2 -->
+        <div class="chain-block" id="cb-2">
+          <div class="chain-block-header">
+            <span class="chain-entry-id">#002</span>
+            <span class="chain-decision-badge badge-allow">ALLOW</span>
+          </div>
+          <div class="chain-field">
+            <div class="chain-field-label">prev_hash</div>
+            <div class="chain-field-value prev">a3f9b2c4d1e8...</div>
+          </div>
+          <div class="chain-field">
+            <div class="chain-field-label">entry_hash</div>
+            <div class="chain-field-value">d84e1fa7b5c2...</div>
+          </div>
+        </div>
+
+        <div class="chain-arrow">&#8594;</div>
+
+        <!-- Entry 3 -->
+        <div class="chain-block" id="cb-3">
+          <div class="chain-block-header">
+            <span class="chain-entry-id">#003</span>
+            <span class="chain-decision-badge badge-deny">DENY</span>
+          </div>
+          <div class="chain-field">
+            <div class="chain-field-label">prev_hash</div>
+            <div class="chain-field-value prev">d84e1fa7b5c2...</div>
+          </div>
+          <div class="chain-field">
+            <div class="chain-field-label">entry_hash</div>
+            <div class="chain-field-value">9e2c6f3a8b41...</div>
+          </div>
+        </div>
+
+        <div class="chain-arrow">&#8594;</div>
+
+        <!-- Entry 4 -->
+        <div class="chain-block" id="cb-4">
+          <div class="chain-block-header">
+            <span class="chain-entry-id">#004</span>
+            <span class="chain-decision-badge badge-allow">ALLOW</span>
+          </div>
+          <div class="chain-field">
+            <div class="chain-field-label">prev_hash</div>
+            <div class="chain-field-value prev">9e2c6f3a8b41...</div>
+          </div>
+          <div class="chain-field">
+            <div class="chain-field-label">entry_hash</div>
+            <div class="chain-field-value">c17d4e9f2a5b...</div>
+          </div>
+        </div>
+
+        <div class="chain-arrow">&#8594;</div>
+
+        <!-- Entry 5 -->
+        <div class="chain-block" id="cb-5">
+          <div class="chain-block-header">
+            <span class="chain-entry-id">#005</span>
+            <span class="chain-decision-badge badge-allow">ALLOW</span>
+          </div>
+          <div class="chain-field">
+            <div class="chain-field-label">prev_hash</div>
+            <div class="chain-field-value prev">c17d4e9f2a5b...</div>
+          </div>
+          <div class="chain-field">
+            <div class="chain-field-label">entry_hash</div>
+            <div class="chain-field-value">7b3a8f1d9c6e...</div>
+          </div>
+        </div>
+
+      </div><!-- /chain-row -->
+
+      <div class="chain-controls">
+        <button class="btn-verify" id="btn-verify" onclick="verifyChain()">
+          <span>&#128274;</span> Verify Chain
+        </button>
+        <div class="verify-status" id="verify-status"></div>
+      </div>
+    </div>
+
+    <!-- Chain-of-Custody Certificate -->
+    <div class="cert-box">
+      <div class="cert-title">&#128196; Chain-of-Custody Certificate</div>
+      <p class="cert-body">Every exported report (JSON and CSV) includes a chain-of-custody certificate that proves the forensic data came from AI Identity and has not been altered after export. The gateway signs a compact summary — report ID, generation timestamp, chain verification status, and entry counts — with the same HMAC key used for the audit chain, producing a <code>report_signature</code> that travels with the export. Any recipient can independently recompute that summary and verify the signature, confirming both the integrity of the underlying hash chain and the authenticity of the export itself.</p>
+      <div class="cert-code"><pre><span class="code-comment"># Verify a forensics report export hasn't been tampered with</span>
+<span class="code-keyword">import</span> hmac, hashlib, json
+
+<span class="code-keyword">def</span> <span class="code-fn">verify_report_signature</span>(
+    secret_key: <span class="code-type">bytes</span>,
+    report_id: <span class="code-type">str</span>,
+    generated_at: <span class="code-type">str</span>,        <span class="code-comment"># ISO 8601 UTC</span>
+    chain_valid: <span class="code-type">bool</span>,
+    total_entries: <span class="code-type">int</span>,
+    entries_verified: <span class="code-type">int</span>,
+    signature_hex: <span class="code-type">str</span>,
+) -> <span class="code-type">bool</span>:
+    payload = {
+        <span class="code-str">"entries_verified"</span>: entries_verified,
+        <span class="code-str">"chain_valid"</span>: chain_valid,
+        <span class="code-str">"generated_at"</span>: generated_at,
+        <span class="code-str">"report_id"</span>: report_id,
+        <span class="code-str">"total_entries"</span>: total_entries,
+    }
+    msg = json.dumps(payload, sort_keys=<span class="code-keyword">True</span>, separators=(<span class="code-str">","</span>, <span class="code-str">":"</span>))
+    expected = hmac.<span class="code-fn">new</span>(secret_key, msg.encode(), hashlib.sha256).hexdigest()
+    <span class="code-keyword">return</span> hmac.<span class="code-fn">compare_digest</span>(expected, signature_hex)</pre></div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════════ SECTION 4 -->
+  <section id="competitive">
+    <div class="section-label">Section 4</div>
+    <div class="section-title">Competitive Comparison — Forensics Capabilities</div>
+    <div class="section-desc">Most IAM and AI governance tools stop at "logs." AI Identity adds cryptographic identity, tamper-evident chains, and signed chain-of-custody exports — capabilities no competing platform ships today.</div>
+
+    <div class="comp-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th class="ai-identity-col">AI Identity</th>
+            <th>Opal</th>
+            <th>Valence</th>
+            <th>Cognition</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="cap-name">Cryptographic agent identity</td>
+            <td class="ai-identity-col"><span class="cell-yes">✅</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+          </tr>
+          <tr>
+            <td class="cap-name">Tamper-evident audit chain</td>
+            <td class="ai-identity-col"><span class="cell-yes">✅</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+          </tr>
+          <tr>
+            <td class="cap-name">Fail-closed proxy gateway</td>
+            <td class="ai-identity-col"><span class="cell-yes">✅</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+          </tr>
+          <tr>
+            <td class="cap-name">Independent chain verification</td>
+            <td class="ai-identity-col"><span class="cell-yes">✅</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+          </tr>
+          <tr>
+            <td class="cap-name">Decision replay / audit query</td>
+            <td class="ai-identity-col"><span class="cell-partial">⚠ partial (timeline &amp; policy-aware filters)</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+          </tr>
+          <tr>
+            <td class="cap-name">Policy snapshot per entry</td>
+            <td class="ai-identity-col"><span class="cell-yes">✅</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+          </tr>
+          <tr>
+            <td class="cap-name">Signed export certificate</td>
+            <td class="ai-identity-col"><span class="cell-yes">✅</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div>AI Identity — Forensics Pipeline · Technical Sales Asset · April 2026</div>
+  <div style="display:flex;gap:20px;">
+    <a href="https://ai-identity.io" target="_blank">ai-identity.io</a>
+    <span style="color:var(--border)">|</span>
+    <span>Confidential — Design Partner Preview</span>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════════════ JS -->
+<script>
+  /* ── Node info definitions ───────────────────────────── */
+  const nodeData = {
+    agent: {
+      title: "🤖 AI Agent — Request Origin",
+      desc: "The agent authenticates with a signed API key bound to its identity. The gateway receives the request with the Agent-ID header.",
+      chips: [
+        { label:"Agent-ID header", cls:"highlight" },
+        { label:"Bearer token" },
+        { label:"X-Request-ID", cls:"highlight" },
+        { label:"endpoint target" },
+        { label:"HTTP method" },
+        { label:"request body" },
+      ]
+    },
+    gateway: {
+      title: "🔀 Gateway :8002 — Intercept & Record",
+      desc: "The gateway intercepts every outbound request from the agent before it reaches the upstream API. It records arrival time, resolves agent identity, and dispatches to the policy engine. The audit event is enqueued immediately — even on DENY.",
+      chips: [
+        { label:"agent_id resolved", cls:"highlight" },
+        { label:"created_at = now()", cls:"highlight" },
+        { label:"endpoint captured" },
+        { label:"method captured" },
+        { label:"Audit event enqueued", cls:"highlight" },
+        { label:"latency timer started" },
+      ]
+    },
+    policy: {
+      title: "⚖️ Policy Engine — Evaluate Rules",
+      desc: "The policy engine evaluates the request against all active rules for the agent (rate limits, endpoint allowlists, cost budgets, time-of-day restrictions). Returns ALLOW or DENY with a reason code.",
+      chips: [
+        { label:"decision = ALLOW | DENY", cls:"highlight" },
+        { label:"deny_reason", cls:"highlight" },
+        { label:"policy rules evaluated" },
+        { label:"status_code set" },
+        { label:"deny_rule_id", cls:"highlight" },
+        { label:"policy_version ✓", cls:"highlight" },
+      ]
+    },
+    upstream: {
+      title: "🌐 Upstream API — Proxied Call",
+      desc: "On ALLOW, the gateway proxies the request to the upstream LLM provider. Response metadata (tokens, cost estimate) is appended to the audit record before it is written.",
+      chips: [
+        { label:"upstream_latency_ms ⚠" },
+        { label:"token_count", cls:"highlight" },
+        { label:"cost_estimate_usd", cls:"highlight" },
+        { label:"status_code", cls:"highlight" },
+        { label:"response proxied back" },
+      ]
+    },
+    writer: {
+      title: "✍️ Audit Writer — Async Persistence",
+      desc: "An async worker dequeues the audit event, computes the HMAC-SHA256 chain hash (using the payload and prev_hash from the last entry), and inserts the record into PostgreSQL. The write is append-only — no UPDATE or DELETE permissions exist.",
+      chips: [
+        { label:"reads prev_hash", cls:"highlight" },
+        { label:"HMAC-SHA256(payload + prev_hash)", cls:"highlight" },
+        { label:"entry_hash computed", cls:"highlight" },
+        { label:"INSERT audit_log", cls:"highlight" },
+        { label:"no UPDATE / DELETE" },
+      ]
+    },
+    db: {
+      title: "🗄️ PostgreSQL — Append-Only + RLS",
+      desc: "The audit_log table is append-only by policy: no application role has UPDATE or DELETE privileges. Row-Level Security ensures tenants can only read their own entries. The table is indexed on (agent_id, created_at) and (entry_hash).",
+      chips: [
+        { label:"RLS by org_id", cls:"highlight" },
+        { label:"no DELETE privilege" },
+        { label:"no UPDATE privilege" },
+        { label:"index: agent_id, created_at" },
+        { label:"index: entry_hash", cls:"highlight" },
+        { label:"partitioned by month" },
+      ]
+    },
+    hmac: {
+      title: "🔐 HMAC Chain — Tamper Evidence",
+      desc: "entry_hash = HMAC-SHA256(canonical_payload || prev_hash). Any modification to a historical entry produces a different hash, breaking the chain from that point forward. The chain can be independently verified by any party with the HMAC secret.",
+      chips: [
+        { label:"HMAC-SHA256", cls:"highlight" },
+        { label:"canonical JSON payload" },
+        { label:"prev_hash as salt", cls:"highlight" },
+        { label:"entry_hash stored", cls:"highlight" },
+        { label:"independently verifiable" },
+        { label:"Genesis: prev=0x000..." },
+      ]
+    },
+    deny: {
+      title: "🚫 Decision: DENY / ERROR",
+      desc: "When the policy engine returns DENY, the gateway returns 403 to the agent immediately. The audit record is still written — denies are as important as allows for compliance. The deny_reason and deny_rule_id are recorded.",
+      chips: [
+        { label:"decision = DENY", cls:"highlight" },
+        { label:"status_code = 403" },
+        { label:"deny_reason captured", cls:"highlight" },
+        { label:"deny_rule_id ⚠" },
+        { label:"audit entry still written" },
+        { label:"fail-closed: no upstream call" },
+      ]
+    },
+  };
+
+  let activeNode = null;
+
+  function activateNode(id) {
+    // Deactivate previous
+    if (activeNode) {
+      const prev = document.getElementById('node-' + activeNode);
+      if (prev) prev.classList.remove('active');
+    }
+
+    activeNode = id;
+    const el = document.getElementById('node-' + id);
+    if (el) el.classList.add('active');
+
+    const data = nodeData[id];
+    if (!data) return;
+
+    const panel = document.getElementById('info-panel');
+    const titleEl = document.getElementById('panel-title');
+    const fieldsEl = document.getElementById('panel-fields');
+
+    // Re-trigger animation
+    panel.style.animation = 'none';
+    panel.offsetHeight; // reflow
+    panel.style.animation = 'panel-in .2s ease';
+
+    titleEl.innerHTML = data.title;
+    if (data.desc) {
+      titleEl.insertAdjacentHTML('afterend', `<p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;line-height:1.6;">${data.desc}</p>`);
+      // Clean previous desc paragraph
+      const oldDesc = titleEl.nextElementSibling;
+      const nextSib = oldDesc ? oldDesc.nextElementSibling : null;
+      if (nextSib && nextSib.tagName === 'P') nextSib.remove();
+    }
+
+    fieldsEl.innerHTML = '';
+    data.chips.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'data-chip' + (c.cls ? ' ' + c.cls : '');
+      div.textContent = c.label;
+      fieldsEl.appendChild(div);
+    });
+
+    // Also add desc correctly
+    const existing = document.querySelector('.info-panel p');
+    if (existing) existing.remove();
+    const p = document.createElement('p');
+    p.style.cssText = 'font-size:12px;color:var(--text-dim);margin-bottom:12px;line-height:1.6;';
+    p.textContent = data.desc;
+    titleEl.insertAdjacentElement('afterend', p);
+  }
+
+  /* ── Chain Verify Animation ──────────────────────────── */
+  function verifyChain() {
+    const btn = document.getElementById('btn-verify');
+    const status = document.getElementById('verify-status');
+    btn.disabled = true;
+
+    // Reset blocks
+    for (let i = 1; i <= 5; i++) {
+      document.getElementById('cb-' + i).classList.remove('verified');
+    }
+    status.textContent = '';
+    status.className = 'verify-status running';
+
+    const messages = [
+      'Checking entry #001 (GENESIS)...',
+      'Checking entry #002 → prev_hash matches...',
+      'Checking entry #003 → prev_hash matches...',
+      'Checking entry #004 → prev_hash matches...',
+      'Checking entry #005 → prev_hash matches...',
+      '✓ Chain integrity verified — 5/5 entries valid'
+    ];
+
+    let step = 0;
+    const interval = setInterval(() => {
+      if (step < 5) {
+        document.getElementById('cb-' + (step + 1)).classList.add('verified');
+        status.textContent = messages[step];
+      } else {
+        status.textContent = messages[5];
+        status.className = 'verify-status success';
+        clearInterval(interval);
+        setTimeout(() => { btn.disabled = false; }, 1500);
+      }
+      step++;
+    }, 480);
+  }
+</script>
+</body>
+</html>
