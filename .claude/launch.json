@@ -10,10 +10,16 @@
     },
     {
       "name": "landing-page",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port", "3000"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "cwd": "landing-page"
+    },
+    {
+      "name": "assets",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "assets", "-l", "3001"],
+      "port": 3001
     }
   ]
 }
