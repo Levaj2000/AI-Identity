@@ -155,13 +155,16 @@ def _load_and_evaluate_policy(
     agent_id: uuid.UUID,
     endpoint: str,
     method: str,
-) -> bool:
+) -> tuple[bool, int | None]:
     """Load the agent's active policy and evaluate it.
 
     This function runs inside a thread pool with a timeout.
     Any exception here is caught by the caller and treated as DENY.
 
-    Returns True if allowed, False if denied.
+    Returns (allowed, policy_id). policy_id is None when no active policy
+    was found or when the policy had invalid rules — this distinguishes
+    NO_ACTIVE_POLICY from POLICY_DENIED in the caller, and provides the
+    policy snapshot for the audit entry without a second DB round-trip.
     """
     from common.validation.policy import PolicyValidator
 
@@ -175,7 +178,7 @@ def _load_and_evaluate_policy(
 
     if policy is None:
         # No active policy = fail-closed = DENY
-        return False
+        return False, None
 
     # Defense-in-depth: validate rules even from the DB.
     # Malformed rules that somehow bypassed creation validation
@@ -189,9 +192,9 @@ def _load_and_evaluate_policy(
             agent_id,
             error_summary,
         )
-        return False
+        return False, None
 
-    return _evaluate_policy_rules(policy.rules, endpoint, method)
+    return _evaluate_policy_rules(policy.rules, endpoint, method), policy.id
 
 
 # ── Key-Type Endpoint Classification ─────────────────────────────────
@@ -361,7 +364,7 @@ def enforce(
             endpoint,
             method,
         )
-        policy_allows = future.result(timeout=timeout_seconds)
+        policy_allows, policy_id = future.result(timeout=timeout_seconds)
 
     except TimeoutError:
         # Policy evaluation took too long — fail-closed
@@ -401,13 +404,17 @@ def enforce(
     # ── 4. Record outcome on circuit breaker ──────────────────────
     policy_circuit_breaker.record_success()
 
+    # Snapshot the policy version that was evaluated — policy_id is None
+    # when no active policy was found. This is captured at evaluation time
+    # so the audit entry reflects the policy that was actually in effect,
+    # not whatever is active when someone reads the log later.
+    if policy_id is not None:
+        metadata["policy_version"] = policy_id
+
     if not policy_allows:
-        # Policy explicitly denied or no active policy
-        # Check if it was no-policy vs policy-denied
-        policy = (
-            db.query(Policy).filter(Policy.agent_id == agent_id, Policy.is_active.is_(True)).first()
-        )
-        if policy is None:
+        # policy_id being None means no active policy was found (or rules were invalid).
+        # A non-None policy_id that still denied means the policy explicitly denied.
+        if policy_id is None:
             deny_reason = DenyReason.NO_ACTIVE_POLICY
             message = "No active policy — request denied (fail-closed)"
         else:
