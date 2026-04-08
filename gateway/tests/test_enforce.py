@@ -71,12 +71,16 @@ class TestPolicyRuleEvaluation:
 
     def test_empty_rules_deny(self):
         """Empty rules dict = no permissions = DENY."""
-        assert _evaluate_policy_rules({}, "/v1/chat", "POST") is False
+        allowed, deny_rule = _evaluate_policy_rules({}, "/v1/chat", "POST")
+        assert allowed is False
+        assert deny_rule is not None
 
     def test_no_allowed_endpoints_deny(self):
         """Rules without allowed_endpoints = DENY (fail-closed)."""
         rules = {"allowed_methods": ["POST"]}
-        assert _evaluate_policy_rules(rules, "/v1/chat", "POST") is False
+        allowed, deny_rule = _evaluate_policy_rules(rules, "/v1/chat", "POST")
+        assert allowed is False
+        assert "not_configured" in deny_rule
 
     def test_allowed_endpoint_and_method(self):
         """Matching endpoint + method = ALLOW."""
@@ -84,21 +88,26 @@ class TestPolicyRuleEvaluation:
             "allowed_endpoints": ["/v1/*"],
             "allowed_methods": ["POST"],
         }
-        assert _evaluate_policy_rules(rules, "/v1/chat", "POST") is True
+        allowed, deny_rule = _evaluate_policy_rules(rules, "/v1/chat", "POST")
+        assert allowed is True
+        assert deny_rule is None
 
     def test_allowed_endpoint_wrong_method(self):
-        """Matching endpoint but wrong method = DENY."""
+        """Matching endpoint but wrong method = DENY with method in deny_rule."""
         rules = {
             "allowed_endpoints": ["/v1/*"],
             "allowed_methods": ["GET"],
         }
-        assert _evaluate_policy_rules(rules, "/v1/chat", "POST") is False
+        allowed, deny_rule = _evaluate_policy_rules(rules, "/v1/chat", "POST")
+        assert allowed is False
+        assert "allowed_methods" in deny_rule
+        assert "POST" in deny_rule
 
     def test_no_method_restriction_allows_all(self):
         """No allowed_methods specified = any method is fine (if endpoint matches)."""
         rules = {"allowed_endpoints": ["/v1/*"]}
-        assert _evaluate_policy_rules(rules, "/v1/chat", "POST") is True
-        assert _evaluate_policy_rules(rules, "/v1/chat", "DELETE") is True
+        assert _evaluate_policy_rules(rules, "/v1/chat", "POST")[0] is True
+        assert _evaluate_policy_rules(rules, "/v1/chat", "DELETE")[0] is True
 
     def test_denied_endpoint_overrides_allow(self):
         """Explicit deny takes precedence over allow."""
@@ -106,17 +115,23 @@ class TestPolicyRuleEvaluation:
             "allowed_endpoints": ["/v1/*"],
             "denied_endpoints": ["/v1/admin"],
         }
-        assert _evaluate_policy_rules(rules, "/v1/chat", "POST") is True
-        assert _evaluate_policy_rules(rules, "/v1/admin", "POST") is False
+        allowed_chat, _ = _evaluate_policy_rules(rules, "/v1/chat", "POST")
+        allowed_admin, deny_rule = _evaluate_policy_rules(rules, "/v1/admin", "POST")
+        assert allowed_chat is True
+        assert allowed_admin is False
+        assert "denied_endpoints" in deny_rule
+        assert "/v1/admin" in deny_rule
 
     def test_multiple_allowed_endpoints(self):
         """Multiple allowed patterns — any match = ALLOW."""
         rules = {
             "allowed_endpoints": ["/v1/chat", "/v1/embeddings"],
         }
-        assert _evaluate_policy_rules(rules, "/v1/chat", "POST") is True
-        assert _evaluate_policy_rules(rules, "/v1/embeddings", "POST") is True
-        assert _evaluate_policy_rules(rules, "/v1/admin", "POST") is False
+        assert _evaluate_policy_rules(rules, "/v1/chat", "POST")[0] is True
+        assert _evaluate_policy_rules(rules, "/v1/embeddings", "POST")[0] is True
+        allowed, deny_rule = _evaluate_policy_rules(rules, "/v1/admin", "POST")
+        assert allowed is False
+        assert "not_matched" in deny_rule
 
 
 # ── Enforcement — Happy Path ───────────────────────────────────────────
@@ -477,3 +492,98 @@ class TestGatewayEndpoints:
         data = resp.json()
         assert data["circuit_breaker"] == "closed"
         assert data["status"] == "ok"
+
+
+# ── Audit Data Quality ─────────────────────────────────────────────────
+
+
+class TestAuditDataQuality:
+    """Verify that audit entries capture latency, upstream timing, and deny rules."""
+
+    def test_audit_entry_has_latency_ms(self, db_session, test_agent, test_policy):
+        """Every enforcement decision records latency_ms on the audit entry."""
+        enforce(
+            db_session,
+            agent_id=test_agent.id,
+            endpoint="/v1/chat",
+            method="POST",
+        )
+
+        entry = db_session.query(AuditLog).first()
+        assert entry is not None
+        assert entry.latency_ms is not None
+        assert entry.latency_ms >= 0
+
+    def test_audit_entry_has_upstream_latency_ms(self, db_session, test_agent, test_policy):
+        """Policy evaluation time is recorded as upstream_latency_ms in metadata."""
+        enforce(
+            db_session,
+            agent_id=test_agent.id,
+            endpoint="/v1/chat",
+            method="POST",
+        )
+
+        entry = db_session.query(AuditLog).first()
+        assert entry is not None
+        assert "upstream_latency_ms" in entry.request_metadata
+        upstream = entry.request_metadata["upstream_latency_ms"]
+        assert upstream >= 0
+        assert upstream <= entry.latency_ms
+
+    def test_deny_rule_id_captured_on_endpoint_mismatch(self, db_session, test_agent, test_policy):
+        """When policy denies due to endpoint mismatch, deny_rule_id is in audit metadata."""
+        enforce(
+            db_session,
+            agent_id=test_agent.id,
+            endpoint="/v2/admin",  # Not in /v1/* policy
+            method="POST",
+        )
+
+        entry = db_session.query(AuditLog).first()
+        assert entry is not None
+        assert entry.decision == "deny"
+        assert "deny_rule_id" in entry.request_metadata
+        assert "allowed_endpoints" in entry.request_metadata["deny_rule_id"]
+
+    def test_deny_rule_id_captured_on_method_mismatch(self, db_session, test_agent):
+        """When policy denies due to method mismatch, deny_rule_id includes the method."""
+        policy = Policy(
+            agent_id=test_agent.id,
+            rules={
+                "allowed_endpoints": ["/v1/*"],
+                "allowed_methods": ["GET"],
+            },
+            version=1,
+            is_active=True,
+        )
+        db_session.add(policy)
+        db_session.commit()
+
+        enforce(
+            db_session,
+            agent_id=test_agent.id,
+            endpoint="/v1/chat",
+            method="POST",
+        )
+
+        entry = db_session.query(AuditLog).first()
+        assert entry is not None
+        assert "deny_rule_id" in entry.request_metadata
+        assert "POST" in entry.request_metadata["deny_rule_id"]
+
+    def test_cost_estimate_populated_when_model_and_tokens_present(
+        self, db_session, test_agent, test_policy
+    ):
+        """cost_estimate_usd is computed when token_count + model are in metadata."""
+        enforce(
+            db_session,
+            agent_id=test_agent.id,
+            endpoint="/v1/chat",
+            method="POST",
+            request_metadata={"model": "gpt-4o-mini", "token_count": 1000},
+        )
+
+        entry = db_session.query(AuditLog).first()
+        assert entry is not None
+        assert entry.cost_estimate_usd is not None
+        assert float(entry.cost_estimate_usd) > 0

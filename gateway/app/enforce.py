@@ -18,6 +18,7 @@ Only an explicit ALLOW from a successful policy evaluation permits a request.
 
 import enum
 import logging
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from dataclasses import dataclass
@@ -90,10 +91,49 @@ class EnforcementResult:
         return self.decision == Decision.PENDING_APPROVAL
 
 
+# ── Cost Estimation ───────────────────────────────────────────────────
+
+# Approximate blended cost per 1K tokens (mid-2025 public pricing).
+# Used to populate cost_estimate_usd when token_count + model are in metadata.
+_MODEL_COST_PER_1K: dict[str, float] = {
+    "gpt-4o-mini": 0.00015,
+    "gpt-4o": 0.005,
+    "gpt-4-turbo": 0.01,
+    "gpt-4": 0.03,
+    "gpt-3.5-turbo": 0.0005,
+    "claude-3-5-haiku": 0.0008,
+    "claude-3-5-sonnet": 0.003,
+    "claude-3-opus": 0.015,
+    "claude-haiku-4": 0.0008,
+    "claude-sonnet-4": 0.003,
+    "claude-opus-4": 0.015,
+}
+
+
+def _estimate_cost_usd(metadata: dict) -> float | None:
+    """Estimate API cost from token_count + model in request metadata.
+
+    Returns None if either field is absent or the model is unrecognized.
+    Matches by prefix so variants like "gpt-4o-2024-11-20" still resolve.
+    """
+    model = str(metadata.get("model", "")).lower().strip()
+    token_count = metadata.get("token_count")
+    if not model or token_count is None:
+        return None
+    try:
+        tokens = int(token_count)
+    except (TypeError, ValueError):
+        return None
+    for prefix, cost_per_1k in _MODEL_COST_PER_1K.items():
+        if model.startswith(prefix) or prefix in model:
+            return round(tokens / 1000 * cost_per_1k, 6)
+    return None
+
+
 # ── Policy Evaluation (Timeout-Bounded) ──────────────────────────────
 
 
-def _evaluate_policy_rules(rules: dict, endpoint: str, method: str) -> bool:
+def _evaluate_policy_rules(rules: dict, endpoint: str, method: str) -> tuple[bool, str | None]:
     """Evaluate policy rules against the request.
 
     This is a simple rule engine for MVP. Rules are a JSONB dict with:
@@ -102,20 +142,21 @@ def _evaluate_policy_rules(rules: dict, endpoint: str, method: str) -> bool:
       - denied_endpoints: explicit deny list (checked first)
       - max_cost_usd: maximum cost per request (future)
 
-    Returns True if the request is allowed, False if denied.
+    Returns (allowed, deny_rule_id). deny_rule_id describes which rule caused
+    the denial — recorded in the audit entry so auditors know exactly what fired.
 
     SECURITY: Default is DENY. The request is only allowed if at least
     one rule explicitly permits it and no rule explicitly denies it.
     """
     # Empty rules = no permissions granted = DENY
     if not rules:
-        return False
+        return False, "allowed_endpoints:not_configured"
 
     # Check explicit deny list first
     denied_endpoints = rules.get("denied_endpoints", [])
     for pattern in denied_endpoints:
         if _endpoint_matches(endpoint, pattern):
-            return False
+            return False, f"denied_endpoints:{pattern}"
 
     # Check allowed endpoints
     allowed_endpoints = rules.get("allowed_endpoints", [])
@@ -124,14 +165,17 @@ def _evaluate_policy_rules(rules: dict, endpoint: str, method: str) -> bool:
             _endpoint_matches(endpoint, pattern) for pattern in allowed_endpoints
         )
         if not endpoint_allowed:
-            return False
+            return False, f"allowed_endpoints:not_matched:{endpoint}"
     else:
         # No allowed_endpoints specified = nothing is allowed (fail-closed)
-        return False
+        return False, "allowed_endpoints:not_configured"
 
     # Check allowed methods
     allowed_methods = rules.get("allowed_methods", [])
-    return not (allowed_methods and method.upper() not in [m.upper() for m in allowed_methods])
+    if allowed_methods and method.upper() not in [m.upper() for m in allowed_methods]:
+        return False, f"allowed_methods:not_allowed:{method}"
+
+    return True, None
 
 
 def _endpoint_matches(endpoint: str, pattern: str) -> bool:
@@ -155,16 +199,15 @@ def _load_and_evaluate_policy(
     agent_id: uuid.UUID,
     endpoint: str,
     method: str,
-) -> tuple[bool, int | None]:
+) -> tuple[bool, int | None, str | None]:
     """Load the agent's active policy and evaluate it.
 
     This function runs inside a thread pool with a timeout.
     Any exception here is caught by the caller and treated as DENY.
 
-    Returns (allowed, policy_id). policy_id is None when no active policy
-    was found or when the policy had invalid rules — this distinguishes
-    NO_ACTIVE_POLICY from POLICY_DENIED in the caller, and provides the
-    policy snapshot for the audit entry without a second DB round-trip.
+    Returns (allowed, policy_id, deny_rule_id).
+    - policy_id is None when no active policy was found or rules were invalid.
+    - deny_rule_id describes which specific rule caused a denial (None on ALLOW).
     """
     from common.validation.policy import PolicyValidator
 
@@ -178,7 +221,7 @@ def _load_and_evaluate_policy(
 
     if policy is None:
         # No active policy = fail-closed = DENY
-        return False, None
+        return False, None, None
 
     # Defense-in-depth: validate rules even from the DB.
     # Malformed rules that somehow bypassed creation validation
@@ -192,9 +235,10 @@ def _load_and_evaluate_policy(
             agent_id,
             error_summary,
         )
-        return False, None
+        return False, None, None
 
-    return _evaluate_policy_rules(policy.rules, endpoint, method), policy.id
+    allowed, deny_rule = _evaluate_policy_rules(policy.rules, endpoint, method)
+    return allowed, policy.id, deny_rule
 
 
 # ── Key-Type Endpoint Classification ─────────────────────────────────
@@ -294,12 +338,22 @@ def enforce(
     """
     metadata = request_metadata if request_metadata is not None else {}
 
+    # Record wall-clock start for latency_ms on every audit entry.
+    start = time.perf_counter()
+
     # ── 0. Key-type enforcement (checked FIRST, before circuit breaker) ──
     key_type_result = _check_key_type(key_type, endpoint)
     if key_type_result is not None:
         key_type_result.agent_id = agent_id
         metadata["key_type"] = key_type or "unknown"
-        _audit_decision(db, key_type_result, endpoint, method, metadata)
+        _audit_decision(
+            db,
+            key_type_result,
+            endpoint,
+            method,
+            metadata,
+            latency_ms=round((time.perf_counter() - start) * 1000),
+        )
         return key_type_result
 
     # ── 1. Circuit breaker check ──────────────────────────────────
@@ -311,7 +365,14 @@ def enforce(
             message="Service unavailable: policy engine circuit breaker is open",
             agent_id=agent_id,
         )
-        _audit_decision(db, result, endpoint, method, metadata)
+        _audit_decision(
+            db,
+            result,
+            endpoint,
+            method,
+            metadata,
+            latency_ms=round((time.perf_counter() - start) * 1000),
+        )
         return result
 
     # ── 1b. Blocklist check ──────────────────────────────────────
@@ -326,7 +387,14 @@ def enforce(
             message="Agent is blocked — requests not permitted",
             agent_id=agent_id,
         )
-        _audit_decision(db, result, endpoint, method, metadata)
+        _audit_decision(
+            db,
+            result,
+            endpoint,
+            method,
+            metadata,
+            latency_ms=round((time.perf_counter() - start) * 1000),
+        )
         return result
 
     # ── 2. Agent validation ───────────────────────────────────────
@@ -339,7 +407,14 @@ def enforce(
             message="Agent not found",
             agent_id=agent_id,
         )
-        _audit_decision(db, result, endpoint, method, metadata)
+        _audit_decision(
+            db,
+            result,
+            endpoint,
+            method,
+            metadata,
+            latency_ms=round((time.perf_counter() - start) * 1000),
+        )
         return result
 
     if agent.status != "active":
@@ -350,11 +425,19 @@ def enforce(
             message=f"Agent is {agent.status} — requests not permitted",
             agent_id=agent_id,
         )
-        _audit_decision(db, result, endpoint, method, metadata)
+        _audit_decision(
+            db,
+            result,
+            endpoint,
+            method,
+            metadata,
+            latency_ms=round((time.perf_counter() - start) * 1000),
+        )
         return result
 
     # ── 3. Policy evaluation with timeout ─────────────────────────
     timeout_seconds = settings.policy_eval_timeout_ms / 1000.0
+    policy_start = time.perf_counter()
 
     try:
         future = _policy_executor.submit(
@@ -364,10 +447,12 @@ def enforce(
             endpoint,
             method,
         )
-        policy_allows, policy_id = future.result(timeout=timeout_seconds)
+        policy_allows, policy_id, deny_rule = future.result(timeout=timeout_seconds)
+        metadata["upstream_latency_ms"] = round((time.perf_counter() - policy_start) * 1000)
 
     except TimeoutError:
         # Policy evaluation took too long — fail-closed
+        metadata["upstream_latency_ms"] = round((time.perf_counter() - policy_start) * 1000)
         policy_circuit_breaker.record_failure()
         logger.warning(
             "Policy evaluation TIMEOUT for agent %s (>%dms) — DENIED",
@@ -381,7 +466,14 @@ def enforce(
             message=f"Policy evaluation timed out ({settings.policy_eval_timeout_ms}ms)",
             agent_id=agent_id,
         )
-        _audit_decision(db, result, endpoint, method, metadata)
+        _audit_decision(
+            db,
+            result,
+            endpoint,
+            method,
+            metadata,
+            latency_ms=round((time.perf_counter() - start) * 1000),
+        )
         return result
 
     except Exception:
@@ -398,22 +490,26 @@ def enforce(
             message="Policy evaluation failed — request denied",
             agent_id=agent_id,
         )
-        _audit_decision(db, result, endpoint, method, metadata)
+        _audit_decision(
+            db,
+            result,
+            endpoint,
+            method,
+            metadata,
+            latency_ms=round((time.perf_counter() - start) * 1000),
+        )
         return result
 
     # ── 4. Record outcome on circuit breaker ──────────────────────
     policy_circuit_breaker.record_success()
 
-    # Snapshot the policy version that was evaluated — policy_id is None
-    # when no active policy was found. This is captured at evaluation time
-    # so the audit entry reflects the policy that was actually in effect,
-    # not whatever is active when someone reads the log later.
+    # Snapshot the policy version evaluated and the specific rule that fired.
     if policy_id is not None:
         metadata["policy_version"] = policy_id
+    if deny_rule is not None:
+        metadata["deny_rule_id"] = deny_rule
 
     if not policy_allows:
-        # policy_id being None means no active policy was found (or rules were invalid).
-        # A non-None policy_id that still denied means the policy explicitly denied.
         if policy_id is None:
             deny_reason = DenyReason.NO_ACTIVE_POLICY
             message = "No active policy — request denied (fail-closed)"
@@ -428,7 +524,15 @@ def enforce(
             message=message,
             agent_id=agent_id,
         )
-        _audit_decision(db, result, endpoint, method, metadata)
+        _audit_decision(
+            db,
+            result,
+            endpoint,
+            method,
+            metadata,
+            latency_ms=round((time.perf_counter() - start) * 1000),
+            cost_estimate_usd=_estimate_cost_usd(metadata),
+        )
         return result
 
     # ── 5. ALLOW — the only path where a request goes through ─────
@@ -439,7 +543,15 @@ def enforce(
         message="Request allowed",
         agent_id=agent_id,
     )
-    _audit_decision(db, result, endpoint, method, metadata)
+    _audit_decision(
+        db,
+        result,
+        endpoint,
+        method,
+        metadata,
+        latency_ms=round((time.perf_counter() - start) * 1000),
+        cost_estimate_usd=_estimate_cost_usd(metadata),
+    )
     return result
 
 
@@ -452,6 +564,9 @@ def _audit_decision(
     endpoint: str,
     method: str,
     metadata: dict,
+    *,
+    latency_ms: int | None = None,
+    cost_estimate_usd: float | None = None,
 ) -> None:
     """Write an audit log entry for every enforcement decision.
 
@@ -473,6 +588,8 @@ def _audit_decision(
             endpoint=endpoint,
             method=method,
             decision=result.decision.value,
+            latency_ms=latency_ms,
+            cost_estimate_usd=cost_estimate_usd,
             request_metadata=audit_metadata,
         )
     except Exception:
