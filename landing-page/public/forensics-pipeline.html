@@ -618,6 +618,112 @@
     .btn-verify:active { transform: translateY(0); }
     .btn-verify:disabled { opacity: .5; cursor: not-allowed; }
 
+    /* ─── CTA SECTION ────────────────────────────────────── */
+    .cta-section {
+      text-align: center;
+      padding: 48px 24px;
+    }
+    .cta-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .cta-subtitle {
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 36px;
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .cta-steps {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-bottom: 36px;
+      flex-wrap: wrap;
+    }
+    .cta-step {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      width: 200px;
+      text-align: center;
+      position: relative;
+    }
+    .cta-step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--cyan-dim);
+      color: var(--cyan);
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    .cta-step-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .cta-step-desc {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.55;
+    }
+    .cta-step-arrow {
+      position: absolute;
+      right: -18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 16px;
+    }
+    .cta-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .cta-btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--cyan), #0ea5e9);
+      color: #0f1117;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 28px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity .2s, transform .15s;
+    }
+    .cta-btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+    .cta-btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--text);
+      font-weight: 600;
+      font-size: 14px;
+      padding: 12px 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color .2s, transform .15s;
+    }
+    .cta-btn-secondary:hover { border-color: var(--cyan); transform: translateY(-1px); }
+
     .verify-status {
       font-size: 13px;
       color: var(--text-dim);
@@ -1284,6 +1390,43 @@
           </tr>
         </tbody>
       </table>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════════ CTA -->
+  <section class="cta-section">
+    <div class="cta-title">See it live in under 5 minutes</div>
+    <div class="cta-subtitle">Sign up, register an agent, and watch every decision appear in your tamper-proof audit trail — free tier included.</div>
+
+    <div class="cta-steps">
+      <div class="cta-step">
+        <div class="cta-step-num">1</div>
+        <div class="cta-step-title">Sign Up</div>
+        <div class="cta-step-desc">Create your account and get your organization API key — no credit card required.</div>
+        <span class="cta-step-arrow">→</span>
+      </div>
+      <div class="cta-step">
+        <div class="cta-step-num">2</div>
+        <div class="cta-step-title">Register an Agent</div>
+        <div class="cta-step-desc">Create an agent identity and point your AI traffic through the gateway proxy.</div>
+        <span class="cta-step-arrow">→</span>
+      </div>
+      <div class="cta-step">
+        <div class="cta-step-num">3</div>
+        <div class="cta-step-title">See Your Audit Trail</div>
+        <div class="cta-step-desc">Every decision is cryptographically chained. Verify, export, and prove what happened.</div>
+      </div>
+    </div>
+
+    <div class="cta-buttons">
+      <a href="https://dashboard.ai-identity.co" class="cta-btn-primary" target="_blank">
+        Start Free Trial →
+      </a>
+      <a href="https://www.ai-identity.co/docs" class="cta-btn-secondary" target="_blank">
+        Read the Quickstart
+      </a>
     </div>
   </section>
 
