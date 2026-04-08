@@ -1,4 +1,5 @@
 import { API_BASE_URL, GATEWAY_URL } from '../config/api'
+import { TryDemoButton } from './TryDemoButton'
 
 const steps = [
   {
@@ -61,6 +62,8 @@ export function GettingStarted() {
         </a>{' '}
         for the full reference.
       </p>
+
+      <TryDemoButton />
 
       <div className="space-y-4">
         {steps.map((step) => (
