@@ -60,7 +60,7 @@ class PerplexityError(Exception):
 
 def summarize_audit_events(
     event_data: dict,
-) -> tuple[dict, list[str]]:
+) -> dict:
     """Call Perplexity to produce a structured audit summary.
 
     Parameters
@@ -70,8 +70,8 @@ def summarize_audit_events(
 
     Returns
     -------
-    tuple[dict, list[str]]
-        (Parsed JSON report dict, list of citation URLs).
+    dict
+        Parsed JSON report dict.
 
     Raises
     ------
@@ -123,8 +123,6 @@ def summarize_audit_events(
         logger.error("Unexpected Perplexity response shape: %s", exc)
         raise PerplexityError("Unexpected response from AI service") from exc
 
-    citations: list[str] = data.get("citations") or []
-
     # Parse the JSON report from the model response
     # Strip markdown code fences if present (```json ... ```)
     cleaned = content.strip()
@@ -158,4 +156,4 @@ def summarize_audit_events(
         logger.error("Perplexity response missing fields: %s", missing)
         raise PerplexityError("AI returned an incomplete response. Please try again.") from None
 
-    return report, citations
+    return report
