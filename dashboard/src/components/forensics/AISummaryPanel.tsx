@@ -8,6 +8,38 @@
 import Markdown from 'react-markdown'
 import type { AuditSummaryResponse } from '../../types/api'
 
+// ── Helpers ──────────────────────────────────────────────────────
+
+/**
+ * Normalize Perplexity output so section titles render as headings.
+ *
+ * Perplexity sometimes returns "Overview\n..." or "**Key Activity**\n..."
+ * instead of "## Overview\n...". This converts known section labels into
+ * proper markdown H2s for consistent rendering.
+ */
+function normalizeSummaryMarkdown(raw: string): string {
+  const sectionLabels = [
+    'Overview',
+    'Key Activity',
+    'Anomalies & Concerns',
+    'Anomalies and Concerns',
+    'Recommendations',
+    'Next Steps',
+  ]
+  let result = raw
+  for (const label of sectionLabels) {
+    // Match "**Label**" or "Label" at start of line (not already a heading)
+    const patterns = [
+      new RegExp(`^\\*\\*${label}\\*\\*\\s*$`, 'gm'),
+      new RegExp(`^${label}\\s*$`, 'gm'),
+    ]
+    for (const pattern of patterns) {
+      result = result.replace(pattern, `## ${label}`)
+    }
+  }
+  return result
+}
+
 // ── Component ────────────────────────────────────────────────────
 
 interface Props {
@@ -84,8 +116,8 @@ export function AISummaryPanel({ data, loading, error, onClose, onRegenerate }: 
           )}
 
           {data && !loading && !error && (
-            <div className="prose prose-invert prose-sm max-w-none prose-headings:text-zinc-100 prose-headings:mt-6 prose-headings:mb-3 prose-headings:border-b prose-headings:border-zinc-700/50 prose-headings:pb-2 prose-h2:text-base prose-h2:font-semibold prose-h3:text-sm prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:mb-3 prose-li:text-zinc-300 prose-li:leading-relaxed prose-ul:my-2 prose-ol:my-2 prose-strong:text-zinc-200 prose-a:text-purple-400 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-300 prose-code:bg-zinc-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs first:prose-headings:mt-0">
-              <Markdown>{data.summary}</Markdown>
+            <div className="ai-summary-content">
+              <Markdown>{normalizeSummaryMarkdown(data.summary)}</Markdown>
             </div>
           )}
         </div>
