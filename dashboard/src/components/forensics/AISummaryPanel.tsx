@@ -84,7 +84,7 @@ export function AISummaryPanel({ data, loading, error, onClose, onRegenerate }: 
           )}
 
           {data && !loading && !error && (
-            <div className="prose prose-invert prose-sm max-w-none prose-headings:text-zinc-100 prose-p:text-zinc-300 prose-li:text-zinc-300 prose-strong:text-zinc-200 prose-a:text-purple-400 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-300 prose-code:bg-zinc-800 prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
+            <div className="prose prose-invert prose-sm max-w-none prose-headings:text-zinc-100 prose-headings:mt-6 prose-headings:mb-3 prose-headings:border-b prose-headings:border-zinc-700/50 prose-headings:pb-2 prose-h2:text-base prose-h2:font-semibold prose-h3:text-sm prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:mb-3 prose-li:text-zinc-300 prose-li:leading-relaxed prose-ul:my-2 prose-ol:my-2 prose-strong:text-zinc-200 prose-a:text-purple-400 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-300 prose-code:bg-zinc-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs first:prose-headings:mt-0">
               <Markdown>{data.summary}</Markdown>
             </div>
           )}
