@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@plugin '@tailwindcss/typography';
 
 /* Enable class-based dark mode (toggle via .dark on <html>) */
 @custom-variant dark (&:where(.dark, .dark *));
