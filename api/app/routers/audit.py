@@ -441,7 +441,7 @@ def audit_summarize(
 
     # ── Call Perplexity ────────────────────────────────────────────
     try:
-        report, citations = summarize_audit_events(event_data=event_data)
+        report = summarize_audit_events(event_data=event_data)
     except PerplexityError as exc:
         status = 504 if "timed out" in str(exc) else 502
         raise HTTPException(status_code=status, detail=str(exc)) from exc
@@ -473,7 +473,6 @@ def audit_summarize(
         recommended_follow_ups=report.get("recommended_follow_ups", []),
         risk_level=risk_level,
         confidence=confidence,
-        citations=citations,
         events_analyzed=len(entries),
         model_used=app_settings.perplexity_model,
         generated_at=datetime.now(UTC),

@@ -404,9 +404,6 @@ class AuditSummaryResponse(BaseModel):
     recommended_follow_ups: list[str] = Field(description="Actionable recommendations")
     risk_level: str = Field(description="informational|low|medium|high")
     confidence: str = Field(description="low|medium|high")
-    citations: list[str] = Field(
-        default_factory=list, description="Source URLs referenced in summary"
-    )
     events_analyzed: int = Field(description="Number of events included")
     model_used: str = Field(description="Perplexity model used")
     generated_at: datetime

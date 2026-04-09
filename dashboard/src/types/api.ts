@@ -254,7 +254,6 @@ export interface AuditSummaryResponse {
   recommended_follow_ups: string[]
   risk_level: 'informational' | 'low' | 'medium' | 'high'
   confidence: 'low' | 'medium' | 'high'
-  citations: string[]
   events_analyzed: number
   model_used: string
   generated_at: string

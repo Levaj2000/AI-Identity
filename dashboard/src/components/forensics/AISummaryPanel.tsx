@@ -175,30 +175,6 @@ export function AISummaryPanel({ data, loading, error, onClose, onRegenerate }: 
                   </ol>
                 </section>
               )}
-
-              {/* Sources */}
-              {data.citations.length > 0 && (
-                <section className="pt-4 border-t border-zinc-700/50">
-                  <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-                    Sources
-                  </h3>
-                  <ol className="list-decimal list-inside space-y-1">
-                    {data.citations.map((url, i) => (
-                      <li key={i} className="text-xs text-zinc-400">
-                        <a
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-purple-400 hover:underline break-all"
-                        >
-                          {url.replace(/^https?:\/\//, '').slice(0, 80)}
-                          {url.replace(/^https?:\/\//, '').length > 80 ? '...' : ''}
-                        </a>
-                      </li>
-                    ))}
-                  </ol>
-                </section>
-              )}
             </>
           )}
         </div>
