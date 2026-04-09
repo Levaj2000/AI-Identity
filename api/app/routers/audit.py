@@ -375,19 +375,38 @@ def audit_summarize(
         agent_names = {row[0]: row[1] for row in rows}
 
     # ── Format events as compact text ──────────────────────────────
+    # Include key metadata fields so the AI has full context for its analysis.
+    meta_keys_for_summary = (
+        "action_type",
+        "agent_name",
+        "resource_type",
+        "model",
+        "new_status",
+        "old_status",
+        "deny_reason",
+        "keys_revoked",
+        "policy_version",
+    )
+
     lines: list[str] = []
     for e in entries:
         name = agent_names.get(e.agent_id, str(e.agent_id)[:8])
         cost = f"${e.cost_estimate_usd:.4f}" if e.cost_estimate_usd else "-"
         latency = f"{e.latency_ms}ms" if e.latency_ms else "-"
-        model_name = ""
+
+        # Extract useful metadata fields
+        meta_parts: list[str] = []
         if e.request_metadata and isinstance(e.request_metadata, dict):
-            model_name = e.request_metadata.get("model", "")
-        model_str = f" | model={model_name}" if model_name else ""
+            for key in meta_keys_for_summary:
+                val = e.request_metadata.get(key)
+                if val:
+                    meta_parts.append(f"{key}={val}")
+        meta_str = f" | {', '.join(meta_parts)}" if meta_parts else ""
+
         lines.append(
             f"[{e.created_at:%Y-%m-%d %H:%M:%S}] "
             f'Agent "{name}" | {e.method or "-"} {e.endpoint or "-"} | '
-            f"{e.decision.upper()} | {cost} | {latency}{model_str}"
+            f"{e.decision.upper()} | {cost} | {latency}{meta_str}"
         )
     events_text = "\n".join(lines)
 
