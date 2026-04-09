@@ -26,6 +26,8 @@ from common.schemas.agent import (
     AuditLogResponse,
     AuditReconstructResponse,
     AuditStatsResponse,
+    AuditSummaryRequest,
+    AuditSummaryResponse,
     ForensicsReportResponse,
     PolicyResponse,
     TopEndpoint,
@@ -278,6 +280,157 @@ def audit_stats(
         start_date=start_date,
         end_date=end_date,
         user_id=user.id,
+    )
+
+
+# ── AI Summary (Perplexity) ────────────────────────────────────────
+
+# Simple in-memory rate limiter: {user_id: [timestamps]}
+_summary_rate_limit: dict[uuid.UUID, list[datetime]] = {}
+
+
+def _check_summary_rate_limit(user_id: uuid.UUID, tier: str) -> None:
+    """Enforce per-user hourly rate limits on AI summaries."""
+    limit = 5 if tier == "pro" else 20  # business / enterprise get 20
+    now = datetime.now(UTC)
+    window = [t for t in _summary_rate_limit.get(user_id, []) if (now - t).total_seconds() < 3600]
+    if len(window) >= limit:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit: {limit} AI summaries per hour. Try again later.",
+        )
+    window.append(now)
+    _summary_rate_limit[user_id] = window
+
+
+@router.post(
+    "/summarize",
+    response_model=AuditSummaryResponse,
+    summary="AI-powered audit summary",
+    response_description="Natural-language summary of agent activity",
+    tags=["forensics"],
+)
+def audit_summarize(
+    body: AuditSummaryRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate an AI-powered summary of audit log events.
+
+    Uses the Perplexity API to produce a natural-language explanation of
+    agent activity including anomalies, concerns, and recommendations.
+    Requires a Pro or higher subscription tier.
+    """
+    from api.app.services.perplexity import PerplexityError, summarize_audit_events
+    from common.config.settings import settings as app_settings
+
+    # ── Tier gate ──────────────────────────────────────────────────
+    if user.tier == "free":
+        raise HTTPException(
+            status_code=403,
+            detail="AI Summaries require a Pro or higher plan.",
+        )
+
+    # ── Feature gate ───────────────────────────────────────────────
+    if not app_settings.perplexity_api_key:
+        raise HTTPException(
+            status_code=503,
+            detail="AI Summary feature is not configured.",
+        )
+
+    # ── Rate limit ─────────────────────────────────────────────────
+    _check_summary_rate_limit(user.id, user.tier)
+
+    # ── Query events ───────────────────────────────────────────────
+    user_agents = _user_agent_ids(db, user)
+
+    if body.event_ids:
+        # Specific events, still scoped to user's agents
+        query = _build_audit_query(db, user_agents, user_id=user.id)
+        query = query.filter(AuditLog.id.in_(body.event_ids))
+    else:
+        query = _build_audit_query(
+            db,
+            user_agents,
+            agent_id=body.agent_id,
+            decision=body.decision,
+            start_date=body.start_date,
+            end_date=body.end_date,
+            user_id=user.id,
+        )
+
+    entries = query.order_by(AuditLog.created_at.asc()).limit(body.max_events).all()
+
+    if not entries:
+        raise HTTPException(
+            status_code=400,
+            detail="No audit events found for the given criteria.",
+        )
+
+    # ── Resolve agent names ────────────────────────────────────────
+    agent_ids_in_results = {e.agent_id for e in entries}
+    agent_names: dict[uuid.UUID, str] = {}
+    if agent_ids_in_results:
+        rows = db.query(Agent.id, Agent.name).filter(Agent.id.in_(agent_ids_in_results)).all()
+        agent_names = {row[0]: row[1] for row in rows}
+
+    # ── Format events as compact text ──────────────────────────────
+    lines: list[str] = []
+    for e in entries:
+        name = agent_names.get(e.agent_id, str(e.agent_id)[:8])
+        cost = f"${e.cost_estimate_usd:.4f}" if e.cost_estimate_usd else "-"
+        latency = f"{e.latency_ms}ms" if e.latency_ms else "-"
+        model_name = ""
+        if e.request_metadata and isinstance(e.request_metadata, dict):
+            model_name = e.request_metadata.get("model", "")
+        model_str = f" | model={model_name}" if model_name else ""
+        lines.append(
+            f"[{e.created_at:%Y-%m-%d %H:%M:%S}] "
+            f'Agent "{name}" | {e.method or "-"} {e.endpoint or "-"} | '
+            f"{e.decision.upper()} | {cost} | {latency}{model_str}"
+        )
+    events_text = "\n".join(lines)
+
+    # ── Compute stats summary ──────────────────────────────────────
+    stats = _compute_stats(
+        db,
+        user_agents,
+        agent_id=body.agent_id,
+        start_date=body.start_date,
+        end_date=body.end_date,
+        user_id=user.id,
+    )
+    top_eps = ", ".join(f"{ep.endpoint} ({ep.count})" for ep in stats.top_endpoints[:5])
+    stats_text = (
+        f"- Total events: {stats.total_events}\n"
+        f"- Allowed: {stats.allowed_count}, Denied: {stats.denied_count}, "
+        f"Errors: {stats.error_count}\n"
+        f"- Total cost: ${stats.total_cost_usd:.4f}\n"
+        f"- Average latency: {stats.avg_latency_ms or 'N/A'}ms\n"
+        f"- Top endpoints: {top_eps or 'N/A'}"
+    )
+
+    # ── Call Perplexity ────────────────────────────────────────────
+    # Determine agent name for single-agent queries
+    single_agent_name = None
+    if body.agent_id and body.agent_id in agent_names:
+        single_agent_name = agent_names[body.agent_id]
+
+    try:
+        summary = summarize_audit_events(
+            events_text=events_text,
+            stats_summary=stats_text,
+            agent_name=single_agent_name,
+        )
+    except PerplexityError as exc:
+        status = 504 if "timed out" in str(exc) else 502
+        raise HTTPException(status_code=status, detail=str(exc)) from exc
+
+    return AuditSummaryResponse(
+        summary=summary,
+        events_analyzed=len(entries),
+        model_used=app_settings.perplexity_model,
+        generated_at=datetime.now(UTC),
     )
 
 
