@@ -371,3 +371,26 @@ class ForensicsReportResponse(BaseModel):
             "by AI Identity and has not been altered since export."
         )
     )
+
+
+# ── AI Summary (Perplexity) ─────────────────────────────────────────────
+
+
+class AuditSummaryRequest(BaseModel):
+    """Request body for AI-generated audit summary."""
+
+    event_ids: list[int] | None = Field(None, description="Specific event IDs to summarize")
+    agent_id: uuid.UUID | None = Field(None, description="Filter by agent")
+    start_date: datetime | None = Field(None, description="Window start")
+    end_date: datetime | None = Field(None, description="Window end")
+    decision: str | None = Field(None, description="Filter by decision (allow/deny/error)")
+    max_events: int = Field(100, ge=1, le=500, description="Max events to include in summary")
+
+
+class AuditSummaryResponse(BaseModel):
+    """AI-generated summary of audit activity."""
+
+    summary: str = Field(description="Markdown-formatted summary")
+    events_analyzed: int = Field(description="Number of events included")
+    model_used: str = Field(description="Perplexity model used")
+    generated_at: datetime

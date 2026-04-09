@@ -80,6 +80,10 @@ class Settings(BaseSettings):
     # Gateway URL (for QA runner — API needs to reach gateway)
     gateway_url: str = "http://localhost:8002"
 
+    # Perplexity AI — "What happened here?" audit summaries (leave empty to disable)
+    perplexity_api_key: str = ""
+    perplexity_model: str = "sonar"
+
     # Sentry error monitoring (leave empty to disable)
     sentry_dsn: str = ""
 

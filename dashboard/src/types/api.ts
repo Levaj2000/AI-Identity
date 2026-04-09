@@ -230,6 +230,24 @@ export interface ForensicsFilterParams {
   offset?: number
 }
 
+// ─── AI Summary ──────────────────────────────────────────────────
+
+export interface AuditSummaryRequest {
+  event_ids?: number[]
+  agent_id?: string
+  start_date?: string
+  end_date?: string
+  decision?: string
+  max_events?: number
+}
+
+export interface AuditSummaryResponse {
+  summary: string
+  events_analyzed: number
+  model_used: string
+  generated_at: string
+}
+
 // ─── Organizations ────────────────────────────────────────────────
 
 export interface Organization {

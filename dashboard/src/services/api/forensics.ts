@@ -6,6 +6,8 @@ import type {
   AuditLogListResponse,
   AuditReconstructResponse,
   AuditStatsResponse,
+  AuditSummaryRequest,
+  AuditSummaryResponse,
   ForensicsFilterParams,
   ForensicsReportResponse,
 } from '../../types/api'
@@ -69,6 +71,17 @@ export async function downloadForensicsCSV(params: {
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+}
+
+/** Generate an AI-powered summary of audit activity. */
+export async function fetchAuditSummary(
+  params: AuditSummaryRequest,
+): Promise<AuditSummaryResponse> {
+  return apiFetch<AuditSummaryResponse>('/api/v1/audit/summarize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
 }
 
 /** Verify audit chain integrity. */

@@ -11,6 +11,7 @@ import type {
   Agent,
   AuditLogEntry,
   AuditStatsResponse,
+  AuditSummaryResponse,
   AuditReconstructResponse,
   ForensicsFilterParams,
 } from '../types/api'
@@ -19,11 +20,13 @@ import {
   fetchAuditLogs,
   fetchAuditStats,
   fetchAuditReconstruct,
+  fetchAuditSummary,
   verifyAuditChain,
 } from '../services/api/forensics'
 import { ForensicsTimeline } from '../components/forensics/ForensicsTimeline'
 import { IncidentReconstructModal } from '../components/forensics/IncidentReconstructModal'
 import { EventDetailDrawer } from '../components/forensics/EventDetailDrawer'
+import { AISummaryPanel } from '../components/forensics/AISummaryPanel'
 import { detectAnomalies } from '../components/forensics/anomalyDetection'
 import { HashChainView } from '../components/forensics/HashChainView'
 
@@ -92,6 +95,12 @@ export function ForensicsPage() {
   // Incident reconstruction
   const [reconstructData, setReconstructData] = useState<AuditReconstructResponse | null>(null)
   const [reconstructing, setReconstructing] = useState(false)
+
+  // AI Summary (Perplexity)
+  const [summaryData, setSummaryData] = useState<AuditSummaryResponse | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const [summaryError, setSummaryError] = useState<string | null>(null)
+  const [showSummaryPanel, setShowSummaryPanel] = useState(false)
 
   // Deep-linked agent_id (e.g. from Shadow Agents page) — may not be a registered agent
   const [deepLinkedAgentId, setDeepLinkedAgentId] = useState<string | null>(null)
@@ -293,6 +302,36 @@ export function ForensicsPage() {
     URL.revokeObjectURL(url)
   }
 
+  // ── AI Summary handler ───────────────────────────────────────
+
+  const handleSummarize = useCallback(async () => {
+    setSummaryLoading(true)
+    setSummaryError(null)
+    setShowSummaryPanel(true)
+    try {
+      const params: Record<string, unknown> = { max_events: 200 }
+      const effectiveAgentId = deepLinkedAgentId || selectedAgent
+      if (effectiveAgentId) params.agent_id = effectiveAgentId
+      if (startDate) params.start_date = new Date(startDate).toISOString()
+      if (endDate) params.end_date = new Date(endDate).toISOString()
+      if (filterDecision) params.decision = filterDecision
+
+      const data = await fetchAuditSummary(params)
+      setSummaryData(data)
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; message?: string }
+      if (apiErr.status === 403) {
+        setSummaryError('AI Summaries require a Pro or higher plan.')
+      } else if (apiErr.status === 429) {
+        setSummaryError('Rate limit reached. Please try again later.')
+      } else {
+        setSummaryError('Failed to generate summary. Please try again.')
+      }
+    } finally {
+      setSummaryLoading(false)
+    }
+  }, [deepLinkedAgentId, selectedAgent, startDate, endDate, filterDecision])
+
   // ── Pagination ────────────────────────────────────────────────
 
   const totalPages = Math.ceil(total / limit)
@@ -379,6 +418,30 @@ export function ForensicsPage() {
             </button>
           )}
 
+          <button
+            onClick={handleSummarize}
+            disabled={summaryLoading || entries.length === 0}
+            className="px-3 py-2 text-sm font-medium text-zinc-100 bg-purple-500/90 hover:bg-purple-400/90 rounded-lg transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
+          >
+            {summaryLoading ? (
+              <>
+                <div className="h-3.5 w-3.5 border-2 border-zinc-200 border-t-transparent rounded-full animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-3.5 w-3.5"
+                >
+                  <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a1 1 0 01-.784.785l-1.192.238a1 1 0 000 1.962l1.192.238a1 1 0 01.785.785l.238 1.192a1 1 0 001.962 0l.238-1.192a1 1 0 01.785-.785l1.192-.238a1 1 0 000-1.962l-1.192-.238a1 1 0 01-.785-.785l-.238-1.192zM6.949 5.684a1 1 0 00-1.898 0l-.683 2.051a1 1 0 01-.633.633l-2.051.683a1 1 0 000 1.898l2.051.684a1 1 0 01.633.632l.683 2.051a1 1 0 001.898 0l.683-2.051a1 1 0 01.633-.633l2.051-.683a1 1 0 000-1.898l-2.051-.683a1 1 0 01-.633-.633L6.95 5.684zM13.949 13.684a1 1 0 00-1.898 0l-.184.551a1 1 0 01-.632.633l-.551.183a1 1 0 000 1.898l.551.183a1 1 0 01.633.633l.183.551a1 1 0 001.898 0l.184-.551a1 1 0 01.632-.633l.551-.183a1 1 0 000-1.898l-.551-.184a1 1 0 01-.633-.632l-.183-.551z" />
+                </svg>
+                What happened here?
+              </>
+            )}
+          </button>
           <button
             onClick={exportCSV}
             className="px-3 py-2 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors border border-zinc-600"
@@ -818,6 +881,17 @@ export function ForensicsPage() {
           onClose={() => setSelectedEvent(null)}
           events={entries}
           onNavigate={setSelectedEvent}
+        />
+      )}
+
+      {/* AI Summary Panel */}
+      {showSummaryPanel && (
+        <AISummaryPanel
+          data={summaryData}
+          loading={summaryLoading}
+          error={summaryError}
+          onClose={() => setShowSummaryPanel(false)}
+          onRegenerate={handleSummarize}
         />
       )}
     </div>
