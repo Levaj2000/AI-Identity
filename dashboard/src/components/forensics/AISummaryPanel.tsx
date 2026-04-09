@@ -40,6 +40,22 @@ function normalizeSummaryMarkdown(raw: string): string {
   return result
 }
 
+/**
+ * Replace `[1]`, `[2][3]` etc. with superscript links to citation URLs.
+ * Falls back to plain text when a citation index has no matching URL.
+ */
+function injectCitationLinks(markdown: string, citations: string[]): string {
+  if (!citations.length) return markdown
+  // Match [N] patterns (possibly chained like [1][2])
+  return markdown.replace(/\[(\d+)\]/g, (_match, numStr) => {
+    const idx = parseInt(numStr, 10) - 1 // citations are 1-indexed in text
+    if (idx >= 0 && idx < citations.length) {
+      return `[<sup>${numStr}</sup>](${citations[idx]})`
+    }
+    return `<sup>${numStr}</sup>`
+  })
+}
+
 // ── Component ────────────────────────────────────────────────────
 
 interface Props {
@@ -117,7 +133,31 @@ export function AISummaryPanel({ data, loading, error, onClose, onRegenerate }: 
 
           {data && !loading && !error && (
             <div className="ai-summary-content">
-              <Markdown>{normalizeSummaryMarkdown(data.summary)}</Markdown>
+              <Markdown>
+                {injectCitationLinks(normalizeSummaryMarkdown(data.summary), data.citations)}
+              </Markdown>
+              {data.citations.length > 0 && (
+                <div className="mt-6 pt-4 border-t border-zinc-700/50">
+                  <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+                    Sources
+                  </h3>
+                  <ol className="list-decimal list-inside space-y-1">
+                    {data.citations.map((url, i) => (
+                      <li key={i} className="text-xs text-zinc-400">
+                        <a
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-purple-400 hover:underline break-all"
+                        >
+                          {url.replace(/^https?:\/\//, '').slice(0, 80)}
+                          {url.replace(/^https?:\/\//, '').length > 80 ? '...' : ''}
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
             </div>
           )}
         </div>

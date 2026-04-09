@@ -417,7 +417,7 @@ def audit_summarize(
         single_agent_name = agent_names[body.agent_id]
 
     try:
-        summary = summarize_audit_events(
+        summary, citations = summarize_audit_events(
             events_text=events_text,
             stats_summary=stats_text,
             agent_name=single_agent_name,
@@ -428,6 +428,7 @@ def audit_summarize(
 
     return AuditSummaryResponse(
         summary=summary,
+        citations=citations,
         events_analyzed=len(entries),
         model_used=app_settings.perplexity_model,
         generated_at=datetime.now(UTC),

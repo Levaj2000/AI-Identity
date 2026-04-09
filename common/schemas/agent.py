@@ -391,6 +391,9 @@ class AuditSummaryResponse(BaseModel):
     """AI-generated summary of audit activity."""
 
     summary: str = Field(description="Markdown-formatted summary")
+    citations: list[str] = Field(
+        default_factory=list, description="Source URLs referenced in summary"
+    )
     events_analyzed: int = Field(description="Number of events included")
     model_used: str = Field(description="Perplexity model used")
     generated_at: datetime

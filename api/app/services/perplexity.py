@@ -48,7 +48,7 @@ def summarize_audit_events(
     events_text: str,
     stats_summary: str,
     agent_name: str | None = None,
-) -> str:
+) -> tuple[str, list[str]]:
     """Call Perplexity to summarise formatted audit events.
 
     Parameters
@@ -62,8 +62,8 @@ def summarize_audit_events(
 
     Returns
     -------
-    str
-        Markdown-formatted summary.
+    tuple[str, list[str]]
+        (Markdown-formatted summary, list of citation URLs).
 
     Raises
     ------
@@ -113,7 +113,10 @@ def summarize_audit_events(
 
     data = resp.json()
     try:
-        return data["choices"][0]["message"]["content"]
+        content = data["choices"][0]["message"]["content"]
     except (KeyError, IndexError, TypeError) as exc:
         logger.error("Unexpected Perplexity response shape: %s", exc)
         raise PerplexityError("Unexpected response from AI service") from exc
+
+    citations: list[str] = data.get("citations") or []
+    return content, citations
