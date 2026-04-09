@@ -241,8 +241,19 @@ export interface AuditSummaryRequest {
   max_events?: number
 }
 
+export interface ObservedFact {
+  label: string
+  value: string
+}
+
 export interface AuditSummaryResponse {
-  summary: string
+  title: string
+  executive_summary: string
+  observed_facts: ObservedFact[]
+  assessment: string
+  recommended_follow_ups: string[]
+  risk_level: 'informational' | 'low' | 'medium' | 'high'
+  confidence: 'low' | 'medium' | 'high'
   citations: string[]
   events_analyzed: number
   model_used: string

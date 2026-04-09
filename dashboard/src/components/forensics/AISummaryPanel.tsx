@@ -1,59 +1,26 @@
 /**
- * AISummaryPanel — slide-out drawer showing AI-generated audit summary.
+ * AISummaryPanel — slide-out drawer showing structured AI audit summary (v2).
  *
- * Renders a Perplexity-powered markdown summary of agent activity with
- * metadata (model used, events analysed) and a regenerate action.
+ * Renders a Perplexity-powered structured report with dedicated sections:
+ * executive summary, observed facts, assessment, recommendations,
+ * risk/confidence badges, and citation sources.
  */
 
-import Markdown from 'react-markdown'
 import type { AuditSummaryResponse } from '../../types/api'
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-/**
- * Normalize Perplexity output so section titles render as headings.
- *
- * Perplexity sometimes returns "Overview\n..." or "**Key Activity**\n..."
- * instead of "## Overview\n...". This converts known section labels into
- * proper markdown H2s for consistent rendering.
- */
-function normalizeSummaryMarkdown(raw: string): string {
-  const sectionLabels = [
-    'Overview',
-    'Key Activity',
-    'Anomalies & Concerns',
-    'Anomalies and Concerns',
-    'Recommendations',
-    'Next Steps',
-  ]
-  let result = raw
-  for (const label of sectionLabels) {
-    // Match "**Label**" or "Label" at start of line (not already a heading)
-    const patterns = [
-      new RegExp(`^\\*\\*${label}\\*\\*\\s*$`, 'gm'),
-      new RegExp(`^${label}\\s*$`, 'gm'),
-    ]
-    for (const pattern of patterns) {
-      result = result.replace(pattern, `## ${label}`)
-    }
-  }
-  return result
+const riskBadgeStyles: Record<string, string> = {
+  informational: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20',
+  low: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  medium: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  high: 'bg-red-500/10 text-red-400 border-red-500/20',
 }
 
-/**
- * Replace `[1]`, `[2][3]` etc. with superscript links to citation URLs.
- * Falls back to plain text when a citation index has no matching URL.
- */
-function injectCitationLinks(markdown: string, citations: string[]): string {
-  if (!citations.length) return markdown
-  // Match [N] patterns (possibly chained like [1][2])
-  return markdown.replace(/\[(\d+)\]/g, (_match, numStr) => {
-    const idx = parseInt(numStr, 10) - 1 // citations are 1-indexed in text
-    if (idx >= 0 && idx < citations.length) {
-      return `[<sup>${numStr}</sup>](${citations[idx]})`
-    }
-    return `<sup>${numStr}</sup>`
-  })
+const confidenceBadgeStyles: Record<string, string> = {
+  low: 'text-zinc-500',
+  medium: 'text-zinc-400',
+  high: 'text-zinc-300',
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -78,7 +45,7 @@ export function AISummaryPanel({ data, loading, error, onClose, onRegenerate }: 
         <div className="sticky top-0 bg-zinc-900/95 backdrop-blur border-b border-zinc-700 px-6 py-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-3">
             <span className="text-lg">✨</span>
-            <h2 className="text-lg font-semibold text-zinc-100">AI Analysis</h2>
+            <h2 className="text-lg font-semibold text-zinc-100">{data?.title || 'AI Analysis'}</h2>
             {data && (
               <span className="text-xs text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">
                 {data.events_analyzed} events · {data.model_used}
@@ -101,7 +68,8 @@ export function AISummaryPanel({ data, loading, error, onClose, onRegenerate }: 
         </div>
 
         {/* Body */}
-        <div className="flex-1 px-6 py-5">
+        <div className="flex-1 px-6 py-5 space-y-6">
+          {/* Loading */}
           {loading && (
             <div className="flex flex-col items-center justify-center py-20 text-zinc-400 gap-3">
               <div className="h-8 w-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
@@ -110,6 +78,7 @@ export function AISummaryPanel({ data, loading, error, onClose, onRegenerate }: 
             </div>
           )}
 
+          {/* Error */}
           {error && (
             <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-5 text-center">
               <p className="text-sm text-red-400 mb-3">{error}</p>
@@ -131,13 +100,85 @@ export function AISummaryPanel({ data, loading, error, onClose, onRegenerate }: 
             </div>
           )}
 
+          {/* Structured Report */}
           {data && !loading && !error && (
-            <div className="ai-summary-content">
-              <Markdown>
-                {injectCitationLinks(normalizeSummaryMarkdown(data.summary), data.citations)}
-              </Markdown>
+            <>
+              {/* Risk + Confidence badges */}
+              <div className="flex items-center gap-3">
+                <span
+                  className={`inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-semibold uppercase tracking-wider ${riskBadgeStyles[data.risk_level] || riskBadgeStyles.informational}`}
+                >
+                  {data.risk_level}
+                </span>
+                <span
+                  className={`text-xs ${confidenceBadgeStyles[data.confidence] || 'text-zinc-500'}`}
+                >
+                  Confidence: {data.confidence}
+                </span>
+              </div>
+
+              {/* Executive Summary */}
+              <section>
+                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+                  Executive Summary
+                </h3>
+                <p className="text-sm text-zinc-300 leading-relaxed">{data.executive_summary}</p>
+              </section>
+
+              {/* Observed Facts */}
+              {data.observed_facts.length > 0 && (
+                <section>
+                  <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+                    Observed Facts
+                  </h3>
+                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg overflow-hidden">
+                    {data.observed_facts.map((fact, i) => (
+                      <div
+                        key={i}
+                        className="flex items-start gap-3 px-4 py-2.5 border-b border-zinc-700/50 last:border-b-0"
+                      >
+                        <span className="text-xs font-medium text-zinc-500 shrink-0 w-28 pt-0.5">
+                          {fact.label}
+                        </span>
+                        <span className="text-xs text-zinc-300 break-words">{fact.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Assessment */}
+              <section>
+                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+                  Assessment
+                </h3>
+                <div className="bg-zinc-800/30 border border-zinc-700/50 rounded-lg p-4">
+                  <p className="text-sm text-zinc-300 leading-relaxed">{data.assessment}</p>
+                </div>
+              </section>
+
+              {/* Recommended Follow-ups */}
+              {data.recommended_follow_ups.length > 0 && (
+                <section>
+                  <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+                    Recommended Follow-ups
+                  </h3>
+                  <ol className="space-y-2">
+                    {data.recommended_follow_ups.map((rec, i) => (
+                      <li key={i} className="flex gap-3 text-sm text-zinc-300 leading-relaxed">
+                        <span className="text-xs font-semibold text-purple-400 bg-purple-500/10 rounded-full h-5 w-5 flex items-center justify-center shrink-0 mt-0.5">
+                          {i + 1}
+                        </span>
+                        <span>{rec}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
+
+              {/* Sources */}
               {data.citations.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-zinc-700/50">
+                <section className="pt-4 border-t border-zinc-700/50">
                   <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
                     Sources
                   </h3>
@@ -156,9 +197,9 @@ export function AISummaryPanel({ data, loading, error, onClose, onRegenerate }: 
                       </li>
                     ))}
                   </ol>
-                </div>
+                </section>
               )}
-            </div>
+            </>
           )}
         </div>
 
