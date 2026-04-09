@@ -178,8 +178,7 @@ export default function HomeContent() {
               className="text-lg md:text-xl max-w-2xl mx-auto mb-10"
               style={{ color: "rgba(213,219,230,0.7)", letterSpacing: "-0.32px" }}
             >
-              Forensic-grade accountability for every agent decision.
-              Replay any session step-by-step. Produce tamper-evident timelines regulators can verify independently.
+              Secure identity and least-privilege access for every AI agent — with forensic-grade audit trails regulators can verify independently.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
