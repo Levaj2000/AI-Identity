@@ -374,43 +374,7 @@ def audit_summarize(
         rows = db.query(Agent.id, Agent.name).filter(Agent.id.in_(agent_ids_in_results)).all()
         agent_names = {row[0]: row[1] for row in rows}
 
-    # ── Format events as compact text ──────────────────────────────
-    # Include key metadata fields so the AI has full context for its analysis.
-    meta_keys_for_summary = (
-        "action_type",
-        "agent_name",
-        "resource_type",
-        "model",
-        "new_status",
-        "old_status",
-        "deny_reason",
-        "keys_revoked",
-        "policy_version",
-    )
-
-    lines: list[str] = []
-    for e in entries:
-        name = agent_names.get(e.agent_id, str(e.agent_id)[:8])
-        cost = f"${e.cost_estimate_usd:.4f}" if e.cost_estimate_usd else "-"
-        latency = f"{e.latency_ms}ms" if e.latency_ms else "-"
-
-        # Extract useful metadata fields
-        meta_parts: list[str] = []
-        if e.request_metadata and isinstance(e.request_metadata, dict):
-            for key in meta_keys_for_summary:
-                val = e.request_metadata.get(key)
-                if val:
-                    meta_parts.append(f"{key}={val}")
-        meta_str = f" | {', '.join(meta_parts)}" if meta_parts else ""
-
-        lines.append(
-            f"[{e.created_at:%Y-%m-%d %H:%M:%S}] "
-            f'Agent "{name}" | {e.method or "-"} {e.endpoint or "-"} | '
-            f"{e.decision.upper()} | {cost} | {latency}{meta_str}"
-        )
-    events_text = "\n".join(lines)
-
-    # ── Compute stats summary ──────────────────────────────────────
+    # ── Compute stats ────────────────────────────────────────────────
     stats = _compute_stats(
         db,
         user_agents,
@@ -419,34 +383,96 @@ def audit_summarize(
         end_date=body.end_date,
         user_id=user.id,
     )
-    top_eps = ", ".join(f"{ep.endpoint} ({ep.count})" for ep in stats.top_endpoints[:5])
-    stats_text = (
-        f"- Total events: {stats.total_events}\n"
-        f"- Allowed: {stats.allowed_count}, Denied: {stats.denied_count}, "
-        f"Errors: {stats.error_count}\n"
-        f"- Total cost: ${stats.total_cost_usd:.4f}\n"
-        f"- Average latency: {stats.avg_latency_ms or 'N/A'}ms\n"
-        f"- Top endpoints: {top_eps or 'N/A'}"
+
+    # ── Build normalized event data for structured prompt ──────────
+    # Per-event details (compact for prompt context)
+    event_details = []
+    for e in entries:
+        name = agent_names.get(e.agent_id, str(e.agent_id)[:8])
+        meta = e.request_metadata if isinstance(e.request_metadata, dict) else {}
+        event_details.append(
+            {
+                "timestamp": e.created_at.isoformat(),
+                "agent_name": meta.get("agent_name", name),
+                "agent_id": str(e.agent_id),
+                "http_method": e.method or "",
+                "endpoint": e.endpoint or "",
+                "decision": e.decision,
+                "cost_usd": float(e.cost_estimate_usd) if e.cost_estimate_usd else 0,
+                "latency_ms": e.latency_ms,
+                "action_type": meta.get("action_type", ""),
+                "resource_type": meta.get("resource_type", ""),
+                "status_before": meta.get("old_status", ""),
+                "status_after": meta.get("new_status", ""),
+                "deny_reason": meta.get("deny_reason", ""),
+                "keys_revoked": meta.get("keys_revoked", ""),
+                "model": meta.get("model", ""),
+            }
+        )
+
+    # Determine time window
+    window_start = (
+        body.start_date.isoformat() if body.start_date else entries[0].created_at.isoformat()
     )
+    window_end = body.end_date.isoformat() if body.end_date else entries[-1].created_at.isoformat()
+
+    # Build notes for context
+    notes_parts = []
+    if len(entries) == 1:
+        notes_parts.append("Single event in selected time window")
+    if stats.denied_count > 0:
+        notes_parts.append(f"{stats.denied_count} denied requests require review")
+    if stats.error_count > 0:
+        notes_parts.append(f"{stats.error_count} errors detected")
+
+    event_data = {
+        "time_window_start": window_start,
+        "time_window_end": window_end,
+        "requests_total": stats.total_events,
+        "requests_allowed": stats.allowed_count,
+        "requests_denied": stats.denied_count,
+        "errors": stats.error_count,
+        "cost_usd": float(stats.total_cost_usd),
+        "avg_latency_ms": stats.avg_latency_ms,
+        "supporting_events_count": len(entries),
+        "events": event_details,
+        "notes": "; ".join(notes_parts) if notes_parts else "No additional notes",
+    }
 
     # ── Call Perplexity ────────────────────────────────────────────
-    # Determine agent name for single-agent queries
-    single_agent_name = None
-    if body.agent_id and body.agent_id in agent_names:
-        single_agent_name = agent_names[body.agent_id]
-
     try:
-        summary, citations = summarize_audit_events(
-            events_text=events_text,
-            stats_summary=stats_text,
-            agent_name=single_agent_name,
-        )
+        report, citations = summarize_audit_events(event_data=event_data)
     except PerplexityError as exc:
         status = 504 if "timed out" in str(exc) else 502
         raise HTTPException(status_code=status, detail=str(exc)) from exc
 
+    # ── Apply guardrails ──────────────────────────────────────────
+    # Force confidence down for single-event windows
+    confidence = report.get("confidence", "medium")
+    if len(entries) <= 1 and confidence == "high":
+        report_risk = report.get("risk_level", "informational")
+        if report_risk not in ("informational",):
+            confidence = "medium"
+
+    # Elevate risk if denials or errors present
+    risk_level = report.get("risk_level", "informational")
+    if stats.denied_count > 0 and risk_level == "informational":
+        risk_level = "low"
+    if stats.error_count > 0 and risk_level in ("informational", "low"):
+        risk_level = "medium"
+
     return AuditSummaryResponse(
-        summary=summary,
+        title=report.get("title", "AI Agent Audit Summary"),
+        executive_summary=report.get("executive_summary", ""),
+        observed_facts=[
+            {"label": f["label"], "value": f["value"]}
+            for f in report.get("observed_facts", [])
+            if isinstance(f, dict) and "label" in f and "value" in f
+        ],
+        assessment=report.get("assessment", ""),
+        recommended_follow_ups=report.get("recommended_follow_ups", []),
+        risk_level=risk_level,
+        confidence=confidence,
         citations=citations,
         events_analyzed=len(entries),
         model_used=app_settings.perplexity_model,

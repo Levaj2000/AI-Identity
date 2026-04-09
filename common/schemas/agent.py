@@ -387,10 +387,23 @@ class AuditSummaryRequest(BaseModel):
     max_events: int = Field(100, ge=1, le=500, description="Max events to include in summary")
 
 
-class AuditSummaryResponse(BaseModel):
-    """AI-generated summary of audit activity."""
+class ObservedFact(BaseModel):
+    """A single observed fact from the audit analysis."""
 
-    summary: str = Field(description="Markdown-formatted summary")
+    label: str
+    value: str
+
+
+class AuditSummaryResponse(BaseModel):
+    """Structured AI-generated audit summary (v2)."""
+
+    title: str = Field(description="Report title")
+    executive_summary: str = Field(description="2-4 sentence overview")
+    observed_facts: list[ObservedFact] = Field(description="Key-value fact rows")
+    assessment: str = Field(description="Interpretation of observed facts")
+    recommended_follow_ups: list[str] = Field(description="Actionable recommendations")
+    risk_level: str = Field(description="informational|low|medium|high")
+    confidence: str = Field(description="low|medium|high")
     citations: list[str] = Field(
         default_factory=list, description="Source URLs referenced in summary"
     )

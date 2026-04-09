@@ -1,10 +1,15 @@
-"""Perplexity AI client for audit log summarisation.
+"""Perplexity AI client for structured audit log summarisation (v2).
 
-Calls the Perplexity chat-completions API (OpenAI-compatible) to produce
-natural-language summaries of agent activity.  The feature is gated on
-``settings.perplexity_api_key`` — when empty the endpoint returns 503.
+Calls the Perplexity chat-completions API (OpenAI-compatible) with a
+fixed JSON report template.  The model fills in the template from
+structured event data — producing consistent, parseable output that is
+rendered directly in the dashboard without markdown processing.
+
+The feature is gated on ``settings.perplexity_api_key`` — when empty
+the endpoint returns 503.
 """
 
+import json
 import logging
 
 import httpx
@@ -14,29 +19,38 @@ from common.config.settings import settings
 logger = logging.getLogger("ai_identity.services.perplexity")
 
 _SYSTEM_PROMPT = """\
-You are an AI security analyst reviewing audit logs from an AI agent \
-governance platform called AI Identity.
+You are a security audit analyst writing concise enterprise-grade summaries \
+for AI agent activity.
 
-Analyze the provided agent activity and produce a clear, actionable summary \
-using the following sections:
+Your job is to analyze the provided audit event data and produce a report \
+for a product UI.
 
-## Overview
-Brief description of what happened in this time window.
+Follow these rules exactly:
+- Use only the facts provided.
+- Do not invent missing details.
+- If evidence is limited, say "based on the events reviewed in this audit window".
+- Separate observed facts from interpretation.
+- Keep the tone precise, calm, and professional.
+- Do not use hype, marketing language, or dramatic wording.
+- Do not claim malicious behavior unless the evidence clearly supports it.
+- If there are zero denied requests and zero errors, do not overstate risk.
+- Recommendations must be operational and specific.
+- Output valid JSON only. No markdown fences, no commentary outside the JSON.
 
-## Key Activity
-Most significant actions, patterns, and endpoints used.
-
-## Anomalies & Concerns
-Any unusual patterns — denied requests, error spikes, cost outliers, \
-latency anomalies, or potential security issues.  If nothing stands out, \
-say so.
-
-## Recommendations
-Actionable next steps based on best practices for AI agent governance.  \
-Reference relevant security frameworks (NIST AI RMF, OWASP LLM Top 10, \
-SOC 2) where applicable and link to authoritative sources.
-
-Keep the summary concise but thorough.  Use bullet points for readability.
+Return JSON in this exact shape:
+{
+  "title": "AI Agent Audit Summary",
+  "executive_summary": "string — 2-4 sentence overview of the audit window",
+  "observed_facts": [
+    {"label": "string — fact name", "value": "string — fact value"}
+  ],
+  "assessment": "string — interpretation of the observed facts, 2-4 sentences",
+  "recommended_follow_ups": [
+    "string — actionable recommendation"
+  ],
+  "risk_level": "informational|low|medium|high",
+  "confidence": "low|medium|high"
+}
 """
 
 
@@ -45,25 +59,19 @@ class PerplexityError(Exception):
 
 
 def summarize_audit_events(
-    events_text: str,
-    stats_summary: str,
-    agent_name: str | None = None,
-) -> tuple[str, list[str]]:
-    """Call Perplexity to summarise formatted audit events.
+    event_data: dict,
+) -> tuple[dict, list[str]]:
+    """Call Perplexity to produce a structured audit summary.
 
     Parameters
     ----------
-    events_text:
-        Pre-formatted audit log lines (one per event).
-    stats_summary:
-        Aggregated stats block (counts, cost, latency, top endpoints).
-    agent_name:
-        Optional agent name for context.
+    event_data:
+        Normalized event object (dict) with structured audit fields.
 
     Returns
     -------
-    tuple[str, list[str]]
-        (Markdown-formatted summary, list of citation URLs).
+    tuple[dict, list[str]]
+        (Parsed JSON report dict, list of citation URLs).
 
     Raises
     ------
@@ -73,10 +81,7 @@ def summarize_audit_events(
     if not settings.perplexity_api_key:
         raise PerplexityError("Perplexity API key not configured")
 
-    context = f"Agent: {agent_name}\n\n" if agent_name else ""
-    user_message = (
-        f"{context}Audit statistics:\n{stats_summary}\n\nAgent activity log:\n{events_text}"
-    )
+    user_message = f"Audit event data:\n{json.dumps(event_data, indent=2)}"
 
     payload = {
         "model": settings.perplexity_model,
@@ -119,4 +124,38 @@ def summarize_audit_events(
         raise PerplexityError("Unexpected response from AI service") from exc
 
     citations: list[str] = data.get("citations") or []
-    return content, citations
+
+    # Parse the JSON report from the model response
+    # Strip markdown code fences if present (```json ... ```)
+    cleaned = content.strip()
+    if cleaned.startswith("```"):
+        # Remove opening fence (```json or ```)
+        first_newline = cleaned.index("\n")
+        cleaned = cleaned[first_newline + 1 :]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    cleaned = cleaned.strip()
+
+    try:
+        report = json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        logger.error("Failed to parse Perplexity response as JSON: %s", exc)
+        logger.debug("Raw response content: %s", content[:500])
+        raise PerplexityError("AI returned an invalid response format. Please try again.") from exc
+
+    # Validate required fields are present
+    required_fields = (
+        "title",
+        "executive_summary",
+        "observed_facts",
+        "assessment",
+        "recommended_follow_ups",
+        "risk_level",
+        "confidence",
+    )
+    missing = [f for f in required_fields if f not in report]
+    if missing:
+        logger.error("Perplexity response missing fields: %s", missing)
+        raise PerplexityError("AI returned an incomplete response. Please try again.") from None
+
+    return report, citations
