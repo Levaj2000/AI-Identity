@@ -243,6 +243,7 @@ export interface AuditSummaryRequest {
 
 export interface AuditSummaryResponse {
   summary: string
+  citations: string[]
   events_analyzed: number
   model_used: string
   generated_at: string
