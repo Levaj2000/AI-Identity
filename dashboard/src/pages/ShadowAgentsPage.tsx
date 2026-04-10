@@ -13,14 +13,12 @@ import {
   type ShadowEvent,
 } from '../services/api/shadow'
 import { isApiError } from '../services/api/client'
-import { useAuth } from '../hooks/useAuth'
 import { ConfirmModal } from '../components/modals/ConfirmModal'
 import { RegisterAgentModal } from '../components/modals/RegisterAgentModal'
 
 type DenyReasonFilter = '' | 'agent_not_found' | 'agent_inactive' | 'agent_blocked'
 
 export function ShadowAgentsPage() {
-  const { user } = useAuth()
   const [stats, setStats] = useState<ShadowAgentStats | null>(null)
   const [data, setData] = useState<ShadowAgentList | null>(null)
   const [loading, setLoading] = useState(true)
@@ -71,9 +69,8 @@ export function ShadowAgentsPage() {
   )
 
   useEffect(() => {
-    if (!user) return
     loadData()
-  }, [user, loadData])
+  }, [loadData])
 
   const handleDenyReasonFilter = (reason: DenyReasonFilter) => {
     setDenyReasonFilter(reason)

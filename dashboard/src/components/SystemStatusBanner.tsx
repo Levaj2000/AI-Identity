@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { apiFetch } from '../services/api/client'
-import { useAuth } from '../hooks/useAuth'
 
 interface HealthResponse {
   status: string
@@ -57,13 +56,11 @@ function MiniSparkline({ values }: { values: number[] }) {
 }
 
 export function SystemStatusBanner() {
-  const { user } = useAuth()
   const [health, setHealth] = useState<HealthResponse | null>(null)
   const [lastRotation, setLastRotation] = useState<string | null>(null)
   const [latencyHistory, setLatencyHistory] = useState<number[]>([])
 
   useEffect(() => {
-    if (!user) return
     // Fetch health (ping a few times for sparkline)
     async function loadHealth() {
       try {
@@ -106,7 +103,7 @@ export function SystemStatusBanner() {
 
     loadHealth()
     loadLastRotation()
-  }, [user])
+  }, [])
 
   const isHealthy = health?.status === 'healthy'
   const latency = health ? Math.round(health.db_latency_ms) : null

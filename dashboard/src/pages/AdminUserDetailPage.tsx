@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getAdminUserDetail, updateUserTier, type AdminUserDetail } from '../services/api/admin'
 import { isApiError } from '../services/api/client'
-import { useAuth } from '../hooks/useAuth'
 
 export function AdminUserDetailPage() {
-  const { user: authUser } = useAuth()
   const { id } = useParams<{ id: string }>()
   const [user, setUser] = useState<AdminUserDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -33,9 +31,8 @@ export function AdminUserDetailPage() {
   }
 
   useEffect(() => {
-    if (!authUser) return
     loadUser()
-  }, [authUser, id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleTierChange = async (newTier: string) => {
     if (!user || !id) return
