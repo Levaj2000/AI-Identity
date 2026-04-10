@@ -141,6 +141,35 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   return response.json() as Promise<T>
 }
 
+// ─── Auth header helper (for raw fetch calls like blob downloads) ──
+
+/**
+ * Build the auth headers that apiFetch would inject.
+ * Use this when you need raw fetch() (e.g. blob downloads) but still
+ * need authentication.
+ */
+export async function getAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {}
+  if (getSessionToken) {
+    const token = await getSessionToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+  }
+  if (!headers['Authorization']) {
+    const key = getApiKey()
+    if (key) {
+      headers['X-API-Key'] = key
+    }
+  }
+  return headers
+}
+
+/** Return the configured API base URL. */
+export function getApiBaseUrl(): string {
+  return API_BASE_URL
+}
+
 // ─── Query string helper ─────────────────────────────────────────
 
 /** Build a query string from an object, omitting undefined/null values. */
