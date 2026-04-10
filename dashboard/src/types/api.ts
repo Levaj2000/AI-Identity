@@ -214,6 +214,7 @@ export interface ForensicsReportResponse {
   chain_verification: ChainVerifyResponse
   active_policy: PolicySnapshot | null
   stats: AuditStatsResponse
+  report_signature: string
 }
 
 export interface ForensicsFilterParams {

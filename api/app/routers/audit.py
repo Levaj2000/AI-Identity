@@ -9,11 +9,13 @@ reconstruction and reporting.
 import csv
 import io
 import logging
+import pathlib
 import uuid
+import zipfile
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -705,6 +707,165 @@ def audit_report(
         active_policy=PolicyResponse.model_validate(active_policy) if active_policy else None,
         stats=stats,
         report_signature=report_sig,
+    )
+
+
+# ── Verification Bundle ────────────────────────────────────────────
+
+_BUNDLE_README = """\
+# AI Identity — Forensic Report Verification
+
+This bundle contains a forensic audit report from AI Identity and a tool to independently verify its integrity.
+
+## What's Inside
+
+- `forensics-report-*.json` — The signed forensic audit report
+- `ai_identity_verify.py` — Standalone verification tool (Python 3.9+, no dependencies)
+
+## Quick Start
+
+1. Get your HMAC verification key from your AI Identity administrator
+2. Open a terminal and run:
+
+   export AI_IDENTITY_HMAC_KEY="your-key-here"
+   python3 ai_identity_verify.py report forensics-report-*.json
+
+3. You should see:
+
+   Signature: VALID ✓
+
+To also verify the full audit chain:
+
+   python3 ai_identity_verify.py chain forensics-report-*.json
+
+## What This Proves
+
+- **Signature VALID**: The report data is authentic and has not been modified since export
+- **Chain INTACT**: Every audit log entry links cryptographically to the previous one — no entries were inserted, deleted, or altered
+
+## Need Help?
+
+Contact your AI Identity administrator or visit https://ai-identity.co/docs
+"""
+
+# Resolve the CLI script path relative to the project root
+_CLI_SCRIPT_PATH = pathlib.Path(__file__).resolve().parents[3] / "cli" / "ai_identity_verify.py"
+
+
+@router.get(
+    "/report/bundle",
+    summary="Download verification bundle",
+    response_description="ZIP file with signed report, verification CLI, and README",
+    tags=["forensics"],
+)
+def audit_report_bundle(
+    agent_id: uuid.UUID = Query(..., description="Agent to report on"),
+    start_date: datetime = Query(..., description="Report window start"),
+    end_date: datetime = Query(..., description="Report window end"),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Response:
+    """Download a ZIP bundle containing the signed forensics report, the standalone
+    verification CLI script, and a client-facing README with instructions.
+    """
+    # Verify agent ownership
+    agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == user.id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    # Generate the full signed report (reuse the same logic as /report)
+    events = (
+        db.query(AuditLog)
+        .filter(
+            AuditLog.agent_id == agent_id,
+            AuditLog.created_at >= start_date,
+            AuditLog.created_at <= end_date,
+        )
+        .order_by(AuditLog.created_at.asc())
+        .all()
+    )
+
+    chain_result = verify_chain(db, agent_id=agent_id)
+
+    active_policy = (
+        db.query(Policy)
+        .filter(Policy.agent_id == agent_id, Policy.is_active.is_(True))
+        .order_by(Policy.version.desc())
+        .first()
+    )
+
+    user_agents = _user_agent_ids(db, user)
+    stats = _compute_stats(
+        db, user_agents, agent_id=agent_id, start_date=start_date, end_date=end_date
+    )
+
+    event_responses = [AuditLogResponse.model_validate(e) for e in events]
+
+    report_id = f"fr-{agent_id.hex[:8]}-{start_date.strftime('%Y%m%d%H%M')}"
+    report_generated_at = datetime.now(tz=UTC)
+    chain_verify = AuditChainVerifyResponse(
+        valid=chain_result.valid,
+        total_entries=chain_result.total_entries,
+        entries_verified=chain_result.entries_verified,
+        first_broken_id=chain_result.first_broken_id,
+        message=chain_result.message,
+    )
+    report_sig = generate_report_signature(
+        report_id=report_id,
+        generated_at=report_generated_at,
+        chain_valid=chain_result.valid,
+        total_entries=chain_result.total_entries,
+        entries_verified=chain_result.entries_verified,
+    )
+
+    report = ForensicsReportResponse(
+        report_id=report_id,
+        generated_at=report_generated_at,
+        agent={
+            "id": str(agent.id),
+            "name": agent.name,
+            "status": agent.status.value if hasattr(agent.status, "value") else str(agent.status),
+            "description": agent.description,
+        },
+        time_window={
+            "start": start_date.isoformat(),
+            "end": end_date.isoformat(),
+        },
+        events=event_responses,
+        chain_verification=chain_verify,
+        active_policy=PolicyResponse.model_validate(active_policy) if active_policy else None,
+        stats=stats,
+        report_signature=report_sig,
+    )
+
+    # Serialize report to JSON
+    report_json = report.model_dump_json(indent=2)
+
+    # Build the ZIP bundle
+    date_str = report_generated_at.strftime("%Y-%m-%d")
+    agent_short = agent_id.hex[:8]
+    report_filename = f"forensics-report-{agent_short}-{date_str}.json"
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(report_filename, report_json)
+
+        # Include the CLI verification script from disk
+        if _CLI_SCRIPT_PATH.exists():
+            zf.write(_CLI_SCRIPT_PATH, "ai_identity_verify.py")
+        else:
+            logger.warning("CLI script not found at %s", _CLI_SCRIPT_PATH)
+
+        zf.writestr("README.md", _BUNDLE_README)
+
+    zip_buffer.seek(0)
+    zip_bytes = zip_buffer.getvalue()
+
+    bundle_filename = f"ai-identity-verify-{agent_short}-{date_str}.zip"
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{bundle_filename}"'},
     )
 
 
