@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { apiFetch, toQueryString } from '../services/api/client'
 import type { AuditLogEntry } from '../types/api'
+import { useAuth } from '../hooks/useAuth'
 import { EventDetailDrawer } from '../components/forensics/EventDetailDrawer'
 import { verifyAuditChain } from '../services/api/forensics'
 
@@ -54,6 +55,7 @@ function isAllowDecision(d: string) {
 // ── Component ────────────────────────────────────────────────────
 
 export function CompliancePage() {
+  const { user } = useAuth()
   // Audit log state
   const [entries, setEntries] = useState<AuditLogEntry[]>([])
   const [total, setTotal] = useState(0)
@@ -84,6 +86,7 @@ export function CompliancePage() {
   // ── Fetch audit entries ──────────────────────────────────────
 
   useEffect(() => {
+    if (!user) return
     let cancelled = false
     async function load() {
       setLoading(true)
@@ -111,13 +114,14 @@ export function CompliancePage() {
     return () => {
       cancelled = true
     }
-  }, [offset, filterDecision, filterAgent])
+  }, [user, offset, filterDecision, filterAgent])
 
   // ── Fetch stats on mount ─────────────────────────────────────
   // Count both "deny" and "denied" (and "allow"/"allowed") variants
   // to avoid showing 0 when backend uses a different form.
 
   useEffect(() => {
+    if (!user) return
     async function loadStats() {
       try {
         const [all, allows, allowsAlt, denies, deniesAlt, errors] = await Promise.all([
@@ -139,7 +143,7 @@ export function CompliancePage() {
       }
     }
     loadStats()
-  }, [])
+  }, [user])
 
   // ── Verify chain (uses shared forensics API) ──────────────────
 
@@ -164,9 +168,10 @@ export function CompliancePage() {
   // ── Auto-verify on mount ──────────────────────────────────────
 
   useEffect(() => {
+    if (!user) return
     runVerify()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [user])
 
   // ── Export CSV ────────────────────────────────────────────────
 

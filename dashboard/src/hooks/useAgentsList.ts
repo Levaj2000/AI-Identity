@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { listAgents } from '../services/api/agents'
 import { isApiError } from '../services/api/client'
+import { useAuth } from './useAuth'
 import { useDebounce } from './useDebounce'
 import type { Agent, AgentStatus, ApiError } from '../types/api'
 
@@ -80,6 +81,7 @@ interface UseAgentsListReturn extends DataState {
  * Fetches agents via `listAgents()` and re-fetches when filters or page change.
  */
 export function useAgentsList(): UseAgentsListReturn {
+  const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Read initial values from URL
@@ -167,6 +169,9 @@ export function useAgentsList(): UseAgentsListReturn {
   // ── Fetch agents ──────────────────────────────────────────
 
   useEffect(() => {
+    // Wait for auth to be ready before fetching
+    if (!user) return
+
     let cancelled = false
     dispatch({ type: 'FETCH_START' })
 
@@ -197,7 +202,7 @@ export function useAgentsList(): UseAgentsListReturn {
     return () => {
       cancelled = true
     }
-  }, [statusFilter, debouncedCapability, page, refreshKey])
+  }, [user, statusFilter, debouncedCapability, page, refreshKey])
 
   return {
     ...data,
