@@ -15,15 +15,16 @@ HMAC key: set AI_IDENTITY_HMAC_KEY environment variable.
 from __future__ import annotations
 
 import argparse
-import csv
 import hashlib
 import hmac
-import io
 import json
 import os
 import sys
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Sequence
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 __version__ = "1.0.0"
 TOOL_NAME = "ai-identity-verify"
@@ -117,7 +118,7 @@ def _compute_report_signature(
     return hmac.new(key, message, hashlib.sha256).hexdigest()
 
 
-def _canonical_entry_payload(entry: Dict[str, Any], prev_hash: str) -> bytes:
+def _canonical_entry_payload(entry: dict[str, Any], prev_hash: str) -> bytes:
     """Build the canonical JSON payload for an audit chain entry.
 
     Mirrors ``common.audit.writer._canonical_payload`` exactly:
@@ -144,7 +145,7 @@ def _canonical_entry_payload(entry: Dict[str, Any], prev_hash: str) -> bytes:
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
-def _compute_entry_hash(key: bytes, entry: Dict[str, Any], prev_hash: str) -> str:
+def _compute_entry_hash(key: bytes, entry: dict[str, Any], prev_hash: str) -> str:
     """Compute HMAC-SHA256 hex digest for an audit chain entry."""
     message = _canonical_entry_payload(entry, prev_hash)
     return hmac.new(key, message, hashlib.sha256).hexdigest()
@@ -156,7 +157,7 @@ def _compute_entry_hash(key: bytes, entry: Dict[str, Any], prev_hash: str) -> st
 def _load_json(path: str) -> Any:
     """Load and parse a JSON file."""
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         print(f"Error: File not found: {path}", file=sys.stderr)
@@ -169,7 +170,7 @@ def _load_json(path: str) -> Any:
 # ── Report verification ────────────────────────────────────────────────
 
 
-def _extract_report_fields(data: Dict[str, Any]) -> Dict[str, Any]:
+def _extract_report_fields(data: dict[str, Any]) -> dict[str, Any]:
     """Extract the fields needed for report signature verification.
 
     Handles the standard ForensicsReportResponse JSON shape.
@@ -213,10 +214,7 @@ def _extract_report_fields(data: Dict[str, Any]) -> Dict[str, Any]:
 
 def _progress_bar(current: int, total: int, width: int = 32) -> str:
     """Render a simple progress bar string."""
-    if total == 0:
-        filled = width
-    else:
-        filled = int(width * current / total)
+    filled = width if total == 0 else int(width * current / total)
     bar = "\u2588" * filled + " " * (width - filled)
     return f"[{bar}] {current}/{total}"
 
@@ -243,7 +241,7 @@ def cmd_report(args: argparse.Namespace) -> int:
             "tool": TOOL_NAME,
             "version": __version__,
             "command": "report",
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "result": "valid" if valid else "invalid",
             "details": {
                 "report_id": fields["report_id"],
@@ -259,7 +257,8 @@ def cmd_report(args: argparse.Namespace) -> int:
         chain_mark = _green("\u2713") if fields["chain_valid"] else _red("\u2717")
         sig_text = _green("VALID \u2713") if valid else _red("INVALID \u2717")
 
-        print(f"\n{_bold('AI Identity \u2014 Report Verification')}")
+        title = _bold("AI Identity \u2014 Report Verification")
+        print(f"\n{title}")
         print("\u2550" * 34)
         print(f"  Report ID:    {fields['report_id']}")
         print(f"  Generated:    {fields['generated_at']}")
@@ -283,7 +282,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 # ── Chain verification ──────────────────────────────────────────────────
 
 
-def _load_chain_entries(path: str) -> List[Dict[str, Any]]:
+def _load_chain_entries(path: str) -> list[dict[str, Any]]:
     """Load audit chain entries from a JSON file.
 
     Accepts either:
@@ -326,7 +325,7 @@ def cmd_chain(args: argparse.Namespace) -> int:
                 "tool": TOOL_NAME,
                 "version": __version__,
                 "command": "chain",
-                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "result": "valid",
                 "details": {
                     "file": os.path.basename(args.file),
@@ -337,18 +336,20 @@ def cmd_chain(args: argparse.Namespace) -> int:
             }
             print(json.dumps(result, indent=2))
         else:
-            print(f"\n{_bold('AI Identity \u2014 Audit Chain Verification')}")
+            chain_title = _bold("AI Identity \u2014 Audit Chain Verification")
+            print(f"\n{chain_title}")
             print("\u2550" * 39)
             print(f"  File:         {os.path.basename(args.file)}")
             print("  Entries:      0")
             print()
-            print(f"  Result:       {_green('CHAIN INTACT \u2713')} (empty)")
+            intact_msg = _green("CHAIN INTACT \u2713")
+            print(f"  Result:       {intact_msg} (empty)")
             print()
         return 0
 
     expected_prev_hash = GENESIS
     verified = 0
-    break_info: Optional[Dict[str, Any]] = None
+    break_info: dict[str, Any] | None = None
 
     for i, entry in enumerate(entries):
         stored_hash = entry.get("entry_hash", "")
@@ -392,7 +393,7 @@ def cmd_chain(args: argparse.Namespace) -> int:
     intact = break_info is None
 
     if args.json:
-        details: Dict[str, Any] = {
+        details: dict[str, Any] = {
             "file": os.path.basename(args.file),
             "total_entries": total,
             "entries_verified": verified,
@@ -404,7 +405,7 @@ def cmd_chain(args: argparse.Namespace) -> int:
             "tool": TOOL_NAME,
             "version": __version__,
             "command": "chain",
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "result": "valid" if intact else "broken",
             "details": details,
         }
@@ -415,7 +416,8 @@ def cmd_chain(args: argparse.Namespace) -> int:
             sys.stdout.write("\r" + " " * 80 + "\r")
             sys.stdout.flush()
 
-        print(f"\n{_bold('AI Identity \u2014 Audit Chain Verification')}")
+        chain_title = _bold("AI Identity \u2014 Audit Chain Verification")
+        print(f"\n{chain_title}")
         print("\u2550" * 39)
         print(f"  File:         {os.path.basename(args.file)}")
         print(f"  Entries:      {total}")
@@ -426,11 +428,13 @@ def cmd_chain(args: argparse.Namespace) -> int:
         print()
 
         if intact:
-            print(f"  Result:       {_green('CHAIN INTACT \u2713')}")
+            intact_msg = _green("CHAIN INTACT \u2713")
+            print(f"  Result:       {intact_msg}")
             print(f"  Verified:     {verified}/{total} entries")
         else:
             assert break_info is not None
-            print(f"  Result:       {_red('CHAIN BROKEN \u2717')}")
+            broken_msg = _red("CHAIN BROKEN \u2717")
+            print(f"  Result:       {broken_msg}")
             print(f"  Verified:     {verified}/{total} entries")
             print(f"  Break at:     Entry #{break_info['index'] + 1}")
             print(f"    Entry ID:   {break_info['entry_id']}")
@@ -526,7 +530,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     global _NO_COLOR
 
     parser = build_parser()

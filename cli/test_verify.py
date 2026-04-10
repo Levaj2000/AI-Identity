@@ -20,12 +20,13 @@ import os
 import sys
 import tempfile
 import unittest
-from datetime import datetime, timezone
+from typing import Any
 from unittest.mock import patch
-from typing import Any, Dict, List
 
 # Import the CLI module from the same directory
 sys.path.insert(0, os.path.dirname(__file__))
+import contextlib
+
 import ai_identity_verify as cli
 
 # ── Test constants ──────────────────────────────────────────────────────
@@ -91,7 +92,7 @@ def _make_entry_hash(
     return hmac.new(key, message, hashlib.sha256).hexdigest()
 
 
-def _build_chain(count: int = 3) -> List[Dict[str, Any]]:
+def _build_chain(count: int = 3) -> list[dict[str, Any]]:
     """Build a valid chain of audit entries."""
     entries = []
     prev_hash = "GENESIS"
@@ -103,7 +104,7 @@ def _build_chain(count: int = 3) -> List[Dict[str, Any]]:
 
         entry_hash = _make_entry_hash(
             agent_id=TEST_AGENT_ID,
-            endpoint=f"/v1/chat/completions",
+            endpoint="/v1/chat/completions",
             method="POST",
             decision="allow",
             cost_estimate_usd=cost,
@@ -129,7 +130,7 @@ def _build_chain(count: int = 3) -> List[Dict[str, Any]]:
     return entries
 
 
-def _build_report(entries: List[Dict[str, Any]] | None = None) -> Dict[str, Any]:
+def _build_report(entries: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """Build a valid ForensicsReportResponse-shaped dict."""
     if entries is None:
         entries = _build_chain(3)
@@ -161,7 +162,7 @@ def _write_json(data: Any) -> str:
     return path
 
 
-def _run_cmd(argv: List[str], env_key: str = TEST_HMAC_KEY) -> tuple[int, str, str]:
+def _run_cmd(argv: list[str], env_key: str = TEST_HMAC_KEY) -> tuple[int, str, str]:
     """Run the CLI main() capturing stdout/stderr and return (exit_code, stdout, stderr)."""
     env_patch = {"AI_IDENTITY_HMAC_KEY": env_key} if env_key else {}
     stdout = io.StringIO()
@@ -653,11 +654,8 @@ class TestCLIParsing(unittest.TestCase):
         """--version prints version."""
         stdout = io.StringIO()
         stderr = io.StringIO()
-        with patch("sys.stdout", stdout), patch("sys.stderr", stderr):
-            try:
-                cli.main(["--version"])
-            except SystemExit:
-                pass
+        with patch("sys.stdout", stdout), patch("sys.stderr", stderr), contextlib.suppress(SystemExit):
+            cli.main(["--version"])
         combined = stdout.getvalue() + stderr.getvalue()
         self.assertIn("1.0.0", combined)
 
