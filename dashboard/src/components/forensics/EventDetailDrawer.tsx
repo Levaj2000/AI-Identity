@@ -129,6 +129,25 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate }: Props)
   const VERIFY_SCRIPT_URL =
     'https://raw.githubusercontent.com/Levaj2000/AI-Identity/main/cli/ai_identity_verify.py'
 
+  const handleDownloadScript = async () => {
+    try {
+      const response = await fetch(VERIFY_SCRIPT_URL)
+      const text = await response.text()
+      const blob = new Blob([text], { type: 'text/x-python' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'ai_identity_verify.py'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      // Fallback: open in new tab if fetch fails (e.g., CORS)
+      window.open(VERIFY_SCRIPT_URL, '_blank')
+    }
+  }
+
   // Extract metadata fields
   const metadata = event.request_metadata || {}
   const metaKeys = Object.keys(metadata)
@@ -382,14 +401,12 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate }: Props)
                 {copied === 'json' ? '✓ Copied!' : 'Copy to Clipboard'}
               </button>
             </div>
-            <a
-              href={VERIFY_SCRIPT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={handleDownloadScript}
               className="w-full px-4 py-2.5 text-sm font-medium text-emerald-100 bg-emerald-600/80 hover:bg-emerald-500/80 rounded-lg transition-colors text-center flex items-center justify-center gap-2"
             >
               Download Verify Script
-            </a>
+            </button>
             <p className="text-xs text-zinc-500 text-center">
               Export the JSON above, then run:{' '}
               <code className="font-mono text-zinc-400">
