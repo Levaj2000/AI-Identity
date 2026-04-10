@@ -7,6 +7,7 @@
 
 import { useState } from 'react'
 import type { AuditLogEntry } from '../../types/api'
+import { downloadVerifyBundle } from '../../services/api/forensics'
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -59,6 +60,8 @@ interface Props {
 
 export function EventDetailDrawer({ event, onClose, events, onNavigate }: Props) {
   const [copied, setCopied] = useState<string | null>(null)
+  const [bundleLoading, setBundleLoading] = useState(false)
+  const [bundleError, setBundleError] = useState<string | null>(null)
 
   // Navigation
   const currentIndex = events?.findIndex((e) => e.id === event.id) ?? -1
@@ -87,14 +90,65 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate }: Props)
 
   const fullJSON = JSON.stringify(event, null, 2)
 
+  /** Build report envelope compatible with the CLI `chain` command. */
+  const buildReportEnvelope = () => {
+    const ts = new Date().toISOString()
+    const agentShort = event.agent_id.slice(0, 8)
+    const tsSlug = ts.replace(/[:.]/g, '-').slice(0, 19)
+    return {
+      report_id: `fr-${agentShort}-${tsSlug}`,
+      generated_at: ts,
+      events: [event],
+      chain_verification: {
+        valid: true,
+        total_entries: 1,
+        entries_verified: 1,
+        first_broken_id: null,
+        message: 'Single event export',
+      },
+      report_signature: null,
+      stats: {
+        total_events: 1,
+        allowed_count: event.decision === 'allow' || event.decision === 'allowed' ? 1 : 0,
+        denied_count: event.decision === 'deny' || event.decision === 'denied' ? 1 : 0,
+        error_count: event.decision === 'error' ? 1 : 0,
+        total_cost_usd: event.cost_estimate_usd ?? 0,
+        avg_latency_ms: event.latency_ms ?? 0,
+      },
+    }
+  }
+
   const exportSingleEntry = () => {
-    const blob = new Blob([fullJSON], { type: 'application/json' })
+    const envelope = buildReportEnvelope()
+    const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = `audit-entry-${event.id}-${event.entry_hash.slice(0, 8)}.json`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  /** Download full verification bundle (ZIP) via the API. */
+  const handleDownloadBundle = async () => {
+    setBundleLoading(true)
+    setBundleError(null)
+    try {
+      // Build a tight 1-second window around the event's created_at
+      const eventDate = new Date(event.created_at)
+      const start = new Date(eventDate.getTime() - 500)
+      const end = new Date(eventDate.getTime() + 500)
+      await downloadVerifyBundle({
+        agent_id: event.agent_id,
+        start_date: start.toISOString(),
+        end_date: end.toISOString(),
+      })
+    } catch {
+      setBundleError('Failed to download bundle')
+      setTimeout(() => setBundleError(null), 3000)
+    } finally {
+      setBundleLoading(false)
+    }
   }
 
   // Extract metadata fields
@@ -334,19 +388,57 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate }: Props)
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 pt-2 border-t border-zinc-700">
+          <div className="space-y-3 pt-2 border-t border-zinc-700">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={exportSingleEntry}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 rounded-lg transition-colors text-center"
+                title="Exports in report envelope format compatible with ai_identity_verify.py"
+              >
+                Export Entry as JSON
+              </button>
+              <button
+                onClick={() => copyToClipboard(fullJSON, 'json')}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors border border-zinc-600 text-center"
+              >
+                {copied === 'json' ? '✓ Copied!' : 'Copy to Clipboard'}
+              </button>
+            </div>
             <button
-              onClick={exportSingleEntry}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 rounded-lg transition-colors text-center"
+              onClick={handleDownloadBundle}
+              disabled={bundleLoading}
+              className="w-full px-4 py-2.5 text-sm font-medium text-emerald-100 bg-emerald-600/80 hover:bg-emerald-500/80 disabled:opacity-50 disabled:cursor-wait rounded-lg transition-colors text-center flex items-center justify-center gap-2"
             >
-              Export Entry as JSON
+              {bundleLoading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    />
+                  </svg>
+                  Downloading...
+                </>
+              ) : (
+                'Download Verify Bundle'
+              )}
             </button>
-            <button
-              onClick={() => copyToClipboard(fullJSON, 'json')}
-              className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors border border-zinc-600 text-center"
-            >
-              {copied === 'json' ? '✓ Copied!' : 'Copy to Clipboard'}
-            </button>
+            {bundleError && <p className="text-xs text-red-400 text-center">{bundleError}</p>}
+            <p className="text-xs text-zinc-500 text-center">
+              Use exported JSON with{' '}
+              <span className="font-mono text-zinc-400">ai_identity_verify.py</span> to verify
+              offline
+            </p>
           </div>
         </div>
       </div>
