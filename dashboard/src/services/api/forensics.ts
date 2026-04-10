@@ -11,7 +11,7 @@ import type {
   ForensicsFilterParams,
   ForensicsReportResponse,
 } from '../../types/api'
-import { apiFetch, toQueryString } from './client'
+import { apiFetch, getApiBaseUrl, getAuthHeaders, toQueryString } from './client'
 
 /** Fetch paginated audit log entries with optional filters. */
 export async function fetchAuditLogs(
@@ -58,8 +58,8 @@ export async function downloadForensicsCSV(params: {
   end_date: string
 }): Promise<void> {
   const qs = toQueryString({ ...params, format: 'csv' })
-  // Use raw fetch for blob download
-  const response = await fetch(`/api/v1/audit/report${qs}`)
+  const headers = await getAuthHeaders()
+  const response = await fetch(`${getApiBaseUrl()}/api/v1/audit/report${qs}`, { headers })
   if (!response.ok) throw new Error('Failed to download CSV')
 
   const blob = await response.blob()
@@ -80,8 +80,8 @@ export async function downloadVerifyBundle(params: {
   end_date: string
 }): Promise<void> {
   const qs = toQueryString(params)
-  // Use raw fetch for blob download (same pattern as downloadForensicsCSV)
-  const response = await fetch(`/api/v1/audit/report/bundle${qs}`)
+  const headers = await getAuthHeaders()
+  const response = await fetch(`${getApiBaseUrl()}/api/v1/audit/report/bundle${qs}`, { headers })
   if (!response.ok) throw new Error('Failed to download verification bundle')
 
   const blob = await response.blob()
