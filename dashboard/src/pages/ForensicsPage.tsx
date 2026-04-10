@@ -22,7 +22,6 @@ import {
   fetchAuditReconstruct,
   fetchAuditSummary,
   fetchForensicsReport,
-  downloadVerifyBundle,
   verifyAuditChain,
 } from '../services/api/forensics'
 import { ForensicsTimeline } from '../components/forensics/ForensicsTimeline'
@@ -103,13 +102,6 @@ export function ForensicsPage() {
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [summaryError, setSummaryError] = useState<string | null>(null)
   const [showSummaryPanel, setShowSummaryPanel] = useState(false)
-
-  // Bundle download
-  const [bundleDownloading, setBundleDownloading] = useState(false)
-  const [bundleMessage, setBundleMessage] = useState<string | null>(null)
-
-  // Export notification
-  const [exportMessage, setExportMessage] = useState<string | null>(null)
 
   // Deep-linked agent_id (e.g. from Shadow Agents page) — may not be a registered agent
   const [deepLinkedAgentId, setDeepLinkedAgentId] = useState<string | null>(null)
@@ -270,8 +262,7 @@ export function ForensicsPage() {
   const exportJSON = async () => {
     const agentId = resolvedAgentId
     if (!agentId) {
-      setExportMessage('Please select a specific agent to export a report')
-      setTimeout(() => setExportMessage(null), 6000)
+      alert('Please select a specific agent to export a report')
       return
     }
     try {
@@ -297,30 +288,6 @@ export function ForensicsPage() {
       a.download = `forensics-report-${new Date().toISOString().slice(0, 10)}.json`
       a.click()
       URL.revokeObjectURL(url)
-    }
-  }
-
-  const handleDownloadBundle = async () => {
-    const agentId = resolvedAgentId
-    if (!agentId) {
-      setBundleMessage('Please select a specific agent to download a verification bundle')
-      setTimeout(() => setBundleMessage(null), 6000)
-      return
-    }
-    setBundleDownloading(true)
-    setBundleMessage(null)
-    try {
-      await downloadVerifyBundle({
-        agent_id: agentId,
-        start_date: new Date(startDate).toISOString(),
-        end_date: new Date(endDate).toISOString(),
-      })
-      setBundleMessage('Verification bundle downloaded — see README.md inside for instructions')
-    } catch {
-      setBundleMessage('Failed to download verification bundle')
-    } finally {
-      setBundleDownloading(false)
-      setTimeout(() => setBundleMessage(null), 6000)
     }
   }
 
@@ -506,68 +473,8 @@ export function ForensicsPage() {
           >
             CSV
           </button>
-          <button
-            onClick={exportJSON}
-            disabled={!resolvedAgentId}
-            title={!resolvedAgentId ? 'Select a specific agent to export' : undefined}
-            className="px-3 py-2 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-          >
-            Export JSON
-          </button>
-          <button
-            onClick={handleDownloadBundle}
-            disabled={bundleDownloading || !resolvedAgentId}
-            title={!resolvedAgentId ? 'Select a specific agent to download' : undefined}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-zinc-100 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="h-4 w-4"
-            >
-              <path
-                fillRule="evenodd"
-                d="M16.403 12.652a3 3 0 0 0-2.066-1.164 2 2 0 0 0 .242-.898c0-1.012-.747-1.842-1.713-1.973A3.5 3.5 0 0 0 6.392 8.5a3 3 0 0 0-2.663 4.823A2.5 2.5 0 0 0 5 18h10a2.5 2.5 0 0 0 1.403-5.348ZM10 8a.75.75 0 0 1 .75.75v3.69l1.72-1.72a.75.75 0 1 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 1 1 1.06-1.06l1.72 1.72V8.75A.75.75 0 0 1 10 8Z"
-                clipRule="evenodd"
-              />
-            </svg>
-            {bundleDownloading ? 'Downloading...' : 'Verify & Download'}
-          </button>
         </div>
       </div>
-
-      {/* Bundle download notification */}
-      {bundleMessage && (
-        <div
-          className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
-            bundleMessage.startsWith('Failed')
-              ? 'border-red-500/20 bg-red-500/10 text-red-300'
-              : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
-          }`}
-        >
-          <span className="text-sm">{bundleMessage}</span>
-          <button
-            onClick={() => setBundleMessage(null)}
-            className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
-      {/* Export notification */}
-      {exportMessage && (
-        <div className="flex items-center justify-between rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-yellow-300">
-          <span className="text-sm">{exportMessage}</span>
-          <button
-            onClick={() => setExportMessage(null)}
-            className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
 
       {/* Deep-linked shadow agent banner */}
       {deepLinkedAgentId && (

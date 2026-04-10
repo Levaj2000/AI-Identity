@@ -7,7 +7,6 @@
 
 import { useState } from 'react'
 import type { AuditLogEntry } from '../../types/api'
-import { downloadVerifyBundle } from '../../services/api/forensics'
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -60,8 +59,6 @@ interface Props {
 
 export function EventDetailDrawer({ event, onClose, events, onNavigate }: Props) {
   const [copied, setCopied] = useState<string | null>(null)
-  const [bundleLoading, setBundleLoading] = useState(false)
-  const [bundleError, setBundleError] = useState<string | null>(null)
 
   // Navigation
   const currentIndex = events?.findIndex((e) => e.id === event.id) ?? -1
@@ -129,27 +126,8 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate }: Props)
     URL.revokeObjectURL(url)
   }
 
-  /** Download full verification bundle (ZIP) via the API. */
-  const handleDownloadBundle = async () => {
-    setBundleLoading(true)
-    setBundleError(null)
-    try {
-      // Build a tight 1-second window around the event's created_at
-      const eventDate = new Date(event.created_at)
-      const start = new Date(eventDate.getTime() - 500)
-      const end = new Date(eventDate.getTime() + 500)
-      await downloadVerifyBundle({
-        agent_id: event.agent_id,
-        start_date: start.toISOString(),
-        end_date: end.toISOString(),
-      })
-    } catch {
-      setBundleError('Failed to download bundle')
-      setTimeout(() => setBundleError(null), 3000)
-    } finally {
-      setBundleLoading(false)
-    }
-  }
+  const VERIFY_SCRIPT_URL =
+    'https://raw.githubusercontent.com/Levaj2000/AI-Identity/main/cli/ai_identity_verify.py'
 
   // Extract metadata fields
   const metadata = event.request_metadata || {}
@@ -404,40 +382,19 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate }: Props)
                 {copied === 'json' ? '✓ Copied!' : 'Copy to Clipboard'}
               </button>
             </div>
-            <button
-              onClick={handleDownloadBundle}
-              disabled={bundleLoading}
-              className="w-full px-4 py-2.5 text-sm font-medium text-emerald-100 bg-emerald-600/80 hover:bg-emerald-500/80 disabled:opacity-50 disabled:cursor-wait rounded-lg transition-colors text-center flex items-center justify-center gap-2"
+            <a
+              href={VERIFY_SCRIPT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full px-4 py-2.5 text-sm font-medium text-emerald-100 bg-emerald-600/80 hover:bg-emerald-500/80 rounded-lg transition-colors text-center flex items-center justify-center gap-2"
             >
-              {bundleLoading ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
-                  Downloading...
-                </>
-              ) : (
-                'Download Verify Bundle'
-              )}
-            </button>
-            {bundleError && <p className="text-xs text-red-400 text-center">{bundleError}</p>}
+              Download Verify Script
+            </a>
             <p className="text-xs text-zinc-500 text-center">
-              Use exported JSON with{' '}
-              <span className="font-mono text-zinc-400">ai_identity_verify.py</span> to verify
-              offline
+              Export the JSON above, then run:{' '}
+              <code className="font-mono text-zinc-400">
+                python3 ai_identity_verify.py chain &lt;exported-file&gt;.json
+              </code>
             </p>
           </div>
         </div>
