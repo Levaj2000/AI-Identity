@@ -62,6 +62,17 @@ def _dim(text: str) -> str:
 # ── HMAC helpers (must match server exactly) ────────────────────────────
 
 
+def _normalize_timestamp(ts: str) -> str:
+    """Normalize ISO-8601 timestamps to match Python's datetime.isoformat().
+
+    Converts trailing 'Z' to '+00:00' since the server uses
+    datetime.isoformat() which always produces '+00:00'.
+    """
+    if ts.endswith("Z"):
+        return ts[:-1] + "+00:00"
+    return ts
+
+
 def _get_hmac_key() -> bytes:
     """Read the HMAC key from the environment, returning raw bytes."""
     key = os.environ.get("AI_IDENTITY_HMAC_KEY")
@@ -96,7 +107,7 @@ def _canonical_report_payload(
     payload = {
         "entries_verified": entries_verified,
         "chain_valid": chain_valid,
-        "generated_at": generated_at,
+        "generated_at": _normalize_timestamp(generated_at),
         "report_id": report_id,
         "total_entries": total_entries,
     }
@@ -138,7 +149,7 @@ def _canonical_entry_payload(entry: dict[str, Any], prev_hash: str) -> bytes:
     payload = {
         "agent_id": str(entry["agent_id"]),
         "cost_estimate_usd": str(cost) if cost is not None else None,
-        "created_at": entry["created_at"],
+        "created_at": _normalize_timestamp(entry["created_at"]),
         "decision": entry["decision"],
         "endpoint": entry["endpoint"],
         "latency_ms": entry.get("latency_ms"),

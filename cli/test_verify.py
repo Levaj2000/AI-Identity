@@ -934,5 +934,106 @@ class TestServerCompatibility(unittest.TestCase):
             )
 
 
+# ── Test: Timestamp normalization (Z vs +00:00) ──────────────────────────
+
+
+class TestTimestampNormalization(unittest.TestCase):
+    """Verify that Z-suffix timestamps produce the same HMAC as +00:00."""
+
+    def test_normalize_z_to_offset(self):
+        """_normalize_timestamp converts Z to +00:00."""
+        self.assertEqual(
+            cli._normalize_timestamp("2026-04-06T15:33:58.228487Z"),
+            "2026-04-06T15:33:58.228487+00:00",
+        )
+
+    def test_normalize_already_offset(self):
+        """_normalize_timestamp is a no-op for +00:00."""
+        ts = "2026-04-06T15:33:58.228487+00:00"
+        self.assertEqual(cli._normalize_timestamp(ts), ts)
+
+    def test_normalize_no_tz(self):
+        """_normalize_timestamp is a no-op for timestamps without timezone."""
+        ts = "2026-04-06T15:33:58.228487"
+        self.assertEqual(cli._normalize_timestamp(ts), ts)
+
+    def test_entry_hash_z_matches_offset(self):
+        """An entry with Z timestamp produces the same hash as +00:00."""
+        entry_z = {
+            "agent_id": TEST_AGENT_ID,
+            "endpoint": "/v1/chat/completions",
+            "method": "POST",
+            "decision": "allow",
+            "cost_estimate_usd": 0.001,
+            "latency_ms": 50,
+            "request_metadata": {"status_code": 200},
+            "created_at": "2026-04-06T15:33:58.228487Z",
+        }
+        entry_offset = dict(entry_z, created_at="2026-04-06T15:33:58.228487+00:00")
+
+        hash_z = cli._compute_entry_hash(TEST_HMAC_KEY_BYTES, entry_z, "GENESIS")
+        hash_offset = cli._compute_entry_hash(TEST_HMAC_KEY_BYTES, entry_offset, "GENESIS")
+        self.assertEqual(hash_z, hash_offset)
+
+    def test_report_signature_z_matches_offset(self):
+        """A report with Z generated_at produces the same signature as +00:00."""
+        sig_z = cli._compute_report_signature(
+            TEST_HMAC_KEY_BYTES,
+            report_id="rpt-001",
+            generated_at="2026-04-08T21:10:37Z",
+            chain_valid=True,
+            total_entries=3,
+            entries_verified=3,
+        )
+        sig_offset = cli._compute_report_signature(
+            TEST_HMAC_KEY_BYTES,
+            report_id="rpt-001",
+            generated_at="2026-04-08T21:10:37+00:00",
+            chain_valid=True,
+            total_entries=3,
+            entries_verified=3,
+        )
+        self.assertEqual(sig_z, sig_offset)
+
+    def test_chain_with_z_timestamps_verifies(self):
+        """A full chain exported with Z timestamps verifies correctly."""
+        # Build a chain with +00:00 (server-side), then convert to Z (JSON export)
+        entries = _build_chain(3)
+        for e in entries:
+            e["created_at"] = e["created_at"].replace("+00:00", "Z")
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 0)
+            self.assertIn("CHAIN INTACT", out)
+        finally:
+            os.unlink(path)
+
+    def test_partial_chain_with_z_timestamps_verifies(self):
+        """A partial chain exported with Z timestamps verifies correctly."""
+        entries = _build_partial_chain(count=3, start_id=50)
+        for e in entries:
+            e["created_at"] = e["created_at"].replace("+00:00", "Z")
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 0)
+            self.assertIn("PARTIAL CHAIN INTACT", out)
+        finally:
+            os.unlink(path)
+
+    def test_report_with_z_generated_at_verifies(self):
+        """A report exported with Z generated_at verifies correctly."""
+        report = _build_report()
+        report["generated_at"] = report["generated_at"].replace("+00:00", "Z")
+        path = _write_json(report)
+        try:
+            code, out, err = _run_cmd(["--no-color", "report", path])
+            self.assertEqual(code, 0)
+            self.assertIn("VALID", out)
+        finally:
+            os.unlink(path)
+
+
 if __name__ == "__main__":
     unittest.main()
