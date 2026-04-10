@@ -10,11 +10,13 @@ import {
   type AdminHealth,
 } from '../services/api/admin'
 import { isApiError } from '../services/api/client'
+import { useAuth } from '../hooks/useAuth'
 import { StatDetailDrawer, type StatDrawerMode } from '../components/admin/StatDetailDrawer'
 
 type TierFilter = '' | 'free' | 'pro' | 'enterprise'
 
 export function AdminPage() {
+  const { user } = useAuth()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [users, setUsers] = useState<AdminUserList | null>(null)
   const [health, setHealth] = useState<AdminHealth | null>(null)
@@ -75,8 +77,9 @@ export function AdminPage() {
   }
 
   useEffect(() => {
+    if (!user) return
     loadData()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = () => {
     setPage(0)
