@@ -113,7 +113,11 @@ def _compute_report_signature(
 ) -> str:
     """Compute HMAC-SHA256 hex digest for a report certificate."""
     message = _canonical_report_payload(
-        report_id, generated_at, chain_valid, total_entries, entries_verified,
+        report_id,
+        generated_at,
+        chain_valid,
+        total_entries,
+        entries_verified,
     )
     return hmac.new(key, message, hashlib.sha256).hexdigest()
 
@@ -382,12 +386,13 @@ def cmd_chain(args: argparse.Namespace) -> int:
         verified += 1
 
         # Show progress on large chains (human mode only)
-        if not args.json and not args.verbose and total >= 100 and (
-            (i + 1) % max(1, total // 32) == 0 or i + 1 == total
+        if (
+            not args.json
+            and not args.verbose
+            and total >= 100
+            and ((i + 1) % max(1, total // 32) == 0 or i + 1 == total)
         ):
-            sys.stdout.write(
-                f"\r  Verifying chain...  {_progress_bar(i + 1, total)}"
-            )
+            sys.stdout.write(f"\r  Verifying chain...  {_progress_bar(i + 1, total)}")
             sys.stdout.flush()
 
     intact = break_info is None
@@ -488,20 +493,26 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--version", action="version", version=f"%(prog)s {__version__}",
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
 
     # Common flags
     parser.add_argument(
-        "--verbose", "-v", action="store_true",
+        "--verbose",
+        "-v",
+        action="store_true",
         help="Show detailed output for each verification step",
     )
     parser.add_argument(
-        "--json", action="store_true",
+        "--json",
+        action="store_true",
         help="Output results as JSON (for CI/automation)",
     )
     parser.add_argument(
-        "--no-color", action="store_true",
+        "--no-color",
+        action="store_true",
         help="Disable colored output",
     )
 
@@ -514,7 +525,8 @@ def build_parser() -> argparse.ArgumentParser:
         description="Verify the HMAC-SHA256 signature on an AI Identity forensics report.",
     )
     report_parser.add_argument(
-        "file", help="Path to a JSON report file (ForensicsReportResponse)",
+        "file",
+        help="Path to a JSON report file (ForensicsReportResponse)",
     )
 
     # chain subcommand
@@ -524,7 +536,8 @@ def build_parser() -> argparse.ArgumentParser:
         description="Walk the sequential HMAC chain and verify each entry's integrity.",
     )
     chain_parser.add_argument(
-        "file", help="Path to a JSON file containing audit log entries",
+        "file",
+        help="Path to a JSON file containing audit log entries",
     )
 
     return parser
