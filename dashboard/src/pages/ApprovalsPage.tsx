@@ -6,7 +6,6 @@ import {
   type ApprovalList,
 } from '../services/api/approvals'
 import { isApiError } from '../services/api/client'
-import { useAuth } from '../hooks/useAuth'
 
 type StatusFilter = '' | 'pending' | 'approved' | 'rejected' | 'expired'
 
@@ -19,7 +18,6 @@ const STATUS_TABS: { label: string; value: StatusFilter }[] = [
 ]
 
 export function ApprovalsPage() {
-  const { user } = useAuth()
   const [data, setData] = useState<ApprovalList | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -57,11 +55,10 @@ export function ApprovalsPage() {
 
   // Initial load + auto-refresh every 10s
   useEffect(() => {
-    if (!user) return
     loadData()
     const interval = setInterval(() => loadData(), 10000)
     return () => clearInterval(interval)
-  }, [user, loadData])
+  }, [loadData])
 
   const handleStatusFilter = (status: StatusFilter) => {
     setStatusFilter(status)

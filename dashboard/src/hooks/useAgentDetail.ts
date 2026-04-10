@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useReducer } from 'react'
 import { getAgent } from '../services/api/agents'
 import { isApiError } from '../services/api/client'
-import { useAuth } from './useAuth'
 import type { Agent, ApiError } from '../types/api'
 
 // ─── State ──────────────────────────────────────────────────────
@@ -52,7 +51,6 @@ interface UseAgentDetailReturn extends DetailState {
  * Exposes a `refetch` callback for reloading after mutations.
  */
 export function useAgentDetail(id: string | undefined): UseAgentDetailReturn {
-  const { user } = useAuth()
   const [state, dispatch] = useReducer(detailReducer, INITIAL_STATE)
 
   const fetchAgent = useCallback(() => {
@@ -90,12 +88,11 @@ export function useAgentDetail(id: string | undefined): UseAgentDetailReturn {
     }
   }, [id])
 
-  // Fetch on mount and when ID changes (wait for auth)
+  // Fetch on mount and when ID changes
   useEffect(() => {
-    if (!user) return
     const cleanup = fetchAgent()
     return cleanup
-  }, [user, fetchAgent])
+  }, [fetchAgent])
 
   return {
     ...state,
