@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { listCapabilities } from '../../services/api/capabilities'
+import { useAuth } from '../../hooks/useAuth'
 import type { CapabilityDefinition } from '../../types/api'
 
 interface CapabilitySelectProps {
@@ -14,6 +15,7 @@ interface CapabilitySelectProps {
 }
 
 export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySelectProps) {
+  const { user } = useAuth()
   const [capabilities, setCapabilities] = useState<CapabilityDefinition[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -21,6 +23,7 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
 
   // Fetch capabilities from API
   useEffect(() => {
+    if (!user) return
     let cancelled = false
     listCapabilities()
       .then((data) => {
@@ -35,7 +38,7 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [user])
 
   // Close dropdown on outside click
   useEffect(() => {

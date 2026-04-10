@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { apiFetch } from '../services/api/client'
+import { useAuth } from '../hooks/useAuth'
 
 interface DailyData {
   date: string
@@ -16,6 +17,7 @@ interface AggregationResponse {
 }
 
 export function RequestVolumeChart() {
+  const { user } = useAuth()
   const [data, setData] = useState<DailyData[]>([])
   const [total, setTotal] = useState(0)
   const [peak, setPeak] = useState(0)
@@ -24,6 +26,7 @@ export function RequestVolumeChart() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
 
   useEffect(() => {
+    if (!user) return
     apiFetch<AggregationResponse>('/api/v1/usage/aggregation')
       .then((res) => {
         // Show last 7 days of data
@@ -37,7 +40,7 @@ export function RequestVolumeChart() {
         // fail silently — chart just stays empty
       })
       .finally(() => setIsLoading(false))
-  }, [])
+  }, [user])
 
   if (isLoading) {
     return <div className="h-80 animate-pulse rounded-xl bg-gray-200 dark:bg-[#10131C]" />

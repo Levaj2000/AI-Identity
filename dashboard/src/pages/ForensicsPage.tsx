@@ -25,6 +25,7 @@ import {
   downloadVerifyBundle,
   verifyAuditChain,
 } from '../services/api/forensics'
+import { useAuth } from '../hooks/useAuth'
 import { ForensicsTimeline } from '../components/forensics/ForensicsTimeline'
 import { IncidentReconstructModal } from '../components/forensics/IncidentReconstructModal'
 import { EventDetailDrawer } from '../components/forensics/EventDetailDrawer'
@@ -65,6 +66,7 @@ function defaultEndDate(): string {
 // ── Component ────────────────────────────────────────────────────
 
 export function ForensicsPage() {
+  const { user } = useAuth()
   // Agents list
   const [agents, setAgents] = useState<Agent[]>([])
 
@@ -147,6 +149,7 @@ export function ForensicsPage() {
   // ── Fetch agents ──────────────────────────────────────────────
 
   useEffect(() => {
+    if (!user) return
     let cancelled = false
     apiFetch<{ items: Agent[] }>('/api/v1/agents?limit=100')
       .then((data) => {
@@ -156,11 +159,12 @@ export function ForensicsPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [user])
 
   // ── Fetch audit entries ───────────────────────────────────────
 
   const loadEntries = useCallback(async () => {
+    if (!user) return
     setLoading(true)
     try {
       const params: Record<string, string | number | undefined> = {
@@ -197,6 +201,7 @@ export function ForensicsPage() {
     filterCostMin,
     filterCostMax,
     offset,
+    user,
   ])
 
   useEffect(() => {
@@ -206,6 +211,7 @@ export function ForensicsPage() {
   // ── Fetch stats ───────────────────────────────────────────────
 
   useEffect(() => {
+    if (!user) return
     const params: Record<string, string | undefined> = {}
     if (effectiveAgentId) params.agent_id = effectiveAgentId
     if (startDate) params.start_date = new Date(startDate).toISOString()
@@ -214,7 +220,7 @@ export function ForensicsPage() {
     fetchAuditStats(params)
       .then(setStats)
       .catch(() => setStats(null))
-  }, [effectiveAgentId, startDate, endDate])
+  }, [user, effectiveAgentId, startDate, endDate])
 
   // ── Verify chain (on-demand only — expensive call) ────────────
 

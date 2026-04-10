@@ -2,6 +2,7 @@ import { useCallback, useEffect, useReducer } from 'react'
 import { getAgent } from '../services/api/agents'
 import { listKeys } from '../services/api/keys'
 import { isApiError } from '../services/api/client'
+import { useAuth } from './useAuth'
 import type { Agent, AgentKey, ApiError } from '../types/api'
 
 // ─── State ──────────────────────────────────────────────────────
@@ -64,6 +65,7 @@ interface UseAgentKeysReturn extends KeysState {
  * Distinguishes 404 (agent not found) from other errors.
  */
 export function useAgentKeys(id: string | undefined): UseAgentKeysReturn {
+  const { user } = useAuth()
   const [state, dispatch] = useReducer(keysReducer, INITIAL_STATE)
 
   const fetchData = useCallback(() => {
@@ -106,9 +108,10 @@ export function useAgentKeys(id: string | undefined): UseAgentKeysReturn {
   }, [id])
 
   useEffect(() => {
+    if (!user) return
     const cleanup = fetchData()
     return cleanup
-  }, [fetchData])
+  }, [user, fetchData])
 
   return {
     ...state,
