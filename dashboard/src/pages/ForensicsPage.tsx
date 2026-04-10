@@ -503,8 +503,17 @@ export function ForensicsPage() {
             disabled={bundleDownloading || !effectiveAgentId}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-zinc-100 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-              <path fillRule="evenodd" d="M16.403 12.652a3 3 0 0 0-2.066-1.164 2 2 0 0 0 .242-.898c0-1.012-.747-1.842-1.713-1.973A3.5 3.5 0 0 0 6.392 8.5a3 3 0 0 0-2.663 4.823A2.5 2.5 0 0 0 5 18h10a2.5 2.5 0 0 0 1.403-5.348ZM10 8a.75.75 0 0 1 .75.75v3.69l1.72-1.72a.75.75 0 1 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 1 1 1.06-1.06l1.72 1.72V8.75A.75.75 0 0 1 10 8Z" clipRule="evenodd" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="h-4 w-4"
+            >
+              <path
+                fillRule="evenodd"
+                d="M16.403 12.652a3 3 0 0 0-2.066-1.164 2 2 0 0 0 .242-.898c0-1.012-.747-1.842-1.713-1.973A3.5 3.5 0 0 0 6.392 8.5a3 3 0 0 0-2.663 4.823A2.5 2.5 0 0 0 5 18h10a2.5 2.5 0 0 0 1.403-5.348ZM10 8a.75.75 0 0 1 .75.75v3.69l1.72-1.72a.75.75 0 1 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 1 1 1.06-1.06l1.72 1.72V8.75A.75.75 0 0 1 10 8Z"
+                clipRule="evenodd"
+              />
             </svg>
             {bundleDownloading ? 'Downloading...' : 'Verify & Download'}
           </button>
@@ -513,11 +522,13 @@ export function ForensicsPage() {
 
       {/* Bundle download notification */}
       {bundleMessage && (
-        <div className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
-          bundleMessage.startsWith('Failed')
-            ? 'border-red-500/20 bg-red-500/10 text-red-300'
-            : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
-        }`}>
+        <div
+          className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
+            bundleMessage.startsWith('Failed')
+              ? 'border-red-500/20 bg-red-500/10 text-red-300'
+              : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+          }`}
+        >
           <span className="text-sm">{bundleMessage}</span>
           <button
             onClick={() => setBundleMessage(null)}
