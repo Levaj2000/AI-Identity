@@ -20,7 +20,7 @@ import hmac
 import json
 import os
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -245,7 +245,7 @@ def cmd_report(args: argparse.Namespace) -> int:
             "tool": TOOL_NAME,
             "version": __version__,
             "command": "report",
-            "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "result": "valid" if valid else "invalid",
             "details": {
                 "report_id": fields["report_id"],
@@ -329,7 +329,7 @@ def cmd_chain(args: argparse.Namespace) -> int:
                 "tool": TOOL_NAME,
                 "version": __version__,
                 "command": "chain",
-                "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "result": "valid",
                 "details": {
                     "file": os.path.basename(args.file),
@@ -410,7 +410,7 @@ def cmd_chain(args: argparse.Namespace) -> int:
             "tool": TOOL_NAME,
             "version": __version__,
             "command": "chain",
-            "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "result": "valid" if intact else "broken",
             "details": details,
         }
