@@ -317,40 +317,10 @@ def _load_chain_entries(path: str) -> list[dict[str, Any]]:
     return entries
 
 
-def cmd_chain(args: argparse.Namespace) -> int:
-    """Verify the full HMAC audit chain."""
-    key = _get_hmac_key()
-    entries = _load_chain_entries(args.file)
-    total = len(entries)
-
-    if total == 0:
-        if args.json:
-            result = {
-                "tool": TOOL_NAME,
-                "version": __version__,
-                "command": "chain",
-                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "result": "valid",
-                "details": {
-                    "file": os.path.basename(args.file),
-                    "total_entries": 0,
-                    "entries_verified": 0,
-                    "chain_intact": True,
-                },
-            }
-            print(json.dumps(result, indent=2))
-        else:
-            chain_title = _bold("AI Identity \u2014 Audit Chain Verification")
-            print(f"\n{chain_title}")
-            print("\u2550" * 39)
-            print(f"  File:         {os.path.basename(args.file)}")
-            print("  Entries:      0")
-            print()
-            intact_msg = _green("CHAIN INTACT \u2713")
-            print(f"  Result:       {intact_msg} (empty)")
-            print()
-        return 0
-
+def _cmd_chain_full(
+    args: argparse.Namespace, key: bytes, entries: list[dict[str, Any]], total: int
+) -> int:
+    """Verify the full HMAC audit chain (first entry has prev_hash=GENESIS)."""
     expected_prev_hash = GENESIS
     verified = 0
     break_info: dict[str, Any] | None = None
@@ -403,6 +373,7 @@ def cmd_chain(args: argparse.Namespace) -> int:
             "total_entries": total,
             "entries_verified": verified,
             "chain_intact": intact,
+            "mode": "full",
         }
         if break_info:
             details["break_at"] = break_info
@@ -426,6 +397,7 @@ def cmd_chain(args: argparse.Namespace) -> int:
         print("\u2550" * 39)
         print(f"  File:         {os.path.basename(args.file)}")
         print(f"  Entries:      {total}")
+        print("  Mode:         Full (chain starts at genesis)")
         print()
 
         if not args.verbose:
@@ -463,6 +435,201 @@ def cmd_chain(args: argparse.Namespace) -> int:
             print()
 
     return 0 if intact else 1
+
+
+def _cmd_chain_partial(
+    args: argparse.Namespace, key: bytes, entries: list[dict[str, Any]], total: int
+) -> int:
+    """Verify a partial chain export (first entry does not start at genesis)."""
+    first_entry_id = entries[0].get("id", "?")
+    verified = 0
+    tampered_entries: list[dict[str, Any]] = []
+
+    for i, entry in enumerate(entries):
+        stored_hash = entry.get("entry_hash", "")
+        entry_prev = entry.get("prev_hash", "")
+
+        # For entries after the first, verify chain linkage within the export
+        if i > 0:
+            expected_prev = entries[i - 1].get("entry_hash", "")
+            if entry_prev != expected_prev:
+                tampered_entries.append(
+                    {
+                        "index": i,
+                        "entry_id": entry.get("id", "?"),
+                        "reason": "prev_hash mismatch",
+                        "expected_prev": expected_prev,
+                        "got_prev": entry_prev,
+                    }
+                )
+                continue
+
+        # Recompute HMAC using the entry's own prev_hash
+        recomputed = _compute_entry_hash(key, entry, entry_prev)
+        if not hmac.compare_digest(recomputed, stored_hash):
+            tampered_entries.append(
+                {
+                    "index": i,
+                    "entry_id": entry.get("id", "?"),
+                    "reason": "hash mismatch",
+                    "stored_hash": stored_hash,
+                    "computed_hash": recomputed,
+                }
+            )
+            continue
+
+        verified += 1
+
+        # Show progress on large chains (human mode only)
+        if (
+            not args.json
+            and not args.verbose
+            and total >= 100
+            and ((i + 1) % max(1, total // 32) == 0 or i + 1 == total)
+        ):
+            sys.stdout.write(f"\r  Verifying entry integrity...  {_progress_bar(i + 1, total)}")
+            sys.stdout.flush()
+
+    all_valid = len(tampered_entries) == 0
+    is_single = total == 1
+
+    if args.json:
+        if is_single:
+            result_str = "valid" if all_valid else "tampered"
+        else:
+            result_str = "valid" if all_valid else "tampered"
+
+        details: dict[str, Any] = {
+            "file": os.path.basename(args.file),
+            "total_entries": total,
+            "entries_verified": verified,
+            "chain_intact": all_valid,
+            "mode": "partial",
+            "partial_start_entry": first_entry_id,
+        }
+        if tampered_entries:
+            details["tampered_entries"] = tampered_entries
+        result = {
+            "tool": TOOL_NAME,
+            "version": __version__,
+            "command": "chain",
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "result": result_str,
+            "details": details,
+        }
+        print(json.dumps(result, indent=2))
+    else:
+        # Clear progress line if used
+        if total >= 100 and not args.verbose:
+            sys.stdout.write("\r" + " " * 80 + "\r")
+            sys.stdout.flush()
+
+        chain_title = _bold("AI Identity \u2014 Audit Chain Verification")
+        print(f"\n{chain_title}")
+        print("\u2550" * 39)
+        print(f"  File:         {os.path.basename(args.file)}")
+        print(f"  Entries:      {total}")
+        print(f"  Mode:         Partial (chain starts at entry #{first_entry_id}, not genesis)")
+        print()
+
+        if not args.verbose:
+            label = "Verifying entry integrity..."
+            print(f"  {label}  {_progress_bar(total, total)}")
+        print()
+
+        if all_valid:
+            if is_single:
+                ok_msg = _green("ENTRY VERIFIED \u2713")
+                print(f"  Result:       {ok_msg}")
+                print(f"  Verified:     {verified}/{total} entries")
+                print(
+                    "  Note:         Entry hash matches HMAC computation.\n"
+                    "                Chain linkage cannot be fully verified\n"
+                    "                without preceding entries."
+                )
+            else:
+                ok_msg = _green("PARTIAL CHAIN INTACT \u2713")
+                print(f"  Result:       {ok_msg}")
+                print(f"  Verified:     {verified}/{total} entries")
+                print(
+                    "  Note:         All entry hashes valid and chain linkage\n"
+                    "                intact within this export. Full chain\n"
+                    "                verification requires all entries from genesis."
+                )
+        else:
+            tampered_msg = (
+                _red("ENTRY TAMPERED \u2717") if is_single else _red("CHAIN TAMPERED \u2717")
+            )
+            print(f"  Result:       {tampered_msg}")
+            print(f"  Verified:     {verified}/{total} entries")
+            for te in tampered_entries:
+                print(f"  Tampered:     Entry #{te['entry_id']}")
+                if te["reason"] == "hash mismatch":
+                    print(f"    Stored hash:    {te['stored_hash'][:16]}...")
+                    print(f"    Computed hash:  {te['computed_hash'][:16]}...")
+                else:
+                    print(f"    Expected prev_hash: {te['expected_prev'][:16]}...")
+                    print(f"    Got:                {te['got_prev'][:16]}...")
+
+        print()
+
+        if args.verbose and tampered_entries:
+            print(_dim("  Full values:"))
+            for te in tampered_entries:
+                print(_dim(f"    Entry #{te['entry_id']}:"))
+                if te["reason"] == "hash mismatch":
+                    print(_dim(f"      stored:   {te['stored_hash']}"))
+                    print(_dim(f"      computed: {te['computed_hash']}"))
+                else:
+                    print(_dim(f"      expected_prev: {te['expected_prev']}"))
+                    print(_dim(f"      got_prev:      {te['got_prev']}"))
+            print()
+
+    return 0 if all_valid else 1
+
+
+def cmd_chain(args: argparse.Namespace) -> int:
+    """Verify the HMAC audit chain (full or partial)."""
+    key = _get_hmac_key()
+    entries = _load_chain_entries(args.file)
+    total = len(entries)
+
+    if total == 0:
+        if args.json:
+            result = {
+                "tool": TOOL_NAME,
+                "version": __version__,
+                "command": "chain",
+                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "result": "valid",
+                "details": {
+                    "file": os.path.basename(args.file),
+                    "total_entries": 0,
+                    "entries_verified": 0,
+                    "chain_intact": True,
+                    "mode": "full",
+                },
+            }
+            print(json.dumps(result, indent=2))
+        else:
+            chain_title = _bold("AI Identity \u2014 Audit Chain Verification")
+            print(f"\n{chain_title}")
+            print("\u2550" * 39)
+            print(f"  File:         {os.path.basename(args.file)}")
+            print("  Entries:      0")
+            print()
+            intact_msg = _green("CHAIN INTACT \u2713")
+            print(f"  Result:       {intact_msg} (empty)")
+            print()
+        return 0
+
+    # Detect partial chain: first entry's prev_hash is not GENESIS
+    is_partial = entries[0].get("prev_hash", "") != GENESIS
+
+    if is_partial:
+        return _cmd_chain_partial(args, key, entries, total)
+    else:
+        return _cmd_chain_full(args, key, entries, total)
 
 
 # ── CLI argument parsing ────────────────────────────────────────────────
