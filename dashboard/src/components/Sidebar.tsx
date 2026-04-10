@@ -226,11 +226,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   // QA pending indicator
   const [qaPending, setQaPending] = useState(false)
   useEffect(() => {
-    if (!user) return
     getQAHasPending()
       .then((r) => setQaPending(r.has_pending))
       .catch(() => {})
-  }, [user])
+  }, [])
 
   function handleLogout() {
     signOut(() => navigate('/login'))
