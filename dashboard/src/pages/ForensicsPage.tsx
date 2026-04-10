@@ -108,6 +108,9 @@ export function ForensicsPage() {
   const [bundleDownloading, setBundleDownloading] = useState(false)
   const [bundleMessage, setBundleMessage] = useState<string | null>(null)
 
+  // Export notification
+  const [exportMessage, setExportMessage] = useState<string | null>(null)
+
   // Deep-linked agent_id (e.g. from Shadow Agents page) — may not be a registered agent
   const [deepLinkedAgentId, setDeepLinkedAgentId] = useState<string | null>(null)
 
@@ -140,6 +143,9 @@ export function ForensicsPage() {
 
   // The effective agent_id filter: dropdown selection OR deep-linked unregistered agent
   const effectiveAgentId = selectedAgent || deepLinkedAgentId || ''
+
+  // For exports: auto-resolve to the sole agent when "All Agents" is selected and there's exactly one
+  const resolvedAgentId = effectiveAgentId || (agents.length === 1 ? agents[0].id : '')
 
   // Event detail drawer
   const [selectedEvent, setSelectedEvent] = useState<AuditLogEntry | null>(null)
@@ -262,8 +268,12 @@ export function ForensicsPage() {
   // ── Export ────────────────────────────────────────────────────
 
   const exportJSON = async () => {
-    const agentId = effectiveAgentId
-    if (!agentId) return
+    const agentId = resolvedAgentId
+    if (!agentId) {
+      setExportMessage('Please select a specific agent to export a report')
+      setTimeout(() => setExportMessage(null), 6000)
+      return
+    }
     try {
       const report = await fetchForensicsReport({
         agent_id: agentId,
@@ -291,8 +301,12 @@ export function ForensicsPage() {
   }
 
   const handleDownloadBundle = async () => {
-    const agentId = effectiveAgentId
-    if (!agentId) return
+    const agentId = resolvedAgentId
+    if (!agentId) {
+      setBundleMessage('Please select a specific agent to download a verification bundle')
+      setTimeout(() => setBundleMessage(null), 6000)
+      return
+    }
     setBundleDownloading(true)
     setBundleMessage(null)
     try {
@@ -494,13 +508,16 @@ export function ForensicsPage() {
           </button>
           <button
             onClick={exportJSON}
-            className="px-3 py-2 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 rounded-lg transition-colors"
+            disabled={!resolvedAgentId}
+            title={!resolvedAgentId ? 'Select a specific agent to export' : undefined}
+            className="px-3 py-2 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
             Export JSON
           </button>
           <button
             onClick={handleDownloadBundle}
-            disabled={bundleDownloading || !effectiveAgentId}
+            disabled={bundleDownloading || !resolvedAgentId}
+            title={!resolvedAgentId ? 'Select a specific agent to download' : undefined}
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-zinc-100 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
             <svg
@@ -532,6 +549,19 @@ export function ForensicsPage() {
           <span className="text-sm">{bundleMessage}</span>
           <button
             onClick={() => setBundleMessage(null)}
+            className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Export notification */}
+      {exportMessage && (
+        <div className="flex items-center justify-between rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3 text-yellow-300">
+          <span className="text-sm">{exportMessage}</span>
+          <button
+            onClick={() => setExportMessage(null)}
             className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
           >
             Dismiss
