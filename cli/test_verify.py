@@ -132,6 +132,63 @@ def _build_chain(count: int = 3) -> list[dict[str, Any]]:
     return entries
 
 
+def _build_partial_chain(count: int = 3, start_id: int = 50) -> list[dict[str, Any]]:
+    """Build a valid partial chain (first entry does NOT start at GENESIS).
+
+    Simulates an export that starts mid-chain, e.g. from entry #50.
+    """
+    # Create a fake "previous hash" that would come from the entry before the export
+    fake_prev = _make_entry_hash(
+        agent_id=TEST_AGENT_ID,
+        endpoint="/v1/chat/completions",
+        method="POST",
+        decision="allow",
+        cost_estimate_usd=0.001,
+        latency_ms=40,
+        request_metadata={"status_code": 200},
+        created_at="2026-04-08T09:59:00+00:00",
+        prev_hash="GENESIS",
+    )
+
+    entries = []
+    prev_hash = fake_prev
+    for i in range(count):
+        created_at = f"2026-04-08T10:{i:02d}:00+00:00"
+        cost = 0.001 * (i + 1) if i % 2 == 0 else None
+        latency = 50 + i * 10
+        metadata = {"status_code": 200, "model": "gpt-4"}
+        entry_id = start_id + i
+
+        entry_hash = _make_entry_hash(
+            agent_id=TEST_AGENT_ID,
+            endpoint="/v1/chat/completions",
+            method="POST",
+            decision="allow",
+            cost_estimate_usd=cost,
+            latency_ms=latency,
+            request_metadata=metadata,
+            created_at=created_at,
+            prev_hash=prev_hash,
+        )
+        entries.append(
+            {
+                "id": entry_id,
+                "agent_id": TEST_AGENT_ID,
+                "endpoint": "/v1/chat/completions",
+                "method": "POST",
+                "decision": "allow",
+                "cost_estimate_usd": cost,
+                "latency_ms": latency,
+                "request_metadata": metadata,
+                "created_at": created_at,
+                "entry_hash": entry_hash,
+                "prev_hash": prev_hash,
+            }
+        )
+        prev_hash = entry_hash
+    return entries
+
+
 def _build_report(entries: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """Build a valid ForensicsReportResponse-shaped dict."""
     if entries is None:
@@ -581,6 +638,130 @@ class TestChainVerification(unittest.TestCase):
             self.assertFalse(result["details"]["chain_intact"])
             self.assertIn("break_at", result["details"])
             self.assertEqual(result["details"]["break_at"]["index"], 3)
+        finally:
+            os.unlink(path)
+
+
+# ── Test: Partial chain verification ──────────────────────────────────
+
+
+class TestPartialChainVerification(unittest.TestCase):
+    """Test partial chain verification (entries not starting from genesis)."""
+
+    def test_single_entry_valid(self):
+        """A single valid partial entry returns exit code 0 and ENTRY VERIFIED."""
+        entries = _build_partial_chain(count=1, start_id=96)
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 0)
+            self.assertIn("ENTRY VERIFIED", out)
+            self.assertIn("1/1", out)
+            self.assertIn("Partial", out)
+            self.assertIn("entry #96", out)
+            self.assertIn("Entry hash matches HMAC computation", out)
+            self.assertIn("Chain linkage cannot be fully verified", out)
+        finally:
+            os.unlink(path)
+
+    def test_single_entry_tampered(self):
+        """A tampered single partial entry returns exit code 1 and ENTRY TAMPERED."""
+        entries = _build_partial_chain(count=1, start_id=96)
+        entries[0]["decision"] = "deny"  # tamper with data
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 1)
+            self.assertIn("ENTRY TAMPERED", out)
+            self.assertIn("0/1", out)
+            self.assertIn("Entry #96", out)
+        finally:
+            os.unlink(path)
+
+    def test_multi_entry_partial_chain_valid(self):
+        """A valid multi-entry partial chain returns exit code 0 and PARTIAL CHAIN INTACT."""
+        entries = _build_partial_chain(count=5, start_id=50)
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 0)
+            self.assertIn("PARTIAL CHAIN INTACT", out)
+            self.assertIn("5/5", out)
+            self.assertIn("Partial", out)
+            self.assertIn("entry #50", out)
+            self.assertIn("All entry hashes valid and chain linkage", out)
+        finally:
+            os.unlink(path)
+
+    def test_multi_entry_partial_chain_tampered(self):
+        """A tampered entry in a partial chain returns exit code 1."""
+        entries = _build_partial_chain(count=5, start_id=50)
+        entries[2]["entry_hash"] = "0" * 64  # corrupt middle entry
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 1)
+            self.assertIn("TAMPERED", out)
+        finally:
+            os.unlink(path)
+
+    def test_partial_chain_json_output(self):
+        """JSON output for partial chain includes mode=partial."""
+        entries = _build_partial_chain(count=3, start_id=50)
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--json", "chain", path])
+            self.assertEqual(code, 0)
+            result = json.loads(out)
+            self.assertEqual(result["result"], "valid")
+            self.assertEqual(result["details"]["mode"], "partial")
+            self.assertTrue(result["details"]["chain_intact"])
+            self.assertEqual(result["details"]["entries_verified"], 3)
+            self.assertEqual(result["details"]["partial_start_entry"], 50)
+        finally:
+            os.unlink(path)
+
+    def test_single_entry_tampered_json_output(self):
+        """JSON output for a tampered partial entry includes mode=partial and tampered info."""
+        entries = _build_partial_chain(count=1, start_id=96)
+        entries[0]["decision"] = "deny"
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--json", "chain", path])
+            self.assertEqual(code, 1)
+            result = json.loads(out)
+            self.assertEqual(result["result"], "tampered")
+            self.assertEqual(result["details"]["mode"], "partial")
+            self.assertFalse(result["details"]["chain_intact"])
+            self.assertEqual(result["details"]["entries_verified"], 0)
+            self.assertIn("tampered_entries", result["details"])
+        finally:
+            os.unlink(path)
+
+    def test_full_chain_still_works(self):
+        """A full chain (starting at GENESIS) still works with the existing logic."""
+        entries = _build_chain(5)
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--json", "chain", path])
+            self.assertEqual(code, 0)
+            result = json.loads(out)
+            self.assertEqual(result["details"]["mode"], "full")
+            self.assertTrue(result["details"]["chain_intact"])
+        finally:
+            os.unlink(path)
+
+    def test_full_chain_broken_still_detected(self):
+        """A broken full chain is still detected correctly."""
+        entries = _build_chain(5)
+        entries[2]["decision"] = "deny"
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--json", "chain", path])
+            self.assertEqual(code, 1)
+            result = json.loads(out)
+            self.assertEqual(result["details"]["mode"], "full")
+            self.assertEqual(result["result"], "broken")
         finally:
             os.unlink(path)
 
