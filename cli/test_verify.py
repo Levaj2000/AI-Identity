@@ -113,19 +113,21 @@ def _build_chain(count: int = 3) -> list[dict[str, Any]]:
             created_at=created_at,
             prev_hash=prev_hash,
         )
-        entries.append({
-            "id": i + 1,
-            "agent_id": TEST_AGENT_ID,
-            "endpoint": "/v1/chat/completions",
-            "method": "POST",
-            "decision": "allow",
-            "cost_estimate_usd": cost,
-            "latency_ms": latency,
-            "request_metadata": metadata,
-            "created_at": created_at,
-            "entry_hash": entry_hash,
-            "prev_hash": prev_hash,
-        })
+        entries.append(
+            {
+                "id": i + 1,
+                "agent_id": TEST_AGENT_ID,
+                "endpoint": "/v1/chat/completions",
+                "method": "POST",
+                "decision": "allow",
+                "cost_estimate_usd": cost,
+                "latency_ms": latency,
+                "request_metadata": metadata,
+                "created_at": created_at,
+                "entry_hash": entry_hash,
+                "prev_hash": prev_hash,
+            }
+        )
         prev_hash = entry_hash
     return entries
 
@@ -167,9 +169,11 @@ def _run_cmd(argv: list[str], env_key: str = TEST_HMAC_KEY) -> tuple[int, str, s
     env_patch = {"AI_IDENTITY_HMAC_KEY": env_key} if env_key else {}
     stdout = io.StringIO()
     stderr = io.StringIO()
-    with patch.dict(os.environ, env_patch, clear=False), \
-         patch("sys.stdout", stdout), \
-         patch("sys.stderr", stderr):
+    with (
+        patch.dict(os.environ, env_patch, clear=False),
+        patch("sys.stdout", stdout),
+        patch("sys.stderr", stderr),
+    ):
         # Remove key if env_key is explicitly empty string
         if env_key == "":
             os.environ.pop("AI_IDENTITY_HMAC_KEY", None)
@@ -251,16 +255,28 @@ class TestHMACVectors(unittest.TestCase):
     def test_different_key_produces_different_hash(self):
         """Different HMAC keys produce different results."""
         h1 = _make_entry_hash(
-            agent_id=TEST_AGENT_ID, endpoint="/test", method="GET",
-            decision="allow", cost_estimate_usd=None, latency_ms=10,
-            request_metadata={}, created_at="2026-01-01T00:00:00+00:00",
-            prev_hash="GENESIS", key=b"key-one",
+            agent_id=TEST_AGENT_ID,
+            endpoint="/test",
+            method="GET",
+            decision="allow",
+            cost_estimate_usd=None,
+            latency_ms=10,
+            request_metadata={},
+            created_at="2026-01-01T00:00:00+00:00",
+            prev_hash="GENESIS",
+            key=b"key-one",
         )
         h2 = _make_entry_hash(
-            agent_id=TEST_AGENT_ID, endpoint="/test", method="GET",
-            decision="allow", cost_estimate_usd=None, latency_ms=10,
-            request_metadata={}, created_at="2026-01-01T00:00:00+00:00",
-            prev_hash="GENESIS", key=b"key-two",
+            agent_id=TEST_AGENT_ID,
+            endpoint="/test",
+            method="GET",
+            decision="allow",
+            cost_estimate_usd=None,
+            latency_ms=10,
+            request_metadata={},
+            created_at="2026-01-01T00:00:00+00:00",
+            prev_hash="GENESIS",
+            key=b"key-two",
         )
         self.assertNotEqual(h1, h2)
 
@@ -400,9 +416,7 @@ class TestReportVerification(unittest.TestCase):
         report = _build_report()
         path = _write_json(report)
         try:
-            code, out, err = _run_cmd(
-                ["--no-color", "report", path], env_key="wrong-key"
-            )
+            code, out, err = _run_cmd(["--no-color", "report", path], env_key="wrong-key")
             self.assertEqual(code, 1)
         finally:
             os.unlink(path)
@@ -548,9 +562,7 @@ class TestChainVerification(unittest.TestCase):
         entries = _build_chain(3)
         path = _write_json(entries)
         try:
-            code, out, err = _run_cmd(
-                ["--no-color", "chain", path], env_key="wrong-key"
-            )
+            code, out, err = _run_cmd(["--no-color", "chain", path], env_key="wrong-key")
             self.assertEqual(code, 1)
             self.assertIn("CHAIN BROKEN", out)
         finally:
@@ -588,9 +600,11 @@ class TestEnvVarHandling(unittest.TestCase):
             env.pop("AI_IDENTITY_HMAC_KEY", None)
             stdout = io.StringIO()
             stderr = io.StringIO()
-            with patch.dict(os.environ, env, clear=True), \
-                 patch("sys.stdout", stdout), \
-                 patch("sys.stderr", stderr):
+            with (
+                patch.dict(os.environ, env, clear=True),
+                patch("sys.stdout", stdout),
+                patch("sys.stderr", stderr),
+            ):
                 try:
                     cli.main(["report", path])
                 except SystemExit as e:
@@ -608,9 +622,11 @@ class TestEnvVarHandling(unittest.TestCase):
             env = os.environ.copy()
             env.pop("AI_IDENTITY_HMAC_KEY", None)
             stderr = io.StringIO()
-            with patch.dict(os.environ, env, clear=True), \
-                 patch("sys.stdout", io.StringIO()), \
-                 patch("sys.stderr", stderr):
+            with (
+                patch.dict(os.environ, env, clear=True),
+                patch("sys.stdout", io.StringIO()),
+                patch("sys.stderr", stderr),
+            ):
                 try:
                     cli.main(["chain", path])
                 except SystemExit as e:
@@ -654,7 +670,11 @@ class TestCLIParsing(unittest.TestCase):
         """--version prints version."""
         stdout = io.StringIO()
         stderr = io.StringIO()
-        with patch("sys.stdout", stdout), patch("sys.stderr", stderr), contextlib.suppress(SystemExit):
+        with (
+            patch("sys.stdout", stdout),
+            patch("sys.stderr", stderr),
+            contextlib.suppress(SystemExit),
+        ):
             cli.main(["--version"])
         combined = stdout.getvalue() + stderr.getvalue()
         self.assertIn("1.0.0", combined)
@@ -701,8 +721,15 @@ class TestServerCompatibility(unittest.TestCase):
         decoded = json.loads(payload)
         # Verify the exact same fields the server includes
         expected_keys = [
-            "agent_id", "cost_estimate_usd", "created_at", "decision",
-            "endpoint", "latency_ms", "method", "prev_hash", "request_metadata",
+            "agent_id",
+            "cost_estimate_usd",
+            "created_at",
+            "decision",
+            "endpoint",
+            "latency_ms",
+            "method",
+            "prev_hash",
+            "request_metadata",
         ]
         self.assertEqual(list(decoded.keys()), expected_keys)
         # cost_estimate_usd as string
@@ -722,7 +749,7 @@ class TestServerCompatibility(unittest.TestCase):
             self.assertEqual(
                 entries[i]["prev_hash"],
                 entries[i - 1]["entry_hash"],
-                f"Entry {i} prev_hash should equal entry {i-1} entry_hash",
+                f"Entry {i} prev_hash should equal entry {i - 1} entry_hash",
             )
 
 
