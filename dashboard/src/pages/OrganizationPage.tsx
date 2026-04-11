@@ -9,6 +9,8 @@ import {
   inviteMember,
   updateMemberRole,
   removeMember,
+  getForensicVerifyKey,
+  regenerateForensicVerifyKey,
   isApiError,
 } from '../services/api'
 import { ConfirmModal } from '../components/modals/ConfirmModal'
@@ -293,6 +295,178 @@ function InlineEditName({
         <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
       </svg>
     </button>
+  )
+}
+
+// ─── Forensics Key Section ────────────────────────────────────────
+
+function ForensicsKeySection({
+  onToast,
+}: {
+  onToast: (message: string, type: 'success' | 'error') => void
+}) {
+  const [key, setKey] = useState<string | null>(null)
+  const [revealed, setRevealed] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [regenerateModal, setRegenerateModal] = useState(false)
+  const [regenerateLoading, setRegenerateLoading] = useState(false)
+
+  useEffect(() => {
+    getForensicVerifyKey()
+      .then((data) => setKey(data.forensic_verify_key))
+      .catch(() => onToast('Failed to load forensic verify key', 'error'))
+      .finally(() => setLoading(false))
+  }, [onToast])
+
+  function maskedKey(k: string) {
+    return k.slice(0, 8) + '••••••••••••••••••••••••'
+  }
+
+  async function handleCopy() {
+    if (!key) return
+    try {
+      await navigator.clipboard.writeText(key)
+      onToast('Key copied to clipboard', 'success')
+    } catch {
+      onToast('Failed to copy key', 'error')
+    }
+  }
+
+  async function handleRegenerate() {
+    setRegenerateLoading(true)
+    try {
+      const data = await regenerateForensicVerifyKey()
+      setKey(data.forensic_verify_key)
+      setRevealed(false)
+      setRegenerateModal(false)
+      onToast('Forensic verify key regenerated', 'success')
+    } catch (err) {
+      onToast(isApiError(err) ? err.message : 'Failed to regenerate key', 'error')
+    } finally {
+      setRegenerateLoading(false)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#10131C]">
+      <div className="flex items-center gap-2">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          className="h-5 w-5 text-[#A6DAFF]"
+        >
+          <path
+            fillRule="evenodd"
+            d="M8 7a5 5 0 114.546 4.975L9.5 15H8v1.5H6.5V18H4a1 1 0 01-1-1v-1.879a1 1 0 01.293-.707l4.963-4.963A5.002 5.002 0 018 7zm5-3a.75.75 0 000 1.5A1.5 1.5 0 0114.5 7 .75.75 0 0016 7a3 3 0 00-3-3z"
+            clipRule="evenodd"
+          />
+        </svg>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">Forensics</h2>
+      </div>
+      <p className="mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">
+        Your organization's HMAC signing key for verifying audit chain exports.
+      </p>
+
+      {loading ? (
+        <div className="mt-4 h-10 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-[#1a1a1d]" />
+      ) : (
+        <>
+          {/* Key display */}
+          <div className="mt-4 flex items-center gap-2">
+            <code className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-sm text-gray-900 dark:border-[#1a1a1d] dark:bg-[#04070D] dark:text-[#e4e4e7]">
+              {key ? (revealed ? key : maskedKey(key)) : '—'}
+            </code>
+
+            {/* Reveal toggle */}
+            <button
+              onClick={() => setRevealed((v) => !v)}
+              title={revealed ? 'Hide key' : 'Reveal key'}
+              className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:border-[#1a1a1d] dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d]"
+            >
+              {revealed ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3.28 2.22a.75.75 0 00-1.06 1.06l14.5 14.5a.75.75 0 101.06-1.06l-1.745-1.745a10.029 10.029 0 003.3-4.38 1.651 1.651 0 000-1.185A10.004 10.004 0 009.999 3a9.956 9.956 0 00-4.744 1.194L3.28 2.22zM7.752 6.69l1.092 1.092a2.5 2.5 0 013.374 3.373l1.091 1.092a4 4 0 00-5.557-5.557z"
+                    clipRule="evenodd"
+                  />
+                  <path d="M10.748 13.93l2.523 2.524a9.987 9.987 0 01-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 010-1.186A10.007 10.007 0 012.839 6.02L6.07 9.252a4 4 0 004.678 4.678z" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-4 w-4"
+                >
+                  <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" />
+                  <path
+                    fillRule="evenodd"
+                    d="M.664 10.59a1.651 1.651 0 010-1.186A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              )}
+            </button>
+
+            {/* Copy button */}
+            <button
+              onClick={handleCopy}
+              title="Copy key"
+              className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:border-[#1a1a1d] dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d]"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className="h-4 w-4"
+              >
+                <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+              </svg>
+            </button>
+
+            {/* Regenerate button */}
+            <button
+              onClick={() => setRegenerateModal(true)}
+              className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-50 dark:border-amber-500/30 dark:text-amber-400 dark:hover:bg-amber-500/10"
+            >
+              Regenerate
+            </button>
+          </div>
+
+          {/* CLI usage snippet */}
+          <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-[#1a1a1d] dark:bg-[#04070D]">
+            <p className="mb-2 text-xs font-medium text-gray-500 dark:text-[#a1a1aa]">
+              CLI verification
+            </p>
+            <pre className="overflow-x-auto text-xs text-gray-700 dark:text-[#a1a1aa]">
+              {`export AI_IDENTITY_HMAC_KEY='${key ? (revealed ? key : maskedKey(key)) : '<your-key>'}'
+python3 ai_identity_verify.py chain export.json`}
+            </pre>
+          </div>
+        </>
+      )}
+
+      {/* Regenerate confirmation modal */}
+      {regenerateModal && (
+        <ConfirmModal
+          title="Regenerate Forensic Verify Key"
+          message="Regenerating your key does not change existing audit entries, but you will need the old key to verify exports signed before this change."
+          confirmLabel="Regenerate Key"
+          confirmVariant="danger"
+          isLoading={regenerateLoading}
+          onConfirm={handleRegenerate}
+          onCancel={() => setRegenerateModal(false)}
+        />
+      )}
+    </div>
   )
 }
 
@@ -619,6 +793,9 @@ export function OrganizationPage() {
           </div>
         )}
       </div>
+
+      {/* ── Section 3: Forensics ──────────────────────────────────── */}
+      {org && <ForensicsKeySection onToast={showToast} />}
 
       {/* ── Modals ─────────────────────────────────────────────────── */}
       {deleteModal && (
