@@ -713,7 +713,7 @@ class TestPartialChainVerification(unittest.TestCase):
             code, out, err = _run_cmd(["--json", "chain", path])
             self.assertEqual(code, 0)
             result = json.loads(out)
-            self.assertEqual(result["result"], "valid")
+            self.assertEqual(result["result"], "partial_valid")
             self.assertEqual(result["details"]["mode"], "partial")
             self.assertTrue(result["details"]["chain_intact"])
             self.assertEqual(result["details"]["entries_verified"], 3)
@@ -730,7 +730,7 @@ class TestPartialChainVerification(unittest.TestCase):
             code, out, err = _run_cmd(["--json", "chain", path])
             self.assertEqual(code, 1)
             result = json.loads(out)
-            self.assertEqual(result["result"], "tampered")
+            self.assertEqual(result["result"], "entry_tampered")
             self.assertEqual(result["details"]["mode"], "partial")
             self.assertFalse(result["details"]["chain_intact"])
             self.assertEqual(result["details"]["entries_verified"], 0)
@@ -762,6 +762,44 @@ class TestPartialChainVerification(unittest.TestCase):
             result = json.loads(out)
             self.assertEqual(result["details"]["mode"], "full")
             self.assertEqual(result["result"], "broken")
+        finally:
+            os.unlink(path)
+
+    def test_expected_prev_hash_valid_anchor(self):
+        """--expected-prev-hash matches the first entry's prev_hash: anchor_verified=True, exit 0."""
+        entries = _build_partial_chain(count=3, start_id=50)
+        known_prev = entries[0]["prev_hash"]
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--json", "chain", path, "--expected-prev-hash", known_prev])
+            self.assertEqual(code, 0)
+            result = json.loads(out)
+            self.assertTrue(result["details"]["anchor_verified"])
+            self.assertEqual(result["result"], "partial_valid")
+        finally:
+            os.unlink(path)
+
+    def test_expected_prev_hash_wrong_anchor(self):
+        """--expected-prev-hash mismatch: anchor_verified=False, exit 1 even if entries are valid."""
+        entries = _build_partial_chain(count=3, start_id=50)
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--json", "chain", path, "--expected-prev-hash", "a" * 64])
+            self.assertEqual(code, 1)
+            result = json.loads(out)
+            self.assertFalse(result["details"]["anchor_verified"])
+        finally:
+            os.unlink(path)
+
+    def test_expected_prev_hash_not_supplied(self):
+        """Without --expected-prev-hash, anchor_verified is absent from output."""
+        entries = _build_partial_chain(count=2, start_id=10)
+        path = _write_json(entries)
+        try:
+            code, out, err = _run_cmd(["--json", "chain", path])
+            self.assertEqual(code, 0)
+            result = json.loads(out)
+            self.assertNotIn("anchor_verified", result["details"])
         finally:
             os.unlink(path)
 
