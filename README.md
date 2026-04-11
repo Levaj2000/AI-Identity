@@ -1,15 +1,51 @@
 # AI Identity
 
 [![CI](https://github.com/Levaj2000/AI-Identity/actions/workflows/ci.yml/badge.svg)](https://github.com/Levaj2000/AI-Identity/actions/workflows/ci.yml)
+[![PyPI - langchain-ai-identity](https://img.shields.io/pypi/v/langchain-ai-identity?label=langchain-ai-identity&color=blue)](https://pypi.org/project/langchain-ai-identity/)
+[![License](https://img.shields.io/badge/license-proprietary-red)](LICENSE)
 
-**Identity, permissions, and guardrails for AI agents.**
+**Identity, governance, and forensic accountability for AI agents.**
 
-AI Identity is an API proxy and dashboard that sits between AI agents and external APIs. Each agent gets its own identity, permissions, and guardrails — the Okta for AI agents.
+AI Identity is the identity, governance, and forensic infrastructure that enterprises need to deploy AI agents with confidence. Each agent gets a cryptographic identity, enforceable policies, compliance-ready audit logs, and tamper-evident forensic trails.
 
 | | URL |
 |---|---|
 | **Dashboard** | [ai-identity.co](https://ai-identity.co) |
 | **API Docs** | [ai-identity-api.onrender.com/docs](https://ai-identity-api.onrender.com/docs) |
+
+## Integrations
+
+### LangChain
+
+AI Identity provides a drop-in LangChain integration, available as a standalone PyPI package:
+
+```bash
+pip install langchain-ai-identity
+```
+
+```python
+from langchain_ai_identity import create_ai_identity_agent
+
+agent = create_ai_identity_agent(
+    tools=[...],
+    agent_id="<your-agent-uuid>",
+    ai_identity_api_key="aid_sk_...",
+    openai_api_key="sk-...",
+)
+result = agent.invoke({"input": "What is the latest news on AI safety?"})
+```
+
+Every LLM call is authenticated, policy-checked, and logged with a tamper-evident audit trail. See the [langchain-ai-identity PyPI page](https://pypi.org/project/langchain-ai-identity/) for full documentation.
+
+### Offline Forensic Verification (CLI)
+
+Auditors and incident responders can verify audit chain integrity offline — no network access or vendor trust required:
+
+```bash
+python3 cli/ai_identity_verify.py chain export.json
+```
+
+The CLI is a single-file, zero-dependency Python script that independently verifies HMAC-SHA256 hash chains exported from AI Identity.
 
 ## Architecture
 
@@ -19,6 +55,9 @@ ai-identity/
 ├── gateway/      # FastAPI proxy gateway — request routing & policy enforcement (port 8002)
 ├── common/       # Shared code — DB models, auth, config, schemas
 ├── dashboard/    # React + TypeScript + Tailwind — agent management UI
+├── sdk/          # Client SDKs — Python, TypeScript, LangChain integration
+├── cli/          # Offline forensic verification CLI
+├── alembic/      # Database migrations
 ├── scripts/      # Dev scripts — seed data, migrations
 └── pyproject.toml
 ```
@@ -29,6 +68,8 @@ ai-identity/
 2. **Proxy Gateway** (`gateway/`) — Authenticates agent keys, evaluates policies, forwards or blocks requests, logs decisions
 3. **Shared Library** (`common/`) — SQLAlchemy models, Pydantic schemas, auth utilities, config — imported by both api/ and gateway/
 4. **Dashboard** (`dashboard/`) — React SPA for agent management, policy editor, live traffic feed, spend charts
+5. **SDKs** (`sdk/`) — Python and TypeScript client libraries, plus the [LangChain integration](https://pypi.org/project/langchain-ai-identity/)
+6. **Forensic CLI** (`cli/`) — Standalone offline audit chain verifier for DFIR and compliance
 
 ## Quick Start
 
@@ -101,9 +142,12 @@ Key rotation supports a 24-hour grace period — both old and new keys work duri
 
 ## Tech Stack
 
-- **Backend**: Python 3.11, FastAPI, SQLAlchemy, Pydantic
+- **Backend**: Python 3.11, FastAPI, SQLAlchemy, Alembic, Pydantic
 - **Database**: PostgreSQL (Neon)
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS
+- **Forensics**: HMAC-SHA256 hash-chained audit logs, offline CLI verifier
+- **Integrations**: LangChain ([PyPI](https://pypi.org/project/langchain-ai-identity/))
+- **CI/CD**: GitHub Actions, Ruff (lint + format), pytest (427+ tests)
 - **Deployment**: Render (API + Gateway), Vercel (Dashboard)
 
 ## License
