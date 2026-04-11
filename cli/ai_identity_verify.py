@@ -420,7 +420,8 @@ def _cmd_chain_full(
             print(f"  Result:       {intact_msg}")
             print(f"  Verified:     {verified}/{total} entries")
         else:
-            assert break_info is not None
+            if break_info is None:
+                raise RuntimeError("Internal error: chain broken but break_info is None")
             broken_msg = _red("CHAIN BROKEN \u2717")
             print(f"  Result:       {broken_msg}")
             print(f"  Verified:     {verified}/{total} entries")
@@ -455,6 +456,14 @@ def _cmd_chain_partial(
     first_entry_id = entries[0].get("id", "?")
     verified = 0
     tampered_entries: list[dict[str, Any]] = []
+    anchor_ok: bool | None = None  # None = no anchor supplied
+
+    # Anchor check: if --expected-prev-hash was supplied, verify the first
+    # entry's prev_hash matches before doing anything else.
+    expected_prev_hash: str | None = getattr(args, "expected_prev_hash", None)
+    if expected_prev_hash is not None:
+        actual_first_prev = entries[0].get("prev_hash", "")
+        anchor_ok = hmac.compare_digest(expected_prev_hash, actual_first_prev)
 
     for i, entry in enumerate(entries):
         stored_hash = entry.get("entry_hash", "")
@@ -505,10 +514,10 @@ def _cmd_chain_partial(
     is_single = total == 1
 
     if args.json:
-        if is_single:
-            result_str = "valid" if all_valid else "tampered"
+        if all_valid:
+            result_str = "entry_valid" if is_single else "partial_valid"
         else:
-            result_str = "valid" if all_valid else "tampered"
+            result_str = "entry_tampered" if is_single else "partial_tampered"
 
         details: dict[str, Any] = {
             "file": os.path.basename(args.file),
@@ -518,6 +527,8 @@ def _cmd_chain_partial(
             "mode": "partial",
             "partial_start_entry": first_entry_id,
         }
+        if anchor_ok is not None:
+            details["anchor_verified"] = anchor_ok
         if tampered_entries:
             details["tampered_entries"] = tampered_entries
         result = {
@@ -541,6 +552,12 @@ def _cmd_chain_partial(
         print(f"  File:         {os.path.basename(args.file)}")
         print(f"  Entries:      {total}")
         print(f"  Mode:         Partial (chain starts at entry #{first_entry_id}, not genesis)")
+        if anchor_ok is True:
+            anchor_msg = _green("VERIFIED \u2713")
+            print(f"  Anchor:       {anchor_msg} (prev_hash matches expected)")
+        elif anchor_ok is False:
+            anchor_msg = _red("MISMATCH \u2717")
+            print(f"  Anchor:       {anchor_msg} (prev_hash does not match --expected-prev-hash)")
         print()
 
         if not args.verbose:
@@ -596,7 +613,8 @@ def _cmd_chain_partial(
                     print(_dim(f"      got_prev:      {te['got_prev']}"))
             print()
 
-    return 0 if all_valid else 1
+    passed = all_valid and (anchor_ok is not False)
+    return 0 if passed else 1
 
 
 def cmd_chain(args: argparse.Namespace) -> int:
@@ -716,6 +734,17 @@ def build_parser() -> argparse.ArgumentParser:
     chain_parser.add_argument(
         "file",
         help="Path to a JSON file containing audit log entries",
+    )
+    chain_parser.add_argument(
+        "--expected-prev-hash",
+        metavar="HEX",
+        default=None,
+        help=(
+            "Expected prev_hash of the first entry in a partial export. "
+            "Anchors the export to a known position in the full chain, "
+            "proving no entries were prepended or the start-point was not altered. "
+            "Obtain this value from the entry immediately before your export window."
+        ),
     )
 
     return parser
