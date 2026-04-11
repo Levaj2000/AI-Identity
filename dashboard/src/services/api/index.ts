@@ -29,4 +29,6 @@ export {
   assignAgent,
   updateAssignment,
   removeAssignment,
+  getForensicVerifyKey,
+  regenerateForensicVerifyKey,
 } from './organizations'

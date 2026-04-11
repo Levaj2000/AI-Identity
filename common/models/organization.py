@@ -26,6 +26,9 @@ class Organization(Base):
     requests_this_month: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     usage_reset_day: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
+    # Per-org HMAC key for audit chain verification
+    forensic_verify_key: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+
     # Stripe billing (org-level for business/enterprise)
     stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)
     stripe_subscription_id: Mapped[str | None] = mapped_column(

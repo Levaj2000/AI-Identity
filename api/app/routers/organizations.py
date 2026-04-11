@@ -1,6 +1,7 @@
 """Organization CRUD — create, manage, invite members, and delete orgs."""
 
 import logging
+import secrets
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -78,6 +79,7 @@ def create_org(
         id=uuid.uuid4(),
         name=body.name,
         owner_id=user.id,
+        forensic_verify_key=secrets.token_hex(32),
     )
     db.add(org)
 
@@ -177,6 +179,71 @@ def delete_my_org(
 
     logger.info("Organization deleted: %s", org_id)
     return {"detail": "Organization deleted"}
+
+
+# ── GET /api/v1/orgs/me/forensic-verify-key ─────────────────────────
+
+
+@router.get(
+    "/me/forensic-verify-key",
+    summary="Get forensic verify key",
+)
+def get_forensic_verify_key(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the organization's HMAC signing key for audit chain verification.
+
+    Requires owner or admin role. This key is used by customers to verify
+    audit exports with the CLI verifier.
+    """
+    _require_membership(db, user, OrgRole.owner.value, OrgRole.admin.value)
+
+    org = db.query(Organization).filter(Organization.id == user.org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    # Auto-provision key if org was created before this feature shipped
+    if not org.forensic_verify_key:
+        org.forensic_verify_key = secrets.token_hex(32)
+        db.commit()
+        db.refresh(org)
+
+    return {"forensic_verify_key": org.forensic_verify_key}
+
+
+# ── POST /api/v1/orgs/me/forensic-verify-key/regenerate ─────────────
+
+
+@router.post(
+    "/me/forensic-verify-key/regenerate",
+    summary="Regenerate forensic verify key",
+)
+def regenerate_forensic_verify_key(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate a new HMAC signing key for this organization.
+
+    Requires owner or admin role. The old key is discarded — exports signed
+    before this change must be verified using the previous key.
+    """
+    _require_membership(db, user, OrgRole.owner.value, OrgRole.admin.value)
+
+    org = db.query(Organization).filter(Organization.id == user.org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    org.forensic_verify_key = secrets.token_hex(32)
+    db.commit()
+    db.refresh(org)
+
+    logger.info("forensic_verify_key regenerated for org %s by user %s", org.id, user.id)
+
+    return {
+        "forensic_verify_key": org.forensic_verify_key,
+        "warning": ("Old exports signed with the previous key must be verified using that key."),
+    }
 
 
 # ── POST /api/v1/orgs/me/members ─────────────────────────────────────
