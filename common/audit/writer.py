@@ -169,6 +169,15 @@ def create_audit_entry(
         raw_metadata=request_metadata,
     )
 
+    # Resolve the org's per-tenant forensic_verify_key (fall back to global key if absent)
+    org_hmac_key: str | None = None
+    if agent and agent.org_id:
+        from common.models.organization import Organization
+
+        org = db.query(Organization).filter(Organization.id == agent.org_id).first()
+        if org and org.forensic_verify_key:
+            org_hmac_key = org.forensic_verify_key
+
     now = datetime.now(UTC)
     prev_hash = _get_last_hash(db)
 
@@ -182,6 +191,7 @@ def create_audit_entry(
         request_metadata=metadata,
         created_at=now,
         prev_hash=prev_hash,
+        hmac_key=org_hmac_key,
     )
 
     entry = AuditLog(

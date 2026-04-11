@@ -51,6 +51,21 @@ export function removeMember(userId: string): Promise<void> {
   return apiFetch<void>(`${ORG_BASE}/me/members/${userId}`, { method: 'DELETE' })
 }
 
+// Forensic verify key
+export function getForensicVerifyKey(): Promise<{ forensic_verify_key: string }> {
+  return apiFetch<{ forensic_verify_key: string }>(`${ORG_BASE}/me/forensic-verify-key`)
+}
+
+export function regenerateForensicVerifyKey(): Promise<{
+  forensic_verify_key: string
+  warning: string
+}> {
+  return apiFetch<{ forensic_verify_key: string; warning: string }>(
+    `${ORG_BASE}/me/forensic-verify-key/regenerate`,
+    { method: 'POST' },
+  )
+}
+
 // Agent assignments
 export function listAgentAssignments(agentId: string): Promise<AgentAssignment[]> {
   return apiFetch<AgentAssignment[]>(`/api/v1/agents/${agentId}/assignments`)
