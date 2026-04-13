@@ -3,8 +3,8 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://ai-identity-api.onrender.com/api/$1" },
-    { "source": "/health", "destination": "https://ai-identity-api.onrender.com/health" },
+    { "source": "/api/(.*)", "destination": "https://api.ai-identity.co/api/$1" },
+    { "source": "/health", "destination": "https://api.ai-identity.co/health" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

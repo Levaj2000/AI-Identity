@@ -75,4 +75,4 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_API_BASE_URL: http://api.ai-identity.co
+          VITE_API_BASE_URL: https://api.ai-identity.co
