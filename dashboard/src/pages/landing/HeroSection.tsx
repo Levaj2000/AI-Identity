@@ -262,7 +262,7 @@ export function HeroSection() {
               </svg>
             </Link>
             <a
-              href="https://ai-identity-api.onrender.com/docs"
+              href="https://api.ai-identity.co/docs"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white/50 px-8 py-3.5 text-sm font-semibold text-gray-700 backdrop-blur-sm transition-all duration-200 hover:scale-[1.02] hover:bg-white hover:text-gray-900 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300 dark:hover:bg-slate-800"
