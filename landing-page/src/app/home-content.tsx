@@ -220,6 +220,38 @@ export default function HomeContent() {
         </div>
       </section>
 
+      {/* ── Works Across Agent Runtimes ── */}
+      <section className="w-full py-12 px-6 border-b border-[rgba(216,231,242,0.05)]">
+        <div className="max-w-[1200px] mx-auto text-center">
+          <p className="text-xs uppercase tracking-[0.2em] text-[rgba(213,219,230,0.35)] mb-3">
+            Works across agent runtimes
+          </p>
+          <p className="text-sm text-[rgba(213,219,230,0.5)] mb-8 max-w-lg mx-auto">
+            Agent runtime is plumbing. Agent identity is the control plane.
+          </p>
+          <div className="flex flex-wrap justify-center items-center gap-x-10 gap-y-4">
+            {[
+              { name: "Cloudflare", icon: "M13.59 19.02l.1-.3 1.59-5.58a.38.38 0 0 0-.14-.4.45.45 0 0 0-.26-.1H8.57l.06-.2 .38-1.18a.5.5 0 0 1 .47-.33h4.35l.66-2.3H9.32a.5.5 0 0 0-.47.33L6.6 15.74a.38.38 0 0 0 .14.4c.07.06.16.1.26.1h6.31l-.06.2-.38 1.18a.5.5 0 0 1-.47.33H8.04l-.66 2.3h5.16a.5.5 0 0 0 .47-.33l.58-2z" },
+              { name: "AWS", icon: "M6.71 11.13c0 .26.03.47.08.64.06.16.13.34.23.53.04.06.05.12.05.17 0 .07-.05.15-.14.22l-.47.31a.35.35 0 0 1-.19.07c-.07 0-.15-.04-.22-.11a2.27 2.27 0 0 1-.27-.35 6.04 6.04 0 0 1-.23-.44c-.58.68-1.31 1.03-2.19 1.03-.62 0-1.12-.18-1.49-.53-.36-.36-.55-.83-.55-1.43 0-.63.22-1.14.67-1.53.45-.38 1.05-.57 1.8-.57.25 0 .51.02.78.06.27.04.55.1.84.17v-.54c0-.57-.12-.96-.35-1.19-.24-.23-.64-.34-1.22-.34-.26 0-.53.03-.81.1-.28.06-.55.15-.81.26a2.04 2.04 0 0 1-.25.1.43.43 0 0 1-.12.02c-.1 0-.16-.07-.16-.23v-.36c0-.12.02-.21.05-.26a.56.56 0 0 1 .2-.15c.26-.13.58-.25.94-.34.37-.1.76-.15 1.18-.15.9 0 1.56.2 1.98.61.41.41.62 1.03.62 1.87v2.46zm-3.03 1.13c.24 0 .49-.04.75-.13.26-.09.49-.25.69-.47.12-.14.21-.3.27-.49.05-.19.09-.41.09-.68v-.33a6.08 6.08 0 0 0-.67-.13 5.48 5.48 0 0 0-.69-.04c-.49 0-.85.09-1.09.29-.24.19-.35.47-.35.83 0 .33.09.58.27.75.17.17.43.26.76.26l-.03-.86z" },
+              { name: "Google Cloud", icon: "M12 4.64l4.43 2.56v5.12L12 14.88l-4.43-2.56V7.2L12 4.64zM12 2L5 6.06v8.12L12 18.24l7-4.06V6.06L12 2z" },
+              { name: "Kubernetes", icon: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2.5l5.5 3.18v6.36L12 17.22l-5.5-3.18V7.68L12 4.5z" },
+              { name: "LangChain", icon: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" },
+              { name: "CrewAI", icon: "M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" },
+            ].map(({ name, icon }) => (
+              <div
+                key={name}
+                className="flex items-center gap-2 text-[rgba(213,219,230,0.3)] hover:text-[rgba(213,219,230,0.6)] transition-colors"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d={icon} />
+                </svg>
+                <span className="text-sm font-medium">{name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── How It Works Section ── */}
       <section className="w-full py-20 px-6">
         <div className="max-w-[1200px] mx-auto">
