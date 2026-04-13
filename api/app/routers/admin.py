@@ -205,6 +205,16 @@ async def update_user_tier(
 
     old_tier = user.tier
     user.tier = body.tier.value
+
+    # Keep the org tier in sync so quota checks and the dashboard
+    # reflect the correct plan when the user belongs to an org.
+    if user.org_id:
+        from common.models.organization import Organization
+
+        org = db.query(Organization).filter(Organization.id == user.org_id).first()
+        if org:
+            org.tier = body.tier.value
+
     db.commit()
     db.refresh(user)
 
