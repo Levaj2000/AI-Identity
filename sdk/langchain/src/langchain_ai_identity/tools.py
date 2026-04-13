@@ -17,7 +17,7 @@ from langchain_core.tools import BaseTool, ToolException
 
 logger = logging.getLogger(__name__)
 
-AI_IDENTITY_GATEWAY_BASE = "https://ai-identity-gateway.onrender.com"
+AI_IDENTITY_GATEWAY_BASE = "https://gateway.ai-identity.co"
 _ENFORCE_ENDPOINT = f"{AI_IDENTITY_GATEWAY_BASE}/gateway/enforce"
 _DEFAULT_TIMEOUT = 5.0
 

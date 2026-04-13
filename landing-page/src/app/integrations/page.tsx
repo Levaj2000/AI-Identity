@@ -26,7 +26,7 @@ const frameworks = [
 
 llm = ChatOpenAI(
     model="gpt-4o",
-    base_url="https://ai-identity-gateway.onrender.com/v1",
+    base_url="https://gateway.ai-identity.co/v1",
     api_key="aid_sk_your_agent_key",
 )`,
   },
@@ -35,7 +35,7 @@ llm = ChatOpenAI(
     language: "Python",
     code: `import os
 os.environ["OPENAI_API_BASE"] = \\
-    "https://ai-identity-gateway.onrender.com/v1"
+    "https://gateway.ai-identity.co/v1"
 os.environ["OPENAI_API_KEY"] = "aid_sk_your_agent_key"
 
 from crewai import Agent, Task, Crew
@@ -46,7 +46,7 @@ from crewai import Agent, Task, Crew
     language: "Python",
     code: `config_list = [{
     "model": "gpt-4o",
-    "base_url": "https://ai-identity-gateway.onrender.com/v1",
+    "base_url": "https://gateway.ai-identity.co/v1",
     "api_key": "aid_sk_your_agent_key",
 }]`,
   },
@@ -56,7 +56,7 @@ from crewai import Agent, Task, Crew
     code: `import OpenAI from "openai";
 
 const client = new OpenAI({
-  baseURL: "https://ai-identity-gateway.onrender.com/v1",
+  baseURL: "https://gateway.ai-identity.co/v1",
   apiKey: "aid_sk_your_agent_key",
 });`,
   },

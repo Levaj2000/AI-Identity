@@ -15,14 +15,14 @@
 #   Add a cron job entry — see render.yaml for configuration.
 #
 # Endpoints pinged:
-#   - AI Identity API:     https://ai-identity-api.onrender.com/health
-#   - AI Identity Gateway: https://ai-identity-gateway.onrender.com/health
+#   - AI Identity API:     https://api.ai-identity.co/health
+#   - AI Identity Gateway: https://gateway.ai-identity.co/health
 # ──────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
-API_URL="https://ai-identity-api.onrender.com/health"
-GATEWAY_URL="https://ai-identity-gateway.onrender.com/health"
+API_URL="https://api.ai-identity.co/health"
+GATEWAY_URL="https://gateway.ai-identity.co/health"
 TIMEOUT=30
 
 timestamp() {

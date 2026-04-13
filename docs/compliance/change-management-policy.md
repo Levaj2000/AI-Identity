@@ -14,7 +14,7 @@ This policy defines how code, configuration, and infrastructure changes are prop
 ## 2. Change Workflow Overview
 
 ```
-Feature branch --> Pre-commit hooks --> Push --> CI (GitHub Actions) --> PR review --> Merge to main --> Auto-deploy (Render/Vercel)
+Feature branch --> Pre-commit hooks --> Push --> CI (GitHub Actions) --> PR review --> Merge to main --> Deploy (GKE via Cloud Build / Vercel)
 ```
 
 No changes reach production without passing through this pipeline. Direct commits to `main` are blocked by GitHub branch protection rules.
@@ -50,17 +50,17 @@ Both jobs must pass before a PR can be merged. Failed CI blocks the merge button
 
 ## 6. Deployment
 
-**API and Gateway (Render):**
-- Merging to `main` triggers automatic deployment on Render for both `ai-identity-api` and `ai-identity-gateway`.
-- Render performs a fresh build using the commands in `render.yaml` and runs a zero-downtime deploy.
-- The `/health` endpoint is checked before the new instance receives traffic.
+**API and Gateway (GKE Autopilot):**
+- Merging to `main` triggers GitHub Actions CI/CD, which builds Docker images via Cloud Build, pushes to Artifact Registry, and deploys to GKE Autopilot.
+- Kubernetes performs a rolling update with zero-downtime deployment.
+- Liveness and readiness probes on `/health` are checked before pods receive traffic.
 
 **Dashboard (Vercel):**
 - Merging to `main` triggers automatic deployment on Vercel.
 - Vercel provides preview deployments on every PR for visual verification before merge.
 
-**Keepalive Cron:**
-- The `ai-identity-keepalive` cron job runs every 10 minutes and pings health endpoints to prevent cold starts on Render's Starter tier.
+**Scheduled Jobs (K8s CronJobs):**
+- Daily email followups and weekly cleanup tasks run as Kubernetes CronJobs within the GKE cluster.
 
 ## 7. Database Migrations
 
@@ -72,11 +72,10 @@ Both jobs must pass before a PR can be merged. Failed CI blocks the merge button
 
 ## 8. Rollback Procedures
 
-**Application rollback (Render):**
-1. Open the Render dashboard for the affected service.
-2. Navigate to the deploy history and select the last known-good deploy.
-3. Click "Rollback" to redeploy the previous build immediately.
-4. Verify via `/health` and Sentry error rates.
+**Application rollback (GKE):**
+1. Run `kubectl rollout undo deployment/<service> -n ai-identity` for the affected service.
+2. Verify rollout status with `kubectl rollout status deployment/<service> -n ai-identity`.
+3. Confirm via `/health` endpoint and Sentry error rates.
 
 **Database rollback (Alembic):**
 1. Identify the target migration revision.
@@ -118,15 +117,15 @@ When a P1 or P2 incident requires an immediate fix:
 2. Implement the minimal fix. Pre-commit hooks still run locally.
 3. Push and open a PR. CI runs automatically.
 4. If CI passes, merge immediately (review can be post-merge for P1).
-5. Render auto-deploys the fix.
+5. GitHub Actions + Cloud Build deploys the fix to GKE.
 6. Conduct a post-incident review within 48 hours (see Incident Response Plan).
 
-For P1 incidents where CI is too slow, Render's manual deploy can be triggered from a specific commit. This is logged and reviewed in the postmortem.
+For P1 incidents where CI is too slow, a manual deploy can be triggered via `kubectl set image` or direct `gcloud builds submit`. This is logged and reviewed in the postmortem.
 
 ## 11. Change Log and Audit Trail
 
 - **Git history** provides a complete, immutable record of every code change, including author, timestamp, and PR reference.
-- **Render deploy events** log every deployment with commit SHA, timestamp, and success/failure status.
+- **GKE deploy events** and Cloud Build logs record every deployment with commit SHA, timestamp, and success/failure status.
 - **Vercel deploy events** provide the same for dashboard deployments.
 - **Alembic migration history** tracks every schema change with a unique revision ID.
 - **Audit logs** (HMAC-chained) record runtime events including API key creation, credential changes, and administrative actions.
@@ -141,6 +140,6 @@ For P1 incidents where CI is too slow, Render's manual deploy can be triggered f
 | CC8.2 -- Testing before deployment | Sections 3-4: pre-commit hooks and CI pipeline with lint, type checks, and tests |
 | CC8.3 -- Change approval | Section 5: PR review requirement, branch protection on `main` |
 | CC8.4 -- Emergency changes | Section 9: hotfix process with post-merge review |
-| CC8.5 -- Configuration management | Section 7: Alembic migrations, `render.yaml` as infrastructure-as-code |
+| CC8.5 -- Configuration management | Section 7: Alembic migrations, K8s manifests as infrastructure-as-code |
 | CC7.5 -- Rollback and recovery | Section 8: rollback procedures for application, database, and DNS |
 | CC1.1 -- Accountability | Section 10: git history, deploy logs, and HMAC-chained audit trail |
