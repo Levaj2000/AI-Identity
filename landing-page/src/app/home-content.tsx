@@ -203,11 +203,11 @@ export default function HomeContent() {
                 Get early access, shape the roadmap, and lock in preferred pricing.
               </p>
             </div>
-            <div className="mt-6 flex flex-wrap justify-center gap-8 text-xs uppercase tracking-wider">
-              <a href="/security" className="text-[rgba(213,219,230,0.35)] hover:text-[rgba(213,219,230,0.6)] transition-colors">SOC 2 Type II</a>
-              <a href="/eu-ai-act-checklist" className="text-[rgba(213,219,230,0.35)] hover:text-[rgba(213,219,230,0.6)] transition-colors">EU AI Act Ready</a>
-              <a href="/privacy" className="text-[rgba(213,219,230,0.35)] hover:text-[rgba(213,219,230,0.6)] transition-colors">GDPR Compliant</a>
-              <a href="/security" className="text-[rgba(213,219,230,0.35)] hover:text-[rgba(213,219,230,0.6)] transition-colors">ISO 27001</a>
+            <div className="mt-6 flex flex-wrap justify-center gap-6 text-xs uppercase tracking-wider font-medium">
+              <a href="/security" className="px-3 py-1.5 rounded-full border border-[rgba(166,218,255,0.15)] text-[rgba(213,219,230,0.6)] hover:text-[rgba(213,219,230,0.85)] hover:border-[rgba(166,218,255,0.3)] transition-all">SOC 2 Type II</a>
+              <a href="/eu-ai-act-checklist" className="px-3 py-1.5 rounded-full border border-[rgba(166,218,255,0.15)] text-[rgba(213,219,230,0.6)] hover:text-[rgba(213,219,230,0.85)] hover:border-[rgba(166,218,255,0.3)] transition-all">EU AI Act Ready</a>
+              <a href="/privacy" className="px-3 py-1.5 rounded-full border border-[rgba(166,218,255,0.15)] text-[rgba(213,219,230,0.6)] hover:text-[rgba(213,219,230,0.85)] hover:border-[rgba(166,218,255,0.3)] transition-all">GDPR Compliant</a>
+              <a href="/security" className="px-3 py-1.5 rounded-full border border-[rgba(166,218,255,0.15)] text-[rgba(213,219,230,0.6)] hover:text-[rgba(213,219,230,0.85)] hover:border-[rgba(166,218,255,0.3)] transition-all">ISO 27001</a>
             </div>
 
             {/* Scroll indicator — down chevron like Landio */}
