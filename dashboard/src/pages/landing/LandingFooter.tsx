@@ -17,10 +17,10 @@ const footerLinks = {
     { label: 'Contact', href: 'mailto:jeff@ai-identity.co' },
   ],
   Developers: [
-    { label: 'Quickstart', href: 'https://ai-identity-api.onrender.com/docs' },
-    { label: 'API Reference', href: 'https://ai-identity-api.onrender.com/redoc' },
+    { label: 'Quickstart', href: 'https://api.ai-identity.co/docs' },
+    { label: 'API Reference', href: 'https://api.ai-identity.co/redoc' },
     { label: 'GitHub', href: 'https://github.com/Levaj2000/AI-Identity' },
-    { label: 'Status', href: 'https://ai-identity-api.onrender.com/health' },
+    { label: 'Status', href: 'https://api.ai-identity.co/health' },
   ],
 }
 
@@ -81,7 +81,7 @@ export function LandingFooter() {
               Terms
             </a>
             <a
-              href="https://ai-identity-api.onrender.com/docs#security"
+              href="https://api.ai-identity.co/docs#security"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-gray-600 dark:hover:text-slate-300"
