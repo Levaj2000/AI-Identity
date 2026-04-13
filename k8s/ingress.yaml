@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ai-identity-ingress
+  namespace: ai-identity
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: ai-identity-ip
+    networking.gke.io/managed-certificates: ai-identity-cert
+    kubernetes.io/ingress.class: "gce"
+spec:
+  rules:
+    - host: api.ai-identity.co
+      http:
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: api-service
+                port:
+                  number: 8001
+    - host: gateway.ai-identity.co
+      http:
+        paths:
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: gateway-service
+                port:
+                  number: 8002

@@ -1,0 +1,38 @@
+# AI Identity — Proxy Gateway
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# System deps for psycopg2-binary
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1000 appuser
+
+# Install shared library first (changes less often -> better layer cache)
+COPY common/ common/
+RUN pip install --no-cache-dir -e common/
+
+# Install service-specific deps
+COPY gateway/requirements.txt gateway/requirements.txt
+RUN pip install --no-cache-dir -r gateway/requirements.txt
+
+# Copy service code
+COPY gateway/ gateway/
+
+# Run as non-root user
+USER appuser
+
+EXPOSE 8002
+
+CMD ["gunicorn", "gateway.app.main:app", \
+     "--workers", "2", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--bind", "0.0.0.0:8002", \
+     "--timeout", "120", \
+     "--keep-alive", "5"]

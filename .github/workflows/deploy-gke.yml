@@ -1,0 +1,71 @@
+name: Deploy to GKE
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'gateway/**'
+      - 'common/**'
+      - 'alembic/**'
+      - 'Dockerfile.*'
+      - 'k8s/**'
+      - 'cloudbuild.yaml'
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: project-8bbb04f8-fda8-462e-bc2
+  REGION: us-east1
+  CLUSTER: ai-identity
+  REGISTRY: us-east1-docker.pkg.dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push API image
+        run: |
+          docker build -f Dockerfile.api \
+            -t $REGISTRY/$PROJECT_ID/ai-identity/api:${{ github.sha }} \
+            -t $REGISTRY/$PROJECT_ID/ai-identity/api:latest .
+          docker push --all-tags $REGISTRY/$PROJECT_ID/ai-identity/api
+
+      - name: Build and push Gateway image
+        run: |
+          docker build -f Dockerfile.gateway \
+            -t $REGISTRY/$PROJECT_ID/ai-identity/gateway:${{ github.sha }} \
+            -t $REGISTRY/$PROJECT_ID/ai-identity/gateway:latest .
+          docker push --all-tags $REGISTRY/$PROJECT_ID/ai-identity/gateway
+
+      - uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER }}
+          location: ${{ env.REGION }}
+
+      - name: Deploy to GKE
+        run: |
+          kubectl set image deployment/api \
+            api=$REGISTRY/$PROJECT_ID/ai-identity/api:${{ github.sha }} \
+            -n ai-identity
+          kubectl set image deployment/gateway \
+            gateway=$REGISTRY/$PROJECT_ID/ai-identity/gateway:${{ github.sha }} \
+            -n ai-identity
+          kubectl rollout status deployment/api -n ai-identity --timeout=120s
+          kubectl rollout status deployment/gateway -n ai-identity --timeout=120s
