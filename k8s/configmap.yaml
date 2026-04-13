@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-identity-config
+  namespace: ai-identity
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  CORS_ORIGINS: "https://ai-identity.co,https://www.ai-identity.co,https://dashboard.ai-identity.co,http://localhost:5173"
+  CORS_ORIGIN_REGEX: "https://dashboard-.*-jeff-levas-projects\\.vercel\\.app"
+  GATEWAY_URL: "http://gateway-service.ai-identity.svc.cluster.local:8002"
+  API_KEY_PREFIX: "aid_sk_"
+  ADMIN_KEY_PREFIX: "aid_admin_"
+  APP_VERSION: "0.1.0"

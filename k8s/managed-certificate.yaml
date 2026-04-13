@@ -1,0 +1,9 @@
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: ai-identity-cert
+  namespace: ai-identity
+spec:
+  domains:
+    - api.ai-identity.co
+    - gateway.ai-identity.co

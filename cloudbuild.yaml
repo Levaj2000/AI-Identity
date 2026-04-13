@@ -1,0 +1,31 @@
+steps:
+  # Build API image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile.api'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/api:$SHORT_SHA'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/api:latest'
+      - '.'
+
+  # Build Gateway image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile.gateway'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/gateway:$SHORT_SHA'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/gateway:latest'
+      - '.'
+
+images:
+  - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/api:latest'
+  - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/gateway:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

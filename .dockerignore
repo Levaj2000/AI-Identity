@@ -33,3 +33,13 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+# Not needed in container images
+k8s/
+landing-page/
+sdk/
+cli/
+docs/
+.github/
+.claude/
+*.md
