@@ -376,8 +376,7 @@ def verify_chain(
                 )
 
             # Recompute the HMAC (normalize timezone for SQLite compat)
-            entry_hmac_key = _resolve_hmac_key(entry.agent_id)
-            recomputed = compute_entry_hash(
+            hash_kwargs = dict(
                 agent_id=entry.agent_id,
                 endpoint=entry.endpoint,
                 method=entry.method,
@@ -389,8 +388,16 @@ def verify_chain(
                 request_metadata=entry.request_metadata,
                 created_at=_ensure_utc(entry.created_at),
                 prev_hash=entry.prev_hash,
-                hmac_key=entry_hmac_key,
             )
+
+            entry_hmac_key = _resolve_hmac_key(entry.agent_id)
+            recomputed = compute_entry_hash(**hash_kwargs, hmac_key=entry_hmac_key)
+
+            # Entries created before the per-org key was configured were
+            # signed with the global key.  If the org key doesn't match,
+            # retry with the global key (hmac_key=None) before failing.
+            if recomputed != entry.entry_hash and entry_hmac_key is not None:
+                recomputed = compute_entry_hash(**hash_kwargs, hmac_key=None)
 
             if recomputed != entry.entry_hash:
                 return ChainVerificationResult(
