@@ -15,14 +15,14 @@
 
 | Environment | API | Gateway |
 |-------------|-----|---------|
-| Production  | `https://ai-identity-api.onrender.com` | `https://ai-identity-gateway.onrender.com` |
+| Production  | `https://api.ai-identity.co` | `https://gateway.ai-identity.co` |
 | Local dev   | `http://localhost:8001` | `http://localhost:8002` |
 
 Set your base URL and API key for the examples below:
 
 ```bash
-export AI_API=https://ai-identity-api.onrender.com
-export AI_GW=https://ai-identity-gateway.onrender.com
+export AI_API=https://api.ai-identity.co
+export AI_GW=https://gateway.ai-identity.co
 export API_KEY=your-api-key-here   # or test-dev-key-12345678 for local dev
 ```
 
@@ -53,8 +53,8 @@ curl -s $AI_API/health | jq
 ```python
 import requests
 
-API = "https://ai-identity-api.onrender.com"
-GW  = "https://ai-identity-gateway.onrender.com"
+API = "https://api.ai-identity.co"
+GW  = "https://gateway.ai-identity.co"
 API_KEY = "your-api-key-here"
 headers = {"X-API-Key": API_KEY}
 

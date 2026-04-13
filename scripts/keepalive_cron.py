@@ -15,12 +15,12 @@ import os
 import httpx
 
 SERVICES = [
-    ("API", "https://ai-identity-api.onrender.com/health"),
-    ("Gateway", "https://ai-identity-gateway.onrender.com/health"),
+    ("API", "https://api.ai-identity.co/health"),
+    ("Gateway", "https://gateway.ai-identity.co/health"),
 ]
 
-FOLLOWUP_URL = "https://ai-identity-api.onrender.com/api/internal/email/send-followups"
-CLEANUP_URL = "https://ai-identity-api.onrender.com/api/internal/cleanup/inactive-users"
+FOLLOWUP_URL = "https://api.ai-identity.co/api/internal/email/send-followups"
+CLEANUP_URL = "https://api.ai-identity.co/api/internal/cleanup/inactive-users"
 
 TIMEOUT = 30
 

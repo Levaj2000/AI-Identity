@@ -80,14 +80,14 @@ async with AIIdentityClient(api_key="aid_sk_...") as client:
 ```python
 client = AIIdentityClient(
     api_key="aid_sk_...",
-    base_url="https://ai-identity-api.onrender.com",  # Custom base URL
+    base_url="https://api.ai-identity.co",  # Custom base URL
     timeout=60.0,  # Request timeout in seconds
 )
 ```
 
 ## API Documentation
 
-Full API reference: [https://ai-identity-api.onrender.com/docs](https://ai-identity-api.onrender.com/docs)
+Full API reference: [https://api.ai-identity.co/docs](https://api.ai-identity.co/docs)
 
 ## License
 

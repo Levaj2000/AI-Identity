@@ -23,7 +23,7 @@ This plan defines how AI Identity detects, responds to, and recovers from securi
 ## 3. Detection Sources
 
 - **Sentry:** Real-time error monitoring on both API (`api/app/main.py`) and Gateway (`gateway/app/main.py`). Alerts on new error types and error rate spikes.
-- **Render Health Checks:** `/health` endpoint polled continuously on both `ai-identity-api` and `ai-identity-gateway`. Render alerts on consecutive failures.
+- **GKE Health Checks:** Kubernetes liveness and readiness probes on `/health` for both `ai-identity-api` and `ai-identity-gateway`. GKE automatically restarts unhealthy pods.
 - **UptimeRobot:** External HTTP monitoring of both services with HEAD requests to `/health`. Alerts via email and SMS on downtime.
 - **Audit Log Anomalies:** HMAC-chained audit logs allow detection of tampering. Broken chains indicate unauthorized modification.
 - **Neon Dashboard:** Database metrics and connection count monitoring for unusual activity.
@@ -33,22 +33,22 @@ This plan defines how AI Identity detects, responds to, and recovers from securi
 
 ### P1 -- Critical
 
-1. **Assess** -- Confirm the incident via Sentry, Render dashboard, and UptimeRobot. Determine scope.
-2. **Contain** -- Immediately rotate any compromised secrets using `scripts/rotate_master_key.py` and Render environment variable updates. If the API is compromised, disable the Render service to stop traffic.
+1. **Assess** -- Confirm the incident via Sentry, GKE/GCP Console, and UptimeRobot. Determine scope.
+2. **Contain** -- Immediately rotate any compromised secrets using `scripts/rotate_master_key.py` and update K8s secrets via `kubectl`. If the API is compromised, scale the deployment to zero to stop traffic.
 3. **Communicate** -- Notify affected customers within 1 hour via email. Post status update to status page.
 4. **Remediate** -- Deploy fix via emergency hotfix process (see Change Management Policy).
 5. **Recover** -- Verify service health, confirm audit log integrity, restore normal operation.
 
 ### P2 -- High
 
-1. **Assess** -- Check Sentry stack traces and Render deploy logs. Identify root cause.
-2. **Contain** -- If security-related, rotate affected API keys. If deploy-related, roll back via Render dashboard.
+1. **Assess** -- Check Sentry stack traces and GKE/Cloud Build deploy logs. Identify root cause.
+2. **Contain** -- If security-related, rotate affected API keys. If deploy-related, roll back via `kubectl rollout undo`.
 3. **Communicate** -- Notify affected customers within 4 hours if customer-facing.
 4. **Remediate** -- Fix and deploy through standard PR process (expedited review).
 
 ### P3 -- Medium
 
-1. **Assess** -- Review Sentry errors and Render metrics. Determine if issue is trending worse.
+1. **Assess** -- Review Sentry errors and GKE metrics (Cloud Monitoring). Determine if issue is trending worse.
 2. **Remediate** -- Create a GitHub issue, fix through normal PR workflow.
 3. **Communicate** -- No external communication unless issue persists beyond 24 hours.
 
@@ -60,16 +60,16 @@ This plan defines how AI Identity detects, responds to, and recovers from securi
 
 | Threat | Containment Action |
 |--------|--------------------|
-| Leaked database credential | Rotate `DATABASE_URL` in Neon console, update in Render env vars, restart services |
-| Leaked encryption key | Run `scripts/rotate_master_key.py --old-key <old> --new-key <new>`, update `CREDENTIAL_ENCRYPTION_KEY` in Render |
+| Leaked database credential | Rotate `DATABASE_URL` in Neon console, update K8s secret via `kubectl`, restart deployments |
+| Leaked encryption key | Run `scripts/rotate_master_key.py --old-key <old> --new-key <new>`, update `CREDENTIAL_ENCRYPTION_KEY` in K8s secret |
 | Compromised Clerk account | Revoke all active sessions in Clerk dashboard, rotate `CLERK_ISSUER` if needed |
-| Suspicious API traffic | Enable Cloudflare rate limiting rules, review Render access logs |
+| Suspicious API traffic | Enable Cloudflare rate limiting rules, review GKE access logs (Cloud Logging) |
 | Compromised GitHub token | Revoke token in GitHub settings, audit recent commits and PR merges |
 
 ## 6. Evidence Preservation
 
 - **Audit logs** are append-only and integrity-protected with HMAC chains (`AUDIT_HMAC_KEY`). Each entry's hash includes the previous entry's hash, making tampering detectable.
-- **Render deploy logs** are retained by Render and provide a timeline of all deployments.
+- **GKE and Cloud Build deploy logs** are retained in GCP Cloud Logging and provide a timeline of all deployments.
 - **Git history** is immutable and provides a complete record of all code changes.
 - **Sentry events** are retained per Sentry's data retention policy and provide stack traces and context.
 - During an incident, take screenshots of relevant dashboards before making changes.
@@ -95,7 +95,7 @@ Postmortems are stored in the repository under `docs/postmortems/` and linked in
 
 | Trust Services Criteria | How This Plan Addresses It |
 |------------------------|----------------------------|
-| CC7.2 -- Monitoring for anomalies | Section 3: Sentry, Render health checks, UptimeRobot, audit log anomaly detection |
+| CC7.2 -- Monitoring for anomalies | Section 3: Sentry, GKE health checks, UptimeRobot, audit log anomaly detection |
 | CC7.3 -- Incident identification and response | Sections 2, 4: severity classification and per-level response procedures |
 | CC7.4 -- Incident containment and remediation | Section 5: containment quick reference with specific actions per threat |
 | CC7.5 -- Incident recovery | Section 4: recovery steps within each severity procedure |

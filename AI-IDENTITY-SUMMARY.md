@@ -70,6 +70,6 @@ Client → [Gateway :8002] → Policy Eval → [Upstream API]
          Audit Log (HMAC chain)
 ```
 
-**Stack:** Python/FastAPI, PostgreSQL (Neon), SQLAlchemy, React 19/TypeScript/Vite, deployed on Render + Vercel.
+**Stack:** Python/FastAPI, PostgreSQL (Neon), SQLAlchemy, React 19/TypeScript/Vite, deployed on GKE Autopilot (API + Gateway) + Vercel (Dashboard). CI/CD via GitHub Actions + Cloud Build.
 
 **Security layers:** SHA-256 key hashing, Fernet credential encryption, HMAC-SHA256 audit integrity chain, PostgreSQL Row Level Security with FORCE, fail-closed gateway enforcement, request sanitization, PII-redacted debug logging.

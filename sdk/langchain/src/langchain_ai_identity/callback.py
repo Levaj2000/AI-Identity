@@ -19,7 +19,7 @@ from langchain_core.outputs import LLMResult
 
 logger = logging.getLogger(__name__)
 
-AI_IDENTITY_API_BASE = "https://ai-identity-api.onrender.com"
+AI_IDENTITY_API_BASE = "https://api.ai-identity.co"
 _AUDIT_ENDPOINT = f"{AI_IDENTITY_API_BASE}/api/v1/audit"
 _DEFAULT_TIMEOUT = 5.0  # seconds
 

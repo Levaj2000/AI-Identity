@@ -11,7 +11,7 @@ AI Identity is the identity, governance, and forensic infrastructure that enterp
 | | URL |
 |---|---|
 | **Dashboard** | [ai-identity.co](https://ai-identity.co) |
-| **API Docs** | [ai-identity-api.onrender.com/docs](https://ai-identity-api.onrender.com/docs) |
+| **API Docs** | [api.ai-identity.co/docs](https://api.ai-identity.co/docs) |
 
 ## Integrations
 
@@ -148,7 +148,7 @@ Key rotation supports a 24-hour grace period — both old and new keys work duri
 - **Forensics**: HMAC-SHA256 hash-chained audit logs, offline CLI verifier
 - **Integrations**: LangChain ([PyPI](https://pypi.org/project/langchain-ai-identity/))
 - **CI/CD**: GitHub Actions, Ruff (lint + format), pytest (427+ tests)
-- **Deployment**: Render (API + Gateway), Vercel (Dashboard)
+- **Deployment**: GKE Autopilot (API + Gateway), Vercel (Dashboard), GitHub Actions CI/CD with Cloud Build
 
 ## License
 

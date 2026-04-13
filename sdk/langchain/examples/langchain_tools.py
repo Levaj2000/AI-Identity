@@ -39,7 +39,7 @@ from langchain_ai_identity import (
 AGENT_ID = os.environ.get("AI_IDENTITY_AGENT_ID", "your-agent-id")
 AI_IDENTITY_API_KEY = os.environ.get("AI_IDENTITY_API_KEY", "aid_sk_...")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "sk-...")
-AI_IDENTITY_API_BASE = "https://ai-identity-api.onrender.com"
+AI_IDENTITY_API_BASE = "https://api.ai-identity.co"
 
 # ---------------------------------------------------------------------------
 # Demonstrate policy enforcement in action

@@ -64,8 +64,8 @@ fi
 # Interval = 300 seconds (5 min, free tier minimum)
 declare -A MONITORS
 MONITORS=(
-    ["AI Identity API"]="https://ai-identity-api.onrender.com/health"
-    ["AI Identity Gateway"]="https://ai-identity-gateway.onrender.com/health"
+    ["AI Identity API"]="https://api.ai-identity.co/health"
+    ["AI Identity Gateway"]="https://gateway.ai-identity.co/health"
     ["AI Identity Dashboard"]="https://dashboard.ai-identity.co"
     ["AI Identity Landing"]="https://ai-identity.co"
     ["CEO Dashboard"]="https://ceo.corethread.tech"

@@ -16,7 +16,7 @@ This policy defines how AI Identity controls access to production systems, infra
 | Service | Access Holder | Auth Method | MFA Required |
 |---------|--------------|-------------|--------------|
 | GitHub (Levaj2000/AI-Identity) | Jeff Leva | SSO + PAT | Yes |
-| Render (ai-identity-api, ai-identity-gateway) | Jeff Leva | Email/password | Yes |
+| GCP / GKE (ai-identity-api, ai-identity-gateway) | Jeff Leva | Google SSO | Yes |
 | Neon (PostgreSQL) | Jeff Leva | Email/password | Yes |
 | Clerk (user auth dashboard) | Jeff Leva | Email/password | Yes |
 | Stripe (billing dashboard) | Jeff Leva | Email/password | Yes |
@@ -40,7 +40,7 @@ As a solo-founder company, Jeff Leva is currently the only individual with produ
 
 ## 4. Service Accounts and API Keys
 
-AI Identity uses the following service-level secrets, managed as environment variables in Render:
+AI Identity uses the following service-level secrets, managed as Kubernetes secrets in GKE:
 
 - **DATABASE_URL** -- Neon PostgreSQL connection string (pooled via Neon's connection pooler)
 - **CREDENTIAL_ENCRYPTION_KEY** -- Fernet key for encrypting upstream provider credentials at rest
@@ -48,7 +48,7 @@ AI Identity uses the following service-level secrets, managed as environment var
 - **INTERNAL_SERVICE_KEY** -- Shared secret for API-to-Gateway internal calls
 - **CLERK_ISSUER** -- Clerk JWT issuer URL for token verification
 
-All secrets are stored in Render's encrypted environment variable store. They are never committed to the repository. The `.env.example` file documents required variables without values.
+All secrets are stored as Kubernetes secrets in the GKE cluster, managed via `kubectl`. They are never committed to the repository. The `.env.example` file documents required variables without values.
 
 ## 5. Database Access Controls
 
@@ -62,12 +62,12 @@ All secrets are stored in Render's encrypted environment variable store. They ar
 
 - **Encryption keys:** Rotated using `scripts/rotate_master_key.py`, which re-encrypts all upstream credentials in a single transaction. The script supports `--dry-run` for safe verification.
 - **AUDIT_HMAC_KEY:** Rotated with a transition period where both old and new keys are accepted.
-- **INTERNAL_SERVICE_KEY:** Rotated by updating the environment variable on both Render services simultaneously.
+- **INTERNAL_SERVICE_KEY:** Rotated by updating the Kubernetes secret and restarting both deployments (`kubectl rollout restart`).
 - **Target cadence:** All secrets rotated at minimum every 90 days, or immediately upon suspected compromise.
 
 ## 7. Principle of Least Privilege
 
-- Production services run with only the environment variables they require (see `render.yaml` for per-service configuration).
+- Production services run with only the environment variables they require (see K8s deployment manifests for per-service configuration).
 - The Gateway service has no direct write access to user or billing tables.
 - CI/CD (GitHub Actions) has no access to production secrets -- tests run against an in-memory SQLite database.
 - Vercel (dashboard hosting) has no server-side access to the database; it communicates exclusively through the API.
@@ -78,7 +78,7 @@ Every quarter, the document owner will:
 1. Review the access inventory table above and confirm it is accurate.
 2. Verify that MFA is enabled on all services.
 3. Confirm no unnecessary API keys or tokens exist.
-4. Check Render and Neon audit logs for unexpected access patterns.
+4. Check GCP and Neon audit logs for unexpected access patterns.
 5. Update this document with review date and any changes made.
 
 ---

@@ -91,8 +91,8 @@ async def trigger_qa_run(
     api_url = settings.gateway_url.replace(":8002", ":8001")
     # In production, use the Render URLs
     if settings.environment == "production":
-        api_url = "https://ai-identity-api.onrender.com"
-        gateway_url = "https://ai-identity-gateway.onrender.com"
+        api_url = "https://api.ai-identity.co"
+        gateway_url = "https://gateway.ai-identity.co"
     else:
         api_url = f"http://localhost:{settings.api_port}"
         gateway_url = settings.gateway_url
@@ -152,8 +152,8 @@ async def trigger_onboarding_run(
     """
     # Determine environment URLs
     if settings.environment == "production":
-        api_url = "https://ai-identity-api.onrender.com"
-        gateway_url = "https://ai-identity-gateway.onrender.com"
+        api_url = "https://api.ai-identity.co"
+        gateway_url = "https://gateway.ai-identity.co"
     else:
         api_url = f"http://localhost:{settings.api_port}"
         gateway_url = settings.gateway_url
