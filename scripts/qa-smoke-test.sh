@@ -16,8 +16,8 @@
 
 set -euo pipefail
 
-API="${1:-https://ai-identity-api.onrender.com}"
-GW="${2:-https://ai-identity-gateway.onrender.com}"
+API="${1:-https://api.ai-identity.co}"
+GW="${2:-https://gateway.ai-identity.co}"
 KEY="${AI_IDENTITY_QA_KEY:-test-dev-key-12345678}"
 CEO_API="${CEO_DASHBOARD_API:-http://localhost:8000/api/v1}"
 CEO_KEY="${CEO_API_KEY:-}"

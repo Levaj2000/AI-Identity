@@ -6,15 +6,15 @@
 
 | Service | URL | Expected |
 |---------|-----|----------|
-| API | `https://ai-identity-api.onrender.com` | `{"status": "ok"}` |
-| Gateway | `https://ai-identity-gateway.onrender.com` | `{"status": "ok"}` |
+| API | `https://api.ai-identity.co` | `{"status": "ok"}` |
+| Gateway | `https://gateway.ai-identity.co` | `{"status": "ok"}` |
 | Dashboard | `https://dashboard.ai-identity.co` | Login page loads |
 | Landing | `https://ai-identity.co` | Landing page loads |
 
 ```bash
 # Set these before running
-API=https://ai-identity-api.onrender.com
-GW=https://ai-identity-gateway.onrender.com
+API=https://api.ai-identity.co
+GW=https://gateway.ai-identity.co
 KEY="your-api-key-here"
 ```
 
@@ -94,7 +94,7 @@ curl -X DELETE $API/api/v1/agents/$AGENT_ID -H "X-API-Key: $KEY"
 | 10 | Verify Rotation | **PASS** | 3 keys: 2 active, 1 rotated |
 | 11 | Revoke Key | **PASS** | Key status changed to revoked |
 | 12 | Store Credential | **PASS** | Encrypted, only `key_prefix` visible |
-| 13 | Gateway Enforce | **FAIL** | Gateway service suspended on Render (503) |
+| 13 | Gateway Enforce | **FAIL** | Gateway service was suspended on Render (503) — now resolved via GKE migration |
 | 14 | Audit Log | **FAIL** | Returns empty — no entries logged (gateway down) |
 | 15 | Verify Chain | **PASS** *(trivial)* | Valid but 0 entries (no gateway traffic to log) |
 
@@ -102,5 +102,5 @@ curl -X DELETE $API/api/v1/agents/$AGENT_ID -H "X-API-Key: $KEY"
 
 ### Bugs Filed
 
-1. **[BUG] Gateway service suspended on Render** — `ai-identity-gateway.onrender.com` returns 503 "Service Suspended". Blocks steps 13-14. Need to re-activate the Render service.
+1. ~~**[BUG] Gateway service suspended on Render** — Resolved: migrated to GKE Autopilot (no idle timeout).~~
 2. **[BUG] Audit log empty despite API activity** — Audit entries are only created by gateway enforce calls. API CRUD operations (create agent, rotate key, etc.) do not create audit entries. Consider: should management operations also be audited?

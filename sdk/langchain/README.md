@@ -190,7 +190,7 @@ start = (datetime.now(tz=timezone.utc) - timedelta(hours=1)).isoformat()
 
 with httpx.Client() as client:
     resp = client.get(
-        "https://ai-identity-api.onrender.com/api/v1/audit",
+        "https://api.ai-identity.co/api/v1/audit",
         params={"agent_id": "your-agent-uuid", "start_date": start},
         headers={"X-API-Key": "aid_sk_..."},
     )
@@ -204,7 +204,7 @@ with httpx.Client() as client:
 ```python
 with httpx.Client() as client:
     resp = client.get(
-        "https://ai-identity-api.onrender.com/api/v1/audit/verify",
+        "https://api.ai-identity.co/api/v1/audit/verify",
         params={"agent_id": "your-agent-uuid"},
         headers={"X-API-Key": "aid_sk_..."},
     )
@@ -220,7 +220,7 @@ If `valid` is `False`, the response includes the exact position of the first has
 ```python
 with httpx.Client() as client:
     resp = client.get(
-        "https://ai-identity-api.onrender.com/api/v1/audit/report",
+        "https://api.ai-identity.co/api/v1/audit/report",
         params={
             "agent_id": "your-agent-uuid",
             "start_date": "2025-01-01T00:00:00Z",
@@ -303,8 +303,8 @@ See `examples/crewai_integration.py` for the full example.
 ## Links
 
 - [AI Identity Platform](https://ai-identity.co)
-- [API Documentation](https://ai-identity-api.onrender.com/docs)
-- [Gateway Documentation](https://ai-identity-gateway.onrender.com/docs)
+- [API Documentation](https://api.ai-identity.co/docs)
+- [Gateway Documentation](https://gateway.ai-identity.co/docs)
 - [GitHub](https://github.com/ai-identity/langchain-ai-identity)
 - [Issues & Support](https://github.com/ai-identity/langchain-ai-identity/issues)
 

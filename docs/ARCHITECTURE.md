@@ -22,7 +22,7 @@ AI Identity is a security and compliance platform for AI agents. It provides ide
            │ HTTPS                        │ HTTPS + JWT
            │                              │
 ┌──────────▼──────────────────────────────▼───────────────────────────┐
-│                      SERVICE LAYER (Render, Oregon)                 │
+│                  SERVICE LAYER (GKE Autopilot, us-east1)            │
 │                                                                     │
 │  ┌─────────────────────────┐    ┌──────────────────────────────┐   │
 │  │   API Service            │    │   Gateway Service             │   │
@@ -80,9 +80,9 @@ AI Identity is a security and compliance platform for AI agents. It provides ide
 │                    Webhooks → tier                                   │
 │                    sync                                              │
 │                                                                      │
-│   UptimeRobot      GitHub Actions      Render Cron                  │
-│   HEAD /health     CI (lint+test+      Keepalive every              │
-│   3 monitors       build)              10 min                       │
+│   UptimeRobot      GitHub Actions      K8s CronJobs                 │
+│   HEAD /health     CI/CD (lint+test+   Daily email followups        │
+│   3 monitors       build+deploy)       Weekly cleanup               │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -98,7 +98,7 @@ AI Identity is a security and compliance platform for AI agents. It provides ide
 |----------|-------|
 | Runtime | Python 3.11 / FastAPI / Uvicorn |
 | Port | 8001 |
-| Deploy | Render (Starter tier, auto-deploy from main) |
+| Deploy | GKE Autopilot (us-east1), GitHub Actions CI/CD with Cloud Build |
 | Auth | Clerk JWT or X-API-Key (legacy) |
 | Database | Neon PostgreSQL (SQLAlchemy + Alembic) |
 
@@ -127,7 +127,7 @@ AI Identity is a security and compliance platform for AI agents. It provides ide
 |----------|-------|
 | Runtime | Python 3.11 / FastAPI / Uvicorn |
 | Port | 8002 |
-| Deploy | Render (Starter tier, auto-deploy from main) |
+| Deploy | GKE Autopilot (us-east1), GitHub Actions CI/CD with Cloud Build |
 | Latency target | < 50ms per enforcement decision |
 
 **Enforcement Pipeline (6 steps):**
@@ -200,7 +200,7 @@ The `common` package is imported by both API and Gateway services.
 ### Defense in Depth (7 layers)
 
 ```
-Layer 1: Network        → HTTPS/TLS (Render + Cloudflare)
+Layer 1: Network        → HTTPS/TLS (GKE Ingress + Cloudflare)
 Layer 2: Headers        → HSTS, CSP, X-Frame-Options, etc.
 Layer 3: Auth           → Clerk JWT or API key (SHA-256 hashed)
 Layer 4: Rate limiting  → Per-IP (100/s) + per-key (60/s)
@@ -256,10 +256,11 @@ qa_runs (user_id FK)
 
 ```
 ┌─────────────────────────────────────────────────┐
-│ Render (Oregon)                                  │
-│  ├── ai-identity-api      (Starter, auto-deploy) │
-│  ├── ai-identity-gateway   (Starter, auto-deploy) │
-│  └── ai-identity-keepalive (Cron, 10 min)        │
+│ GKE Autopilot (us-east1)                         │
+│  ├── ai-identity-api      (api.ai-identity.co)   │
+│  ├── ai-identity-gateway  (gateway.ai-identity.co)│
+│  └── K8s CronJobs         (email followups,      │
+│                             weekly cleanup)       │
 ├──────────────────────────────────────────────────┤
 │ Vercel                                           │
 │  ├── dashboard.ai-identity.co (preview deploys)  │
@@ -273,7 +274,8 @@ qa_runs (user_id FK)
 │  ├── Stripe      → Subscriptions, checkout       │
 │  ├── Sentry      → Error monitoring (optional)   │
 │  ├── UptimeRobot → Health checks (HEAD /health)  │
-│  └── GitHub      → CI/CD (lint, test, build)     │
+│  └── GitHub      → CI/CD (lint, test, build,     │
+│                    deploy via Cloud Build)        │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -288,10 +290,10 @@ PR opened → GitHub Actions:
   ├── Dashboard: ESLint + Prettier + tsc
   └── Dashboard: Vite build
 
-Merge to main → Render auto-deploy:
-  ├── API: pip install + alembic upgrade + uvicorn
-  ├── Gateway: pip install + uvicorn
-  └── Keepalive: no rebuild needed
+Merge to main → GitHub Actions + Cloud Build deploy:
+  ├── API: Docker build → push to Artifact Registry → deploy to GKE
+  ├── Gateway: Docker build → push to Artifact Registry → deploy to GKE
+  └── Alembic migrations run as part of deploy
 
 Post-deploy → QA smoke test (optional):
   └── 15-step E2E checklist via POST /api/v1/qa/run
@@ -308,7 +310,7 @@ Post-deploy → QA smoke test (optional):
 | `generate_internal_key.py` | Generate INTERNAL_SERVICE_KEY |
 | `rotate_master_key.py` | Re-encrypt all credentials with new master key |
 | `qa-smoke-test.sh` | 15-step E2E QA |
-| `keepalive_cron.py` | Prevent cold starts (Render cron) |
+| `keepalive_cron.py` | (Obsolete — GKE has no idle timeout) |
 | `setup-uptimerobot.sh` | Configure monitoring |
 
 ---

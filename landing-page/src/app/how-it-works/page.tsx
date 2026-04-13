@@ -108,7 +108,7 @@ client = OpenAI(api_key="sk-...")
 
 # After — through AI Identity gateway
 client = OpenAI(
-    base_url="https://ai-identity-gateway.onrender.com/v1",
+    base_url="https://gateway.ai-identity.co/v1",
     api_key="aid_sk_your_agent_key",
 )
 

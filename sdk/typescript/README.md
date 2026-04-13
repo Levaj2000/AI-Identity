@@ -72,7 +72,7 @@ try {
 ```typescript
 const client = new AIIdentityClient({
   apiKey: "aid_sk_...",
-  baseUrl: "https://ai-identity-api.onrender.com", // Custom base URL
+  baseUrl: "https://api.ai-identity.co", // Custom base URL
   timeout: 60_000, // Request timeout in ms
 });
 ```
@@ -84,7 +84,7 @@ const client = new AIIdentityClient({
 
 ## API Documentation
 
-Full API reference: [https://ai-identity-api.onrender.com/docs](https://ai-identity-api.onrender.com/docs)
+Full API reference: [https://api.ai-identity.co/docs](https://api.ai-identity.co/docs)
 
 ## License
 

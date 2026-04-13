@@ -5,13 +5,13 @@ a new design partner. Every step must pass. If any step fails, fix the issue
 and re-run from the failed step.
 
 **Production URLs:**
-- API: `https://ai-identity-api.onrender.com`
-- Gateway: `https://ai-identity-gateway.onrender.com`
+- API: `https://api.ai-identity.co`
+- Gateway: `https://gateway.ai-identity.co`
 - Dashboard: `https://dashboard.ai-identity.co`
 
 ```bash
-API=https://ai-identity-api.onrender.com
-GATEWAY=https://ai-identity-gateway.onrender.com
+API=https://api.ai-identity.co
+GATEWAY=https://gateway.ai-identity.co
 ```
 
 ---

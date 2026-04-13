@@ -169,7 +169,7 @@ def run_crew() -> None:
     print(result)
     print(
         "\n[AI Identity] All tool calls were enforced via the gateway. "
-        "Check the audit log at https://ai-identity-api.onrender.com/api/v1/audit"
+        "Check the audit log at https://api.ai-identity.co/api/v1/audit"
     )
 
 

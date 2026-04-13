@@ -27,7 +27,7 @@ export const docSections: DocSection[] = [
             title: "1. Create an Agent",
             description:
               "Register a new AI agent with a unique identity. Every agent gets a cryptographic fingerprint that follows it across every request.",
-            code: `curl -X POST https://ai-identity-gateway.onrender.com/v1/agents \\
+            code: `curl -X POST https://gateway.ai-identity.co/v1/agents \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -40,7 +40,7 @@ export const docSections: DocSection[] = [
             title: "2. Get an API Key",
             description:
               "Generate a scoped API key for your agent. Keys can be restricted by model, rate limit, and expiration date.",
-            code: `curl -X POST https://ai-identity-gateway.onrender.com/v1/agents/ag_abc123/keys \\
+            code: `curl -X POST https://gateway.ai-identity.co/v1/agents/ag_abc123/keys \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -59,7 +59,7 @@ export const docSections: DocSection[] = [
 # POST https://api.anthropic.com/v1/messages
 
 # Point ALL providers to the AI Identity gateway:
-curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
+curl -X POST https://gateway.ai-identity.co/v1/chat/completions \\
   -H "Authorization: Bearer aid_sk_your_agent_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -74,7 +74,7 @@ curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
             title: "4. Explore Forensics",
             description:
               "Every request through the gateway is logged with a tamper-proof audit trail. Query the forensics API to see what your agents have been doing.",
-            code: `curl https://ai-identity-gateway.onrender.com/v1/agents/ag_abc123/logs \\
+            code: `curl https://gateway.ai-identity.co/v1/agents/ag_abc123/logs \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -G \\
   -d "limit=10" \\
@@ -155,7 +155,7 @@ curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
 
 # Point the OpenAI client at the AI Identity gateway
 client = OpenAI(
-    base_url="https://ai-identity-gateway.onrender.com/v1",
+    base_url="https://gateway.ai-identity.co/v1",
     api_key="aid_sk_your_agent_key",
 )
 
@@ -173,7 +173,7 @@ print(response.choices[0].message.content)`,
 
 # Same gateway, different model — Anthropic Claude
 client = OpenAI(
-    base_url="https://ai-identity-gateway.onrender.com/v1",
+    base_url="https://gateway.ai-identity.co/v1",
     api_key="aid_sk_your_agent_key",
 )
 
@@ -190,7 +190,7 @@ print(response.choices[0].message.content)`,
         body: `import OpenAI from "openai";
 
 const client = new OpenAI({
-  baseURL: "https://ai-identity-gateway.onrender.com/v1",
+  baseURL: "https://gateway.ai-identity.co/v1",
   apiKey: "aid_sk_your_agent_key",
 });
 
@@ -219,7 +219,7 @@ console.log(response.choices[0].message.content);`,
 
 llm = ChatOpenAI(
     model="gpt-4o",
-    base_url="https://ai-identity-gateway.onrender.com/v1",
+    base_url="https://gateway.ai-identity.co/v1",
     api_key="aid_sk_your_agent_key",
 )
 
@@ -231,7 +231,7 @@ print(response.content)`,
         language: "python",
         title: "CrewAI",
         body: `import os
-os.environ["OPENAI_API_BASE"] = "https://ai-identity-gateway.onrender.com/v1"
+os.environ["OPENAI_API_BASE"] = "https://gateway.ai-identity.co/v1"
 os.environ["OPENAI_API_KEY"] = "aid_sk_your_agent_key"
 
 from crewai import Agent, Task, Crew
@@ -261,7 +261,7 @@ print(result)`,
 
 config_list = [{
     "model": "gpt-4o",
-    "base_url": "https://ai-identity-gateway.onrender.com/v1",
+    "base_url": "https://gateway.ai-identity.co/v1",
     "api_key": "aid_sk_your_agent_key",
 }]
 
@@ -285,11 +285,11 @@ user_proxy.initiate_chat(
         language: "bash",
         title: "Direct cURL",
         body: `# List your agents
-curl https://ai-identity-gateway.onrender.com/v1/agents \\
+curl https://gateway.ai-identity.co/v1/agents \\
   -H "Authorization: Bearer YOUR_API_KEY"
 
 # Create a chat completion through the gateway (any provider)
-curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
+curl -X POST https://gateway.ai-identity.co/v1/chat/completions \\
   -H "Authorization: Bearer aid_sk_your_agent_key" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -298,7 +298,7 @@ curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
   }'
 
 # Check agent usage and forensic logs
-curl https://ai-identity-gateway.onrender.com/v1/agents/ag_abc123/usage \\
+curl https://gateway.ai-identity.co/v1/agents/ag_abc123/usage \\
   -H "Authorization: Bearer YOUR_API_KEY"`,
       },
     ],
@@ -333,11 +333,11 @@ curl https://ai-identity-gateway.onrender.com/v1/agents/ag_abc123/usage \\
         language: "bash",
         title: "Authentication header format",
         body: `# Organization-level operations
-curl https://ai-identity-gateway.onrender.com/v1/agents \\
+curl https://gateway.ai-identity.co/v1/agents \\
   -H "Authorization: Bearer aid_org_your_org_key"
 
 # Agent-level LLM requests
-curl -X POST https://ai-identity-gateway.onrender.com/v1/chat/completions \\
+curl -X POST https://gateway.ai-identity.co/v1/chat/completions \\
   -H "Authorization: Bearer aid_sk_your_agent_key" \\
   -H "Content-Type: application/json" \\
   -d '{"model": "claude-sonnet-4-20250514", "messages": [{"role": "user", "content": "Hi"}]}'`,

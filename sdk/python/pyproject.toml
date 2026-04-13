@@ -28,7 +28,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://ai-identity.co"
-Documentation = "https://ai-identity-api.onrender.com/docs"
+Documentation = "https://api.ai-identity.co/docs"
 Repository = "https://github.com/Levaj2000/AI-Identity"
 
 [tool.hatch.build.targets.wheel]

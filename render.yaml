@@ -31,7 +31,7 @@ services:
       - key: CLERK_ISSUER
         sync: false
       - key: GATEWAY_URL
-        value: https://ai-identity-gateway.onrender.com
+        value: https://gateway.ai-identity.co
       - key: PYTHON_VERSION
         value: "3.11.11"
       - key: PYTHONPATH

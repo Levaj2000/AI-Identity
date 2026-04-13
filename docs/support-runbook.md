@@ -39,8 +39,8 @@ Is the API returning 5xx for all users?
 
 | Service | URL | Health Endpoint | Hosting |
 |---------|-----|-----------------|---------|
-| API | `ai-identity-api.onrender.com` | `GET /health` | Render |
-| Gateway | `ai-identity-gateway.onrender.com` | `GET /health` | Render (currently suspended) |
+| API | `api.ai-identity.co` | `GET /health` | GKE Autopilot (us-east1) |
+| Gateway | `gateway.ai-identity.co` | `GET /health` | GKE Autopilot (us-east1) |
 | Dashboard | `dashboard.ai-identity.co` | Load `/` | Vercel |
 | Landing Page | `ai-identity.co` | Load `/` | Vercel |
 | Database | Neon PostgreSQL | Via API `/health` | Neon |
@@ -49,8 +49,8 @@ Is the API returning 5xx for all users?
 ### Quick Health Check (run from terminal)
 
 ```bash
-echo "API:" && curl -sf https://ai-identity-api.onrender.com/health | jq .status
-echo "Gateway:" && curl -sf https://ai-identity-gateway.onrender.com/health | jq .status
+echo "API:" && curl -sf https://api.ai-identity.co/health | jq .status
+echo "Gateway:" && curl -sf https://gateway.ai-identity.co/health | jq .status
 echo "Dashboard:" && curl -sf -o /dev/null -w "%{http_code}" https://dashboard.ai-identity.co
 echo "Landing:" && curl -sf -o /dev/null -w "%{http_code}" https://ai-identity.co
 ```
@@ -72,17 +72,11 @@ Based on the architecture and current state, these are the most likely issues pa
 **Fix**: Direct them to the quickstart guide. Ensure their user exists in the database.
 **Prevention**: Add clearer error messages for 401 responses.
 
-### 3.2 Gateway Service Down (P2)
-**Symptom**: Gateway returns 503 or HTML "Service Suspended" page.
-**Cause**: Render free tier suspends inactive services. Gateway has no scheduled keep-alive.
-**Fix**: Re-activate on Render dashboard. Add a cron ping to keep it warm.
-**Prevention**: Upgrade to paid Render instance or add uptime monitoring.
-
-### 3.3 Render Cold Start Latency (P3)
-**Symptom**: First API request after idle period takes 10-30 seconds.
-**Cause**: Render free tier spins down after 15 minutes of inactivity.
-**Fix**: Partners just need to retry. First request wakes the service.
-**Prevention**: Add a scheduled ping (every 10 min) via GitHub Actions or external monitor.
+### 3.2 Gateway Pod Unavailable (P2)
+**Symptom**: Gateway returns 503 or connection refused.
+**Cause**: GKE pod crashed, failed health check, or deployment rollout issue.
+**Fix**: Check pod status with `kubectl get pods -n ai-identity`. Restart if needed with `kubectl rollout restart deployment/gateway -n ai-identity`.
+**Prevention**: GKE Autopilot handles node provisioning automatically. Ensure liveness/readiness probes are configured correctly.
 
 ### 3.4 Key Rotation Grace Period Confusion (P3)
 **Symptom**: Partner rotates a key, old key stops working "too soon" or "too late."
@@ -105,7 +99,7 @@ Based on the architecture and current state, these are the most likely issues pa
 ### 3.7 Credential Encryption Key Not Set (P1)
 **Symptom**: Storing upstream credentials returns 500 error.
 **Cause**: `CREDENTIAL_ENCRYPTION_KEY` environment variable not set in production.
-**Fix**: Generate a Fernet key and set it on Render.
+**Fix**: Generate a Fernet key and set it via `kubectl create secret` or update the existing K8s secret.
 **Prevention**: Startup health check should validate encryption key is set.
 
 ### 3.8 Database Connection Pool Exhaustion (P1)
@@ -157,7 +151,7 @@ Partner reports issue
 
 | Tool | Purpose | Status |
 |------|---------|--------|
-| **Render Dashboard** | API + Gateway deploy, logs, env vars | ✅ Active |
+| **GCP Console / kubectl** | API + Gateway deploy, logs, K8s secrets | ✅ Active |
 | **Vercel Dashboard** | Dashboard + Landing deploy, logs | ✅ Active |
 | **Neon Console** | Database monitoring, queries, branching | ✅ Active |
 | **GitHub Issues** | Bug tracking (auto-created by QA workflow) | ✅ Active |
@@ -172,7 +166,6 @@ Partner reports issue
 | Tool | Purpose | Priority | Cost |
 |------|---------|----------|------|
 | **Sentry** | Error tracking with stack traces, auto-grouping | P2 | Free tier covers 5K events/mo |
-| **Render Cron** or **GitHub Actions ping** | Keep-alive ping to prevent cold starts | P2 | Free |
 
 ### UptimeRobot Setup
 
@@ -180,8 +173,8 @@ Monitors are provisioned via `scripts/setup-uptimerobot.sh`. Services monitored 
 
 | Monitor | URL |
 |---------|-----|
-| AI Identity API | `https://ai-identity-api.onrender.com/health` |
-| AI Identity Gateway | `https://ai-identity-gateway.onrender.com/health` |
+| AI Identity API | `https://api.ai-identity.co/health` |
+| AI Identity Gateway | `https://gateway.ai-identity.co/health` |
 | AI Identity Dashboard | `https://dashboard.ai-identity.co` |
 | AI Identity Landing | `https://ai-identity.co` |
 | CEO Dashboard | `https://ceo.corethread.tech` |
@@ -203,11 +196,11 @@ export UPTIMEROBOT_API_KEY="ur_your_key_here"
 
 ```
 □ Confirm the outage (check /health endpoint)
-□ Check Render dashboard for deploy failures or service errors
+□ Check GKE pod status and logs (kubectl get pods, kubectl logs)
 □ Check Neon console for database connectivity
-□ If deploy failure: roll back to previous deploy on Render
+□ If deploy failure: roll back with kubectl rollout undo
 □ If database: check Neon status page, restart API service
-□ If neither: check Render logs for error pattern
+□ If neither: check GKE logs for error pattern (kubectl logs, GCP Cloud Logging)
 □ Once resolved: verify with qa-smoke-test.sh
 □ Notify affected partners
 □ Write postmortem as CEO Dashboard insight (category: "ops")
@@ -218,7 +211,7 @@ export UPTIMEROBOT_API_KEY="ur_your_key_here"
 
 ```
 □ Reproduce the issue locally
-□ Check production logs on Render for error details
+□ Check production logs via kubectl logs or GCP Cloud Logging
 □ Identify root cause
 □ Fix and deploy (or roll back if faster)
 □ Verify with relevant qa-smoke-test.sh steps
@@ -230,7 +223,7 @@ export UPTIMEROBOT_API_KEY="ur_your_key_here"
 
 ```
 □ Confirm the degradation (timing, error rates)
-□ Check if it's a known issue (gateway suspended, cold start, rate limit)
+□ Check if it's a known issue (pod crash loop, rate limit, resource limits)
 □ Apply quick fix if available
 □ File sprint item for proper fix
 □ Acknowledge to partner
@@ -258,17 +251,17 @@ These are not contractual — they're internal targets to build trust:
 | Day | Activity |
 |-----|----------|
 | **Monday** | Automated QA smoke test runs (8am MT). Review results. |
-| **Wednesday** | Check Render/Neon dashboards for anomalies. Review partner feedback. |
+| **Wednesday** | Check GKE/Neon dashboards for anomalies. Review partner feedback. |
 | **Friday** | Quick partner check-in (async). Review any open GitHub issues. |
 
 ---
 
 ## 9. Rollback Procedures
 
-### API (Render)
-1. Go to Render dashboard → `ai-identity-api` → Deploys
-2. Click the last successful deploy → "Rollback to this deploy"
-3. Verify with `curl https://ai-identity-api.onrender.com/health`
+### API (GKE)
+1. Run `kubectl rollout undo deployment/api -n ai-identity`
+2. Verify with `curl https://api.ai-identity.co/health`
+3. Check rollout status with `kubectl rollout status deployment/api -n ai-identity`
 
 ### Dashboard (Vercel)
 1. Go to Vercel dashboard → project → Deployments
@@ -288,6 +281,6 @@ These are not contractual — they're internal targets to build trust:
 | Role | Contact | When |
 |------|---------|------|
 | CEO (you) | Direct | All P0, P1 escalations |
-| Render Support | support@render.com | Infrastructure issues |
+| GCP Support | GCP Console support | Infrastructure issues |
 | Neon Support | support@neon.tech | Database issues |
 | Vercel Support | Vercel dashboard ticket | Frontend deploy issues |
