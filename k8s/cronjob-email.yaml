@@ -1,0 +1,36 @@
+# Daily email followups (16:00 UTC)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: daily-email-followups
+  namespace: ai-identity
+spec:
+  schedule: "0 16 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: curl
+              image: curlimages/curl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  curl -sf -X POST \
+                    -H "x-internal-key: $(INTERNAL_SERVICE_KEY)" \
+                    http://api-service.ai-identity.svc.cluster.local:8001/api/internal/email/send-followups
+              envFrom:
+                - secretRef:
+                    name: ai-identity-secrets
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "64Mi"
+                limits:
+                  cpu: "100m"
+                  memory: "128Mi"
+          restartPolicy: OnFailure

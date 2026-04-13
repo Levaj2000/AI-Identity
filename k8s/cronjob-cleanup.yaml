@@ -1,0 +1,36 @@
+# Weekly inactive user cleanup (Sundays 04:00 UTC)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: weekly-user-cleanup
+  namespace: ai-identity
+spec:
+  schedule: "0 4 * * 0"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: curl
+              image: curlimages/curl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  curl -sf -X POST \
+                    -H "x-internal-key: $(INTERNAL_SERVICE_KEY)" \
+                    "http://api-service.ai-identity.svc.cluster.local:8001/api/internal/cleanup/inactive-users?inactivity_days=90&dry_run=false"
+              envFrom:
+                - secretRef:
+                    name: ai-identity-secrets
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "64Mi"
+                limits:
+                  cpu: "100m"
+                  memory: "128Mi"
+          restartPolicy: OnFailure
