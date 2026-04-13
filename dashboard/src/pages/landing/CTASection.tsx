@@ -93,7 +93,7 @@ export function CTASection() {
                 </svg>
               </Link>
               <a
-                href="https://ai-identity-api.onrender.com/docs"
+                href="https://api.ai-identity.co/docs"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-8 py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:bg-white/10 active:scale-[0.98]"

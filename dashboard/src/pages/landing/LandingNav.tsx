@@ -44,7 +44,7 @@ export function LandingNav() {
             How It Works
           </a>
           <a
-            href="https://ai-identity-api.onrender.com/docs"
+            href="https://api.ai-identity.co/docs"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900 dark:text-slate-400 dark:hover:text-slate-200"
@@ -115,7 +115,7 @@ export function LandingNav() {
               How It Works
             </a>
             <a
-              href="https://ai-identity-api.onrender.com/docs"
+              href="https://api.ai-identity.co/docs"
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm font-medium text-gray-700 dark:text-slate-300"

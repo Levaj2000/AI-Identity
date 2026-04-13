@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 
-const API_BASE = 'https://ai-identity-api.onrender.com'
-const GATEWAY_BASE = 'https://ai-identity-gateway.onrender.com'
+const API_BASE = 'https://api.ai-identity.co'
+const GATEWAY_BASE = 'https://gateway.ai-identity.co'
 
 interface TerminalLine {
   type: 'command' | 'response' | 'info' | 'error' | 'success'
