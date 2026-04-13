@@ -329,6 +329,28 @@ def verify_chain(
             message="No entries to verify",
         )
 
+    # Build a cache of agent_id → org forensic_verify_key so we use the
+    # same key that was used when the entry was created.
+    _org_key_cache: dict[uuid.UUID, str | None] = {}
+
+    def _resolve_hmac_key(entry_agent_id: uuid.UUID) -> str | None:
+        """Return the per-org HMAC key for an agent, or None for the global key."""
+        if hmac_key is not None:
+            return hmac_key  # explicit override (testing)
+        if entry_agent_id in _org_key_cache:
+            return _org_key_cache[entry_agent_id]
+        from common.models.agent import Agent as AgentModel
+        from common.models.organization import Organization
+
+        agent = db.query(AgentModel).filter(AgentModel.id == entry_agent_id).first()
+        key = None
+        if agent and agent.org_id:
+            org = db.query(Organization).filter(Organization.id == agent.org_id).first()
+            if org and org.forensic_verify_key:
+                key = org.forensic_verify_key
+        _org_key_cache[entry_agent_id] = key
+        return key
+
     expected_prev_hash = GENESIS
     verified = 0
     offset = 0
@@ -354,6 +376,7 @@ def verify_chain(
                 )
 
             # Recompute the HMAC (normalize timezone for SQLite compat)
+            entry_hmac_key = _resolve_hmac_key(entry.agent_id)
             recomputed = compute_entry_hash(
                 agent_id=entry.agent_id,
                 endpoint=entry.endpoint,
@@ -366,7 +389,7 @@ def verify_chain(
                 request_metadata=entry.request_metadata,
                 created_at=_ensure_utc(entry.created_at),
                 prev_hash=entry.prev_hash,
-                hmac_key=hmac_key,
+                hmac_key=entry_hmac_key,
             )
 
             if recomputed != entry.entry_hash:
