@@ -8,8 +8,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-04-14
+
 ### Added
 - **Agent purge with retention policy** — Revoked agents are now hard-deleted after a configurable retention period (default: 30 days). Audit logs are preserved with denormalized agent names so history remains meaningful after deletion. Admin-only `POST /api/v1/admin/agents/purge` endpoint and dashboard "Purge All" button (visible when filtering to Revoked). `revoked_at` timestamp tracks when each agent was revoked.
+- OpenAPI `servers` block (`https://api.ai-identity.co`) so ReDoc shows a concrete base URL.
+- Tag descriptions for `capabilities`, `auth`, `audit.forensics`, `approvals`, and `shadow-agents` in the API docs.
+- MIT license URL in the OpenAPI `license` block.
+
+### Changed
+- API docs `contact.url` now points to `https://ai-identity.co` (product site) instead of the repository.
+- Stale "Render" references in `api/app/main.py` module and `/health` docstrings replaced with GKE / generic wording after the infrastructure migration.
 
 ## [0.1.0] — 2026-03-30
 
