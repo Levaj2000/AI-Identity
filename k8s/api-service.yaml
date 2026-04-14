@@ -3,6 +3,13 @@ kind: Service
 metadata:
   name: api-service
   namespace: ai-identity
+  annotations:
+    # Attach Cloud Armor security policy `ai-identity-armor` via BackendConfig.
+    # See k8s/backend-config.yaml + scripts/setup-cloud-armor.sh.
+    cloud.google.com/backend-config: '{"default": "ai-identity-backend-config"}'
+    # Explicit NEG mode (default on GKE Autopilot, declared so BackendConfig
+    # attaches cleanly on first apply).
+    cloud.google.com/neg: '{"ingress": true}'
 spec:
   selector:
     app: api

@@ -1,0 +1,25 @@
+# BackendConfig — attaches the Cloud Armor security policy `ai-identity-armor`
+# to the GCE Load Balancer backend services fronting api-service and
+# gateway-service.
+#
+# The Cloud Armor policy itself lives in GCP (not K8s). See
+# scripts/setup-cloud-armor.sh for the idempotent gcloud commands that create
+# and configure it (WAF preconfigured rules in preview mode, adaptive L7
+# DDoS protection, per-IP throttling at 300 req/min).
+#
+# Attached via annotation on each Service:
+#   cloud.google.com/backend-config: '{"default": "ai-identity-backend-config"}'
+
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: ai-identity-backend-config
+  namespace: ai-identity
+spec:
+  securityPolicy:
+    name: ai-identity-armor
+  # Enable access logging for all backend requests — pairs with Cloud Armor
+  # deny logs for a complete audit trail when investigating incidents.
+  logging:
+    enable: true
+    sampleRate: 1.0
