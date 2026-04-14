@@ -1,0 +1,205 @@
+# AI Identity — NetworkPolicies for the ai-identity namespace.
+#
+# Implements default-deny ingress + egress with an explicit allow-list.
+# All policies in this file are additive; the default-deny only restricts pods
+# not otherwise allowed by a matching policy.
+#
+# Rollback if anything stalls after apply:
+#   kubectl delete networkpolicy default-deny-all -n ai-identity
+# That single delete restores full connectivity instantly.
+
+---
+# Default-deny: pods get no ingress and no egress unless explicitly allowed below.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: ai-identity
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+
+---
+# DNS resolution — required by every pod for Neon, Stripe, Sentry, Resend, etc.
+# kube-system is labeled `kubernetes.io/metadata.name=kube-system` automatically
+# in K8s 1.21+; GKE 1.35 has it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: ai-identity
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+
+---
+# External traffic from GCE Load Balancer (health checks + user requests) → api pods.
+# 35.191.0.0/16 + 130.211.0.0/22 are the documented Google LB source ranges.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-glb-to-api
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchLabels:
+      app: api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - ipBlock: { cidr: 35.191.0.0/16 }
+        - ipBlock: { cidr: 130.211.0.0/22 }
+      ports:
+        - { protocol: TCP, port: 8001 }
+
+---
+# External traffic from GCE Load Balancer → gateway pods.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-glb-to-gateway
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchLabels:
+      app: gateway
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - ipBlock: { cidr: 35.191.0.0/16 }
+        - ipBlock: { cidr: 130.211.0.0/22 }
+      ports:
+        - { protocol: TCP, port: 8002 }
+
+---
+# Internal: gateway pods (proxy) and cron pods (cleanup/email triggers) → api:8001.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-to-api
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchLabels:
+      app: api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: gateway
+        - podSelector:
+            matchLabels:
+              tier: cron
+      ports:
+        - { protocol: TCP, port: 8001 }
+
+---
+# Egress: api + gateway → external HTTPS (Stripe, Sentry, Resend, Perplexity,
+# Clerk JWKs, LLM upstreams). Excludes RFC1918 + GCE metadata so internal targets
+# require an explicit allow rule.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-https
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: [api, gateway] }
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16   # GCE instance metadata
+      ports:
+        - { protocol: TCP, port: 443 }
+
+---
+# Egress: api + gateway → external Postgres (Neon).
+# Single port (5432) so 0.0.0.0/0 is acceptably narrow.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-postgres
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: [api, gateway] }
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+      ports:
+        - { protocol: TCP, port: 5432 }
+
+---
+# Egress: gateway → api pods (proxy traffic, in-cluster).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-egress-to-api
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchLabels:
+      app: gateway
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: api
+      ports:
+        - { protocol: TCP, port: 8001 }
+
+---
+# Egress: cron pods → api pods (POST /api/internal/* calls).
+# Also needs DNS (covered by allow-dns-egress above, which targets podSelector: {}).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cron-egress-to-api
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchLabels:
+      tier: cron
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: api
+      ports:
+        - { protocol: TCP, port: 8001 }
