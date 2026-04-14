@@ -23,8 +23,12 @@ spec:
 
 ---
 # DNS resolution — required by every pod for Neon, Stripe, Sentry, Resend, etc.
-# kube-system is labeled `kubernetes.io/metadata.name=kube-system` automatically
-# in K8s 1.21+; GKE 1.35 has it.
+#
+# This cluster has GKE NodeLocal DNSCache enabled (addonsConfig.dnsCacheConfig).
+# Pod /etc/resolv.conf points at 169.254.20.10 — a host-network link-local IP
+# served by a per-node DNSCache daemon, not a pod IP. The fallback path goes
+# to kube-dns service IP (in kube-system) on cache miss or if NodeLocal is
+# unavailable. Both paths must be allowed.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -36,6 +40,10 @@ spec:
     - Egress
   egress:
     - to:
+        # NodeLocal DNSCache (per-node host-network daemon)
+        - ipBlock:
+            cidr: 169.254.20.10/32
+        # Fallback: direct to kube-dns pods in kube-system
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: kube-system
