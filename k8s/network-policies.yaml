@@ -211,3 +211,30 @@ spec:
               app: api
       ports:
         - { protocol: TCP, port: 8001 }
+
+---
+# Egress: gateway → Upstash Redis (TCP 6379) for distributed rate limiting.
+# Single port so 0.0.0.0/0 is acceptably narrow. Excludes RFC1918 + GCE metadata
+# so an attacker can't use this rule to reach internal targets.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-redis
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchLabels:
+      app: gateway
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+      ports:
+        - { protocol: TCP, port: 6379 }

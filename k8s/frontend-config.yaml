@@ -1,0 +1,18 @@
+# FrontendConfig — force HTTP → HTTPS redirect at the GCE Load Balancer edge.
+#
+# Without this, GCLB serves content on both port 80 and 443. Clients that
+# accidentally hit http:// transmit API keys in plaintext to the LB before any
+# app-level redirect. This CRD makes the LB return a 301 to https:// before
+# the request reaches a backend.
+#
+# Wired via annotation on the Ingress:
+#   networking.gke.io/v1beta1.FrontendConfig: ai-identity-frontend-config
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: ai-identity-frontend-config
+  namespace: ai-identity
+spec:
+  redirectToHttps:
+    enabled: true
+    responseCodeName: MOVED_PERMANENTLY_DEFAULT   # 301
