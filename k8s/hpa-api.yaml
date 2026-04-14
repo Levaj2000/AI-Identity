@@ -8,7 +8,9 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: api
-  minReplicas: 1
+  # Min 2 so a PodDisruptionBudget (minAvailable: 1) can tolerate
+  # node drains / auto-upgrades without taking the service to zero.
+  minReplicas: 2
   maxReplicas: 3
   metrics:
     - type: Resource

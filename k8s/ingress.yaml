@@ -7,6 +7,8 @@ metadata:
     kubernetes.io/ingress.global-static-ip-name: ai-identity-ip
     networking.gke.io/managed-certificates: ai-identity-cert
     kubernetes.io/ingress.class: "gce"
+    # Force HTTP → HTTPS redirect at the LB edge. See k8s/frontend-config.yaml.
+    networking.gke.io/v1beta1.FrontendConfig: ai-identity-frontend-config
 spec:
   rules:
     - host: api.ai-identity.co
