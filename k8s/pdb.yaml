@@ -1,0 +1,32 @@
+# PodDisruptionBudgets — protect availability during node drains / auto-upgrades.
+#
+# Paired with HPA minReplicas: 2 on both deployments. GKE Autopilot will still
+# respect voluntary disruption budgets — drains wait until at least `minAvailable`
+# pods are ready on the remaining nodes before evicting the next one.
+#
+# Involuntary disruptions (node crash, kernel panic, hardware fault) are NOT
+# protected by PDB. For those we rely on multiple replicas + fast reschedule.
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+  namespace: ai-identity
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: api
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: gateway-pdb
+  namespace: ai-identity
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: gateway
