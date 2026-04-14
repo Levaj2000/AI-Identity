@@ -102,7 +102,7 @@ class Settings(BaseSettings):
     cors_origin_regex: str = ""
 
     # App metadata
-    app_version: str = "0.1.0"
+    app_version: str = "0.2.0"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

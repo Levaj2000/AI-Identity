@@ -3,8 +3,8 @@
 Identity service and admin API for managing AI agents,
 API keys, capabilities, and policies.
 
-Run locally:  uvicorn api.app.main:app --reload --port 8001
-Run on Render: uvicorn api.app.main:app --host 0.0.0.0 --port $PORT
+Run locally: uvicorn api.app.main:app --reload --port 8001
+Run on GKE:  uvicorn api.app.main:app --host 0.0.0.0 --port $PORT
 """
 
 import logging
@@ -80,6 +80,16 @@ OPENAPI_TAGS = [
         "Each agent gets a UUID identity and cryptographic API key at creation.",
     },
     {
+        "name": "capabilities",
+        "description": "Named permissions that can be bound to agents via policies — "
+        "the vocabulary your policy engine uses to decide what an agent can do.",
+    },
+    {
+        "name": "auth",
+        "description": "User authentication — signup, login, JWT issuance, and "
+        "session management for the dashboard and CLI.",
+    },
+    {
         "name": "keys",
         "description": "Manage API keys for agents — create, list, revoke, and rotate. "
         "Keys use SHA-256 hashing and are shown only once at creation time.",
@@ -93,6 +103,11 @@ OPENAPI_TAGS = [
         "name": "audit",
         "description": "Append-only audit log with HMAC integrity chain. "
         "Read-only access and chain verification for SOC 2 compliance.",
+    },
+    {
+        "name": "audit.forensics",
+        "description": "Incident reconstruction — deep-dive forensic queries over "
+        "the audit log for compliance investigations and post-incident review.",
     },
     {
         "name": "credentials",
@@ -130,6 +145,16 @@ OPENAPI_TAGS = [
         "name": "agent-assignments",
         "description": "Assign users to specific agents with roles — "
         "owner, operator, or viewer for fine-grained access control.",
+    },
+    {
+        "name": "approvals",
+        "description": "Human-in-the-loop approval workflows — queue, review, and "
+        "authorize sensitive agent actions before they execute.",
+    },
+    {
+        "name": "shadow-agents",
+        "description": "Detection of unauthorized agents — flags API activity from "
+        "agents operating outside your org's registered identities.",
     },
     {
         "name": "health",
@@ -217,12 +242,16 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_tags=OPENAPI_TAGS,
     lifespan=lifespan,
+    servers=[
+        {"url": "https://api.ai-identity.co", "description": "Production"},
+    ],
     contact={
         "name": "AI Identity Team",
-        "url": "https://github.com/Levaj2000/AI-Identity",
+        "url": "https://ai-identity.co",
     },
     license_info={
         "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT",
     },
 )
 
@@ -470,7 +499,7 @@ app.include_router(shadow_router)
 
 @app.api_route("/health", methods=["GET", "HEAD"], tags=["health"], summary="Health check")
 async def health():
-    """Returns service status, version, and name. Used by Render and uptime monitors."""
+    """Returns service status, version, and name. Used by uptime monitors."""
     return {
         "status": "ok",
         "version": settings.app_version,

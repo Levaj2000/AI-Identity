@@ -11,4 +11,4 @@ data:
   GATEWAY_URL: "http://gateway-service.ai-identity.svc.cluster.local:8002"
   API_KEY_PREFIX: "aid_sk_"
   ADMIN_KEY_PREFIX: "aid_admin_"
-  APP_VERSION: "0.1.0"
+  APP_VERSION: "0.2.0"
