@@ -12,7 +12,21 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          labels:
+            # Targeted by NetworkPolicy `allow-cron-egress-to-api` and the
+            # gateway/cron clause of `allow-internal-to-api`. Required for
+            # this job to reach api-service:8001 under the namespace default-deny.
+            tier: cron
         spec:
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 100             # curlimages/curl ships as uid=100(curl_user)
+            runAsGroup: 101            # gid=101(curl_group)
+            fsGroup: 101
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: curl
               image: curlimages/curl:latest
@@ -26,6 +40,11 @@ spec:
               envFrom:
                 - secretRef:
                     name: ai-identity-secrets
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
               resources:
                 requests:
                   cpu: "50m"
@@ -33,4 +52,10 @@ spec:
                 limits:
                   cpu: "100m"
                   memory: "128Mi"
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir: {}
           restartPolicy: OnFailure
