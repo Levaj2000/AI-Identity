@@ -13,6 +13,9 @@ repos:
       - id: end-of-file-fixer
         exclude: ^alembic/
       - id: check-yaml
+        # K8s manifests use multi-document YAML (---) for related resources
+        # in one file; without this flag the hook only validates single-doc.
+        args: [--allow-multiple-documents]
       - id: check-json
         exclude: ^dashboard/tsconfig.*\.json$
       - id: check-added-large-files
