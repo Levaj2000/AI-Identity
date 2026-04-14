@@ -2,3 +2,12 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: ai-identity
+  labels:
+    # Pod Security Admission — restricted baseline.
+    # Gates admission of NEW pods; running pods are unaffected by label changes.
+    # Deployments in this namespace must set runAsNonRoot, drop ALL caps,
+    # disallow privilege escalation, and use seccompProfile RuntimeDefault.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

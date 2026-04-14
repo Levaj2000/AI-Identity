@@ -15,6 +15,15 @@ spec:
       labels:
         app: gateway
     spec:
+      # App does not call the K8s API — drop the auto-mounted SA token.
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000           # matches Dockerfile.gateway `USER appuser` (uid 1000)
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: gateway
           image: us-east1-docker.pkg.dev/project-8bbb04f8-fda8-462e-bc2/ai-identity/gateway:latest
@@ -25,6 +34,11 @@ spec:
                 name: ai-identity-config
             - secretRef:
                 name: ai-identity-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
           resources:
             requests:
               cpu: "200m"
@@ -50,3 +64,11 @@ spec:
               port: 8002
             failureThreshold: 15
             periodSeconds: 2
+          # Required because readOnlyRootFilesystem: true. Covers Python tempfiles,
+          # SQLAlchemy connection caches, gunicorn worker temp state, httpx caches.
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
