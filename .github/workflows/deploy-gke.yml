@@ -54,17 +54,23 @@ jobs:
             -t $REGISTRY/$PROJECT_ID/ai-identity/gateway:latest .
           docker push --all-tags $REGISTRY/$PROJECT_ID/ai-identity/gateway
 
-      - uses: google-github-actions/get-gke-credentials@v2
-        with:
-          cluster_name: ${{ env.CLUSTER }}
-          location: ${{ env.REGION }}
-          # Route kubectl traffic through Connect Gateway
-          # (us-east1-connectgateway.googleapis.com) instead of the cluster's
-          # public control-plane endpoint. Lets us enable Master Authorized
-          # Networks without having to whitelist GitHub runner IP ranges.
-          # Requires fleet membership + roles/gkehub.gatewayEditor +
-          # roles/container.developer on the WIF SA (granted out-of-band).
-          use_connect_gateway: true
+      # Route kubectl via Connect Gateway (us-east1-connectgateway.googleapis.com)
+      # instead of the cluster's public control-plane endpoint. Lets us enable
+      # Master Authorized Networks without whitelisting GitHub runner IP ranges.
+      #
+      # Requires fleet membership (registered in us-east1) + roles/gkehub.viewer
+      # + roles/gkehub.gatewayEditor + roles/container.developer on the WIF SA
+      # (granted out-of-band).
+      #
+      # We call `gcloud container fleet memberships get-credentials` directly
+      # instead of `google-github-actions/get-gke-credentials@v2 use_connect_gateway`
+      # because that action assumes the membership lives at location=global, and
+      # ours is in us-east1.
+      - name: Configure kubectl via Connect Gateway
+        run: |
+          gcloud container fleet memberships get-credentials ${{ env.CLUSTER }} \
+            --project=${{ env.PROJECT_ID }} \
+            --location=${{ env.REGION }}
 
       - name: Deploy to GKE
         run: |
