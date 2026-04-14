@@ -58,6 +58,13 @@ jobs:
         with:
           cluster_name: ${{ env.CLUSTER }}
           location: ${{ env.REGION }}
+          # Route kubectl traffic through Connect Gateway
+          # (us-east1-connectgateway.googleapis.com) instead of the cluster's
+          # public control-plane endpoint. Lets us enable Master Authorized
+          # Networks without having to whitelist GitHub runner IP ranges.
+          # Requires fleet membership + roles/gkehub.gatewayEditor +
+          # roles/container.developer on the WIF SA (granted out-of-band).
+          use_connect_gateway: true
 
       - name: Deploy to GKE
         run: |
