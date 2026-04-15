@@ -15,8 +15,9 @@ spec:
       labels:
         app: gateway
     spec:
-      # App does not call the K8s API — drop the auto-mounted SA token.
-      automountServiceAccountToken: false
+      # Bound to GCP SA ai-identity-workload@ via Workload Identity for
+      # Secret Manager CSI access. See k8s/serviceaccount.yaml.
+      serviceAccountName: ai-identity-workload
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000           # matches Dockerfile.gateway `USER appuser` (uid 1000)
@@ -26,17 +27,33 @@ spec:
           type: RuntimeDefault
       containers:
         - name: gateway
-          # Pinned by digest. CI (.github/workflows/deploy-gke.yml) resolves
-          # the newly built tag to its digest on each deploy and overrides
-          # this via `kubectl set image`.
+          # Pinned by digest. CI overrides via `kubectl set image` on deploy.
           image: us-east1-docker.pkg.dev/project-8bbb04f8-fda8-462e-bc2/ai-identity/gateway@sha256:6791032b26fe07eba231f293d9e5e82c0672f0b3df7763ba4b37d67ff50207b5
           ports:
             - containerPort: 8002
+          # See k8s/api-deployment.yaml for why we use a shell-wrapper CMD:
+          # GKE Autopilot's CSI provider mounts files but doesn't synthesize
+          # K8s Secrets, so the wrapper reads /mnt/secrets/<KEY> files and
+          # exports them as env vars before exec'ing the original gunicorn.
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              for f in /mnt/secrets/*; do
+                [ -f "$f" ] || continue
+                name=$(basename "$f")
+                value=$(cat "$f")
+                export "$name=$value"
+              done
+              exec gunicorn gateway.app.main:app \
+                --workers 2 \
+                --worker-class uvicorn.workers.UvicornWorker \
+                --bind 0.0.0.0:8002 \
+                --timeout 120 \
+                --keep-alive 5
           envFrom:
             - configMapRef:
                 name: ai-identity-config
-            - secretRef:
-                name: ai-identity-secrets
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -67,11 +84,18 @@ spec:
               port: 8002
             failureThreshold: 15
             periodSeconds: 2
-          # Required because readOnlyRootFilesystem: true. Covers Python tempfiles,
-          # SQLAlchemy connection caches, gunicorn worker temp state, httpx caches.
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: secrets-store
+              mountPath: /mnt/secrets
+              readOnly: true
       volumes:
         - name: tmp
           emptyDir: {}
+        - name: secrets-store
+          csi:
+            driver: secrets-store-gke.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: ai-identity-secrets
