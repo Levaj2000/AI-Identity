@@ -45,3 +45,9 @@ admissionWhitelistPatterns:
   - namePattern: gcr.io/stackdriver-agents/*
   - namePattern: gcr.io/projectcalico-org/*
   - namePattern: mirror.gcr.io/*
+  # Third-party images consumed by cronjobs. Digest-pinned in the manifests
+  # (k8s/cronjob-*.yaml), so content integrity is covered even without an
+  # attestation. Allowlisting here avoids us signing external images we
+  # don't build. Syntax note: BinAuth requires the `[@:]*` form — plain
+  # trailing `*` (like `curlimages/curl*`) returns INVALID_ARGUMENT.
+  - namePattern: curlimages/curl[@:]*
