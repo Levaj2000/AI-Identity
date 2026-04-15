@@ -141,14 +141,25 @@ class TestDepthLimits:
         assert result.valid  # depth = 3: dict → list → string
 
     def test_depth_3_valid(self, validator):
-        """Depth 3 is the max allowed."""
+        """Depth 3 — a flat endpoints policy — remains valid."""
         # dict(1) → list(2) → str(3) = depth 3
         result = validator.validate({"allowed_endpoints": ["/v1/*"]})
         assert result.valid
 
-    def test_depth_4_rejected(self, validator):
-        """Depth 4 exceeds the limit."""
-        rules = {"allowed_endpoints": [{"nested": "value"}]}  # depth 4
+    def test_depth_5_valid_for_when_clause(self, validator):
+        """Depth 5 is the max — required for ABAC `when: {field: {op: [...]}}`."""
+        # dict(1) → dict(2) → dict(3) → list(4) → str(5) = depth 5
+        rules = {
+            "when": {"env": {"in": ["production"]}},
+            "allowed_endpoints": ["/v1/*"],
+        }
+        result = validator.validate(rules)
+        assert result.valid
+
+    def test_depth_6_rejected(self, validator):
+        """Depth 6 exceeds the limit (max_depth=5 accommodates ABAC `when`)."""
+        # dict(1) → dict(2) → dict(3) → list(4) → dict(5) → str(6) = depth 6
+        rules = {"when": {"env": {"in": [{"nested": "bad"}]}}}
         result = validator.validate(rules)
         assert not result.valid
         assert any("too deep" in e.message for e in result.errors)
@@ -163,7 +174,7 @@ class TestDepthLimits:
         """Custom depth limit is respected."""
         v = PolicyValidator(max_depth=2)
         result = v.validate({"allowed_endpoints": ["/v1/*"]})
-        assert not result.valid  # depth 3 > max 2
+        assert not result.valid  # depth 3 > custom max 2
 
 
 # ── Size Limits ──────────────────────────────────────────────────────
@@ -453,3 +464,123 @@ class TestGatewayDefenseInDepth:
             method="POST",
         )
         assert result.allowed
+
+
+# ── `when` Clause Validation (ABAC) ──────────────────────────────────
+
+
+class TestWhenClauseValidation:
+    """Validator behavior for the optional `when` metadata clause."""
+
+    def test_when_accepted_as_top_level_key(self, validator):
+        result = validator.validate(
+            {
+                "when": {"environment": "production"},
+                "allowed_endpoints": ["/v1/*"],
+            }
+        )
+        assert result.valid
+
+    def test_when_scalar_shorthand_valid(self, validator):
+        result = validator.validate(
+            {
+                "when": {"env": "prod", "tier": 3, "active": True},
+                "allowed_endpoints": ["/v1/*"],
+            }
+        )
+        assert result.valid
+
+    def test_when_in_and_not_in_operators_valid(self, validator):
+        result = validator.validate(
+            {
+                "when": {
+                    "env": {"in": ["production", "staging"]},
+                    "framework": {"not_in": ["test-tool"]},
+                },
+                "allowed_endpoints": ["/v1/*"],
+            }
+        )
+        assert result.valid
+
+    def test_when_must_be_dict(self, validator):
+        result = validator.validate({"when": ["bad"], "allowed_endpoints": ["/v1/*"]})
+        assert not result.valid
+        assert any("when" in e.field for e in result.errors)
+
+    def test_when_unsupported_operator_rejected(self, validator):
+        result = validator.validate(
+            {
+                "when": {"env": {"matches": "prod.*"}},
+                "allowed_endpoints": ["/v1/*"],
+            }
+        )
+        assert not result.valid
+        assert any("Unsupported operator" in e.message for e in result.errors)
+
+    def test_when_empty_in_list_rejected(self, validator):
+        # Empty match list is always a no-match; almost certainly an accident.
+        result = validator.validate(
+            {
+                "when": {"env": {"in": []}},
+                "allowed_endpoints": ["/v1/*"],
+            }
+        )
+        assert not result.valid
+        assert any("Empty list" in e.message for e in result.errors)
+
+    def test_when_non_scalar_value_rejected(self, validator):
+        result = validator.validate(
+            {
+                "when": {"env": {"in": [{"nested": "dict"}]}},
+                "allowed_endpoints": ["/v1/*"],
+            }
+        )
+        assert not result.valid
+
+    def test_when_warns_on_unknown_metadata_key(self, validator):
+        # Agent has no `team` key — policy should be valid but carry a warning.
+        result = validator.validate(
+            {
+                "when": {"team": "payments"},
+                "allowed_endpoints": ["/v1/*"],
+            },
+            agent_metadata={"environment": "production"},
+        )
+        assert result.valid  # not an error
+        assert len(result.warnings) == 1
+        assert "team" in result.warnings[0].message
+
+    def test_when_no_warning_without_agent_metadata_context(self, validator):
+        # Without agent_metadata we can't know whether keys are unknown.
+        result = validator.validate(
+            {
+                "when": {"team": "payments"},
+                "allowed_endpoints": ["/v1/*"],
+            }
+        )
+        assert result.valid
+        assert result.warnings == []
+
+    def test_when_no_warning_when_agent_has_the_key(self, validator):
+        result = validator.validate(
+            {
+                "when": {"team": "payments"},
+                "allowed_endpoints": ["/v1/*"],
+            },
+            agent_metadata={"team": "payments"},
+        )
+        assert result.valid
+        assert result.warnings == []
+
+    def test_when_too_many_conditions_rejected(self, validator):
+        from common.validation.policy import MAX_WHEN_CONDITIONS
+
+        when = {f"k{i}": "v" for i in range(MAX_WHEN_CONDITIONS + 1)}
+        result = validator.validate({"when": when, "allowed_endpoints": ["/v1/*"]})
+        assert not result.valid
+
+    def test_policy_without_when_still_valid(self, validator):
+        """Backward compatibility: flat policies keep working."""
+        result = validator.validate({"allowed_endpoints": ["/v1/*"], "allowed_methods": ["POST"]})
+        assert result.valid
+        assert result.warnings == []
