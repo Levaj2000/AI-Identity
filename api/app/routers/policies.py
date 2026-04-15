@@ -10,6 +10,7 @@ from api.app.auth import get_current_user
 from common.models import Policy, User, get_db
 from common.queries import get_user_agent
 from common.schemas.agent import PolicyCreate, PolicyResponse
+from common.validation.policy import PolicyValidator
 
 logger = logging.getLogger("ai_identity.api.policies")
 
@@ -77,7 +78,20 @@ def create_policy(
         user.id,
     )
 
-    return policy
+    # Re-validate with the agent's metadata in context to surface non-fatal
+    # warnings (e.g., `when` references a metadata key the agent isn't tagged
+    # with). The policy is already saved — warnings don't block creation,
+    # they're authoring nudges the dashboard renders as yellow flags.
+    contextual = PolicyValidator().validate(body.rules, agent_metadata=agent.metadata_ or {})
+    warnings = (
+        [{"field": w.field, "message": w.message} for w in contextual.warnings]
+        if contextual.warnings
+        else None
+    )
+
+    response = PolicyResponse.model_validate(policy)
+    response.warnings = warnings
+    return response
 
 
 # ── GET /api/v1/agents/{agent_id}/policies ──────────────────────────────

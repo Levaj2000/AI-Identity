@@ -21,7 +21,15 @@ logger = logging.getLogger("ai_identity.validation.policy")
 
 # ── Constants ────────────────────────────────────────────────────────
 
-MAX_RULES_DEPTH = 3
+# Max nesting depth. The deepest legitimate structure is:
+#   depth 1: rules dict top
+#   depth 2: the `when` dict
+#   depth 3: a condition key's operator dict (e.g. `{in: [...]}`)
+#   depth 4: the operator's value list
+#   depth 5: a scalar inside that list
+# Cap set at 5 to accommodate the ABAC `when` DSL without allowing unbounded
+# payloads. Older rules (no `when`) max out at depth 3 and are unaffected.
+MAX_RULES_DEPTH = 5
 MAX_RULES_SIZE_BYTES = 10_240  # 10 KB
 MAX_ENDPOINTS = 50
 MAX_METHODS = 10
@@ -31,12 +39,28 @@ MAX_ENDPOINT_LENGTH = 256
 # Any key not in this set is rejected.
 ALLOWED_RULE_KEYS = frozenset(
     {
+        "when",
         "allowed_endpoints",
         "denied_endpoints",
         "allowed_methods",
         "max_cost_usd",
     }
 )
+
+# Maximum number of conditions permitted in a `when` clause. Keeps the
+# audit log readable and evaluation bounded.
+MAX_WHEN_CONDITIONS = 10
+
+# Maximum number of values in an `in` / `not_in` list.
+MAX_WHEN_OP_VALUES = 20
+
+# Supported operators inside a `when` condition dict. Kept in sync with
+# common.policy.eval.SUPPORTED_WHEN_OPERATORS (imported lazily to avoid
+# cross-module circular imports during model init).
+_WHEN_OPERATORS = frozenset({"in", "not_in"})
+
+# Scalar types valid as metadata values being matched against.
+_SCALAR_TYPES = (str, int, float, bool)
 
 # Valid HTTP methods (uppercase).
 VALID_HTTP_METHODS = frozenset(
@@ -68,16 +92,35 @@ class PolicyValidationError:
 
 
 @dataclass
+class PolicyValidationWarning:
+    """A non-fatal concern surfaced during validation.
+
+    Warnings do not invalidate the policy — the policy is still saved — but
+    are returned to the API caller so a dashboard editor can surface them
+    (e.g., "policy references metadata key 'team' but the agent has no such
+    key — this rule will deny all requests until the agent is tagged").
+    """
+
+    field: str
+    message: str
+
+
+@dataclass
 class ValidationResult:
     """Result of validating a policy rules dict."""
 
     valid: bool
     errors: list[PolicyValidationError] = field(default_factory=list)
+    warnings: list[PolicyValidationWarning] = field(default_factory=list)
 
     def add_error(self, field_name: str, message: str) -> None:
         """Record a validation error."""
         self.errors.append(PolicyValidationError(field=field_name, message=message))
         self.valid = False
+
+    def add_warning(self, field_name: str, message: str) -> None:
+        """Record a non-fatal concern. Does not invalidate the result."""
+        self.warnings.append(PolicyValidationWarning(field=field_name, message=message))
 
 
 # ── PolicyValidator ──────────────────────────────────────────────────
@@ -106,7 +149,12 @@ class PolicyValidator:
         self.max_depth = max_depth
         self.max_size_bytes = max_size_bytes
 
-    def validate(self, rules: dict) -> ValidationResult:
+    def validate(
+        self,
+        rules: dict,
+        *,
+        agent_metadata: dict | None = None,
+    ) -> ValidationResult:
         """Validate a policy rules dict.
 
         Checks (in order):
@@ -116,8 +164,15 @@ class PolicyValidator:
           4. Key whitelist — only recognized keys allowed
           5. Field-level validation for each known key
 
-        Returns a ValidationResult with valid=True if all checks pass,
-        or valid=False with a list of errors.
+        ``agent_metadata`` is optional. When provided, a ``when`` clause that
+        references a metadata key absent from the agent's metadata produces a
+        **warning** (not an error) so the API caller can surface "this will
+        deny all requests until you tag the agent". Callers that don't have a
+        specific agent in mind (e.g. generic schema checks on PolicyCreate)
+        should omit it.
+
+        Returns a ValidationResult with ``valid=True`` when no errors are
+        present. Warnings may be present on a valid result.
         """
         result = ValidationResult(valid=True)
 
@@ -140,6 +195,7 @@ class PolicyValidator:
         self._check_unknown_keys(rules, result)
 
         # 5. Field-level validation
+        self._validate_when(rules, result, agent_metadata)
         self._validate_endpoints(rules, "allowed_endpoints", result)
         self._validate_endpoints(rules, "denied_endpoints", result)
         self._validate_methods(rules, result)
@@ -328,3 +384,113 @@ class PolicyValidator:
                 "max_cost_usd",
                 f"Unreasonably high: ${cost} (max $10,000)",
             )
+
+    # ── `when` Clause Validation ──────────────────────────────────
+
+    def _validate_when(
+        self,
+        rules: dict,
+        result: ValidationResult,
+        agent_metadata: dict | None,
+    ) -> None:
+        """Validate the optional ``when`` clause for ABAC on agent metadata.
+
+        Grammar::
+
+            when:
+              field_a: "scalar"                    # implicit equality
+              field_b: {in: ["x", "y"]}            # value in list
+              field_c: {not_in: ["z"]}             # value not in list
+
+        Rules here keep the DSL deliberately narrow — only scalar values in
+        matches, only ``in`` / ``not_in`` as dict operators. The validator
+        rejects anything else at policy creation time so the runtime evaluator
+        never sees a malformed rule. If ``agent_metadata`` is supplied, fields
+        referenced by ``when`` that are absent from the agent produce a
+        warning so dashboards can surface the configuration gap without
+        blocking the save.
+        """
+        if "when" not in rules:
+            return
+
+        when_clause = rules["when"]
+
+        if not isinstance(when_clause, dict):
+            result.add_error("when", f"Must be a dict, got {type(when_clause).__name__}")
+            return
+
+        if len(when_clause) > MAX_WHEN_CONDITIONS:
+            result.add_error(
+                "when",
+                f"Too many conditions: {len(when_clause)} (max {MAX_WHEN_CONDITIONS})",
+            )
+            return
+
+        for key, condition in when_clause.items():
+            if not isinstance(key, str) or not key:
+                result.add_error("when", "Condition keys must be non-empty strings")
+                continue
+
+            # Scalar shorthand for equality.
+            if isinstance(condition, _SCALAR_TYPES) or condition is None:
+                pass
+            elif isinstance(condition, dict):
+                if len(condition) != 1:
+                    result.add_error(
+                        f"when.{key}",
+                        "Operator dict must contain exactly one operator key "
+                        f"(got {sorted(condition.keys())})",
+                    )
+                    continue
+                op_key = next(iter(condition))
+                if op_key not in _WHEN_OPERATORS:
+                    result.add_error(
+                        f"when.{key}",
+                        f"Unsupported operator '{op_key}'. "
+                        f"Allowed operators: {sorted(_WHEN_OPERATORS)}",
+                    )
+                    continue
+                op_value = condition[op_key]
+                if not isinstance(op_value, list):
+                    result.add_error(
+                        f"when.{key}.{op_key}",
+                        f"Must be a list, got {type(op_value).__name__}",
+                    )
+                    continue
+                if len(op_value) == 0:
+                    result.add_error(
+                        f"when.{key}.{op_key}",
+                        "Empty list is always a no-match; remove the condition or add values.",
+                    )
+                    continue
+                if len(op_value) > MAX_WHEN_OP_VALUES:
+                    result.add_error(
+                        f"when.{key}.{op_key}",
+                        f"Too many values: {len(op_value)} (max {MAX_WHEN_OP_VALUES})",
+                    )
+                    continue
+                for i, v in enumerate(op_value):
+                    if not isinstance(v, _SCALAR_TYPES) and v is not None:
+                        result.add_error(
+                            f"when.{key}.{op_key}[{i}]",
+                            f"List values must be scalar (string, number, bool, null); "
+                            f"got {type(v).__name__}",
+                        )
+            else:
+                result.add_error(
+                    f"when.{key}",
+                    f"Condition must be a scalar (implicit equality) or "
+                    f"{{op: [...]}} dict; got {type(condition).__name__}",
+                )
+                continue
+
+            # Optional warning: if we know the agent's metadata, flag fields
+            # that don't yet exist on it. Not an error — metadata can be
+            # added later — but a high-signal nudge for dashboard authors.
+            if agent_metadata is not None and key not in agent_metadata:
+                result.add_warning(
+                    f"when.{key}",
+                    f"Policy references metadata key '{key}' but the agent has "
+                    f"no such key. This rule will deny all requests until the "
+                    f"agent is tagged with '{key}'.",
+                )
