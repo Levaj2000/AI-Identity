@@ -36,6 +36,11 @@ jobs:
           service_account: ${{ secrets.WIF_SA }}
 
       - uses: google-github-actions/setup-gcloud@v2
+        with:
+          # Required for kubectl to use Connect Gateway credentials
+          # (normally installed by google-github-actions/get-gke-credentials,
+          # which we bypass because of our us-east1 fleet membership).
+          install_components: 'gke-gcloud-auth-plugin'
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
