@@ -2,8 +2,8 @@
 # Create or update the `ai-identity-armor` Cloud Armor security policy.
 #
 # Idempotent — safe to re-run. Creates the policy if missing, then ensures
-# adaptive DDoS protection, the six preconfigured WAF rule sets (in preview
-# mode until manually promoted to enforce), and a per-IP throttle rule exist.
+# adaptive DDoS protection, the six preconfigured WAF rule sets (in enforce
+# mode), and a per-IP throttle rule exist.
 #
 # After this runs, k8s/backend-config.yaml references the policy by name, and
 # the ingress backend services inherit it automatically.
@@ -11,12 +11,16 @@
 # Usage:
 #   scripts/setup-cloud-armor.sh [PROJECT_ID]
 #
-# Promotion path: WAF rules ship in `--preview` mode by design. Inspect
-# denied requests in Cloud Logging (resource.type="http_load_balancer"
-# jsonPayload.enforcedSecurityPolicy.outcome="DENY"), tune sensitivity or
-# add exclusions for false positives, then drop --preview on the specific
-# rule with `gcloud compute security-policies rules update <priority>
-# --security-policy=ai-identity-armor --no-preview`.
+# History: WAF rules originally shipped in `--preview` mode. Preview traffic
+# (7 days, 13 hits) was reviewed in Cloud Logging and confirmed to be entirely
+# hostile scanner traffic (LFI probes for .env/.aws/credentials, RCE POSTs to
+# `/` from rotating fake user agents) with zero legitimate requests caught.
+# Rules were promoted to enforce. This script now creates new rules directly
+# in enforce mode and will auto-promote any lingering preview rules on re-run.
+#
+# To re-inspect decisions: resource.type="http_load_balancer"
+# jsonPayload.enforcedSecurityPolicy.name="ai-identity-armor"
+# jsonPayload.enforcedSecurityPolicy.outcome="DENY"
 
 set -euo pipefail
 
@@ -32,7 +36,7 @@ if gcloud compute security-policies describe "$POLICY" --project="$PROJECT_ID" >
 else
   echo "• creating policy"
   gcloud compute security-policies create "$POLICY" --project="$PROJECT_ID" \
-    --description="AI Identity WAF + adaptive DDoS + per-IP throttling. WAF rules in preview mode — review logs before enforcing."
+    --description="AI Identity WAF + adaptive DDoS + per-IP throttling. WAF rules in enforce mode."
 fi
 
 # ---- 2. Enable adaptive L7 DDoS protection ---------------------------------
@@ -40,7 +44,7 @@ echo "• ensuring adaptive L7 DDoS protection is enabled"
 gcloud compute security-policies update "$POLICY" --project="$PROJECT_ID" \
   --enable-layer7-ddos-defense >/dev/null
 
-# ---- 3. WAF preconfigured rules (preview mode) ------------------------------
+# ---- 3. WAF preconfigured rules (enforce mode) ------------------------------
 #
 # priority | ruleset                       | description
 # ---------|-------------------------------|---------------------------------
@@ -63,14 +67,25 @@ for spec in "${WAF_RULES[@]}"; do
   IFS='|' read -r priority ruleset label <<< "$spec"
   if gcloud compute security-policies rules describe "$priority" \
       --security-policy="$POLICY" --project="$PROJECT_ID" >/dev/null 2>&1; then
-    echo "✓ WAF rule $priority ($label) exists"
+    # Ensure rule is in enforce mode (idempotently promotes any leftover preview rules)
+    is_preview=$(gcloud compute security-policies rules describe "$priority" \
+      --security-policy="$POLICY" --project="$PROJECT_ID" --format='value(preview)')
+    if [[ "$is_preview" == "True" ]]; then
+      echo "• promoting WAF rule $priority ($label) from preview → enforce"
+      gcloud compute security-policies rules update "$priority" \
+        --security-policy="$POLICY" --project="$PROJECT_ID" \
+        --no-preview \
+        --description="WAF: $label (enforced)" >/dev/null
+    else
+      echo "✓ WAF rule $priority ($label) exists (enforced)"
+    fi
   else
-    echo "• creating WAF rule $priority ($label) in preview mode"
+    echo "• creating WAF rule $priority ($label) in enforce mode"
     gcloud compute security-policies rules create "$priority" \
       --security-policy="$POLICY" --project="$PROJECT_ID" \
       --expression="evaluatePreconfiguredWaf('$ruleset', {'sensitivity': 1})" \
-      --action=deny-403 --preview \
-      --description="WAF: $label (preview)"
+      --action=deny-403 \
+      --description="WAF: $label (enforced)"
   fi
 done
 
