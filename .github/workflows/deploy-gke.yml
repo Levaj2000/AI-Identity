@@ -99,6 +99,36 @@ jobs:
           echo "api     → $API_DIGEST"
           echo "gateway → $GATEWAY_DIGEST"
 
+      # Binary Authorization: sign each image's digest with our KMS key and
+      # create an attestation Occurrence so the cluster admission controller
+      # can verify provenance. The policy is in DRYRUN_AUDIT_LOG_ONLY mode
+      # initially, so a missing attestation will log but not block. After we
+      # observe valid attestations in prod, the policy flips to ENFORCED.
+      #
+      # Attestor: ai-identity-attestor (us-east1 KMS key `binauth/attestor-key`).
+      # Idempotent — re-running against the same digest returns the existing
+      # attestation rather than erroring.
+      - name: Sign images with Binary Authorization
+        run: |
+          for spec in "api:${{ steps.digests.outputs.api_digest }}" "gateway:${{ steps.digests.outputs.gateway_digest }}"; do
+            IMAGE="${spec%%:*}"
+            DIGEST="${spec#*:}"
+            URL="$REGISTRY/$PROJECT_ID/ai-identity/$IMAGE@$DIGEST"
+            echo "→ signing $URL"
+            # sign-and-create is currently in the `beta` track. Idempotent —
+            # signing the same digest twice returns the existing occurrence.
+            gcloud beta container binauthz attestations sign-and-create \
+              --artifact-url="$URL" \
+              --attestor=ai-identity-attestor \
+              --attestor-project="$PROJECT_ID" \
+              --keyversion=1 \
+              --keyversion-project="$PROJECT_ID" \
+              --keyversion-location="$REGION" \
+              --keyversion-keyring=binauth \
+              --keyversion-key=attestor-key \
+              2>&1 | tail -2
+          done
+
       - name: Deploy to GKE
         run: |
           kubectl set image deployment/api \

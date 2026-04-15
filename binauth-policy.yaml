@@ -1,0 +1,44 @@
+# Binary Authorization policy for project project-8bbb04f8-fda8-462e-bc2.
+#
+# Shape:
+#   - ai-identity cluster (us-east1): REQUIRE_ATTESTATION by ai-identity-attestor
+#   - All other clusters (if added later): ALWAYS_ALLOW default
+#   - Google-managed system images (GKE addons, kubelet infra): allowlisted
+#     so they don't need attestation
+#
+# Enforcement mode:
+#   - DRYRUN_AUDIT_LOG_ONLY initially — policy violations logged to Cloud
+#     Logging but admission is allowed. Gives telemetry with zero blast risk
+#     while we validate the CI signing pipeline produces valid attestations.
+#   - Flip to ENFORCED_BLOCK_AND_AUDIT_LOG once we've observed a full deploy
+#     cycle produce valid attestations (same preview→enforce pattern as WAF).
+#
+# Apply with:
+#   gcloud container binauthz policy import binauth-policy.yaml
+#
+# Breakglass: set pod annotation `alpha.image-policy.k8s.io/break-glass: "true"`
+# to bypass admission checks (logged as a breakglass event in audit logs).
+defaultAdmissionRule:
+  evaluationMode: ALWAYS_ALLOW
+  enforcementMode: DRYRUN_AUDIT_LOG_ONLY
+clusterAdmissionRules:
+  us-east1.ai-identity:
+    evaluationMode: REQUIRE_ATTESTATION
+    requireAttestationsBy:
+      - projects/project-8bbb04f8-fda8-462e-bc2/attestors/ai-identity-attestor
+    enforcementMode: DRYRUN_AUDIT_LOG_ONLY
+# System images from Google-managed registries are exempt. Without this,
+# the cluster's own control-plane addons (kube-dns, metrics-server, etc.)
+# would fail admission.
+admissionWhitelistPatterns:
+  - namePattern: gke.gcr.io/*
+  - namePattern: gcr.io/gke-release/*
+  - namePattern: gcr.io/gke-release-staging/*
+  - namePattern: gcr.io/gke-on-prem-release/*
+  - namePattern: registry.k8s.io/*
+  - namePattern: k8s.gcr.io/*
+  - namePattern: gcr.io/google-containers/*
+  - namePattern: gcr.io/google_containers/*
+  - namePattern: gcr.io/stackdriver-agents/*
+  - namePattern: gcr.io/projectcalico-org/*
+  - namePattern: mirror.gcr.io/*
