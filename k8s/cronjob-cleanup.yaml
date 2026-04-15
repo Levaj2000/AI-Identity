@@ -19,7 +19,9 @@ spec:
             # this job to reach api-service:8001 under the namespace default-deny.
             tier: cron
         spec:
-          automountServiceAccountToken: false
+          # Same SA as api/gateway — Workload Identity binding to the GCP SA
+          # that has secretmanager.secretAccessor on ai-identity-INTERNAL_SERVICE_KEY.
+          serviceAccountName: ai-identity-workload
           securityContext:
             runAsNonRoot: true
             runAsUser: 100             # curlimages/curl ships as uid=100(curl_user)
@@ -31,16 +33,16 @@ spec:
             - name: curl
               # Pinned by digest (curlimages/curl:8.14.1 at time of pinning)
               image: curlimages/curl@sha256:9a6f6a17667960e077f1b153009aaf18ac99a622221084e1938a45a06fff057a
+              # Read INTERNAL_SERVICE_KEY from the Secret Manager CSI file mount.
+              # Uses the narrow `ai-identity-cron-secrets` SPC which only exposes
+              # this one secret, for least-privilege audit logging.
               command:
                 - /bin/sh
                 - -c
                 - |
                   curl -sf -X POST \
-                    -H "x-internal-key: $(INTERNAL_SERVICE_KEY)" \
+                    -H "x-internal-key: $(cat /mnt/secrets/INTERNAL_SERVICE_KEY)" \
                     "http://api-service.ai-identity.svc.cluster.local:8001/api/internal/cleanup/inactive-users?inactivity_days=90&dry_run=false"
-              envFrom:
-                - secretRef:
-                    name: ai-identity-secrets
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
@@ -56,7 +58,16 @@ spec:
               volumeMounts:
                 - name: tmp
                   mountPath: /tmp
+                - name: secrets-store
+                  mountPath: /mnt/secrets
+                  readOnly: true
           volumes:
             - name: tmp
               emptyDir: {}
+            - name: secrets-store
+              csi:
+                driver: secrets-store-gke.csi.k8s.io
+                readOnly: true
+                volumeAttributes:
+                  secretProviderClass: ai-identity-cron-secrets
           restartPolicy: OnFailure
