@@ -15,32 +15,28 @@ spec:
         metadata:
           labels:
             # Targeted by NetworkPolicy `allow-cron-egress-to-api` and the
-            # gateway/cron clause of `allow-internal-to-api`. Required for
-            # this job to reach api-service:8001 under the namespace default-deny.
+            # gateway/cron clause of `allow-internal-to-api`.
             tier: cron
         spec:
-          automountServiceAccountToken: false
+          serviceAccountName: ai-identity-workload
           securityContext:
             runAsNonRoot: true
-            runAsUser: 100             # curlimages/curl ships as uid=100(curl_user)
-            runAsGroup: 101            # gid=101(curl_group)
+            runAsUser: 100
+            runAsGroup: 101
             fsGroup: 101
             seccompProfile:
               type: RuntimeDefault
           containers:
             - name: curl
-              # Pinned by digest (curlimages/curl:8.14.1 at time of pinning)
               image: curlimages/curl@sha256:9a6f6a17667960e077f1b153009aaf18ac99a622221084e1938a45a06fff057a
+              # INTERNAL_SERVICE_KEY sourced from the narrow cron SPC file mount.
               command:
                 - /bin/sh
                 - -c
                 - |
                   curl -sf -X POST \
-                    -H "x-internal-key: $(INTERNAL_SERVICE_KEY)" \
+                    -H "x-internal-key: $(cat /mnt/secrets/INTERNAL_SERVICE_KEY)" \
                     http://api-service.ai-identity.svc.cluster.local:8001/api/internal/email/send-followups
-              envFrom:
-                - secretRef:
-                    name: ai-identity-secrets
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
@@ -56,7 +52,16 @@ spec:
               volumeMounts:
                 - name: tmp
                   mountPath: /tmp
+                - name: secrets-store
+                  mountPath: /mnt/secrets
+                  readOnly: true
           volumes:
             - name: tmp
               emptyDir: {}
+            - name: secrets-store
+              csi:
+                driver: secrets-store-gke.csi.k8s.io
+                readOnly: true
+                volumeAttributes:
+                  secretProviderClass: ai-identity-cron-secrets
           restartPolicy: OnFailure

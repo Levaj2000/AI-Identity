@@ -12,3 +12,11 @@ data:
   API_KEY_PREFIX: "aid_sk_"
   ADMIN_KEY_PREFIX: "aid_admin_"
   APP_VERSION: "0.2.0"
+  # Stripe price IDs are public per-product identifiers (not secrets). Moved
+  # here from the K8s Secret during the Secret Manager migration so sensitive
+  # values (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) remain in Secret Manager
+  # while these public identifiers live in plain config.
+  STRIPE_PRICE_ID_PRO: "price_1TEtzpANWtf2Ph76ICz5z7JT"
+  STRIPE_PRICE_ID_PRO_ANNUAL: "price_1TEuCfANWtf2Ph7607PHDFit"
+  STRIPE_PRICE_ID_BUSINESS: "price_1TEu1vANWtf2Ph76W5S5U2ME"
+  STRIPE_PRICE_ID_BUSINESS_ANNUAL: "price_1TEu9uANWtf2Ph764zcV3BsJ"
