@@ -15,8 +15,14 @@ spec:
       labels:
         app: api
     spec:
-      # App does not call the K8s API — drop the auto-mounted SA token.
-      automountServiceAccountToken: false
+      # Bound to GCP SA ai-identity-workload@ via Workload Identity for
+      # Secret Manager CSI access. See k8s/serviceaccount.yaml.
+      serviceAccountName: ai-identity-workload
+      # automountServiceAccountToken left at the default (true) because the
+      # Secret Manager CSI driver needs the projected SA token to exchange
+      # for a GCP access token via Workload Identity. The token is for a SA
+      # with ONLY secretmanager.secretAccessor (per-secret), no K8s API
+      # privileges, so exposure risk is minimal.
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000           # matches Dockerfile.api `USER appuser` (uid 1000)
@@ -32,11 +38,34 @@ spec:
           image: us-east1-docker.pkg.dev/project-8bbb04f8-fda8-462e-bc2/ai-identity/api@sha256:ca247d293f8f6f2a1de957d8388a286c6ee10985a18f5a848c5c27def6e0c1cc
           ports:
             - containerPort: 8001
+          # Shell-wrapper entrypoint: reads each file at /mnt/secrets/<KEY>
+          # (populated by the Secret Manager CSI mount below) and exports it
+          # as an env var before exec'ing the original gunicorn CMD from
+          # Dockerfile.api. This is required because GKE Autopilot's managed
+          # CSI provider mounts files but does not synthesize K8s Secrets,
+          # so we can't use envFrom to surface them to the application.
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              for f in /mnt/secrets/*; do
+                [ -f "$f" ] || continue
+                name=$(basename "$f")
+                # Use read+IFS to handle any trailing newline safely; value keeps
+                # internal bytes verbatim. NUL bytes would be stripped by read but
+                # none of our secrets contain NULs (all are text).
+                value=$(cat "$f")
+                export "$name=$value"
+              done
+              exec gunicorn api.app.main:app \
+                --workers 2 \
+                --worker-class uvicorn.workers.UvicornWorker \
+                --bind 0.0.0.0:8001 \
+                --timeout 120 \
+                --keep-alive 5
           envFrom:
             - configMapRef:
                 name: ai-identity-config
-            - secretRef:
-                name: ai-identity-secrets
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -67,11 +96,22 @@ spec:
               port: 8001
             failureThreshold: 30
             periodSeconds: 2
-          # Required because readOnlyRootFilesystem: true. Covers Python tempfiles,
-          # SQLAlchemy connection caches, gunicorn worker temp state, etc.
+          # /tmp: required because readOnlyRootFilesystem: true. Covers Python
+          # tempfiles, SQLAlchemy connection caches, gunicorn worker temp state.
+          # /mnt/secrets: Secret Manager CSI mount — the shell wrapper above
+          # reads these files at container start and exports them as env vars.
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: secrets-store
+              mountPath: /mnt/secrets
+              readOnly: true
       volumes:
         - name: tmp
           emptyDir: {}
+        - name: secrets-store
+          csi:
+            driver: secrets-store-gke.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: ai-identity-secrets
