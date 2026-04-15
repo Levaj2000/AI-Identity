@@ -37,10 +37,14 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
         with:
-          # Required for kubectl to use Connect Gateway credentials
+          # gke-gcloud-auth-plugin: required for kubectl to use Connect Gateway
           # (normally installed by google-github-actions/get-gke-credentials,
           # which we bypass because of our us-east1 fleet membership).
-          install_components: 'gke-gcloud-auth-plugin'
+          # beta: required for `gcloud beta container binauthz attestations
+          # sign-and-create`. Pre-installing avoids the runtime prompt "You do
+          # not currently have this command group installed" which `--quiet`
+          # doesn't cover in non-interactive shells.
+          install_components: 'gke-gcloud-auth-plugin, beta'
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
