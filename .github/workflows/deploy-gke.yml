@@ -77,13 +77,35 @@ jobs:
             --project=${{ env.PROJECT_ID }} \
             --location=${{ env.REGION }}
 
+      # Resolve each freshly-pushed SHA tag to its content digest so that
+      # the cluster pulls the image by `@sha256:...` rather than by tag.
+      # Digest pinning prevents tag mutation attacks (someone overwriting a
+      # tag in Artifact Registry) and makes provenance unambiguous.
+      - name: Resolve image digests
+        id: digests
+        run: |
+          API_DIGEST=$(gcloud artifacts docker images describe \
+            $REGISTRY/$PROJECT_ID/ai-identity/api:${{ github.sha }} \
+            --format='value(image_summary.digest)')
+          GATEWAY_DIGEST=$(gcloud artifacts docker images describe \
+            $REGISTRY/$PROJECT_ID/ai-identity/gateway:${{ github.sha }} \
+            --format='value(image_summary.digest)')
+          if [[ -z "$API_DIGEST" || -z "$GATEWAY_DIGEST" ]]; then
+            echo "::error::failed to resolve image digest(s)"
+            exit 1
+          fi
+          echo "api_digest=$API_DIGEST"     >> $GITHUB_OUTPUT
+          echo "gateway_digest=$GATEWAY_DIGEST" >> $GITHUB_OUTPUT
+          echo "api     → $API_DIGEST"
+          echo "gateway → $GATEWAY_DIGEST"
+
       - name: Deploy to GKE
         run: |
           kubectl set image deployment/api \
-            api=$REGISTRY/$PROJECT_ID/ai-identity/api:${{ github.sha }} \
+            api=$REGISTRY/$PROJECT_ID/ai-identity/api@${{ steps.digests.outputs.api_digest }} \
             -n ai-identity
           kubectl set image deployment/gateway \
-            gateway=$REGISTRY/$PROJECT_ID/ai-identity/gateway:${{ github.sha }} \
+            gateway=$REGISTRY/$PROJECT_ID/ai-identity/gateway@${{ steps.digests.outputs.gateway_digest }} \
             -n ai-identity
           kubectl rollout status deployment/api -n ai-identity --timeout=120s
           kubectl rollout status deployment/gateway -n ai-identity --timeout=120s
