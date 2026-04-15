@@ -26,7 +26,10 @@ spec:
           type: RuntimeDefault
       containers:
         - name: gateway
-          image: us-east1-docker.pkg.dev/project-8bbb04f8-fda8-462e-bc2/ai-identity/gateway:latest
+          # Pinned by digest. CI (.github/workflows/deploy-gke.yml) resolves
+          # the newly built tag to its digest on each deploy and overrides
+          # this via `kubectl set image`.
+          image: us-east1-docker.pkg.dev/project-8bbb04f8-fda8-462e-bc2/ai-identity/gateway@sha256:6791032b26fe07eba231f293d9e5e82c0672f0b3df7763ba4b37d67ff50207b5
           ports:
             - containerPort: 8002
           envFrom:
