@@ -7,11 +7,14 @@
 #     so they don't need attestation
 #
 # Enforcement mode:
-#   - DRYRUN_AUDIT_LOG_ONLY initially — policy violations logged to Cloud
-#     Logging but admission is allowed. Gives telemetry with zero blast risk
-#     while we validate the CI signing pipeline produces valid attestations.
-#   - Flip to ENFORCED_BLOCK_AND_AUDIT_LOG once we've observed a full deploy
-#     cycle produce valid attestations (same preview→enforce pattern as WAF).
+#   ENFORCED_BLOCK_AND_AUDIT_LOG — unattested images are rejected at admission
+#   and the decision is written to Cloud Logging. Flipped from the initial
+#   DRYRUN_AUDIT_LOG_ONLY after observing one clean CI deploy cycle produce
+#   valid attestations (same preview→enforce pattern as the WAF rules in #260).
+#
+# Rollback if a future deploy is unexpectedly blocked:
+#   sed -i '' 's/ENFORCED_BLOCK_AND_AUDIT_LOG/DRYRUN_AUDIT_LOG_ONLY/g' binauth-policy.yaml
+#   gcloud container binauthz policy import binauth-policy.yaml
 #
 # Apply with:
 #   gcloud container binauthz policy import binauth-policy.yaml
@@ -20,13 +23,13 @@
 # to bypass admission checks (logged as a breakglass event in audit logs).
 defaultAdmissionRule:
   evaluationMode: ALWAYS_ALLOW
-  enforcementMode: DRYRUN_AUDIT_LOG_ONLY
+  enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG
 clusterAdmissionRules:
   us-east1.ai-identity:
     evaluationMode: REQUIRE_ATTESTATION
     requireAttestationsBy:
       - projects/project-8bbb04f8-fda8-462e-bc2/attestors/ai-identity-attestor
-    enforcementMode: DRYRUN_AUDIT_LOG_ONLY
+    enforcementMode: ENFORCED_BLOCK_AND_AUDIT_LOG
 # System images from Google-managed registries are exempt. Without this,
 # the cluster's own control-plane addons (kube-dns, metrics-server, etc.)
 # would fail admission.
@@ -42,3 +45,8 @@ admissionWhitelistPatterns:
   - namePattern: gcr.io/stackdriver-agents/*
   - namePattern: gcr.io/projectcalico-org/*
   - namePattern: mirror.gcr.io/*
+  # Third-party images consumed by cronjobs. Digest-pinned in the manifests
+  # (k8s/cronjob-*.yaml), so content integrity is covered even without an
+  # attestation. Allowlisting here avoids us signing external images we
+  # don't build.
+  - namePattern: curlimages/curl[@:]*
