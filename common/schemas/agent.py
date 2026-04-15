@@ -260,7 +260,13 @@ class PolicyCreate(BaseModel):
 
 
 class PolicyResponse(BaseModel):
-    """Response body for a policy."""
+    """Response body for a policy.
+
+    ``warnings`` is populated on creation / update paths when the validator
+    produces non-fatal concerns (e.g. a ``when`` clause referencing a
+    metadata key the agent hasn't been tagged with). It is ``None`` on
+    read paths — warnings are ephemeral authoring context, not state.
+    """
 
     id: int
     agent_id: uuid.UUID
@@ -269,6 +275,13 @@ class PolicyResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    warnings: list[dict[str, str]] | None = Field(
+        default=None,
+        description=(
+            "Non-fatal validation concerns surfaced at creation time. "
+            "Each entry: {field, message}. `null` on read paths."
+        ),
+    )
 
     model_config = {"from_attributes": True}
 

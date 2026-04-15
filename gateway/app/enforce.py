@@ -29,7 +29,22 @@ from common.audit import create_audit_entry
 from common.config.settings import settings
 from common.models import Agent, Policy
 from common.models.blocked_agent import BlockedAgent
+from common.policy import PolicyDecision, evaluate_policy
+from common.policy.eval import _endpoint_matches  # noqa: F401 — re-exported for legacy test imports
 from gateway.app.circuit_breaker import CircuitBreaker
+
+
+def _evaluate_policy_rules(rules: dict, endpoint: str, method: str) -> tuple[bool, str | None]:
+    """Legacy wrapper preserved for test imports.
+
+    The actual implementation lives in :func:`common.policy.eval.evaluate_policy`,
+    which returns a rich :class:`PolicyDecision`. This wrapper projects back
+    to the pre-ABAC ``(allowed, deny_rule)`` tuple shape for tests written
+    before the ABAC refactor. New code should call ``evaluate_policy`` directly.
+    """
+    decision = evaluate_policy(rules, {}, endpoint, method)
+    return decision.allowed, decision.deny_reason
+
 
 logger = logging.getLogger("ai_identity.gateway.enforce")
 
@@ -131,67 +146,12 @@ def _estimate_cost_usd(metadata: dict) -> float | None:
 
 
 # ── Policy Evaluation (Timeout-Bounded) ──────────────────────────────
-
-
-def _evaluate_policy_rules(rules: dict, endpoint: str, method: str) -> tuple[bool, str | None]:
-    """Evaluate policy rules against the request.
-
-    This is a simple rule engine for MVP. Rules are a JSONB dict with:
-      - allowed_endpoints: list of endpoint patterns (glob-style)
-      - allowed_methods: list of HTTP methods
-      - denied_endpoints: explicit deny list (checked first)
-      - max_cost_usd: maximum cost per request (future)
-
-    Returns (allowed, deny_rule_id). deny_rule_id describes which rule caused
-    the denial — recorded in the audit entry so auditors know exactly what fired.
-
-    SECURITY: Default is DENY. The request is only allowed if at least
-    one rule explicitly permits it and no rule explicitly denies it.
-    """
-    # Empty rules = no permissions granted = DENY
-    if not rules:
-        return False, "allowed_endpoints:not_configured"
-
-    # Check explicit deny list first
-    denied_endpoints = rules.get("denied_endpoints", [])
-    for pattern in denied_endpoints:
-        if _endpoint_matches(endpoint, pattern):
-            return False, f"denied_endpoints:{pattern}"
-
-    # Check allowed endpoints
-    allowed_endpoints = rules.get("allowed_endpoints", [])
-    if allowed_endpoints:
-        endpoint_allowed = any(
-            _endpoint_matches(endpoint, pattern) for pattern in allowed_endpoints
-        )
-        if not endpoint_allowed:
-            return False, f"allowed_endpoints:not_matched:{endpoint}"
-    else:
-        # No allowed_endpoints specified = nothing is allowed (fail-closed)
-        return False, "allowed_endpoints:not_configured"
-
-    # Check allowed methods
-    allowed_methods = rules.get("allowed_methods", [])
-    if allowed_methods and method.upper() not in [m.upper() for m in allowed_methods]:
-        return False, f"allowed_methods:not_allowed:{method}"
-
-    return True, None
-
-
-def _endpoint_matches(endpoint: str, pattern: str) -> bool:
-    """Simple endpoint matching with wildcard support.
-
-    Supports:
-      - Exact match: "/v1/chat" matches "/v1/chat"
-      - Prefix wildcard: "/v1/*" matches "/v1/chat" and "/v1/embeddings"
-      - Full wildcard: "*" matches everything
-    """
-    if pattern == "*":
-        return True
-    if pattern.endswith("/*"):
-        prefix = pattern[:-1]  # "/v1/" from "/v1/*"
-        return endpoint.startswith(prefix) or endpoint == pattern[:-2]
-    return endpoint == pattern
+#
+# The evaluator itself lives in common.policy.eval — shared between the
+# gateway (enforcement) and the API (dry-run endpoint). This module owns the
+# orchestration: load agent + policy, defence-in-depth validate, invoke the
+# shared evaluator, unwrap the rich PolicyDecision into the gateway's audit
+# contract.
 
 
 def _load_and_evaluate_policy(
@@ -199,19 +159,26 @@ def _load_and_evaluate_policy(
     agent_id: uuid.UUID,
     endpoint: str,
     method: str,
-) -> tuple[bool, int | None, str | None]:
+) -> tuple[PolicyDecision | None, int | None]:
     """Load the agent's active policy and evaluate it.
 
-    This function runs inside a thread pool with a timeout.
-    Any exception here is caught by the caller and treated as DENY.
+    Runs inside a thread pool with a timeout. Any exception here is caught by
+    the caller and treated as DENY.
 
-    Returns (allowed, policy_id, deny_rule_id).
-    - policy_id is None when no active policy was found or rules were invalid.
-    - deny_rule_id describes which specific rule caused a denial (None on ALLOW).
+    Returns ``(decision, policy_id)``.
+    - ``decision`` is None when no active policy exists or the policy's rules
+      failed defense-in-depth validation. The caller interprets this as the
+      fail-closed default (DENY with ``NO_ACTIVE_POLICY``).
+    - ``policy_id`` is set whenever a policy was located in the DB, even if
+      its rules were invalid — surfaced into the audit trail so operators
+      can find the broken policy.
     """
     from common.validation.policy import PolicyValidator
 
-    # Load active policy for the agent
+    # Load active policy for the agent. We also need the agent's metadata for
+    # ABAC `when` clause evaluation — fetch it in the same query shape to
+    # keep the runtime path narrow (agent lookup already happened upstream in
+    # `enforce()`; this is the policy-eval path only).
     policy = (
         db.query(Policy)
         .filter(Policy.agent_id == agent_id, Policy.is_active.is_(True))
@@ -220,12 +187,16 @@ def _load_and_evaluate_policy(
     )
 
     if policy is None:
-        # No active policy = fail-closed = DENY
-        return False, None, None
+        return None, None
 
-    # Defense-in-depth: validate rules even from the DB.
-    # Malformed rules that somehow bypassed creation validation
-    # must not be evaluated — fail-closed = DENY.
+    # Agent metadata for ABAC. We fetch a fresh row rather than relying on
+    # the one from `enforce()` so this function stays usable standalone
+    # (dry-run path, tests, retries).
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    agent_metadata = agent.metadata_ if agent and agent.metadata_ else {}
+
+    # Defense-in-depth: validate rules even from the DB. Malformed rules that
+    # somehow bypassed creation validation must not be evaluated — fail-closed.
     validation = PolicyValidator().validate(policy.rules)
     if not validation.valid:
         error_summary = "; ".join(f"{e.field}: {e.message}" for e in validation.errors)
@@ -235,10 +206,10 @@ def _load_and_evaluate_policy(
             agent_id,
             error_summary,
         )
-        return False, None, None
+        return None, policy.id
 
-    allowed, deny_rule = _evaluate_policy_rules(policy.rules, endpoint, method)
-    return allowed, policy.id, deny_rule
+    decision = evaluate_policy(policy.rules, agent_metadata, endpoint, method)
+    return decision, policy.id
 
 
 # ── Key-Type Endpoint Classification ─────────────────────────────────
@@ -447,7 +418,7 @@ def enforce(
             endpoint,
             method,
         )
-        policy_allows, policy_id, deny_rule = future.result(timeout=timeout_seconds)
+        decision, policy_id = future.result(timeout=timeout_seconds)
         metadata["upstream_latency_ms"] = round((time.perf_counter() - policy_start) * 1000)
 
     except TimeoutError:
@@ -506,11 +477,29 @@ def enforce(
     # Snapshot the policy version evaluated and the specific rule that fired.
     if policy_id is not None:
         metadata["policy_version"] = policy_id
-    if deny_rule is not None:
-        metadata["deny_rule_id"] = deny_rule
+
+    policy_allows = decision is not None and decision.allowed
+
+    if decision is not None and decision.deny_reason is not None:
+        metadata["deny_rule_id"] = decision.deny_reason
+    # Rich audit trail for ABAC denials: surface which `when` condition failed
+    # (with expected vs. actual values) so auditors can defend the decision.
+    # Only recorded when a decision was made — not when the policy was absent
+    # or validation-failed (those already emit `NO_ACTIVE_POLICY`).
+    if decision is not None and decision.when_conditions:
+        metadata["when_conditions"] = [
+            {
+                "field": c.field,
+                "op": c.op,
+                "expected": c.expected,
+                "actual": c.actual,
+                "match": c.match,
+            }
+            for c in decision.when_conditions
+        ]
 
     if not policy_allows:
-        if policy_id is None:
+        if policy_id is None or decision is None:
             deny_reason = DenyReason.NO_ACTIVE_POLICY
             message = "No active policy — request denied (fail-closed)"
         else:
