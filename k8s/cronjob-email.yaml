@@ -29,7 +29,8 @@ spec:
               type: RuntimeDefault
           containers:
             - name: curl
-              image: curlimages/curl:latest
+              # Pinned by digest (curlimages/curl:8.14.1 at time of pinning)
+              image: curlimages/curl@sha256:9a6f6a17667960e077f1b153009aaf18ac99a622221084e1938a45a06fff057a
               command:
                 - /bin/sh
                 - -c
