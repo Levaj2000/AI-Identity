@@ -110,14 +110,18 @@ jobs:
       # attestation rather than erroring.
       - name: Sign images with Binary Authorization
         run: |
+          set -o pipefail  # propagate the gcloud exit code past the pipe
           for spec in "api:${{ steps.digests.outputs.api_digest }}" "gateway:${{ steps.digests.outputs.gateway_digest }}"; do
             IMAGE="${spec%%:*}"
             DIGEST="${spec#*:}"
             URL="$REGISTRY/$PROJECT_ID/ai-identity/$IMAGE@$DIGEST"
             echo "→ signing $URL"
-            # sign-and-create is currently in the `beta` track. Idempotent —
-            # signing the same digest twice returns the existing occurrence.
+            # `sign-and-create` is in the `beta` track — it prints a one-time
+            # "Do you want to continue (Y/n)?" prompt which deadlocks in CI
+            # without --quiet. Idempotent — signing the same digest twice
+            # returns the existing Occurrence rather than erroring.
             gcloud beta container binauthz attestations sign-and-create \
+              --quiet \
               --artifact-url="$URL" \
               --attestor=ai-identity-attestor \
               --attestor-project="$PROJECT_ID" \
@@ -125,8 +129,7 @@ jobs:
               --keyversion-project="$PROJECT_ID" \
               --keyversion-location="$REGION" \
               --keyversion-keyring=binauth \
-              --keyversion-key=attestor-key \
-              2>&1 | tail -2
+              --keyversion-key=attestor-key
           done
 
       - name: Deploy to GKE
