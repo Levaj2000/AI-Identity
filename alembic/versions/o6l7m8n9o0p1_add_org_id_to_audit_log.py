@@ -66,8 +66,8 @@ def upgrade() -> None:
     if existing_sys_org is None:
         bind.execute(
             sa.text(
-                "INSERT INTO organizations (id, name, owner_id, tier) "
-                "VALUES (:id, :name, :owner, 'enterprise')"
+                "INSERT INTO organizations (id, name, owner_id, tier, requests_this_month, usage_reset_day) "
+                "VALUES (:id, :name, :owner, 'enterprise', 0, 1)"
             ),
             {"id": SYSTEM_ORG_ID, "name": SYSTEM_ORG_NAME, "owner": SYSTEM_USER_ID},
         )
@@ -90,8 +90,8 @@ def upgrade() -> None:
 
         bind.execute(
             sa.text(
-                "INSERT INTO organizations (id, name, owner_id, tier) "
-                "VALUES (:id, :name, :owner, 'free')"
+                "INSERT INTO organizations (id, name, owner_id, tier, requests_this_month, usage_reset_day) "
+                "VALUES (:id, :name, :owner, 'free', 0, 1)"
             ),
             {"id": new_org_id, "name": org_name, "owner": user_id_str},
         )
