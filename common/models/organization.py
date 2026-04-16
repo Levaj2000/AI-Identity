@@ -9,6 +9,16 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from common.models.base import Base
 
+# ── Sentinel IDs for the "__system__" org ─────────────────────────────
+# Used by audit log entries where no real tenant can be resolved
+# (shadow agents, pre-auth errors, orphaned traffic). Every audit row
+# has a NOT NULL org_id; these sentinels catch the residual.
+# See migration o6l7m8n9o0p1 for creation; writer.py for usage.
+SYSTEM_USER_ID = uuid.UUID("ffffffff-ffff-ffff-ffff-fffffffffffe")
+SYSTEM_ORG_ID = uuid.UUID("ffffffff-ffff-ffff-ffff-ffffffffffff")
+SYSTEM_USER_EMAIL = "__system__@ai-identity.internal"
+SYSTEM_ORG_NAME = "__system__"
+
 
 class Organization(Base):
     """An organization that groups users and their agents."""
