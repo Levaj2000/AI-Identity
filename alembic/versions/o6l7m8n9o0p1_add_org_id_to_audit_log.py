@@ -109,9 +109,11 @@ def upgrade() -> None:
 
     # ── 3. Backfill agent.org_id from its owner ────────────────────
     # Only covers real agents owned by users who now have an org.
+    # users.org_id is VARCHAR; agents.org_id is UUID. Postgres won't
+    # implicitly cast, so we cast explicitly.
     if dialect == "postgresql":
         op.execute(
-            "UPDATE agents SET org_id = users.org_id "
+            "UPDATE agents SET org_id = users.org_id::uuid "
             "FROM users "
             "WHERE agents.user_id = users.id "
             "  AND agents.org_id IS NULL "
@@ -146,7 +148,7 @@ def upgrade() -> None:
 
     # ── 6. Any remaining NULLs (orphan/shadow) → system org ────────
     op.execute(
-        f"UPDATE audit_log SET org_id = '{SYSTEM_ORG_ID}' WHERE org_id IS NULL"
+        f"UPDATE audit_log SET org_id = '{SYSTEM_ORG_ID}'::uuid WHERE org_id IS NULL"
     )
 
     # ── 7. Enforce NOT NULL + add FK + index ───────────────────────
