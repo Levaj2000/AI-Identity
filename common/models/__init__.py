@@ -5,6 +5,8 @@ from common.models.agent_assignment import AgentAssignment, AgentRole
 from common.models.agent_key import AgentKey, KeyStatus, KeyType
 from common.models.approval_request import ApprovalRequest, ApprovalStatus
 from common.models.audit_log import AuditLog
+from common.models.audit_outbox import AuditLogOutbox, OutboxStatus
+from common.models.audit_sink import AuditLogSink, SinkKind
 from common.models.base import Base, SessionLocal, engine, get_db
 from common.models.blocked_agent import BlockedAgent
 from common.models.compliance import (
@@ -38,6 +40,10 @@ __all__ = [
     "KeyType",
     "Policy",
     "AuditLog",
+    "AuditLogOutbox",
+    "OutboxStatus",
+    "AuditLogSink",
+    "SinkKind",
     "UpstreamCredential",
     "CredentialStatus",
     "UpstreamProvider",
