@@ -1,0 +1,123 @@
+# One-shot Alembic migration Job. Runs BEFORE the api/gateway rollout in
+# .github/workflows/deploy-gke.yml so pods never start against a stale
+# schema. The workflow:
+#   1. `kubectl delete job alembic-migrate --ignore-not-found`
+#   2. Substitutes the freshly-signed API image digest into this manifest
+#   3. `kubectl apply -f k8s/migration-job.yaml`
+#   4. `kubectl wait --for=condition=complete ...` (blocks rollout on failure)
+#
+# Uses the API image because it already bundles alembic + the versions
+# directory; the workflow has already signed this image with Binary
+# Authorization, so the admission controller lets the Job pod run.
+#
+# SECRETS: same Secret Manager CSI pattern as the api/gateway deployments.
+# The shell wrapper reads /mnt/secrets/<KEY> files and exports them as
+# env vars (required because GKE Autopilot's managed CSI provider mounts
+# files but doesn't synthesize K8s Secrets for envFrom).
+#
+# RECONCILIATION: the one-time block inside the shell wrapper drops the
+# orphan audit_log_outbox / audit_log_sinks tables if we're stuck at
+# alembic_version=n5j6k7l8m9n0. This covers the 2026-04-16 incident where
+# migration q8n9o0p1q2r3 partially ran (tables created) without alembic
+# updating its version row, blocking every subsequent upgrade. No-op on
+# any subsequent deploy because alembic_version moves past n5 once this
+# Job succeeds.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: alembic-migrate
+  namespace: ai-identity
+  labels:
+    app: alembic-migrate
+    app.kubernetes.io/part-of: ai-identity
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: alembic-migrate
+    spec:
+      serviceAccountName: ai-identity-workload
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          # Pinned by digest. CI resolves the newly built API image digest
+          # on each deploy and substitutes it here via sed.
+          image: IMAGE_PLACEHOLDER
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              # Surface CSI-mounted secrets as env vars (same pattern as
+              # api-deployment.yaml and gateway-deployment.yaml).
+              for f in /mnt/secrets/*; do
+                [ -f "$f" ] || continue
+                name=$(basename "$f")
+                value=$(cat "$f")
+                export "$name=$value"
+              done
+
+              # One-time reconciliation for the 2026-04-16 audit-infra
+              # incident. Idempotent on every subsequent run.
+              python - <<'PY'
+              import os
+              import psycopg2
+
+              conn = psycopg2.connect(os.environ["DATABASE_URL"])
+              conn.autocommit = True
+              cur = conn.cursor()
+              cur.execute("SELECT version_num FROM alembic_version")
+              (version,) = cur.fetchone()
+              if version == "n5j6k7l8m9n0":
+                  # Partially-applied q8 left these tables behind without
+                  # advancing alembic_version. Drop so q8 runs clean.
+                  for t in ("audit_log_outbox", "audit_log_sinks"):
+                      cur.execute(f"DROP TABLE IF EXISTS {t}")
+                      print(f"[reconcile] dropped {t}")
+              else:
+                  print(f"[reconcile] no-op (alembic_version={version})")
+              PY
+
+              # Print current head + plan for log visibility
+              alembic current
+              alembic heads
+              alembic upgrade head
+              alembic current
+          envFrom:
+            - configMapRef:
+                name: ai-identity-config
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: secrets-store
+              mountPath: /mnt/secrets
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: secrets-store
+          csi:
+            driver: secrets-store-gke.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: ai-identity-secrets
