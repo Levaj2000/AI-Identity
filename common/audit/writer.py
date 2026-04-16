@@ -14,13 +14,24 @@ import json
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from common.audit.sanitizer import sanitize_metadata
+from common.audit.correlation import (
+    CORRELATION_ID_MAX_LEN,
+    get_current_correlation_id,
+)
+from common.audit.sanitizer import V1_STRUCTURED_KEYS, sanitize_metadata
 from common.config.settings import settings
 from common.models.audit_log import AuditLog
+from common.schemas.audit_metadata import (
+    CURRENT_SCHEMA_VERSION,
+    SCHEMA_VERSION_KEY,
+    AuditMetadataV1,
+    as_metadata_dict,
+)
 
 GENESIS = "GENESIS"
 
@@ -176,8 +187,9 @@ def create_audit_entry(
     decision: str,
     cost_estimate_usd: float | None = None,
     latency_ms: int | None = None,
-    request_metadata: dict | None = None,
+    request_metadata: AuditMetadataV1 | dict[str, Any] | None = None,
     user_id: uuid.UUID | None = None,
+    correlation_id: str | None = None,
 ) -> AuditLog:
     """Create a new audit log entry with HMAC integrity chain.
 
@@ -195,9 +207,53 @@ def create_audit_entry(
     TENANCY: org_id is resolved from the agent; for shadow/orphan entries
     with no registered agent, the sentinel system org is used so the row
     still has a NOT NULL org_id.
+
+    TRACING: correlation_id is auto-resolved from the request contextvar
+    when not passed explicitly. Pass ``correlation_id=...`` from
+    background jobs (no request in scope) to keep the cross-service
+    trace intact.
+
+    METADATA SHAPE: ``request_metadata`` may be a plain dict (legacy
+    callers) or an ``AuditMetadataV1`` instance (preferred for new code).
+    V1 instances are dumped and tagged with ``schema_version=1``; plain
+    dicts pass through untagged — readers treat untagged rows as pre-v1.
     """
-    # Sanitize metadata — allowlist only, PII blocked
-    metadata = sanitize_metadata(request_metadata)
+    # Caller may pass an AuditMetadataV1 instance (preferred) or a plain dict
+    # (legacy). The typed path skips the flat-value sanitizer for its known
+    # structured sub-dicts — Pydantic already validated the shape.
+    is_typed = isinstance(request_metadata, AuditMetadataV1)
+    metadata_dict = as_metadata_dict(request_metadata)
+
+    # If the caller passed an AuditMetadataV1 with a correlation_id baked in,
+    # promote it so the top-level column stays in sync with the blob.
+    if correlation_id is None and metadata_dict.get("correlation_id"):
+        candidate = metadata_dict["correlation_id"]
+        if isinstance(candidate, str) and 0 < len(candidate) <= CORRELATION_ID_MAX_LEN:
+            correlation_id = candidate
+
+    # Fall back to the per-request contextvar set by the HTTP middleware.
+    # Background jobs with no request in scope get None — still valid.
+    if correlation_id is None:
+        correlation_id = get_current_correlation_id()
+
+    # Stamp the v1 schema tag on any metadata that explicitly carries a
+    # ``correlation_id`` key — that signals the caller intended structured
+    # metadata. We don't retroactively stamp opaque legacy dicts just
+    # because the middleware set a contextvar.
+    if (
+        correlation_id
+        and metadata_dict
+        and "correlation_id" in metadata_dict
+        and SCHEMA_VERSION_KEY not in metadata_dict
+    ):
+        metadata_dict[SCHEMA_VERSION_KEY] = CURRENT_SCHEMA_VERSION
+
+    # Sanitize metadata — allowlist only, PII blocked. Typed v1 instances
+    # also keep their Pydantic-validated structured sub-dicts intact.
+    metadata = sanitize_metadata(
+        metadata_dict,
+        trusted_structured_keys=V1_STRUCTURED_KEYS if is_typed else frozenset(),
+    )
 
     # Resolve user_id, agent_name, and org_id from agent
     # (for RLS tenant isolation + denormalization)
@@ -257,6 +313,7 @@ def create_audit_entry(
         agent_id=agent_id,
         user_id=user_id,
         org_id=org_id,
+        correlation_id=correlation_id,
         agent_name=agent_name,
         endpoint=endpoint,
         method=method,

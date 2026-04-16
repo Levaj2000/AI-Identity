@@ -160,20 +160,45 @@ async def security_headers_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):
-    """Log every request with timing and a unique request ID.
+    """Log every request with timing and an end-to-end correlation ID.
 
-    Propagates X-Request-ID from upstream if present, otherwise generates one.
-    This enables end-to-end correlation across Gateway → API during incidents.
+    Two identifiers, derived from one UUID so they always agree:
+      * correlation_id — full UUID, travels to audit_log.correlation_id
+        and echoes as ``X-Correlation-ID``. Queryable for cross-service
+        incident reconstruction.
+      * request_id — first 8 hex chars. Log-friendly shorthand, echoed
+        as ``X-Request-ID`` for backwards compatibility.
+
+    Incoming headers are honored (``X-Correlation-ID`` wins over
+    ``X-Request-ID``) so a single trace survives hops through proxies,
+    load balancers, and service mesh.
     """
-    request_id = request.headers.get("x-request-id") or str(uuid.uuid4())[:8]
-    request.state.request_id = request_id
+    from common.audit.correlation import (
+        reset_current_correlation_id,
+        resolve_correlation_id,
+        set_current_correlation_id,
+        to_short_id,
+    )
+
+    correlation_id = resolve_correlation_id(
+        request.headers.get("x-correlation-id"),
+        request.headers.get("x-request-id"),
+    )
+    request_id = to_short_id(correlation_id)
+    request.state.correlation_id = correlation_id
+    request.state.request_id = request_id  # kept for existing log call-sites
+    token = set_current_correlation_id(correlation_id)
 
     start = time.perf_counter()
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    finally:
+        reset_current_correlation_id(token)
     duration_ms = round((time.perf_counter() - start) * 1000, 2)
 
     log_extra = {
         "request_id": request_id,
+        "correlation_id": correlation_id,
         "method": request.method,
         "path": request.url.path,
         "status_code": response.status_code,
@@ -211,6 +236,7 @@ async def request_logging_middleware(request: Request, call_next):
         )
 
     response.headers["X-Request-ID"] = request_id
+    response.headers["X-Correlation-ID"] = correlation_id
     return response
 
 

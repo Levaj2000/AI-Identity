@@ -24,6 +24,9 @@ ALLOWED_METADATA_KEYS: frozenset[str] = frozenset(
     {
         # Correlation (propagated across Gateway → API for incident investigation)
         "request_id",
+        "correlation_id",  # full-UUID counterpart; also denormalized to top-level column
+        # Versioning — tags rows written through AuditMetadataV1
+        "schema_version",
         # Decision context (set by gateway enforce.py)
         "deny_reason",
         "deny_rule_id",
@@ -50,6 +53,15 @@ ALLOWED_METADATA_KEYS: frozenset[str] = frozenset(
         "keys_revoked",
         "grace_hours",
     }
+)
+
+# V1 structured-metadata top-level keys that hold nested dicts/lists
+# (Actor, Tenant, PolicyTrace, Resource, Cost). When the caller passes
+# an AuditMetadataV1 instance, the writer flags these as trusted — the
+# Pydantic schema has already validated their shape, so we store them
+# as-is instead of running them through the flat-value sanitizer.
+V1_STRUCTURED_KEYS: frozenset[str] = frozenset(
+    {"actor", "tenant", "policy_trace", "resource", "cost"}
 )
 
 # ── PII Blocklist ────────────────────────────────────────────────────────
@@ -185,7 +197,11 @@ def is_pii_field(key: str) -> bool:
     return any(pattern.match(normalized) for pattern in _PII_PATTERNS)
 
 
-def sanitize_metadata(metadata: dict | None) -> dict:
+def sanitize_metadata(
+    metadata: dict | None,
+    *,
+    trusted_structured_keys: frozenset[str] = frozenset(),
+) -> dict:
     """Sanitize request_metadata before writing to the audit log.
 
     1. Strips all keys not in the allowlist
@@ -194,6 +210,12 @@ def sanitize_metadata(metadata: dict | None) -> dict:
     4. Returns a clean, safe metadata dict
 
     This function is idempotent — calling it twice gives the same result.
+
+    ``trusted_structured_keys`` names top-level keys whose values are
+    allowed to be dicts or lists and pass through without flat-value
+    sanitization. Use this when the caller has already validated the
+    nested shape (e.g. via ``AuditMetadataV1``). Keys in this set still
+    have to survive the PII name check at the top level.
     """
     if metadata is None:
         return {}
@@ -213,6 +235,12 @@ def sanitize_metadata(metadata: dict | None) -> dict:
         # Check PII blocklist FIRST — log the attempt
         if is_pii_field(key):
             pii_keys.append(key)
+            continue
+
+        # Trusted structured keys (Pydantic-validated) bypass the allowlist
+        # and the flat-value restriction. Still subject to PII name check above.
+        if key in trusted_structured_keys:
+            clean[key] = value
             continue
 
         # Check allowlist

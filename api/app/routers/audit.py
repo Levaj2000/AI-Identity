@@ -82,6 +82,7 @@ def _build_audit_query(
     cost_min: float | None = None,
     cost_max: float | None = None,
     user_id: uuid.UUID | None = None,
+    correlation_id: str | None = None,
 ):
     """Build a filtered audit log query scoped to user's agents.
 
@@ -139,6 +140,9 @@ def _build_audit_query(
 
     if cost_max is not None:
         query = query.filter(AuditLog.cost_estimate_usd <= cost_max)
+
+    if correlation_id:
+        query = query.filter(AuditLog.correlation_id == correlation_id)
 
     return query
 
@@ -233,6 +237,14 @@ def list_audit_logs(
     model: str | None = Query(None, description="Filter by metadata model"),
     cost_min: float | None = Query(None, description="Minimum cost_estimate_usd"),
     cost_max: float | None = Query(None, description="Maximum cost_estimate_usd"),
+    correlation_id: str | None = Query(
+        None,
+        max_length=64,
+        description=(
+            "Filter to events sharing this correlation ID — use when tracing "
+            "a single request across services."
+        ),
+    ),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),
@@ -272,6 +284,8 @@ def list_audit_logs(
             query = query.filter(AuditLog.cost_estimate_usd >= cost_min)
         if cost_max is not None:
             query = query.filter(AuditLog.cost_estimate_usd <= cost_max)
+        if correlation_id:
+            query = query.filter(AuditLog.correlation_id == correlation_id)
     else:
         user_agents = _user_agent_ids(db, user)
         query = _build_audit_query(
@@ -287,6 +301,7 @@ def list_audit_logs(
             cost_min=cost_min,
             cost_max=cost_max,
             user_id=user.id,
+            correlation_id=correlation_id,
         )
 
     total = query.count()
@@ -990,6 +1005,14 @@ def admin_list_audit_logs(
         None,
         description="Filter by action_type in metadata (e.g. agent_created, key_rotated)",
     ),
+    correlation_id: str | None = Query(
+        None,
+        max_length=64,
+        description=(
+            "Filter to events sharing this correlation ID — the canonical "
+            "cross-service trace lookup."
+        ),
+    ),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     user: User = Depends(get_current_user),
@@ -999,7 +1022,8 @@ def admin_list_audit_logs(
 
     Access is gated by org membership: the caller must be an owner or
     admin in the target org (platform admins are also allowed).
-    Supports filtering by agent_id, user_id, decision, and action_type.
+    Supports filtering by agent_id, user_id, decision, action_type,
+    and correlation_id.
     """
     if not _is_org_admin(db, user, org_id):
         # Deliberately 403, not 404 — the org exists, the caller just
@@ -1022,6 +1046,8 @@ def admin_list_audit_logs(
     if action_type:
         # Filter by action_type inside JSONB request_metadata
         query = query.filter(AuditLog.request_metadata["action_type"].astext == action_type)
+    if correlation_id:
+        query = query.filter(AuditLog.correlation_id == correlation_id)
 
     total = query.count()
     entries = query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit).all()
