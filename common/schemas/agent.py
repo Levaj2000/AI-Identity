@@ -295,6 +295,13 @@ class AuditLogResponse(BaseModel):
     id: int
     agent_id: uuid.UUID
     user_id: uuid.UUID | None = None
+    org_id: uuid.UUID | None = Field(
+        default=None,
+        description=(
+            "Tenant org this entry belongs to. Populated from agent.org_id at "
+            "write time; sentinel system-org for orphan/shadow entries."
+        ),
+    )
     endpoint: str
     method: str
     decision: str
