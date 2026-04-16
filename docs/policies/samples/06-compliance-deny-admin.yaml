@@ -1,0 +1,27 @@
+# Sample 06 — Compliance deny-list (admin endpoints blocked)
+#
+# Use case: a broadly-scoped agent is allowed most of `/v1/*` but must never
+# reach admin / user-management endpoints, regardless of its metadata. The
+# explicit deny list fires before the allow list, so this is the safe pattern
+# for "allow a surface, except these holes."
+#
+# DSL feature: `denied_endpoints` with wildcard patterns. Deny list wins.
+#
+# Fits: SOC 2 / ISO 27001 boundary enforcement — the auditable statement
+# "agents in role X could never administer users" is one policy lookup away.
+
+allowed_endpoints:
+  - /v1/*
+denied_endpoints:
+  - /v1/admin/*
+  - /v1/users/*
+  - /v1/audit-log/*
+allowed_methods:
+  - GET
+  - POST
+
+# Example pass:  POST /v1/chat/completions → matches /v1/*, no deny hit
+# Example deny:  GET  /v1/admin/rotate-keys
+#                → deny_reason = denied_endpoints:/v1/admin/*
+# Example deny:  DELETE /v1/chat/42
+#                → deny_reason = allowed_methods:not_allowed:DELETE
