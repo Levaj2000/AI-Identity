@@ -349,6 +349,24 @@ def create_audit_entry(
 
     db.commit()
     db.refresh(entry)
+
+    # Phase 2B — Prometheus observability. Also opportunistic / never raises:
+    # a metrics-subsystem hiccup must never change the audited outcome.
+    try:
+        from common.observability.metrics import record_audit_write
+
+        record_audit_write(
+            decision=decision,
+            deny_reason=(metadata.get("deny_reason") if isinstance(metadata, dict) else None),
+            latency_ms=latency_ms,
+        )
+    except Exception:
+        import logging
+
+        logging.getLogger("ai_identity.audit.writer").warning(
+            "metric emission failed for audit_log.id=%s", entry.id, exc_info=True
+        )
+
     return entry
 
 

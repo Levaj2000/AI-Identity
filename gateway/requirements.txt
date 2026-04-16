@@ -15,6 +15,7 @@ python-dotenv==1.2.2
 
 cryptography==46.0.5
 sentry-sdk[fastapi]==2.22.0
+prometheus-client==0.25.0
 redis==5.2.1
 
 # Dev / testing
