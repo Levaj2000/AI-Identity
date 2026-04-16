@@ -136,6 +136,51 @@ jobs:
               --keyversion-key=attestor-key
           done
 
+      # Run Alembic migrations BEFORE rolling out new pods. If this step
+      # fails, no new code reaches prod — the old pods keep serving the
+      # old schema. Uses the API image we just signed (Binary Auth admits
+      # it) + the ai-identity-workload SA for Secret Manager access to
+      # DATABASE_URL. Idempotent: `alembic upgrade head` is a no-op once
+      # the chain is current.
+      #
+      # Deliberately a k8s Job (not a deployment initContainer) so we get
+      # an explicit completion signal and logs that survive pod restarts.
+      - name: Run Alembic migrations
+        run: |
+          set -o pipefail
+          API_IMAGE="$REGISTRY/$PROJECT_ID/ai-identity/api@${{ steps.digests.outputs.api_digest }}"
+
+          # Clear any completed / failed Job from a prior deploy before
+          # re-applying the manifest (Job spec is immutable once created).
+          kubectl delete job alembic-migrate \
+            -n ai-identity \
+            --ignore-not-found=true \
+            --wait=true
+
+          # Substitute the image digest into the Job manifest and apply.
+          sed "s|IMAGE_PLACEHOLDER|$API_IMAGE|" k8s/migration-job.yaml \
+            | kubectl apply -f -
+
+          # Block on completion. The rollout stays on old pods until this
+          # succeeds. 300s covers 3 migrations + reconciliation + backfill
+          # with generous headroom; cold-start on Autopilot adds ~30-60s.
+          if ! kubectl wait --for=condition=complete \
+                 job/alembic-migrate \
+                 -n ai-identity \
+                 --timeout=300s; then
+            echo "::error::Alembic migration Job did not complete in 300s"
+            echo "── Job describe ──"
+            kubectl describe job/alembic-migrate -n ai-identity || true
+            echo "── Pod logs ──"
+            kubectl logs -n ai-identity -l app=alembic-migrate --tail=500 || true
+            exit 1
+          fi
+
+          # Surface migration output in the CI log so a successful run
+          # still shows which revisions ran.
+          echo "── Migration Job logs ──"
+          kubectl logs -n ai-identity -l app=alembic-migrate --tail=200
+
       - name: Deploy to GKE
         run: |
           kubectl set image deployment/api \
