@@ -1,0 +1,27 @@
+# Sample 04 — Exclude test frameworks (NOT_IN operator)
+#
+# Use case: production endpoints should never be reachable by an agent that
+# identifies itself as a test or evaluation harness. Anything else passes —
+# the policy is defined by exclusion.
+#
+# DSL feature: `{not_in: [...]}` operator. Remember: a missing metadata key
+# also fails this condition (absence is treated as ambiguous → deny). Tag
+# your real agents with a `framework` value; don't rely on absence.
+#
+# Fits: preventing CI runners, load-test harnesses, or red-team sandboxes
+# from accidentally hitting live endpoints.
+
+when:
+  framework: {not_in: ["pytest", "locust", "red-team-harness"]}
+
+allowed_endpoints:
+  - /v1/chat/completions
+  - /v1/assistants/*
+allowed_methods:
+  - POST
+
+# Example pass:  agent.metadata = {framework: "langchain"} → allowed
+# Example deny:  agent.metadata = {framework: "pytest"}
+#                → deny_reason = when:framework:in_forbidden:
+#                    expected=['pytest','locust','red-team-harness'],actual='pytest'
+# Example deny:  agent.metadata = {}  # framework tag missing → deny (fail-closed)

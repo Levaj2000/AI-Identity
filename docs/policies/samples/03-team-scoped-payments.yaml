@@ -1,0 +1,26 @@
+# Sample 03 — Team-scoped access (IN operator)
+#
+# Use case: only agents owned by the payments or finance teams can reach
+# the payments API. Any other `team` value (or missing tag) is denied.
+#
+# DSL feature: `{in: [...]}` operator.
+#
+# Fits: multi-tenant internal platforms where one auth service fronts agents
+# from many teams but only some teams should touch money-movement endpoints.
+
+when:
+  team: {in: ["payments", "finance"]}
+
+allowed_endpoints:
+  - /v1/payments/*
+  - /v1/ledger/*
+allowed_methods:
+  - GET
+  - POST
+
+# Example pass:  agent.metadata = {team: "payments"} → allowed
+# Example pass:  agent.metadata = {team: "finance"}  → allowed
+# Example deny:  agent.metadata = {team: "sales"}
+#                → deny_reason = when:team:not_in:expected=['payments','finance'],actual='sales'
+# Example deny:  agent.metadata = {}  # untagged agent
+#                → deny_reason = when:team:not_in:expected=['payments','finance'],actual=None
