@@ -68,6 +68,26 @@ audit_latency_ms = Histogram(
 )
 
 
+# ── Audit integrity failures ───────────────────────────────────────────
+#
+# Counts the rare but security-critical case where `create_audit_entry`
+# raises — meaning the enforcement decision was made but we could not
+# record it. This happened during the 2026-04-16 incident: audit writes
+# failed for 3 days without alerting because the gateway's try/except
+# only logged to stdout and Sentry's default LoggingIntegration
+# deduplicated them into one event. This counter is the cheap, always-on
+# backstop for monitoring: a non-zero rate over any window is a page-the-
+# on-call signal because it means the forensic audit chain has gaps.
+
+audit_write_failures_total = Counter(
+    "ai_identity_audit_write_failures_total",
+    "audit_log write failures by service and failure kind. "
+    "A non-zero rate means the forensic audit chain has gaps — page.",
+    ["service", "kind"],  # service: api | gateway; kind: schema | integrity | unknown
+    registry=REGISTRY,
+)
+
+
 # ── Audit forwarding (Phase 2A) ────────────────────────────────────────
 
 outbox_deliveries_total = Counter(
@@ -139,6 +159,54 @@ def record_audit_write(
         import logging
 
         logging.getLogger("ai_identity.metrics").warning("metrics emission failed", exc_info=True)
+
+
+def classify_audit_write_failure(exc: BaseException) -> str:
+    """Classify an audit-write exception into a stable failure-kind label.
+
+    Kept narrow on purpose — the cardinality of Prometheus labels has to
+    stay bounded. Three buckets is enough to drive alerts and triage:
+
+      - ``schema``    — DB schema mismatch (missing column, FK violation,
+                        NOT-NULL violation). The code and DB disagree;
+                        this is the 2026-04-16 incident shape.
+      - ``integrity`` — HMAC chain, hash computation, or canonical-payload
+                        problems. A real forensic-integrity concern —
+                        either key rotation gone wrong or tampering.
+      - ``unknown``   — anything else (connection, timeout, programming
+                        error). Still paged; still worth investigating.
+    """
+    msg = str(exc).lower()
+    name = type(exc).__name__.lower()
+    schema_markers = (
+        "undefinedcolumn",
+        "undefinedtable",
+        "notnullviolation",
+        "foreignkeyviolation",
+    )
+    if any(m in name for m in schema_markers) or "does not exist" in msg or "violates" in msg:
+        return "schema"
+    if "hmac" in msg or "entry_hash" in msg or "prev_hash" in msg or "chain" in msg:
+        return "integrity"
+    return "unknown"
+
+
+def record_audit_write_failure(service: str, *, kind: str = "unknown") -> None:
+    """Increment the audit-write-failure counter.
+
+    Called from the narrow ``except`` blocks that wrap
+    ``create_audit_entry``. Safe to call under any concurrency model —
+    prometheus_client Counters are process-safe. Never raises; an
+    observability hiccup must never change the enforcement outcome.
+    """
+    try:
+        audit_write_failures_total.labels(service=service, kind=kind).inc()
+    except Exception:  # pragma: no cover — defensive
+        import logging
+
+        logging.getLogger("ai_identity.metrics").warning(
+            "audit_write_failures counter increment failed", exc_info=True
+        )
 
 
 def record_outbox_delivery(outcome: str, *, count: int = 1) -> None:
@@ -241,10 +309,13 @@ __all__ = [
     "audit_denies_total",
     "audit_events_total",
     "audit_latency_ms",
+    "audit_write_failures_total",
+    "classify_audit_write_failure",
     "organizations_total",
     "outbox_backlog",
     "outbox_deliveries_total",
     "record_audit_write",
+    "record_audit_write_failure",
     "record_outbox_delivery",
     "refresh_db_gauges",
     "sinks_circuit_open",
