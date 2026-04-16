@@ -1,0 +1,94 @@
+name: Migration Dry-Run
+
+# Catch schema mismatches BEFORE merge — runs `alembic upgrade head`
+# against an ephemeral Neon branch cloned from production. This would
+# have caught all 4 issues from the 2026-04-16 incident (NOT NULL columns,
+# VARCHAR→UUID cast, append-only trigger) in the PR check instead of
+# during the production deploy.
+#
+# The Neon branch is a zero-copy fork of the prod DB — same schema, same
+# triggers, same constraints, same data types. It's created at the start
+# of the job and deleted at the end (even on failure).
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'alembic/**'
+      - 'common/models/**'
+
+env:
+  NEON_PROJECT_ID: steep-surf-83629306
+
+jobs:
+  migration-dry-run:
+    name: Alembic upgrade against prod-schema clone
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install -r api/requirements.txt
+          pip install -e common/
+
+      - name: Install neonctl
+        run: npm install -g neonctl
+
+      - name: Create ephemeral Neon branch
+        id: neon
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          BRANCH_NAME="ci-migration-$(echo $GITHUB_SHA | head -c 8)"
+          OUTPUT=$(neonctl branches create \
+            --project-id "$NEON_PROJECT_ID" \
+            --name "$BRANCH_NAME" \
+            --output json)
+          BRANCH_ID=$(echo "$OUTPUT" | jq -r '.branch.id')
+          echo "branch_id=$BRANCH_ID" >> $GITHUB_OUTPUT
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Created Neon branch: $BRANCH_NAME ($BRANCH_ID)"
+
+          # Get connection string for the new branch
+          CONNSTR=$(neonctl connection-string "$BRANCH_NAME" \
+            --project-id "$NEON_PROJECT_ID" \
+            --database-name neondb)
+          echo "connstr=$CONNSTR" >> $GITHUB_OUTPUT
+
+      - name: Run alembic upgrade head
+        env:
+          DATABASE_URL: ${{ steps.neon.outputs.connstr }}
+        run: |
+          echo "Current alembic version:"
+          alembic current
+          echo ""
+          echo "Alembic heads:"
+          alembic heads
+          echo ""
+          echo "Running upgrade..."
+          alembic upgrade head
+          echo ""
+          echo "Post-upgrade version:"
+          alembic current
+
+      - name: Delete ephemeral Neon branch
+        if: always()
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+        run: |
+          BRANCH_ID="${{ steps.neon.outputs.branch_id }}"
+          if [ -n "$BRANCH_ID" ]; then
+            neonctl branches delete "$BRANCH_ID" \
+              --project-id "$NEON_PROJECT_ID" \
+              --output json || true
+            echo "Deleted Neon branch: ${{ steps.neon.outputs.branch_name }}"
+          fi

@@ -243,3 +243,28 @@ spec:
               - 169.254.0.0/16
       ports:
         - { protocol: TCP, port: 6379 }
+
+---
+# Ingress: Google Managed Prometheus (GMP) collector pods → api + gateway
+# for /metrics scraping. GMP collectors run in the gmp-system namespace.
+# The /metrics endpoint is unauthenticated (cluster-internal only, returns
+# aggregate counters with no PII) — standard k8s pattern.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gmp-scrape
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: [api, gateway] }
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: gmp-system
+      ports:
+        - { protocol: TCP, port: 8001 }
+        - { protocol: TCP, port: 8002 }

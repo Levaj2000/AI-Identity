@@ -156,6 +156,8 @@ jobs:
           # (2026-04-16 first-deploy failure mode). `kubectl apply` is
           # idempotent and a no-op on unchanged manifests.
           kubectl apply -f k8s/network-policies.yaml
+          kubectl apply -f k8s/pod-monitoring.yaml
+          kubectl apply -f k8s/prometheus-rules.yaml
 
           # Clear any completed / failed Job from a prior deploy before
           # re-applying the manifest (Job spec is immutable once created).
