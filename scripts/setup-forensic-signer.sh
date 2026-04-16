@@ -20,9 +20,21 @@
 #   - The key uses EC P-256 SHA-256 — short signatures (~64 bytes), fast
 #     offline verification from a PEM public key, and broad tooling
 #     support (OpenSSL, Python cryptography, Go crypto/ecdsa).
-#   - Rotation is 90 days. Old key versions stay ENABLED for verification
-#     (they go DISABLED only on explicit revocation), so historical
-#     attestations remain verifiable across rotations.
+#   - Rotation is operator-triggered on a ~90-day cadence. GCP KMS does
+#     NOT support scheduled rotation for ASYMMETRIC_SIGN keys (the public
+#     key changes on rotation, so downstream verifiers must be re-armed
+#     before the new version becomes primary — Google forces the
+#     operator to drive this explicitly). To rotate:
+#
+#       gcloud kms keys versions create \
+#         --key=session-attestation \
+#         --keyring=ai-identity-forensic \
+#         --location=us-east1 \
+#         --primary
+#
+#     Old versions stay ENABLED for verification (they go DISABLED only
+#     on explicit revocation), so historical attestations remain
+#     verifiable across rotations. Full procedure will ship in #267.
 #
 # Idempotent — safe to re-run. Only takes actions needed to reach the
 # target state.
@@ -40,7 +52,9 @@ KEYRING=ai-identity-forensic
 KEY=session-attestation
 KEY_ALGO=ec-sign-p256-sha256
 KEY_PURPOSE=asymmetric-signing
-ROTATION_PERIOD=7776000s  # 90 days
+# GCP KMS does not permit scheduled rotation for asymmetric signing keys;
+# rotation is operator-triggered via `gcloud kms keys versions create
+# --primary` on a ~90-day cadence. See the header comment for details.
 
 GCP_SA_NAME=ai-identity-forensic-signer
 GCP_SA_EMAIL="${GCP_SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
@@ -50,7 +64,7 @@ PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectN
 
 echo "→ project:  $PROJECT_ID ($PROJECT_NUMBER)"
 echo "→ region:   $REGION"
-echo "→ key:      $REGION/$KEYRING/$KEY ($KEY_ALGO, rotates ${ROTATION_PERIOD})"
+echo "→ key:      $REGION/$KEYRING/$KEY ($KEY_ALGO, manual rotation)"
 echo "→ GCP SA:   $GCP_SA_EMAIL"
 echo "→ K8s SA:   $NS/$K8S_SA_NAME"
 echo
@@ -69,19 +83,16 @@ gcloud kms keyrings describe "$KEYRING" \
 
 if gcloud kms keys describe "$KEY" \
      --keyring="$KEYRING" --location="$REGION" --project="$PROJECT_ID" >/dev/null 2>&1; then
-  echo "  (key already exists — leaving rotation schedule untouched)"
+  echo "  (key already exists)"
 else
-  # macOS `date -v`; Linux `date -d`. Either produces an RFC3339 timestamp
-  # 90 days from now for --next-rotation-time.
-  NEXT_ROTATION=$(date -u -v+90d +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
-                  || date -u -d '+90 days' +%Y-%m-%dT%H:%M:%SZ)
+  # No --rotation-period / --next-rotation-time: GCP KMS rejects those
+  # flags for ASYMMETRIC_SIGN keys with INVALID_ARGUMENT. Rotation is
+  # operator-triggered via `gcloud kms keys versions create --primary`.
   gcloud kms keys create "$KEY" \
     --keyring="$KEYRING" --location="$REGION" --project="$PROJECT_ID" \
     --purpose="$KEY_PURPOSE" \
     --default-algorithm="$KEY_ALGO" \
     --protection-level=software \
-    --rotation-period="$ROTATION_PERIOD" \
-    --next-rotation-time="$NEXT_ROTATION" \
     --labels=component=forensic-signer,environment=production >/dev/null
 fi
 KEY_RESOURCE="projects/$PROJECT_ID/locations/$REGION/keyRings/$KEYRING/cryptoKeys/$KEY"
