@@ -1,0 +1,21 @@
+# Sample 01 — Read-only RBAC (no ABAC)
+#
+# Use case: the simplest policy shape. Pure endpoint + method allow-list with
+# no metadata conditions. Equivalent to the pre-ABAC flat-policy behavior; use
+# this form when you don't need any metadata-driven gating.
+#
+# What it proves: flat policies without a `when` clause are still first-class
+# and behave identically to the pre-ABAC evaluator.
+#
+# Fits: LLM agents that only read from your vector store or docs API.
+
+allowed_endpoints:
+  - /v1/embeddings
+  - /v1/search
+  - /v1/documents/*
+allowed_methods:
+  - GET
+  - POST
+
+# Example pass:  agent.metadata = {} → allowed (no `when` to fail)
+# Example deny:  DELETE /v1/documents/42 → method not in allowed_methods
