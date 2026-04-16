@@ -1,4 +1,4 @@
-"""Tests for Prometheus metrics — auth, counters, gauges, scrape handler."""
+"""Tests for Prometheus metrics — counters, gauges, scrape handler."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from prometheus_client.parser import text_string_to_metric_families
 from common.audit import create_audit_entry
 from common.audit.outbox import flush_outbox
 from common.audit.transports import DeliveryResult
-from common.config.settings import settings
 from common.models import Agent, AuditLogSink, Organization, OrgMembership, User
 from common.observability.metrics import (
     REGISTRY,
@@ -22,10 +21,9 @@ from common.observability.metrics import (
 # ── Helpers ──────────────────────────────────────────────────────────
 
 
-def _scrape(client, internal_key: str | None = None):
-    """Fetch /metrics with the given internal key (defaults to the configured one)."""
-    key = internal_key if internal_key is not None else settings.internal_service_key
-    return client.get("/metrics", headers={"X-Internal-Key": key} if key else {})
+def _scrape(client):
+    """Fetch /metrics (unauthenticated — cluster-internal only)."""
+    return client.get("/metrics")
 
 
 def _metric_value(body: str, name: str, **labels) -> float | None:
@@ -58,31 +56,14 @@ def _counter_value(name: str, **labels) -> float:
     return 0.0
 
 
-# ── Auth on /metrics ────────────────────────────────────────────────
+# ── Scrape endpoint (unauthenticated, cluster-internal) ────────────
 
 
-class TestMetricsAuth:
-    def test_missing_key_returns_401(self, client, monkeypatch):
-        monkeypatch.setattr(settings, "internal_service_key", "testkey")
+class TestMetricsEndpoint:
+    def test_returns_200_without_auth(self, client):
         resp = client.get("/metrics")
-        assert resp.status_code == 401
-
-    def test_wrong_key_returns_401(self, client, monkeypatch):
-        monkeypatch.setattr(settings, "internal_service_key", "testkey")
-        resp = client.get("/metrics", headers={"X-Internal-Key": "nope"})
-        assert resp.status_code == 401
-
-    def test_correct_key_returns_200(self, client, monkeypatch):
-        monkeypatch.setattr(settings, "internal_service_key", "testkey")
-        resp = client.get("/metrics", headers={"X-Internal-Key": "testkey"})
         assert resp.status_code == 200
         assert resp.headers["content-type"].startswith("text/plain")
-
-    def test_unconfigured_service_key_rejects_all(self, client, monkeypatch):
-        """With no internal_service_key set, every request is unauthorized."""
-        monkeypatch.setattr(settings, "internal_service_key", "")
-        resp = client.get("/metrics", headers={"X-Internal-Key": "anything"})
-        assert resp.status_code == 401
 
 
 # ── Counter emission from writer ────────────────────────────────────
@@ -227,9 +208,7 @@ class TestOutboxDeliveryCounters:
 
 
 class TestRefreshDbGauges:
-    def test_gauges_reflect_live_counts(self, db_session, client, monkeypatch):
-        monkeypatch.setattr(settings, "internal_service_key", "k")
-
+    def test_gauges_reflect_live_counts(self, db_session, client):
         user = User(
             id=uuid.uuid4(),
             email="gauge-user@test",
@@ -260,7 +239,7 @@ class TestRefreshDbGauges:
         )
         db_session.commit()
 
-        resp = client.get("/metrics", headers={"X-Internal-Key": "k"})
+        resp = client.get("/metrics")
         assert resp.status_code == 200
         body = resp.text
 
@@ -296,13 +275,11 @@ class TestMetricsResilience:
 
 
 class TestCollectorsAreRegistered:
-    def test_expected_metrics_appear_in_registry(self, client, monkeypatch):
-        monkeypatch.setattr(settings, "internal_service_key", "k")
-        # Ensure at least one label instance exists so the family renders
+    def test_expected_metrics_appear_in_registry(self, client):
         audit_events_total.labels(decision="allow").inc(0)
         audit_denies_total.labels(reason="n/a").inc(0)
 
-        resp = client.get("/metrics", headers={"X-Internal-Key": "k"})
+        resp = client.get("/metrics")
         assert resp.status_code == 200
         body = resp.text
 
