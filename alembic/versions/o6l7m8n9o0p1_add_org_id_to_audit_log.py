@@ -130,6 +130,15 @@ def upgrade() -> None:
     # ── 4. Add audit_log.org_id nullable for backfill ──────────────
     op.add_column("audit_log", sa.Column("org_id", sa.UUID(), nullable=True))
 
+    # The audit_log table has append-only triggers (audit_log_no_update,
+    # audit_log_no_delete) that protect forensic integrity at runtime.
+    # Temporarily disable audit_log_no_update so the one-time backfill
+    # UPDATEs in Steps 5-6 can populate org_id on existing rows. The
+    # trigger is re-enabled before the migration commits, so the
+    # append-only guarantee is never exposed to runtime traffic.
+    if dialect == "postgresql":
+        op.execute("ALTER TABLE audit_log DISABLE TRIGGER audit_log_no_update")
+
     # ── 5. Backfill audit_log.org_id from agent.org_id ─────────────
     if dialect == "postgresql":
         op.execute(
@@ -150,6 +159,10 @@ def upgrade() -> None:
     op.execute(
         f"UPDATE audit_log SET org_id = '{SYSTEM_ORG_ID}'::uuid WHERE org_id IS NULL"
     )
+
+    # Re-enable the append-only trigger before committing.
+    if dialect == "postgresql":
+        op.execute("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update")
 
     # ── 7. Enforce NOT NULL + add FK + index ───────────────────────
     op.alter_column("audit_log", "org_id", nullable=False)
