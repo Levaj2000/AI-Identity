@@ -120,6 +120,53 @@ def _get_last_hash(db: Session) -> str:
     return result if result is not None else GENESIS
 
 
+def _ensure_system_org(db: Session) -> uuid.UUID:
+    """Return the sentinel system org ID, creating it if absent.
+
+    The system org is the fallback tenant for audit entries that can't
+    be attributed to a real org (shadow agents, pre-auth errors). This
+    lets us enforce `audit_log.org_id NOT NULL` while still logging
+    orphan traffic for platform admins to investigate.
+
+    Idempotent — safe to call on every write.
+    """
+    from common.models.organization import (
+        SYSTEM_ORG_ID,
+        SYSTEM_ORG_NAME,
+        SYSTEM_USER_EMAIL,
+        SYSTEM_USER_ID,
+        Organization,
+    )
+    from common.models.user import User
+
+    org = db.query(Organization).filter(Organization.id == SYSTEM_ORG_ID).first()
+    if org is not None:
+        return SYSTEM_ORG_ID
+
+    # Ensure the system user exists first (owner_id is NOT NULL on orgs)
+    sys_user = db.query(User).filter(User.id == SYSTEM_USER_ID).first()
+    if sys_user is None:
+        sys_user = User(
+            id=SYSTEM_USER_ID,
+            email=SYSTEM_USER_EMAIL,
+            role="system",
+            tier="enterprise",
+        )
+        db.add(sys_user)
+        db.flush()
+
+    db.add(
+        Organization(
+            id=SYSTEM_ORG_ID,
+            name=SYSTEM_ORG_NAME,
+            owner_id=SYSTEM_USER_ID,
+            tier="enterprise",
+        )
+    )
+    db.flush()
+    return SYSTEM_ORG_ID
+
+
 def create_audit_entry(
     db: Session,
     *,
@@ -144,19 +191,31 @@ def create_audit_entry(
 
     SECURITY: request_metadata is sanitized BEFORE hashing. Only allowed
     metadata keys are stored. PII fields are rejected with a warning.
+
+    TENANCY: org_id is resolved from the agent; for shadow/orphan entries
+    with no registered agent, the sentinel system org is used so the row
+    still has a NOT NULL org_id.
     """
     # Sanitize metadata — allowlist only, PII blocked
     metadata = sanitize_metadata(request_metadata)
 
-    # Resolve user_id and agent_name from agent (for RLS tenant isolation + denormalization)
+    # Resolve user_id, agent_name, and org_id from agent
+    # (for RLS tenant isolation + denormalization)
     agent_name: str | None = None
+    org_id: uuid.UUID | None = None
     from common.models.agent import Agent
 
     agent = db.query(Agent).filter(Agent.id == agent_id).first()
     if agent:
         agent_name = agent.name
+        org_id = agent.org_id
         if user_id is None:
             user_id = agent.user_id
+
+    # Shadow / orphan fallback: no registered agent OR agent without an org.
+    # Route the entry to the sentinel system org so org_id stays NOT NULL.
+    if org_id is None:
+        org_id = _ensure_system_org(db)
 
     # Opt-in debug logging (PII-redacted, separate from audit trail)
     from common.audit.debug_log import write_debug_entry
@@ -197,6 +256,7 @@ def create_audit_entry(
     entry = AuditLog(
         agent_id=agent_id,
         user_id=user_id,
+        org_id=org_id,
         agent_name=agent_name,
         endpoint=endpoint,
         method=method,

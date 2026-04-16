@@ -31,6 +31,16 @@ class AuditLog(Base):
         index=True,
     )
 
+    # Denormalized org_id for fast org-scoped queries (Cisco-scale multi-tenant).
+    # Populated from agent.org_id at write time; backfilled for legacy rows via
+    # migration o6l7m8n9o0p1. NOT included in the HMAC integrity chain — it's
+    # an access-control field derivable from agent_id.
+    org_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=False,
+        index=True,
+    )
+
     # Request details
     endpoint: Mapped[str] = mapped_column(String(2048), nullable=False)
     method: Mapped[str] = mapped_column(String(10), nullable=False)
@@ -76,4 +86,6 @@ class AuditLog(Base):
     __table_args__ = (
         Index("ix_audit_log_agent_created", "agent_id", "created_at"),
         Index("ix_audit_log_user_created", "user_id", "created_at"),
+        # Primary enterprise query pattern: "all events in this org, newest first"
+        Index("ix_audit_log_org_created", "org_id", "created_at"),
     )
