@@ -19,9 +19,9 @@ from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from api.app.auth import get_current_user, require_admin
+from api.app.auth import get_current_user
 from common.audit import generate_report_signature, verify_chain
-from common.models import Agent, AuditLog, Policy, User, get_db
+from common.models import Agent, AuditLog, OrgMembership, Policy, User, get_db
 from common.schemas.agent import (
     AuditChainVerifyResponse,
     AuditLogListResponse,
@@ -46,6 +46,27 @@ router = APIRouter(prefix="/api/v1/audit", tags=["audit"])
 def _user_agent_ids(db: Session, user: User) -> list[uuid.UUID]:
     """Return list of agent IDs owned by the user."""
     return [row[0] for row in db.query(Agent.id).filter(Agent.user_id == user.id).all()]
+
+
+def _is_org_admin(db: Session, user: User, org_id: uuid.UUID) -> bool:
+    """True if the user is an owner or admin in the given org.
+
+    Platform admins (user.role == 'admin') also pass. Used to gate access
+    to org-wide audit views where a single member can read every agent's
+    activity in their tenant.
+    """
+    if user.role == "admin":
+        return True
+    membership = (
+        db.query(OrgMembership)
+        .filter(
+            OrgMembership.org_id == org_id,
+            OrgMembership.user_id == user.id,
+            OrgMembership.role.in_(("owner", "admin")),
+        )
+        .first()
+    )
+    return membership is not None
 
 
 def _build_audit_query(
@@ -219,26 +240,54 @@ def list_audit_logs(
 ):
     """List audit log entries with optional filters.
 
-    Results are scoped to agents owned by the authenticated user.
+    Scoping rules (most-to-least privileged):
+      1. Org owner/admin → all entries in their org (every agent, every member).
+      2. Regular user    → entries for agents they own, plus their own
+         shadow-agent denials (unregistered agent_ids tagged with their user_id).
+
     Supports filtering by agent, decision, date range, endpoint,
     metadata action_type, metadata model, and cost range.
     """
-    user_agents = _user_agent_ids(db, user)
+    # Org owners/admins get org-wide visibility via the fast org_id index.
+    # Uses denormalized audit_log.org_id (populated at write time) so the
+    # query stays flat even at 100+ agents in the org.
+    if user.org_id and _is_org_admin(db, user, user.org_id):
+        query = db.query(AuditLog).filter(AuditLog.org_id == user.org_id)
 
-    query = _build_audit_query(
-        db,
-        user_agents,
-        agent_id=agent_id,
-        decision=decision,
-        start_date=start_date,
-        end_date=end_date,
-        endpoint=endpoint,
-        action_type=action_type,
-        model=model,
-        cost_min=cost_min,
-        cost_max=cost_max,
-        user_id=user.id,
-    )
+        if agent_id:
+            query = query.filter(AuditLog.agent_id == agent_id)
+        if decision:
+            query = query.filter(AuditLog.decision == decision)
+        if start_date:
+            query = query.filter(AuditLog.created_at >= start_date)
+        if end_date:
+            query = query.filter(AuditLog.created_at <= end_date)
+        if endpoint:
+            query = query.filter(AuditLog.endpoint.ilike(f"%{endpoint}%"))
+        if action_type:
+            query = query.filter(AuditLog.request_metadata["action_type"].astext == action_type)
+        if model:
+            query = query.filter(AuditLog.request_metadata["model"].astext == model)
+        if cost_min is not None:
+            query = query.filter(AuditLog.cost_estimate_usd >= cost_min)
+        if cost_max is not None:
+            query = query.filter(AuditLog.cost_estimate_usd <= cost_max)
+    else:
+        user_agents = _user_agent_ids(db, user)
+        query = _build_audit_query(
+            db,
+            user_agents,
+            agent_id=agent_id,
+            decision=decision,
+            start_date=start_date,
+            end_date=end_date,
+            endpoint=endpoint,
+            action_type=action_type,
+            model=model,
+            cost_min=cost_min,
+            cost_max=cost_max,
+            user_id=user.id,
+        )
 
     total = query.count()
     entries = query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit).all()
@@ -923,10 +972,17 @@ def verify_audit_chain(
 @router.get(
     "/admin",
     response_model=AuditLogListResponse,
-    summary="[Admin] List all audit entries system-wide",
-    response_description="Paginated audit log (all users, all agents)",
+    summary="[Org Admin] List audit entries for an organization",
+    response_description="Paginated audit log scoped to one org",
 )
 def admin_list_audit_logs(
+    org_id: uuid.UUID = Query(
+        ...,
+        description=(
+            "Organization to list audit entries for. Caller must be an owner or "
+            "admin in this org (or a platform admin)."
+        ),
+    ),
     agent_id: uuid.UUID | None = Query(None, description="Filter by agent ID"),
     user_id: uuid.UUID | None = Query(None, description="Filter by user ID"),
     decision: str | None = Query(None, pattern="^(allowed|denied|error)$"),
@@ -936,15 +992,26 @@ def admin_list_audit_logs(
     ),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    _admin: User = Depends(require_admin),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Admin-only: list all audit log entries system-wide.
+    """List audit log entries scoped to a single organization.
 
-    No user-scoping — returns entries for all users and agents.
+    Access is gated by org membership: the caller must be an owner or
+    admin in the target org (platform admins are also allowed).
     Supports filtering by agent_id, user_id, decision, and action_type.
     """
-    query = db.query(AuditLog)
+    if not _is_org_admin(db, user, org_id):
+        # Deliberately 403, not 404 — the org exists, the caller just
+        # doesn't have the role. We don't want to leak org existence here
+        # because any user can guess UUIDs, but the role requirement is
+        # the real gate.
+        raise HTTPException(
+            status_code=403,
+            detail="Owner or admin role in this organization is required",
+        )
+
+    query = db.query(AuditLog).filter(AuditLog.org_id == org_id)
 
     if agent_id:
         query = query.filter(AuditLog.agent_id == agent_id)
