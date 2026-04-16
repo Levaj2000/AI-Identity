@@ -326,6 +326,27 @@ def create_audit_entry(
         prev_hash=prev_hash,
     )
     db.add(entry)
+    db.flush()  # assign entry.id before enqueuing outbox rows
+
+    # Enqueue forwarding (Phase 2A). No-op when no sinks are configured,
+    # which is the common case today. Any failure here is isolated to the
+    # outbox row itself and MUST NOT change the audit-write outcome — if
+    # the outbox system is broken, the audit trail is still intact.
+    try:
+        from common.audit.outbox import enqueue_for_sinks
+
+        enqueue_for_sinks(db, audit_entry=entry)
+    except Exception:
+        # The audit row is already flushed; its integrity is independent of
+        # forwarding. Log and proceed — the DB rollback would undo the
+        # audit write itself, which is worse than losing a forwarded copy.
+        import logging
+
+        logging.getLogger("ai_identity.audit.writer").exception(
+            "outbox enqueue failed for audit_log.id=%s — event recorded but not forwarded",
+            entry.id,
+        )
+
     db.commit()
     db.refresh(entry)
     return entry
