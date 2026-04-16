@@ -1,0 +1,42 @@
+# Google Managed Prometheus — scrape AI Identity API + Gateway /metrics.
+#
+# GMP's managed collector runs in gmp-system and scrapes targets matching
+# the PodMonitoring selector. Metrics flow to Cloud Monitoring's Prometheus
+# backend where they're queryable via PromQL in the GCP console, Grafana
+# (via the Managed Service for Prometheus datasource), or the Monitoring
+# API. Retention follows the Cloud Monitoring default (24 months).
+#
+# Prerequisite: the allow-gmp-scrape NetworkPolicy (in network-policies.yaml)
+# must admit ingress from gmp-system pods to api:8001 / gateway:8002.
+---
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: ai-identity-api
+  namespace: ai-identity
+  labels:
+    app.kubernetes.io/part-of: ai-identity
+spec:
+  selector:
+    matchLabels:
+      app: api
+  endpoints:
+    - port: 8001
+      path: /metrics
+      interval: 30s
+---
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: ai-identity-gateway
+  namespace: ai-identity
+  labels:
+    app.kubernetes.io/part-of: ai-identity
+spec:
+  selector:
+    matchLabels:
+      app: gateway
+  endpoints:
+    - port: 8002
+      path: /metrics
+      interval: 30s

@@ -1,0 +1,79 @@
+# Google Managed Prometheus — alerting rules for AI Identity.
+#
+# GMP evaluates these rules against the metrics scraped by PodMonitoring
+# (pod-monitoring.yaml) and fires alerts through the managed AlertManager
+# (configurable via the `alertmanager` Secret in gmp-public).
+#
+# Adding a new rule:
+#   1. Add the rule below with a PromQL expression
+#   2. kubectl apply -f k8s/prometheus-rules.yaml
+#   3. Verify in GCP Console → Monitoring → Alerting → Prometheus Rules
+#
+# Alert routing:
+#   The AlertManager config lives in:
+#     kubectl get secret alertmanager -n gmp-public -o jsonpath='{.data.alertmanager\.yaml}' | base64 -d
+#   Update it to route alerts to your preferred channel (email, PagerDuty, Slack).
+---
+apiVersion: monitoring.googleapis.com/v1
+kind: Rules
+metadata:
+  name: ai-identity-alerts
+  namespace: ai-identity
+  labels:
+    app.kubernetes.io/part-of: ai-identity
+spec:
+  groups:
+    - name: ai-identity.audit
+      interval: 60s
+      rules:
+        # P0 — any non-zero rate means the forensic audit chain has gaps.
+        # Added after the 2026-04-16 incident where audit writes failed
+        # silently for 72 hours. This rule would have caught it in 5 min.
+        - alert: AuditWriteFailures
+          expr: rate(ai_identity_audit_write_failures_total[5m]) > 0
+          for: 1m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Audit log write failures detected ({{ $labels.kind }})"
+            description: >-
+              {{ $labels.service }} is failing to write audit entries
+              (kind={{ $labels.kind }}). The forensic audit chain has gaps —
+              enforcement decisions are being made but not recorded. This is
+              a P0 for a compliance product.
+            runbook: "https://github.com/Levaj2000/AI-Identity/blob/main/docs/incidents/2026-04-16-audit-infrastructure.md"
+
+        # Warning — audit event rate drops to zero for 10 minutes.
+        # A sustained zero rate means either no traffic (unlikely in prod)
+        # or audit writes are silently failing without incrementing the
+        # failure counter (a deeper bug).
+        - alert: AuditEventsAbsent
+          expr: absent_over_time(ai_identity_audit_events_total[10m])
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "No audit events written in 10+ minutes"
+            description: >-
+              No ai_identity_audit_events_total samples received in the last
+              10 minutes. Either there is genuinely zero traffic, or the
+              metrics pipeline / audit writer has a deeper failure.
+
+    - name: ai-identity.health
+      interval: 60s
+      rules:
+        # Gateway circuit breaker opened — all requests being denied.
+        - alert: GatewayCircuitBreakerOpen
+          expr: ai_identity_audit_denies_total{reason="circuit_breaker_open"} > 0
+          for: 1m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Gateway circuit breaker is open — all requests denied"
+            description: >-
+              The gateway policy-engine circuit breaker has tripped. All
+              inbound agent requests are being denied with 503. Check the
+              policy evaluation path and DB connectivity.
