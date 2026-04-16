@@ -150,6 +150,13 @@ jobs:
           set -o pipefail
           API_IMAGE="$REGISTRY/$PROJECT_ID/ai-identity/api@${{ steps.digests.outputs.api_digest }}"
 
+          # Reconcile NetworkPolicies before the Job runs. The
+          # `allow-egress-postgres` policy's pod-selector allow-list has
+          # to include `alembic-migrate` or the Job pod can't reach Neon
+          # (2026-04-16 first-deploy failure mode). `kubectl apply` is
+          # idempotent and a no-op on unchanged manifests.
+          kubectl apply -f k8s/network-policies.yaml
+
           # Clear any completed / failed Job from a prior deploy before
           # re-applying the manifest (Job spec is immutable once created).
           kubectl delete job alembic-migrate \
