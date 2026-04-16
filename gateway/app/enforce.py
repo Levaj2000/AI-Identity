@@ -581,12 +581,54 @@ def _audit_decision(
             cost_estimate_usd=cost_estimate_usd,
             request_metadata=audit_metadata,
         )
-    except Exception:
-        # Audit write failure is logged but MUST NOT change the decision.
-        # The enforcement decision was already made — we just couldn't record it.
+    except Exception as exc:
+        # The enforcement decision was already made — we just couldn't record
+        # it. Dropping the exception is a deliberate availability choice (the
+        # gateway keeps serving), but the failure is **security-critical**:
+        # every missed write is a gap in the forensic audit chain. The
+        # 2026-04-16 incident ran 3 days before anyone noticed because this
+        # block logged to stdout and Sentry deduplicated the traceback into
+        # one event. Do three things on every failure:
+        #
+        #   1. Bump an always-on Prometheus counter labeled by failure kind.
+        #      The rate is the primary alerting signal — anything non-zero
+        #      over any window should page.
+        #   2. Emit a Sentry event with stable tags / fingerprint so alerts
+        #      show per-kind volume rather than one collapsed group.
+        #   3. Keep the stdout traceback for local debugging.
+        from common.observability.metrics import (
+            classify_audit_write_failure,
+            record_audit_write_failure,
+        )
+
+        kind = classify_audit_write_failure(exc)
+        record_audit_write_failure("gateway", kind=kind)
+
+        try:
+            import sentry_sdk
+
+            sentry_sdk.set_tag("audit_write_failure", "true")
+            sentry_sdk.set_tag("audit_write_failure_kind", kind)
+            sentry_sdk.set_context(
+                "audit_write_failure",
+                {
+                    "agent_id": str(result.agent_id),
+                    "decision": result.decision.value,
+                    "endpoint": endpoint,
+                    "method": method,
+                    "kind": kind,
+                },
+            )
+            # Stable fingerprint so repeated failures surface as volume
+            # rather than getting collapsed into one deduplicated group.
+            sentry_sdk.capture_exception(exc, scope=None)
+        except Exception:  # pragma: no cover — never let Sentry break us
+            pass
+
         logger.exception(
             "CRITICAL: Failed to write audit entry for agent %s — "
-            "decision was %s but audit trail has a gap",
+            "decision was %s but audit trail has a gap (kind=%s)",
             result.agent_id,
             result.decision.value,
+            kind,
         )
