@@ -650,3 +650,14 @@ async def root():
         "version": settings.app_version,
         "docs": "/docs",
     }
+
+
+# ── Observability (Phase 2B) ─────────────────────────────────────────────
+# /metrics is a shared router — same endpoint on both API and Gateway so
+# Prometheus can scrape each service independently. The gateway exposes
+# its own collectors (different process, different registry) — most of the
+# audit-write traffic originates here, so this is the higher-volume target.
+
+from common.observability.router import router as metrics_router  # noqa: E402
+
+app.include_router(metrics_router)
