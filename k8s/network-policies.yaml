@@ -154,7 +154,12 @@ metadata:
 spec:
   podSelector:
     matchExpressions:
-      - { key: app, operator: In, values: [api, gateway] }
+      # `alembic-migrate` is the Job pod spawned by the deploy workflow
+      # (k8s/migration-job.yaml). It needs Postgres egress for the
+      # duration of the migration and nothing else — but it's as
+      # legitimate a Neon client as api/gateway, so it belongs in the
+      # same allow-list rather than getting a bespoke policy.
+      - { key: app, operator: In, values: [api, gateway, alembic-migrate] }
   policyTypes:
     - Egress
   egress:
