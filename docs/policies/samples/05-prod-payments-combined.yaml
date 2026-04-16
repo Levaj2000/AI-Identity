@@ -1,0 +1,29 @@
+# Sample 05 — Multi-condition AND (environment + team)
+#
+# Use case: the agent must BOTH be running in production AND belong to the
+# payments team to reach the payment-authorization endpoint. A mis-tagged
+# agent on either axis is denied.
+#
+# DSL feature: multiple `when` keys are an implicit AND. The evaluator reports
+# the FIRST failing condition in the audit log — order your conditions so the
+# most diagnostic failure surfaces first if you have a preference (otherwise
+# declaration order controls).
+#
+# Fits: the high-risk crossover case — production write endpoints that only
+# one team is authorized to drive.
+
+when:
+  environment: "production"
+  team:        {in: ["payments"]}
+
+allowed_endpoints:
+  - /v1/payments/authorize
+  - /v1/payments/capture
+allowed_methods:
+  - POST
+
+# Example pass:  agent.metadata = {environment: "production", team: "payments"}
+# Example deny:  agent.metadata = {environment: "staging",    team: "payments"}
+#                → fails first condition (environment)
+# Example deny:  agent.metadata = {environment: "production", team: "sales"}
+#                → passes env, fails team: when:team:not_in:...actual='sales'

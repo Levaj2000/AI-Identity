@@ -1,0 +1,24 @@
+# Sample 02 — Production-only (equality condition)
+#
+# Use case: the agent should reach a live API only when tagged as running in
+# production. Staging / dev / test agents are denied by the `when` clause
+# before endpoint matching runs.
+#
+# DSL feature: scalar-shorthand equality (`environment: "production"`).
+#
+# Fits: payment authorizers, customer-data writers — anything where a stray
+# staging call to a prod endpoint is unacceptable.
+
+when:
+  environment: "production"
+
+allowed_endpoints:
+  - /v1/payments/*
+allowed_methods:
+  - POST
+
+# Example pass:  agent.metadata = {environment: "production"} → allowed
+# Example deny:  agent.metadata = {environment: "staging"}
+#                → deny_reason = when:environment:not_equal:expected='production',actual='staging'
+# Example deny:  agent.metadata = {}  # key missing
+#                → deny_reason = when:environment:missing:expected='production'

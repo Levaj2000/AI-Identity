@@ -1,0 +1,23 @@
+# Sample 07 — Read-only via method restriction
+#
+# Use case: an agent should be able to read anything under `/v1/*` but must
+# never mutate. The cleanest expression is an `allowed_methods` list of GET
+# only — no deny list needed, no per-endpoint method tuple.
+#
+# DSL feature: `allowed_methods` as the sole write-guard. Method check runs
+# AFTER `when` and endpoint matching; the audit log distinguishes
+# `allowed_methods:not_allowed:<METHOD>` from an endpoint denial.
+#
+# Fits: analytics / observability agents that scrape state but must never
+# write it back; third-party integrations on a trial tier.
+
+allowed_endpoints:
+  - /v1/*
+allowed_methods:
+  - GET
+
+# Example pass:  GET  /v1/orders/123 → allowed
+# Example deny:  POST /v1/orders
+#                → deny_reason = allowed_methods:not_allowed:POST
+# Example deny:  GET  /v2/orders/123
+#                → deny_reason = allowed_endpoints:not_matched:/v2/orders/123

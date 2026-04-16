@@ -1,0 +1,49 @@
+# Sample 08 — Full-stack production write path
+#
+# Use case: the realistic end-to-end policy for a payment-processing agent.
+# Combines every feature: metadata gating (environment + team), endpoint
+# allow-list with wildcards, a defensive deny list for admin surfaces, and a
+# method restriction so the agent can't read everything it can write.
+#
+# DSL features: `when` (equality + IN), allowed_endpoints, denied_endpoints,
+# allowed_methods. Evaluation order: `when` → denied_endpoints →
+# allowed_endpoints → allowed_methods. Failing condition wins the audit log.
+#
+# Fits: the first policy you'd ship for a production design partner — it
+# covers the four real questions a compliance reviewer will ask:
+#   1. Who can use it?       (team)
+#   2. Where does it run?    (environment)
+#   3. What can it reach?    (allowed/denied endpoints)
+#   4. What can it do there? (allowed methods)
+
+when:
+  environment: "production"
+  team:        {in: ["payments", "finance"]}
+  framework:   {not_in: ["pytest", "locust"]}
+
+allowed_endpoints:
+  - /v1/payments/*
+  - /v1/ledger/entries
+  - /v1/refunds/*
+denied_endpoints:
+  - /v1/payments/admin/*
+  - /v1/payments/*/delete
+allowed_methods:
+  - POST
+  - PUT
+
+# Example pass:
+#   metadata = {environment: "production", team: "payments", framework: "langchain"}
+#   POST /v1/payments/authorize → allowed (matched /v1/payments/*)
+#
+# Example deny (when clause):
+#   metadata = {environment: "staging", team: "payments", framework: "langchain"}
+#   → when:environment:not_equal:expected='production',actual='staging'
+#
+# Example deny (denied_endpoints beats allowed_endpoints):
+#   metadata = {environment: "production", team: "finance", framework: "langchain"}
+#   POST /v1/payments/admin/rotate-key → denied_endpoints:/v1/payments/admin/*
+#
+# Example deny (method):
+#   metadata = {environment: "production", team: "payments", framework: "langchain"}
+#   GET /v1/payments/abc → allowed_methods:not_allowed:GET
