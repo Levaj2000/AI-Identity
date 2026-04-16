@@ -302,6 +302,15 @@ class AuditLogResponse(BaseModel):
             "write time; sentinel system-org for orphan/shadow entries."
         ),
     )
+    correlation_id: str | None = Field(
+        default=None,
+        max_length=64,
+        description=(
+            "End-to-end request ID. One value travels client → API → gateway → "
+            "audit row, so operators can reconstruct a single user action across "
+            "services with a point query."
+        ),
+    )
     endpoint: str
     method: str
     decision: str

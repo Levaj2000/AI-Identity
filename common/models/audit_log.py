@@ -41,6 +41,18 @@ class AuditLog(Base):
         index=True,
     )
 
+    # End-to-end correlation ID — one value travels client → API → gateway
+    # → audit row. Enables operators (and SIEM pipelines) to reconstruct a
+    # single user action across services with a point query.
+    # See common/audit/correlation.py for generation / header handling.
+    # NOT included in the HMAC chain — it's operational metadata, not a
+    # statement about what the request did.
+    correlation_id: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
+    )
+
     # Request details
     endpoint: Mapped[str] = mapped_column(String(2048), nullable=False)
     method: Mapped[str] = mapped_column(String(10), nullable=False)
