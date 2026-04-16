@@ -33,6 +33,7 @@ from common.audit.transports import TRANSPORTS, DeliveryResult
 from common.models.audit_log import AuditLog
 from common.models.audit_outbox import AuditLogOutbox, OutboxStatus
 from common.models.audit_sink import AuditLogSink
+from common.observability.metrics import record_outbox_delivery
 
 logger = logging.getLogger("ai_identity.audit.outbox")
 
@@ -339,6 +340,15 @@ def flush_outbox(
                 )
 
     db.commit()
+
+    # Phase 2B — surface delivery outcomes to Prometheus. Safe to call
+    # outside the DB transaction; counter bumps are in-memory.
+    if delivered:
+        record_outbox_delivery("delivered", count=delivered)
+    if failed:
+        record_outbox_delivery("failed", count=failed)
+    if dead_lettered:
+        record_outbox_delivery("dead_letter", count=dead_lettered)
 
     return FlushResult(
         rows_claimed=len(claimed_rows),
