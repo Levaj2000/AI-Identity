@@ -120,6 +120,14 @@ OPENAPI_TAGS = [
         "of agent policies, key hygiene, audit integrity, and credential security.",
     },
     {
+        "name": "compliance.exports",
+        "description": "Compliance evidence exports — request a signed ZIP bundle "
+        "covering an audit period for SOC 2, EU AI Act, or NIST AI RMF. "
+        "Endpoints are wired with the real contract; the build pipeline is a stub "
+        "(501 Not Implemented) pending the Milestone #34 follow-on sprint. "
+        "See docs/ADR-002-compliance-exports.md.",
+    },
+    {
         "name": "usage",
         "description": "Account usage and quota management — check resource utilization "
         "against your tier limits and view available plans.",
@@ -499,6 +507,7 @@ from api.app.routers.billing import router as billing_router  # noqa: E402
 from api.app.routers.capabilities import router as capabilities_router  # noqa: E402
 from api.app.routers.cleanup_cron import router as cleanup_cron_router  # noqa: E402
 from api.app.routers.compliance import router as compliance_router  # noqa: E402
+from api.app.routers.compliance_exports import router as compliance_exports_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
 from api.app.routers.email_cron import router as email_cron_router  # noqa: E402
 from api.app.routers.forensic_keys import router as forensic_keys_router  # noqa: E402
@@ -521,6 +530,7 @@ app.include_router(audit_sinks_router)
 app.include_router(auth_router)
 app.include_router(billing_router)
 app.include_router(compliance_router)
+app.include_router(compliance_exports_router)
 app.include_router(credentials_router)
 app.include_router(cleanup_cron_router)
 app.include_router(email_cron_router)
