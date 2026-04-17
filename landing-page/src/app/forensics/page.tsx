@@ -3,9 +3,9 @@ import Link from "next/link";
 import { generatePageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "AI Agent Forensics — Replay Any Session, Prove Every Decision",
+  title: "AI Agent Forensics — Cryptographically Signed Evidence, Verified Offline",
   description:
-    "Replay any agent session step-by-step. Produce tamper-evident timelines regulators can verify independently of the vendor. HMAC-SHA256 hash-chained evidence for every agent action.",
+    "Every session closes with a DSSE + ECDSA P-256 signed attestation over the HMAC audit chain. Auditors fetch the envelope, fetch the public JWKS, and verify offline — no vendor trust required. Signing keys never leave KMS hardware.",
   path: "/forensics",
 });
 
@@ -32,9 +32,21 @@ const forensicFeatures = [
     ),
   },
   {
+    title: "Signed Session Attestations",
+    description:
+      "Every session closes with a DSSE envelope signed by a KMS-held ECDSA P-256 key. The signed payload commits to the exact audit range, so an auditor can prove offline that the chain hasn't been altered since sign time.",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+        <circle cx="12" cy="16" r="1" />
+      </svg>
+    ),
+  },
+  {
     title: "Chain Verification",
     description:
-      "One API call verifies the integrity of your entire audit chain. If a single record was altered or deleted, the chain breaks — and we tell you exactly where.",
+      "One API call (or the offline CLI) verifies the integrity of your entire audit chain. If a single record was altered or deleted, the chain breaks — and we tell you exactly where.",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -93,12 +105,12 @@ const pillars = [
   {
     pillar: "Compliance",
     question: "Can we prove rules were followed?",
-    capability: "HMAC-verifiable audit logs, automated compliance assessments.",
+    capability: "DSSE-signed session attestations, HMAC-verifiable audit logs, automated compliance assessments.",
   },
   {
     pillar: "Forensics",
     question: "What happened, provably?",
-    capability: "Hash-chained logs, incident replay, export, chain verification.",
+    capability: "Hash-chained logs, incident replay, export, offline cryptographic verification.",
   },
 ];
 
@@ -111,7 +123,7 @@ const complianceMapping = [
   {
     framework: "SOC 2 Type II",
     requirement: "Tamper-evident audit logging",
-    forensicControl: "Cryptographic hash chain where altering one record breaks the entire chain. Independently verifiable.",
+    forensicControl: "DSSE-signed session attestations (ECDSA P-256) over an HMAC-SHA256 hash chain. Dual-key separation: signing keys in KMS hardware, chain HMAC keys in the application tier — forging evidence requires both.",
   },
   {
     framework: "HIPAA",
@@ -139,7 +151,7 @@ export default function Forensics() {
             <span className="text-[rgb(166,218,255)]">Prove It.</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
-            AI Forensics is the ability to reconstruct an agent&apos;s entire decision chain, prove it hasn&apos;t been altered, and export it as evidence for security, compliance, and legal teams.
+            AI Forensics reconstructs an agent&apos;s entire decision chain, commits to it with a KMS-signed DSSE attestation, and exports evidence any auditor can verify offline — without trusting our infrastructure.
           </p>
         </div>
       </section>

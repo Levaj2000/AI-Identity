@@ -374,7 +374,8 @@ export function ForensicsPage() {
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">AI Forensics</h1>
           <p className="text-sm text-zinc-400 mt-1">
-            Reconstruct agent decisions with tamper-evident audit chains
+            Reconstruct agent decisions with HMAC-chained audit logs and DSSE-signed session
+            attestations
           </p>
         </div>
         <div className="flex items-center gap-2">

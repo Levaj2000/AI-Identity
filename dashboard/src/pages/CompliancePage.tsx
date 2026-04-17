@@ -258,7 +258,8 @@ export function CompliancePage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Compliance & Audit</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-[#71717a]">
-            SOC 2-ready audit trail with HMAC-SHA256 integrity verification
+            SOC 2-ready audit trail — HMAC-SHA256 integrity chain plus DSSE + ECDSA P-256 session
+            attestations auditors can verify offline
           </p>
         </div>
         <div className="flex items-center gap-2">

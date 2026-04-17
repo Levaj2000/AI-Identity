@@ -34,11 +34,12 @@ const steps = [
     num: "03",
     title: "Prove Everything",
     description:
-      "Every agent action becomes tamper-evident forensic evidence. Replay any session step-by-step. Produce timelines regulators can verify independently of the vendor.",
+      "Every agent action becomes tamper-evident forensic evidence. Replay any session step-by-step. Produce cryptographically-signed timelines regulators can verify independently of the vendor.",
     details: [
       "HMAC-SHA256 hash-chained audit trail — alter one record and the entire chain breaks",
+      "DSSE + ECDSA P-256 signed session attestations — signing keys held in KMS hardware, never leave the HSM",
+      "Offline verification CLI — auditors fetch the envelope, fetch the public JWKS, and verify without touching our servers",
       "Forensic replay: reconstruct any agent's complete decision path from policy evaluation to action",
-      "Independent verification — regulators and auditors can validate the chain without trusting your infrastructure",
       "Export audit-ready evidence with chain-of-custody certificates for SOC 2, EU AI Act, and GDPR",
     ],
   },
@@ -178,7 +179,7 @@ export default function HomeContent() {
               className="text-lg md:text-xl max-w-2xl mx-auto mb-10"
               style={{ color: "rgba(213,219,230,0.7)", letterSpacing: "-0.32px" }}
             >
-              Secure identity and least-privilege access for every AI agent — with forensic-grade audit trails regulators can verify independently.
+              Secure identity, context-aware policy, and cryptographically-signed forensic evidence for every AI agent — verifiable offline, no vendor trust required.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
