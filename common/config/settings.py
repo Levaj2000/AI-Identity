@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     key_rotation_grace_hours: int = 24
     audit_hmac_key: str = "CHANGE-ME-IN-PRODUCTION"
 
+    # Forensic attestation signer (see docs/forensics/attestation-format.md)
+    # Either set forensic_signing_key_id to a GCP KMS key-version resource path
+    # (projects/.../cryptoKeyVersions/N) for production signing via KMS, or set
+    # forensic_signing_key_pem to a PEM-encoded P-256 private key for local
+    # development/testing. If both are empty, the attestation endpoint 503s.
+    forensic_signing_key_id: str = ""
+    forensic_signing_key_pem: str = ""
+
     # Upstream credential encryption (Fernet)
     credential_encryption_key: str = ""
 
