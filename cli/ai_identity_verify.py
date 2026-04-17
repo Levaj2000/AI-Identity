@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
 """AI Identity — Offline Verification CLI.
 
-Standalone, zero-dependency tool for auditors to verify AI Identity
-forensic exports completely offline — no database, no API, no network.
+Standalone tool for auditors to verify AI Identity forensic exports
+completely offline — no database, no API, no network.
 
-Two verification modes:
-  report  — verify the HMAC chain-of-custody certificate on an exported report
-  chain   — verify the full sequential HMAC audit chain from exported entries
+Three verification modes:
+  report       — verify the HMAC chain-of-custody certificate on an exported report
+  chain        — verify the full sequential HMAC audit chain from exported entries
+  attestation  — verify an ECDSA-signed forensic attestation DSSE envelope
 
-Requires: Python 3.9+, no external packages.
-HMAC key: set AI_IDENTITY_HMAC_KEY environment variable.
+Requires: Python 3.9+ for `report` and `chain` (stdlib only). The
+`attestation` command additionally requires the `cryptography` package
+(`pip install cryptography`) for ECDSA verification.
+
+HMAC key (report/chain): set AI_IDENTITY_HMAC_KEY environment variable.
+Public key (attestation): provide via --pubkey <pem> or --jwks <file>.
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import hmac
 import json
@@ -26,9 +32,14 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 TOOL_NAME = "ai-identity-verify"
 GENESIS = "GENESIS"
+
+# DSSE constants — must match common/schemas/forensic_attestation.py
+ATTESTATION_PAYLOAD_TYPE = "application/vnd.ai-identity.attestation+json"
+ATTESTATION_SCHEMA_VERSION = 1
+DSSE_PREAMBLE = b"DSSEv1"
 
 # ── Colour helpers ──────────────────────────────────────────────────────
 
@@ -661,6 +672,321 @@ def cmd_chain(args: argparse.Namespace) -> int:
         return _cmd_chain_full(args, key, entries, total)
 
 
+# ── Attestation verification (DSSE + ECDSA P-256) ──────────────────────
+#
+# Unlike the HMAC-only `report` and `chain` commands, attestation verify
+# needs asymmetric crypto. We rely on the `cryptography` package for
+# ECDSA verification — importing it lazily inside the command so that
+# `report` and `chain` continue to work with a stdlib-only install.
+
+
+def _base64_decode(value: str, field: str) -> bytes:
+    """Strict base64 decode; raises usage error on bad input."""
+    try:
+        return base64.b64decode(value, validate=True)
+    except (ValueError, base64.binascii.Error) as exc:  # type: ignore[attr-defined]
+        print(f"Error: {field} is not valid base64: {exc}", file=sys.stderr)
+        sys.exit(2)
+
+
+def _b64url_decode(value: str, field: str) -> bytes:
+    """Decode base64url (JWK) with optional missing padding."""
+    pad = "=" * (-len(value) % 4)
+    try:
+        return base64.urlsafe_b64decode(value + pad)
+    except (ValueError, base64.binascii.Error) as exc:  # type: ignore[attr-defined]
+        print(f"Error: {field} is not valid base64url: {exc}", file=sys.stderr)
+        sys.exit(2)
+
+
+def _dsse_pae(payload_type: str, payload_bytes: bytes) -> bytes:
+    """DSSE Pre-Authentication Encoding.
+
+    Must match ``common.schemas.forensic_attestation.pae`` byte-for-byte.
+    Any divergence here silently breaks verification — keep the two
+    implementations in lockstep.
+    """
+    type_bytes = payload_type.encode("utf-8")
+    return (
+        DSSE_PREAMBLE
+        + b" "
+        + str(len(type_bytes)).encode("ascii")
+        + b" "
+        + type_bytes
+        + b" "
+        + str(len(payload_bytes)).encode("ascii")
+        + b" "
+        + payload_bytes
+    )
+
+
+def _load_public_key(args: argparse.Namespace, envelope_kid: str):
+    """Resolve the public key used to verify the envelope.
+
+    Two sources, mutually exclusive:
+
+    * ``--pubkey <PEM file>`` — single local PEM (e.g. a pinned copy
+      for the key that signed this envelope). No kid cross-check —
+      if you passed a specific PEM, we trust you know which key it is.
+    * ``--jwks <JSON file>`` — a JWKS document (as served by
+      ``/.well-known/ai-identity-public-keys.json``). We match on
+      ``kid`` against the envelope's signature keyid.
+
+    Returns the cryptography public key object. Exits with code 2 on
+    any configuration error so the caller never needs to guard against
+    ``None``.
+    """
+    try:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+    except ImportError:
+        print(
+            "Error: The `attestation` command requires the `cryptography` "
+            "package.\n"
+            "\n"
+            "Install it with:\n"
+            "\n"
+            "  pip install cryptography\n"
+            "\n"
+            "(The `report` and `chain` commands are stdlib-only and work "
+            "without this dependency.)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if args.pubkey and args.jwks:
+        print(
+            "Error: --pubkey and --jwks are mutually exclusive; pick one.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    if not args.pubkey and not args.jwks:
+        print(
+            "Error: Provide a verification key via --pubkey <pem-file> or --jwks <jwks.json>.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    if args.pubkey:
+        try:
+            with open(args.pubkey, "rb") as f:
+                pem_bytes = f.read()
+        except FileNotFoundError:
+            print(f"Error: Public key file not found: {args.pubkey}", file=sys.stderr)
+            sys.exit(2)
+        try:
+            public_key = serialization.load_pem_public_key(pem_bytes)
+        except ValueError as exc:
+            print(f"Error: Could not parse PEM public key: {exc}", file=sys.stderr)
+            sys.exit(2)
+        if not isinstance(public_key, ec.EllipticCurvePublicKey):
+            print(
+                "Error: Public key is not an EC key (attestation format requires ECDSA P-256).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        return public_key
+
+    # JWKS path ---------------------------------------------------------
+    jwks = _load_json(args.jwks)
+    if not isinstance(jwks, dict) or "keys" not in jwks:
+        print(
+            "Error: JWKS file does not look like a JWK Set "
+            "(expected an object with a 'keys' array).",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    match = None
+    for jwk in jwks["keys"]:
+        if jwk.get("kid") == envelope_kid:
+            match = jwk
+            break
+    if match is None:
+        available = [k.get("kid", "<no-kid>") for k in jwks["keys"]]
+        print(
+            f"Error: JWKS has no key with kid={envelope_kid!r}.\nAvailable kids: {available}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    if match.get("kty") != "EC" or match.get("crv") != "P-256":
+        print(
+            f"Error: JWK kid={envelope_kid!r} is not EC/P-256 "
+            f"(kty={match.get('kty')!r}, crv={match.get('crv')!r}).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    x_bytes = _b64url_decode(match["x"], field=f"JWK kid={envelope_kid!r} x")
+    y_bytes = _b64url_decode(match["y"], field=f"JWK kid={envelope_kid!r} y")
+    numbers = ec.EllipticCurvePublicNumbers(
+        x=int.from_bytes(x_bytes, "big"),
+        y=int.from_bytes(y_bytes, "big"),
+        curve=ec.SECP256R1(),
+    )
+    return numbers.public_key()
+
+
+def cmd_attestation(args: argparse.Namespace) -> int:
+    """Verify a forensic attestation DSSE envelope."""
+    envelope = _load_json(args.file)
+
+    # Shape check — fail fast with a precise message rather than a
+    # generic KeyError deep inside the verify path.
+    if not isinstance(envelope, dict):
+        print("Error: Envelope must be a JSON object.", file=sys.stderr)
+        sys.exit(2)
+    if envelope.get("payloadType") != ATTESTATION_PAYLOAD_TYPE:
+        print(
+            f"Error: Unexpected payloadType: {envelope.get('payloadType')!r} "
+            f"(expected {ATTESTATION_PAYLOAD_TYPE!r}).",
+            file=sys.stderr,
+        )
+        return 1
+    signatures = envelope.get("signatures") or []
+    if len(signatures) != 1:
+        print(
+            f"Error: Expected exactly 1 signature, got {len(signatures)}.",
+            file=sys.stderr,
+        )
+        return 1
+
+    sig_entry = signatures[0]
+    envelope_kid = sig_entry.get("keyid", "")
+    if not envelope_kid:
+        print("Error: Signature is missing keyid.", file=sys.stderr)
+        return 1
+
+    public_key = _load_public_key(args, envelope_kid)
+
+    payload_bytes = _base64_decode(envelope.get("payload", ""), field="envelope.payload")
+    signature_der = _base64_decode(sig_entry.get("sig", ""), field="signature.sig")
+
+    # Parse the payload JSON (without re-canonicalizing — we verify over
+    # the bytes that were actually signed, not a round-tripped copy).
+    try:
+        payload = json.loads(payload_bytes)
+    except json.JSONDecodeError as exc:
+        print(f"Error: payload is not valid JSON: {exc}", file=sys.stderr)
+        return 1
+    if not isinstance(payload, dict):
+        print("Error: payload JSON is not an object.", file=sys.stderr)
+        return 1
+
+    schema_version = payload.get("schema_version")
+    if schema_version != ATTESTATION_SCHEMA_VERSION:
+        print(
+            f"Error: Unsupported schema_version: {schema_version!r} "
+            f"(this CLI only understands v{ATTESTATION_SCHEMA_VERSION}).",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Range sanity — cheap and catches obviously-malformed payloads
+    # before we invest in the ECDSA verify.
+    first_id = payload.get("first_audit_id")
+    last_id = payload.get("last_audit_id")
+    event_count = payload.get("event_count")
+    range_ok = (
+        isinstance(first_id, int)
+        and isinstance(last_id, int)
+        and isinstance(event_count, int)
+        and last_id >= first_id
+        and event_count >= 1
+    )
+    if not range_ok:
+        print(
+            "Error: Payload range fields are missing or inconsistent "
+            "(first_audit_id / last_audit_id / event_count).",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Signature verify --------------------------------------------------
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    signing_input = _dsse_pae(ATTESTATION_PAYLOAD_TYPE, payload_bytes)
+    sig_valid = True
+    sig_error: str | None = None
+    try:
+        public_key.verify(signature_der, signing_input, ec.ECDSA(hashes.SHA256()))
+    except InvalidSignature:
+        sig_valid = False
+        sig_error = "signature does not verify against the supplied public key"
+    except Exception as exc:  # pragma: no cover — defensive
+        sig_valid = False
+        sig_error = f"verify raised: {exc}"
+
+    # Output ------------------------------------------------------------
+    details = {
+        "file": os.path.basename(args.file),
+        "payload_type": ATTESTATION_PAYLOAD_TYPE,
+        "schema_version": schema_version,
+        "signer_key_id": payload.get("signer_key_id"),
+        "envelope_keyid": envelope_kid,
+        "session_id": payload.get("session_id"),
+        "org_id": payload.get("org_id"),
+        "first_audit_id": first_id,
+        "last_audit_id": last_id,
+        "event_count": event_count,
+        "evidence_chain_hash": payload.get("evidence_chain_hash"),
+        "session_start": payload.get("session_start"),
+        "session_end": payload.get("session_end"),
+        "signed_at": payload.get("signed_at"),
+        "signature_valid": sig_valid,
+    }
+    if sig_error:
+        details["signature_error"] = sig_error
+
+    if args.json:
+        result = {
+            "tool": TOOL_NAME,
+            "version": __version__,
+            "command": "attestation",
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "result": "valid" if sig_valid else "invalid",
+            "details": details,
+        }
+        print(json.dumps(result, indent=2))
+    else:
+        title = _bold("AI Identity \u2014 Attestation Verification")
+        print(f"\n{title}")
+        print("\u2550" * 41)
+        print(f"  File:         {details['file']}")
+        print(f"  Schema:       v{schema_version}")
+        print(f"  Key ID:       {details['signer_key_id']}")
+        print(f"  Session:      {details['session_id']}")
+        print(f"  Org:          {details['org_id']}")
+        print(
+            f"  Audit range:  {first_id}..{last_id} "
+            f"({event_count} event{'s' if event_count != 1 else ''})"
+        )
+        print(f"  Chain hash:   {details['evidence_chain_hash']}")
+        print(f"  Signed at:    {details['signed_at']}")
+        print()
+        if sig_valid:
+            ok_msg = _green("VALID \u2713")
+            print(f"  Signature:    {ok_msg}")
+        else:
+            bad_msg = _red("INVALID \u2717")
+            print(f"  Signature:    {bad_msg}")
+            if sig_error:
+                print(f"                {_dim(sig_error)}")
+        print()
+
+        if args.verbose:
+            print(_dim(f"  payloadType:     {envelope.get('payloadType')}"))
+            print(_dim(f"  signing keyid:   {envelope_kid}"))
+            print(_dim(f"  signature bytes: {len(signature_der)} (DER)"))
+            print(_dim(f"  payload bytes:   {len(payload_bytes)} (canonical JSON)"))
+            print()
+
+    return 0 if sig_valid else 1
+
+
 # ── CLI argument parsing ────────────────────────────────────────────────
 
 
@@ -678,9 +1004,11 @@ def build_parser() -> argparse.ArgumentParser:
             "  %(prog)s report forensics_report.json\n"
             "  %(prog)s chain audit_export.json --verbose\n"
             "  %(prog)s chain audit_export.json --json\n"
+            "  %(prog)s attestation envelope.json --pubkey signer.pem\n"
+            "  %(prog)s attestation envelope.json --jwks keys.json\n"
             "\n"
             "Environment:\n"
-            "  AI_IDENTITY_HMAC_KEY  HMAC secret key (required)\n"
+            "  AI_IDENTITY_HMAC_KEY  HMAC secret key (required for report/chain)\n"
             "\n"
             "Exit codes:\n"
             "  0  Verification passed\n"
@@ -725,6 +1053,39 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to a JSON report file (ForensicsReportResponse)",
     )
 
+    # attestation subcommand
+    attestation_parser = subparsers.add_parser(
+        "attestation",
+        help="Verify a forensic attestation DSSE envelope",
+        description=(
+            "Verify the ECDSA-P256 signature on an AI Identity forensic "
+            "attestation envelope (DSSE + JCS). Requires the `cryptography` "
+            "package (the `report` and `chain` commands do not)."
+        ),
+    )
+    attestation_parser.add_argument(
+        "file",
+        help="Path to a DSSE envelope JSON file (as returned by GET /api/v1/sessions/{id}/attestation)",
+    )
+    attestation_parser.add_argument(
+        "--pubkey",
+        metavar="PEM",
+        help=(
+            "Path to a PEM-encoded ECDSA P-256 public key. Use when you've "
+            "pinned a specific verification key. Mutually exclusive with --jwks."
+        ),
+    )
+    attestation_parser.add_argument(
+        "--jwks",
+        metavar="JSON",
+        help=(
+            "Path to a JWKS file (as served by "
+            "/.well-known/ai-identity-public-keys.json). The envelope's "
+            "keyid is matched against the JWKS to pick the right public key. "
+            "Mutually exclusive with --pubkey."
+        ),
+    )
+
     # chain subcommand
     chain_parser = subparsers.add_parser(
         "chain",
@@ -767,6 +1128,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return cmd_report(args)
     elif args.command == "chain":
         return cmd_chain(args)
+    elif args.command == "attestation":
+        return cmd_attestation(args)
     else:
         parser.print_help()
         return 2

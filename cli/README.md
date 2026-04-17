@@ -17,7 +17,10 @@ cp cli/ai_identity_verify.py /usr/local/bin/ai_identity_verify
 chmod +x /usr/local/bin/ai_identity_verify
 ```
 
-**Requirements:** Python 3.9+ (stdlib only — no `pip install` needed).
+**Requirements:**
+
+- **`report` and `chain` commands:** Python 3.9+, stdlib only — no `pip install` needed.
+- **`attestation` command:** additionally requires the [`cryptography`](https://cryptography.io) package for ECDSA verification. Install with `pip install cryptography`. The other two commands continue to work without it.
 
 ## Quick Start
 
@@ -39,6 +42,52 @@ python ai_identity_verify.py report forensics_report.json --json
 ```
 
 ## Commands
+
+### `attestation` — Verify a Forensic Attestation Envelope
+
+Verifies the ECDSA-P256 signature on a DSSE envelope returned by
+`GET /api/v1/sessions/{session_id}/attestation`. This is the
+crypto-signed equivalent of the HMAC `report` certificate — it proves
+AI Identity signed a specific statement about a specific audit range,
+verifiable offline with only the public key.
+
+```bash
+# Using a locally-pinned PEM public key
+python ai_identity_verify.py attestation envelope.json --pubkey signer.pem
+
+# Using a JWKS file (fetched once from /.well-known/ai-identity-public-keys.json)
+curl https://api.ai-identity.co/.well-known/ai-identity-public-keys.json > keys.json
+python ai_identity_verify.py attestation envelope.json --jwks keys.json
+```
+
+**What it checks:**
+
+1. `payloadType` equals the AI Identity attestation MIME type
+2. Exactly one signature is present
+3. `schema_version == 1` (rejects v2+ loudly rather than silently)
+4. `(first_audit_id, last_audit_id, event_count)` are consistent
+5. Reconstructs the DSSE pre-authentication encoding and verifies the
+   ECDSA-P256 signature against the supplied public key
+
+**Example output (valid):**
+```
+AI Identity — Attestation Verification
+═════════════════════════════════════════
+  File:         envelope.json
+  Schema:       v1
+  Key ID:       projects/.../cryptoKeyVersions/1
+  Session:      b8f2c1a0-4e6d-4e2a-9f1a-3c2b0d4e8f7a
+  Org:          f1e2d3c4-b5a6-4798-8877-66554433abcd
+  Audit range:  104821..104827 (7 events)
+  Chain hash:   3b7e0a6f4a9d8c2e5b1f0d3c6a8b9e2d1f4c7a0b3d6e9f2a5c8b1d4e7a0b3c6d
+  Signed at:    2026-04-17T13:47:30+00:00
+
+  Signature:    VALID ✓
+```
+
+**What this does NOT do:** walking the HMAC audit chain to confirm the
+committed `evidence_chain_hash` matches the actual rows. That's the
+`chain` subcommand's job — run both for full end-to-end verification.
 
 ### `report` — Verify Chain-of-Custody Certificate
 
