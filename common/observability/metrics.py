@@ -98,6 +98,32 @@ outbox_deliveries_total = Counter(
 )
 
 
+# ── Forensic attestation signing (#263) ────────────────────────────────
+#
+# Sign latency matters because a slow KMS call blocks the attestation
+# POST. Labeled by backend so we can separate "KMS network call" (slow,
+# bursty) from "local PEM" (fast, for dev + tests). Outcome lets alerts
+# distinguish "KMS throwing" from "clean slow signs" — only the former
+# should page.
+
+attestation_sign_latency_ms = Histogram(
+    "ai_identity_attestation_sign_latency_ms",
+    "Observed latency of forensic attestation signing (milliseconds).",
+    ["backend"],  # "kms" | "local"
+    # KMS typical is 50–300ms, local is single-digit. Buckets cover both
+    # without so many bins that cardinality balloons.
+    buckets=(1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500),
+    registry=REGISTRY,
+)
+
+attestation_signs_total = Counter(
+    "ai_identity_attestation_signs_total",
+    "Forensic attestation sign attempts, labeled by backend and outcome.",
+    ["backend", "outcome"],  # outcome: "ok" | "error" | "config_error"
+    registry=REGISTRY,
+)
+
+
 # ── Process-level gauges (populated on scrape) ─────────────────────────
 
 agents_total = Gauge(
@@ -308,6 +334,8 @@ __all__ = [
     "agents_total",
     "audit_denies_total",
     "audit_events_total",
+    "attestation_sign_latency_ms",
+    "attestation_signs_total",
     "audit_latency_ms",
     "audit_write_failures_total",
     "classify_audit_write_failure",
