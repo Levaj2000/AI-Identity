@@ -214,6 +214,58 @@ still fetch the exact public key that signed it.
 key.** A key_id of `.../cryptoKeys/session-attestation` would be
 ambiguous after the first rotation.
 
+## Retention coordination
+
+An attestation commits to a range of `audit_log` rows by ID. If those
+rows are purged before the attestation is verified, the envelope
+remains cryptographically valid but becomes *unverifiable* against the
+chain — the whole point of the attestation evaporates.
+
+Two guardrails, enforced in the signing pipeline (#263), close this:
+
+1. **Eager resolution at sign time.** The signer resolves the
+   `[first_audit_id, last_audit_id]` range to a concrete list of row
+   IDs at the moment of signing and stores that list (or a Merkle root
+   over those row hashes — TBD per perf) alongside the envelope. This
+   means a later verifier can detect "the chain existed at sign time
+   but N rows are now missing" rather than seeing a plausible but
+   unreachable range.
+2. **Retention policy is a hard constraint.** Any audit-log retention
+   policy MUST be at least as long as the attestation retention
+   policy. Operators who shorten audit retention without shortening
+   attestation retention are creating silently-broken evidence, and
+   the compliance export work (#272) will surface this as a policy
+   conflict.
+
+The attestation table itself holds the envelope indefinitely — it is
+small (~1 KB) and is the artifact customers and auditors reference. Row
+purges happen against `audit_log`, not against attestations.
+
+## Retroactive attestation
+
+`session_start` and `session_end` are producer-reported timestamps, and
+nothing in the signing pipeline forbids signing a session whose window
+closed days or weeks ago. This is deliberate:
+
+- The HMAC audit chain is append-only and tamper-evident. Rows from
+  two weeks ago are as trustworthy as rows from two minutes ago — the
+  chain's integrity is independent of when we ask about it.
+- Some operator flows (batch ingest, customer-initiated forensic
+  request, regulator subpoena) legitimately need to attest to a window
+  that has already closed.
+
+The `signed_at` field is the signer's wall clock, **not** the session
+window. Verifiers should read `signed_at` as "when AI Identity
+committed to this evidence" and `session_start`/`session_end` as "the
+window the evidence covers." A large gap between them is a flag
+worth noticing but not a verification failure.
+
+Overlapping sessions — two attestations whose `[first_audit_id,
+last_audit_id]` ranges intersect — are **allowed** at this layer. The
+evidence chain is still sound for each. Detection of overlap as a
+*policy* concern is deferred to operator tooling (flagged for a PM
+follow-up out of #263).
+
 ## What this format does NOT prove
 
 Worth being explicit — an attestation is a claim about audit log
