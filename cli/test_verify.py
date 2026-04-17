@@ -12,6 +12,7 @@ Uses only unittest (stdlib). Covers:
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import io
@@ -896,7 +897,7 @@ class TestCLIParsing(unittest.TestCase):
         ):
             cli.main(["--version"])
         combined = stdout.getvalue() + stderr.getvalue()
-        self.assertIn("1.0.0", combined)
+        self.assertIn(cli.__version__, combined)
 
 
 # ── Test: Cross-validation with server logic ────────────────────────────
@@ -1071,6 +1072,285 @@ class TestTimestampNormalization(unittest.TestCase):
             self.assertIn("VALID", out)
         finally:
             os.unlink(path)
+
+
+# ── Attestation verification tests ──────────────────────────────────────
+
+
+def _have_cryptography() -> bool:
+    try:
+        import cryptography  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+@unittest.skipUnless(_have_cryptography(), "cryptography package not installed")
+class TestAttestationVerification(unittest.TestCase):
+    """End-to-end tests for the `attestation` subcommand.
+
+    These tests import the server-side signer helpers so the signed
+    envelope we hand to the CLI is produced exactly the same way
+    production signs — no divergent mock implementation.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        # Make the project importable so we can reuse the server signer.
+        import pathlib
+
+        repo_root = pathlib.Path(__file__).resolve().parent.parent
+        if str(repo_root) not in sys.path:
+            sys.path.insert(0, str(repo_root))
+
+        import uuid
+        from datetime import datetime as _dt
+        from datetime import timezone as _tz
+
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+
+        from common.schemas.forensic_attestation import (
+            AttestationPayloadV1,
+            local_ecdsa_signer,
+            sign_payload,
+        )
+
+        cls._uuid = uuid
+        cls._dt = _dt
+        cls._tz = _tz
+        cls._AttestationPayloadV1 = AttestationPayloadV1
+        # Wrap callables in staticmethod so Python doesn't try to bind
+        # them to `self` when accessed via instance attribute lookup.
+        cls._sign_payload = staticmethod(sign_payload)
+        cls._local_ecdsa_signer = staticmethod(local_ecdsa_signer)
+        cls._serialization = serialization
+        cls._ec = ec
+
+        # Fresh keypair for the whole suite — the envelope and JWKS
+        # always agree on key identity.
+        cls._private_key = ec.generate_private_key(ec.SECP256R1())
+        cls._pub_pem = cls._private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+
+        import hashlib as _hashlib
+
+        pub_der = cls._private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.DER,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        cls._kid = "local:" + _hashlib.sha256(pub_der).hexdigest()
+
+    # Factories ---------------------------------------------------------
+
+    def _build_envelope(self, *, kid: str | None = None) -> dict[str, Any]:
+        now = self._dt.now(self._tz.utc)
+        payload = self._AttestationPayloadV1(
+            session_id=self._uuid.UUID("b8f2c1a0-4e6d-4e2a-9f1a-3c2b0d4e8f7a"),
+            org_id=self._uuid.UUID("f1e2d3c4-b5a6-4798-8877-66554433abcd"),
+            evidence_chain_hash="3b7e0a6f4a9d8c2e5b1f0d3c6a8b9e2d1f4c7a0b3d6e9f2a5c8b1d4e7a0b3c6d",
+            first_audit_id=104821,
+            last_audit_id=104827,
+            event_count=7,
+            session_start=now,
+            session_end=now,
+            signed_at=now,
+            signer_key_id=kid or self._kid,
+        )
+        envelope = self._sign_payload(payload, self._local_ecdsa_signer(self._private_key))
+        return envelope.model_dump()
+
+    def _write_pem(self, pem_bytes: bytes) -> str:
+        fd, path = tempfile.mkstemp(suffix=".pem")
+        with os.fdopen(fd, "wb") as f:
+            f.write(pem_bytes)
+        return path
+
+    def _write_jwks(self, kid: str, pub_pem: bytes) -> str:
+        """Build a minimal JWKS containing one EC P-256 entry."""
+        public_key = self._serialization.load_pem_public_key(pub_pem)
+        nums = public_key.public_numbers()
+        x_b = nums.x.to_bytes(32, "big")
+        y_b = nums.y.to_bytes(32, "big")
+        jwks = {
+            "keys": [
+                {
+                    "kty": "EC",
+                    "crv": "P-256",
+                    "x": base64.urlsafe_b64encode(x_b).rstrip(b"=").decode(),
+                    "y": base64.urlsafe_b64encode(y_b).rstrip(b"=").decode(),
+                    "kid": kid,
+                    "alg": "ES256",
+                    "use": "sig",
+                }
+            ]
+        }
+        return _write_json(jwks)
+
+    # Tests -------------------------------------------------------------
+
+    def test_valid_envelope_with_pubkey(self):
+        envelope_path = _write_json(self._build_envelope())
+        pub_path = self._write_pem(self._pub_pem)
+        try:
+            code, out, err = _run_cmd(
+                ["--no-color", "attestation", envelope_path, "--pubkey", pub_path]
+            )
+            self.assertEqual(code, 0, msg=err)
+            self.assertIn("VALID", out)
+            self.assertIn("Audit range:", out)
+        finally:
+            os.unlink(envelope_path)
+            os.unlink(pub_path)
+
+    def test_valid_envelope_with_jwks(self):
+        envelope_path = _write_json(self._build_envelope())
+        jwks_path = self._write_jwks(self._kid, self._pub_pem)
+        try:
+            code, out, err = _run_cmd(
+                ["--no-color", "attestation", envelope_path, "--jwks", jwks_path]
+            )
+            self.assertEqual(code, 0, msg=err)
+            self.assertIn("VALID", out)
+        finally:
+            os.unlink(envelope_path)
+            os.unlink(jwks_path)
+
+    def test_tampered_payload_fails(self):
+        """Re-encode the payload with a changed field but keep the original
+        signature → signature check must reject it.
+
+        We mutate inside a value (not a structural byte) so JSON parsing
+        still succeeds and the CLI reaches the ECDSA verify step.
+        """
+        envelope = self._build_envelope()
+        raw = base64.b64decode(envelope["payload"])
+        payload_json = json.loads(raw)
+        payload_json["event_count"] = payload_json["event_count"] + 1
+        envelope["payload"] = base64.b64encode(
+            json.dumps(payload_json, separators=(",", ":")).encode("utf-8")
+        ).decode()
+        envelope_path = _write_json(envelope)
+        pub_path = self._write_pem(self._pub_pem)
+        try:
+            code, out, _err = _run_cmd(
+                ["--no-color", "attestation", envelope_path, "--pubkey", pub_path]
+            )
+            self.assertEqual(code, 1)
+            self.assertIn("INVALID", out)
+        finally:
+            os.unlink(envelope_path)
+            os.unlink(pub_path)
+
+    def test_wrong_pubkey_fails(self):
+        """Correct envelope, different key → signature invalid."""
+        envelope_path = _write_json(self._build_envelope())
+        other_key = self._ec.generate_private_key(self._ec.SECP256R1())
+        other_pem = other_key.public_key().public_bytes(
+            encoding=self._serialization.Encoding.PEM,
+            format=self._serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        pub_path = self._write_pem(other_pem)
+        try:
+            code, out, _err = _run_cmd(
+                ["--no-color", "attestation", envelope_path, "--pubkey", pub_path]
+            )
+            self.assertEqual(code, 1)
+            self.assertIn("INVALID", out)
+        finally:
+            os.unlink(envelope_path)
+            os.unlink(pub_path)
+
+    def test_unknown_kid_in_jwks(self):
+        """JWKS has no entry for the envelope's kid → exit 1 with useful msg."""
+        envelope_path = _write_json(self._build_envelope())
+        # JWKS advertises a different kid for the same key
+        jwks_path = self._write_jwks("local:wrong-kid", self._pub_pem)
+        try:
+            code, _out, err = _run_cmd(
+                ["--no-color", "attestation", envelope_path, "--jwks", jwks_path]
+            )
+            self.assertEqual(code, 1)
+            self.assertIn("no key with kid", err)
+        finally:
+            os.unlink(envelope_path)
+            os.unlink(jwks_path)
+
+    def test_wrong_schema_version_rejected(self):
+        """A v2 envelope must be rejected by a v1 CLI, not silently accepted."""
+        envelope = self._build_envelope()
+        # Rebuild the payload with schema_version=2 and re-base64 (no
+        # re-sign needed — the test checks that schema is validated
+        # before the signature would even pass).
+        payload_bytes = base64.b64decode(envelope["payload"])
+        payload_json = json.loads(payload_bytes)
+        payload_json["schema_version"] = 2
+        envelope["payload"] = base64.b64encode(
+            json.dumps(payload_json, separators=(",", ":")).encode()
+        ).decode()
+        envelope_path = _write_json(envelope)
+        pub_path = self._write_pem(self._pub_pem)
+        try:
+            code, _out, err = _run_cmd(
+                ["--no-color", "attestation", envelope_path, "--pubkey", pub_path]
+            )
+            self.assertEqual(code, 1)
+            self.assertIn("Unsupported schema_version", err)
+        finally:
+            os.unlink(envelope_path)
+            os.unlink(pub_path)
+
+    def test_bad_payload_type_rejected(self):
+        """Non-attestation DSSE envelope is rejected with exit 1."""
+        envelope = self._build_envelope()
+        envelope["payloadType"] = "application/vnd.other+json"
+        envelope_path = _write_json(envelope)
+        pub_path = self._write_pem(self._pub_pem)
+        try:
+            code, _out, err = _run_cmd(
+                ["--no-color", "attestation", envelope_path, "--pubkey", pub_path]
+            )
+            self.assertEqual(code, 1)
+            self.assertIn("Unexpected payloadType", err)
+        finally:
+            os.unlink(envelope_path)
+            os.unlink(pub_path)
+
+    def test_missing_key_source_usage_error(self):
+        envelope_path = _write_json(self._build_envelope())
+        try:
+            code, _out, err = _run_cmd(["--no-color", "attestation", envelope_path])
+            self.assertEqual(code, 2)
+            self.assertIn("--pubkey", err)
+            self.assertIn("--jwks", err)
+        finally:
+            os.unlink(envelope_path)
+
+    def test_json_output_valid(self):
+        envelope_path = _write_json(self._build_envelope())
+        pub_path = self._write_pem(self._pub_pem)
+        try:
+            code, out, _err = _run_cmd(
+                [
+                    "--no-color",
+                    "--json",
+                    "attestation",
+                    envelope_path,
+                    "--pubkey",
+                    pub_path,
+                ]
+            )
+            self.assertEqual(code, 0)
+            parsed = json.loads(out)
+            self.assertEqual(parsed["result"], "valid")
+            self.assertEqual(parsed["command"], "attestation")
+            self.assertTrue(parsed["details"]["signature_valid"])
+            self.assertEqual(parsed["details"]["event_count"], 7)
+        finally:
+            os.unlink(envelope_path)
+            os.unlink(pub_path)
 
 
 if __name__ == "__main__":
