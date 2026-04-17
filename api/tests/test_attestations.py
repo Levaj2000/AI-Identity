@@ -324,6 +324,164 @@ class TestSignerUnavailable:
         assert resp.status_code == 503
 
 
+# ── Retrieval (#264) ────────────────────────────────────────────────
+
+
+class TestGetAttestationBySession:
+    def test_owner_fetches_own_attestation(self, client, seeded_org, local_signer):
+        """Happy path: org owner POSTs, then GETs back the envelope."""
+        entries = seeded_org["entries"]
+        body = _sign_body(seeded_org, entries[0].id, entries[-1].id)
+        post = client.post(
+            "/api/v1/attestations",
+            json=body,
+            headers={"X-API-Key": OWNER_EMAIL},
+        )
+        assert post.status_code == 201
+
+        get = client.get(
+            f"/api/v1/sessions/{body['session_id']}/attestation",
+            headers={"X-API-Key": OWNER_EMAIL},
+        )
+        assert get.status_code == 200, get.text
+        assert get.json()["id"] == post.json()["id"]
+        assert get.json()["envelope"] == post.json()["envelope"]
+
+    def test_plain_member_can_read(self, client, db_session, seeded_org, local_signer):
+        """Read access is any-role — members can view their org's evidence."""
+        entries = seeded_org["entries"]
+        body = _sign_body(seeded_org, entries[0].id, entries[-1].id)
+        post = client.post(
+            "/api/v1/attestations",
+            json=body,
+            headers={"X-API-Key": OWNER_EMAIL},
+        )
+        assert post.status_code == 201
+
+        reader = User(
+            id=uuid.uuid4(),
+            email="reader@example.test",
+            role="owner",
+            tier="enterprise",
+        )
+        db_session.add(reader)
+        db_session.flush()
+        db_session.add(OrgMembership(org_id=seeded_org["org_id"], user_id=reader.id, role="member"))
+        db_session.commit()
+
+        get = client.get(
+            f"/api/v1/sessions/{body['session_id']}/attestation",
+            headers={"X-API-Key": "reader@example.test"},
+        )
+        assert get.status_code == 200
+        assert get.json()["id"] == post.json()["id"]
+
+    def test_unknown_session_returns_404(self, client, seeded_org):
+        resp = client.get(
+            f"/api/v1/sessions/{uuid.uuid4()}/attestation",
+            headers={"X-API-Key": OWNER_EMAIL},
+        )
+        assert resp.status_code == 404
+
+    def test_other_org_session_returns_404_not_403(
+        self, client, db_session, seeded_org, local_signer
+    ):
+        """Tenancy boundary: 'exists but not yours' must look like
+        'does not exist' to avoid leaking cross-org session ids.
+        """
+        entries = seeded_org["entries"]
+        body = _sign_body(seeded_org, entries[0].id, entries[-1].id)
+        post = client.post(
+            "/api/v1/attestations",
+            json=body,
+            headers={"X-API-Key": OWNER_EMAIL},
+        )
+        assert post.status_code == 201
+
+        # Outsider: authenticated user with no membership in seeded_org.
+        outsider_org_id = uuid.UUID("33333333-3333-3333-3333-333333333333")
+        outsider = User(
+            id=uuid.uuid4(),
+            email="outsider@example.test",
+            role="owner",
+            tier="enterprise",
+        )
+        db_session.add(outsider)
+        db_session.flush()
+        outsider_org = Organization(
+            id=outsider_org_id,
+            name="Outsider Org",
+            owner_id=outsider.id,
+            tier="business",
+        )
+        db_session.add(outsider_org)
+        db_session.add(OrgMembership(org_id=outsider_org_id, user_id=outsider.id, role="owner"))
+        db_session.commit()
+
+        resp = client.get(
+            f"/api/v1/sessions/{body['session_id']}/attestation",
+            headers={"X-API-Key": "outsider@example.test"},
+        )
+        assert resp.status_code == 404
+
+    def test_user_with_no_memberships_returns_404(
+        self, client, db_session, seeded_org, local_signer
+    ):
+        """Authenticated but memberless users must not bypass the filter
+        (empty-IN on some DBs matches everything). Short-circuit with 404.
+        """
+        entries = seeded_org["entries"]
+        body = _sign_body(seeded_org, entries[0].id, entries[-1].id)
+        post = client.post(
+            "/api/v1/attestations",
+            json=body,
+            headers={"X-API-Key": OWNER_EMAIL},
+        )
+        assert post.status_code == 201
+
+        loner = User(
+            id=uuid.uuid4(),
+            email="loner@example.test",
+            role="owner",
+            tier="enterprise",
+        )
+        db_session.add(loner)
+        db_session.commit()
+
+        resp = client.get(
+            f"/api/v1/sessions/{body['session_id']}/attestation",
+            headers={"X-API-Key": "loner@example.test"},
+        )
+        assert resp.status_code == 404
+
+    def test_platform_admin_sees_any_org(self, client, db_session, seeded_org, local_signer):
+        """role=='admin' bypasses the org filter — ops can inspect any tenant."""
+        entries = seeded_org["entries"]
+        body = _sign_body(seeded_org, entries[0].id, entries[-1].id)
+        post = client.post(
+            "/api/v1/attestations",
+            json=body,
+            headers={"X-API-Key": OWNER_EMAIL},
+        )
+        assert post.status_code == 201
+
+        platform_admin = User(
+            id=uuid.uuid4(),
+            email="admin@example.test",
+            role="admin",
+            tier="enterprise",
+        )
+        db_session.add(platform_admin)
+        db_session.commit()
+
+        resp = client.get(
+            f"/api/v1/sessions/{body['session_id']}/attestation",
+            headers={"X-API-Key": "admin@example.test"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["id"] == post.json()["id"]
+
+
 # ── Helper ──────────────────────────────────────────────────────────
 
 

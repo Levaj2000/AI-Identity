@@ -63,6 +63,13 @@ logger = logging.getLogger("ai_identity.api.attestations")
 
 router = APIRouter(prefix="/api/v1/attestations", tags=["attestations"])
 
+# Companion router mounted at /api/v1/sessions so the retrieval URL
+# reads as the session-scoped sub-resource the spec calls for
+# (``GET /api/v1/sessions/{id}/attestation``). Keeping both in this
+# module so the POST/GET pair stays discoverable for #266 (CLI verify)
+# without a second file.
+sessions_router = APIRouter(prefix="/api/v1/sessions", tags=["attestations"])
+
 # Cache the signer handle for the process lifetime. The KMS client
 # creates its own gRPC channel on first use; we don't want to rebuild
 # it per request. Failures are latched to None so a misconfigured
@@ -185,7 +192,20 @@ def _assert_org_admin(db: Session, user: User, org_id: uuid.UUID) -> None:
         )
 
 
-# ── Endpoint ──────────────────────────────────────────────────────────
+def _user_org_ids(db: Session, user: User) -> list[uuid.UUID]:
+    """Return every org the user is a member of (any role).
+
+    Used by the retrieval endpoint to scope lookups. Platform admins
+    (``user.role == "admin"``) get an unfiltered lookup — that case is
+    handled by the caller, not by synthesizing every org id here.
+    """
+    return [
+        row[0]
+        for row in db.query(OrgMembership.org_id).filter(OrgMembership.user_id == user.id).all()
+    ]
+
+
+# ── Endpoints ─────────────────────────────────────────────────────────
 
 
 @router.post(
@@ -347,3 +367,53 @@ def _to_response(row: ForensicAttestation) -> AttestationResponse:
         signer_key_id=row.signer_key_id,
         envelope=DSSEEnvelope.model_validate(row.envelope),
     )
+
+
+# ── Retrieval (#264) ──────────────────────────────────────────────────
+
+
+@sessions_router.get(
+    "/{session_id}/attestation",
+    response_model=AttestationResponse,
+    summary="Fetch the signed attestation for a session",
+    response_description=(
+        "The full DSSE envelope plus indexed metadata. Clients with the "
+        "public key can verify the envelope offline — no further API calls."
+    ),
+)
+def get_attestation_by_session(
+    session_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> AttestationResponse:
+    """Look up the attestation for ``session_id`` within the caller's orgs.
+
+    ``session_id`` is only unique within an org (the UNIQUE index is
+    ``(org_id, session_id)``) so we scope the lookup to the caller's
+    memberships. Platform admins see across all orgs.
+
+    Returns 404 on both "no such session" and "session belongs to an
+    org you're not in" — this is deliberate. Distinguishing the two
+    would leak tenancy boundaries (e.g. "this session_id exists
+    somewhere, you just can't see it"), which is exactly the kind of
+    cross-tenant information the org scope is meant to contain.
+    """
+    query = db.query(ForensicAttestation).filter(ForensicAttestation.session_id == session_id)
+    if user.role != "admin":
+        org_ids = _user_org_ids(db, user)
+        if not org_ids:
+            # No memberships → nothing visible. Short-circuit with 404
+            # rather than an empty-IN filter that would always miss.
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="attestation not found",
+            )
+        query = query.filter(ForensicAttestation.org_id.in_(org_ids))
+
+    row = query.first()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="attestation not found",
+        )
+    return _to_response(row)
