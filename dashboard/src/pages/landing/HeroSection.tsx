@@ -236,8 +236,8 @@ export function HeroSection() {
         {/* Subheadline */}
         <div style={stagger(2)}>
           <p className="mx-auto mt-6 max-w-xl text-lg text-gray-500 dark:text-slate-400">
-            Per-agent API keys, scoped permissions, and tamper-proof audit trails. Deploy in 15
-            minutes, not 15 weeks.
+            Per-agent API keys, context-aware policy, and cryptographically-signed audit trails
+            auditors can verify offline. Deploy in 15 minutes, not 15 weeks.
           </p>
         </div>
 
