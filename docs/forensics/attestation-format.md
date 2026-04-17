@@ -283,11 +283,26 @@ integrity, nothing more:
 These boundaries get expanded in the trust-model doc (#267) for an
 audit-ready audience.
 
-## Open questions (resolved in follow-on sprint items)
+## Companion documents
 
-- **Session lifecycle** — when does a session close, and who calls the
-  signer? → #263
-- **Retrieval API shape** — REST endpoint, auth, query params. → #264
-- **Public key distribution** — JWKS endpoint URL, rotation metadata. → #265
-- **CLI UX** — `ai-identity verify-attestation <file>` flags and exit codes. → #266
-- **Trust model prose for auditors** — what to show a SOC 2 auditor, emergency rotation runbook. → #267
+The format spec above is intentionally narrow. For the questions a
+verifier, auditor, or operator actually asks:
+
+- [`trust-model.md`](trust-model.md) — what a valid attestation
+  proves and does not prove, what to show a SOC 2 auditor, how to
+  respond to a suspected key compromise.
+- [`key-rotation.md`](key-rotation.md) — operator runbook for
+  planned and emergency key rotation, post-rotation verification,
+  and when (not) to destroy a key.
+
+## Sprint history
+
+For reference — the Milestone #33 items that shipped this format:
+
+- **#261** — KMS forensic signer keyring, SA, Workload Identity
+- **#262** — this document + pydantic model + DSSE helpers
+- **#263** — sign on session close (`POST /api/v1/attestations`)
+- **#264** — retrieval API (`GET /api/v1/sessions/{id}/attestation`)
+- **#265** — JWKS (`/.well-known/ai-identity-public-keys.json`)
+- **#266** — CLI verify (`ai_identity_verify attestation`)
+- **#267** — this section + the companion trust-model and rotation docs
