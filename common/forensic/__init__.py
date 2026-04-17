@@ -6,6 +6,7 @@ tests can drive the schema without a KMS dependency and production can
 swap signer backends without touching format code.
 """
 
+from common.forensic.jwks import build_jwks
 from common.forensic.signer import (
     ForensicSignerConfigError,
     SignerHandle,
@@ -15,5 +16,6 @@ from common.forensic.signer import (
 __all__ = [
     "ForensicSignerConfigError",
     "SignerHandle",
+    "build_jwks",
     "get_forensic_signer",
 ]

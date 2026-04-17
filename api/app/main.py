@@ -501,6 +501,7 @@ from api.app.routers.cleanup_cron import router as cleanup_cron_router  # noqa: 
 from api.app.routers.compliance import router as compliance_router  # noqa: E402
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
 from api.app.routers.email_cron import router as email_cron_router  # noqa: E402
+from api.app.routers.forensic_keys import router as forensic_keys_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
 from api.app.routers.organizations import router as organizations_router  # noqa: E402
 from api.app.routers.policies import router as policies_router  # noqa: E402
@@ -523,6 +524,7 @@ app.include_router(compliance_router)
 app.include_router(credentials_router)
 app.include_router(cleanup_cron_router)
 app.include_router(email_cron_router)
+app.include_router(forensic_keys_router)
 app.include_router(keys_router)
 app.include_router(metrics_router)
 app.include_router(policies_router)
