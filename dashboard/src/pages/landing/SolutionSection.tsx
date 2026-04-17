@@ -56,8 +56,8 @@ const solutions = [
         />
       </svg>
     ),
-    title: 'HMAC audit trail',
-    body: 'Every request is logged with cryptographic integrity. Tamper-evident, append-only, and SOC 2 ready from day one.',
+    title: 'Signed audit trail',
+    body: 'HMAC-chained logs plus DSSE-signed session attestations (ECDSA P-256, KMS-held keys). Auditors verify offline — no vendor trust required.',
   },
 ]
 
@@ -136,8 +136,8 @@ export function SolutionSection() {
             One identity per agent. Zero shared secrets.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-gray-500 dark:text-slate-400">
-            AI Identity gives every agent a verifiable identity, scoped credentials, and a
-            tamper-proof audit trail.
+            AI Identity gives every agent a verifiable identity, context-aware policy on agent
+            metadata, and a cryptographically-signed audit trail auditors can verify offline.
           </p>
         </div>
 
