@@ -14,6 +14,7 @@ python-dotenv==1.2.2
 alembic==1.18.4
 
 cryptography==46.0.5
+rfc8785==0.1.4
 PyJWT==2.10.1
 stripe==14.4.1
 resend==2.26.0
