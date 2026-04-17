@@ -9,9 +9,9 @@ import JsonLd from "@/components/JsonLd";
 import HomeContent from "./home-content";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "AI Identity — Forensic-Grade Accountability for Every AI Agent",
+  title: "AI Identity — Identity + Context-Aware Policy for Every AI Agent",
   description:
-    "Replay any agent session step-by-step. Produce tamper-evident timelines regulators can verify independently. Per-agent identity, fail-closed enforcement, and HMAC-SHA256 forensic audit trails. Deploy in 15 minutes.",
+    "Per-agent identity, context-aware policy (ABAC on agent metadata), and cryptographically-signed forensic evidence — DSSE envelopes + ECDSA P-256 signatures that auditors can verify offline. Fail-closed enforcement. Deploy in 15 minutes.",
   path: "/",
 });
 
