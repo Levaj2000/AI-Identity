@@ -10,6 +10,93 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: "offline-attestation-verification-proving-ai-agent-behavior",
+    title:
+      "Offline Attestation Verification: Proving AI Agent Behavior Without Trusting the Vendor",
+    date: "April 18, 2026",
+    readTime: "9 min read",
+    excerpt:
+      "The question that stalls every enterprise AI deal: can you prove this audit log was not edited after the fact? This post walks through the pattern AI Identity ships today — HMAC-chained audit entries, DSSE-signed range attestations, and an offline CLI that verifies agent behavior without ever contacting the governance vendor.",
+    tags: [
+      "AI Forensics",
+      "Security Architecture",
+      "Audit Trails",
+      "Agent Governance",
+      "Developer Guide",
+    ],
+    sections: [
+      {
+        heading: "The Question That Stalls Every Enterprise AI Deal",
+        content: [
+          "Every team shipping a Claude-based agent into a regulated environment eventually runs into the same question from the same person — the security reviewer, the compliance lead, or the auditor brought in at the end of a procurement cycle. The question is simple, and it is the one question most agent platforms cannot answer: how do you prove to us that this agent did exactly what your logs say it did, and nothing else?",
+          "The honest answer, for most teams, is that they cannot. Agent frameworks log to stdout. Those logs are piped to Datadog, Splunk, or a database. Someone with write access can rewrite rows. When the auditor asks for tamper-evident evidence of agent behavior, the typical response is a PDF export and an implicit request to trust the vendor's infrastructure. That is not evidence. That is trust. And in regulated industries, the distinction matters. It is covered in detail in the companion post on [why log-based audit trails fail for AI agent governance](/blog/why-log-based-audit-trails-fail-ai-agent-governance).",
+          "AI Identity closes that gap with three architectural pieces that work together: HMAC-chained audit entries, DSSE-signed attestations over ranges of the chain, and an offline verification tool that validates both without ever touching the governance vendor's service. This post walks through the pattern, the cryptography that makes it work, and the concrete steps a team can take to adopt the same approach — whether or not they use AI Identity.",
+        ],
+      },
+      {
+        heading: "The Pattern in Three Pieces",
+        content: [
+          "The first piece is a hash-chained audit log. Every audit entry is bound to the entry before it using HMAC-SHA256. Tampering with any row breaks the chain from that point forward in a way that is cryptographically detectable by anyone who holds the verification key. This solves the tampering-invisibility failure mode of conventional logs.",
+          "The second piece is attestation over ranges rather than individual rows. A session, a multi-step plan, or a sequence of tool calls — whatever the atomic unit of agent work is — gets one signed attestation that covers the range. The attestation commits to the first and last audit IDs, the total event count, and the evidence chain hash for that range. One small signed artifact proves that a large block of agent behavior existed exactly as recorded at the moment of signing.",
+          "The third piece is an offline verification tool. The signed attestation is portable and verifiable without network access to the governance vendor. An auditor running in an air-gapped environment, armed only with the attestation envelope and the public verification key, can independently confirm that the evidence is intact. That property is what moves the compliance conversation from 'trust us' to 'verify us.'",
+          "Each piece solves a specific failure mode of conventional audit trails. Together they compose a chain of custody that holds up under regulatory scrutiny — and that any engineering team can reproduce in their own stack with a handful of columns, a signing key, and a verification script.",
+        ],
+      },
+      {
+        heading: "Chaining the Audit Log With HMAC-SHA256",
+        content: [
+          "Each audit entry in AI Identity records the agent's cryptographic identity, the user and organization on whose behalf the action was taken, the endpoint and HTTP method the agent attempted to call, the enforcement decision (allow, deny, or error), cost and latency metadata, any structured request context, and — critically — two cryptographic fields: an entry hash and a previous-entry hash.",
+          "The entry hash is computed as HMAC-SHA256 over the canonical form of the row concatenated with the previous entry's hash. For the first entry in a chain, the previous hash is a fixed genesis marker. Every subsequent entry incorporates the hash of the entry before it, creating a tamper-evident chain of custody. Altering any single row invalidates the hash for that row, which in turn invalidates the stored hash in the following row, and every row after that. The chain break is localized, and the point of divergence is cryptographically provable.",
+          "Two implementation details separate a working chain from a broken one. The first is canonicalization. If one verifier serializes a row as one ordering of JSON keys and another verifier serializes the same row differently, their hashes will not match. AI Identity uses RFC 8785 JSON Canonicalization Scheme (JCS) to ensure every verifier processes the exact same bytes for the exact same logical row. Without canonicalization, the chain is unreliable the first time any downstream tool round-trips the data.",
+          "The second is timestamp provenance. The row's creation timestamp is part of the canonical hash input, which means the timestamp must be set server-side inside the same transaction that writes the row and computes the hash. If callers are allowed to provide their own timestamps, the chain can be replayed or reordered in ways that appear legitimate to a verifier. Server-set timestamps inside the same transaction close that attack surface.",
+          "The overall construction is the same primitive git uses for commit linkage — each commit references the hash of its parent, making history cryptographically immutable in aggregate. The novelty is not the cryptography. The novelty is applying it to individual agent decisions, at the decision level, as a first-class property of the agent runtime.",
+        ],
+      },
+      {
+        heading: "Signing Ranges, Not Rows",
+        content: [
+          "Signing every audit row individually does not scale. A single Claude-based agent session can produce hundreds or thousands of audit entries as the model plans, invokes tools, and reacts to results. Per-row signing saturates the signing service and generates an unwieldy artifact for verifiers to process. The architectural move is to sign ranges of the chain, not individual rows.",
+          "An attestation envelope in AI Identity contains a schema version, the session identifier, the first and last audit row IDs covered by the attestation, the total event count for the range, the evidence chain hash, and an issuance timestamp. That payload is wrapped in a DSSE (Dead Simple Signing Envelope) and signed with ECDSA over the P-256 curve using SHA-256 as the digest function.",
+          "DSSE matters for two reasons. First, it uses Pre-Authentication Encoding (PAE) — the signature commits not only to the payload bytes but to the declared payload type. This prevents an attacker from lifting a valid signature off one kind of artifact and attaching it to a different kind of artifact. Second, DSSE envelopes are portable, well-specified, and compatible with existing tooling in the supply-chain security ecosystem, which is where the pattern of range-based signed attestations originated.",
+          "The result is that one HTTP call per session produces one small signed envelope that is a durable, portable proof of an entire range of agent work. The envelope is the artifact a customer can hand to their auditor. It is bytes, not a login. It has a short, specified format. And it can be verified without involving the governance vendor at all — which is what makes the next piece possible.",
+        ],
+      },
+      {
+        heading: "Offline Verification Is the Whole Point",
+        content: [
+          "AI Identity ships a command-line verifier that takes an attestation envelope and a public verification key and returns a pass or fail result without ever contacting the AI Identity service. The verifier loads the envelope, validates its schema and declared payload type, loads the public key (either from a local PEM file or from a JWKS endpoint), reconstructs the DSSE Pre-Authentication Encoding exactly as the signer produced it, verifies the ECDSA-P256 signature over the reconstructed PAE, and sanity-checks the declared range for internal consistency — first ID cannot exceed last ID, event count must be at least one, declared chain hash must be well-formed.",
+          "The verifier runs with two Python dependencies — the cryptography package for ECDSA verification, and the standard library for everything else. It produces human-readable output by default and structured JSON output when invoked with a flag, suitable for use in continuous-integration pipelines or automated compliance scorecards. Because it has no network dependency and no required service calls, it runs cleanly inside an air-gapped environment, which is precisely how serious compliance evaluations are run.",
+          "This is the property that changes the procurement conversation. When a prospect's security team asks how they would verify AI Identity's claims six months after purchase, or five years after the initial vendor relationship ends, the answer is a public key and a binary. Not a support ticket. Not a portal login. Not a retention commitment. An independently verifiable artifact, held and checked by the customer, on their timeline, with their tools. That is the shape of evidence in every serious regulatory regime, and it is what makes agent governance defensible when the stakes are real.",
+        ],
+      },
+      {
+        heading: "Why This Pattern Matters for Claude-Based Agents",
+        content: [
+          "Claude's strongest product surface is tool use — delegating concrete actions against real systems in service of a natural-language objective. That is also the surface regulators care most about. Every tool invocation is the kind of event that, in aggregate, needs to be reconstructible after the fact. If the audit trail is not attestable, neither are the agent's actions. The harder and more consequential the tool use, the harder and more consequential the attestation requirement.",
+          "Multi-step plans compound this. A single user prompt can produce a plan with thirty steps that touches six distinct tools, each with their own cost and risk profile. The interesting evidence artifact is not any individual step — it is the plan, end to end. That maps cleanly onto the idea of signing an audit range: one session, one plan, one signed envelope. The attestation matches the unit of work the agent actually performed, which is the unit the auditor actually cares about.",
+          "The verticals adopting Claude most aggressively are also the verticals where this pattern is not optional. Financial services, healthcare, legal — all three are bound by regulatory frameworks that require tamper-evident records and independent verification of those records. Agent platforms that cannot meet this bar lose these deals at the security review stage, no matter how impressive the demo was in the sales call. Agent platforms that can meet it win the enterprise conversation structurally, not incrementally.",
+        ],
+      },
+      {
+        heading: "Adopting the Pattern in Your Stack",
+        content: [
+          "Teams who need a governance layer but are not ready to adopt a dedicated platform can reproduce the core of this architecture in their own stack in an afternoon. The first step is to identify the atomic unit of agent work — a tool call, a session, a multi-step plan — and make that the unit of attestation. That decision shapes everything downstream.",
+          "The second step is to add hash columns to the table that records agent tool calls. Each row needs an entry hash and a previous-entry hash. Compute the entry hash as HMAC-SHA256 over the canonical form of the row concatenated with the previous hash, and do it in the same database transaction that writes the row. Use a JSON canonicalization scheme — JCS is the current best-in-class choice — and set the timestamp server-side.",
+          "The third step is to produce and sign a per-range payload when the unit of work completes. The payload at minimum should include the first and last row IDs, the event count, and the chain hash for the range. Sign the payload with ECDSA-P256. A full DSSE envelope is the correct long-term choice, but a bare signed JSON blob is acceptable for a first version and can be migrated to DSSE later.",
+          "The fourth step is the offline verifier. Write a fifty-line script that takes a signed payload and a public key and prints a pass or fail result. Hand it to customers. Document the verification steps publicly. The moment a customer can independently verify claims without the vendor's cooperation, the trust conversation is fundamentally different — and it is a difference that procurement, security, and legal teams all feel immediately.",
+        ],
+      },
+      {
+        heading: "From Trust Us to Verify Us",
+        content: [
+          "The structural shift in agent governance is not a new UI or a new dashboard. It is the shift from vendor-hosted trust to cryptographic, independently verifiable evidence. Log-based audit trails ask customers to trust the vendor's infrastructure. HMAC-chained, range-attested, offline-verifiable audit trails hand customers the means to check the vendor's claims themselves, on their own terms.",
+          "For teams shipping AI agents into regulated industries, this shift is the difference between winning an enterprise deal at the security review stage and losing it. For the broader agent ecosystem, it is the difference between governance architectures that scale into the next decade of autonomous AI and governance architectures that collapse the first time a serious incident forces a real investigation.",
+          "AI Identity provides this architecture today as a production platform. Register agents with cryptographic identities, define governance policies in a compact declarative language, route agent traffic through a fail-closed enforcement gateway, and receive tamper-evident, range-attested audit trails as a default property of every session. Start with the [free tier](/pricing) — five agents, full forensic audit trails included — or explore the technical architecture in [how it works](/how-it-works).",
+        ],
+      },
+    ],
+  },
+  {
     slug: "why-log-based-audit-trails-fail-ai-agent-governance",
     title:
       "Why Log-Based Audit Trails Fail for AI Agent Governance: A Technical Reference Architecture",
