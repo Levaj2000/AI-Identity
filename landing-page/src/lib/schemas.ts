@@ -9,8 +9,8 @@ export const organizationSchema = {
   description:
     "AI Identity is an identity infrastructure platform for autonomous AI agents. It provides per-agent API keys, scoped permissions, policy-as-code enforcement, and tamper-proof cryptographic audit trails.",
   sameAs: [
-    "https://x.com/ai_identity_co",
-    "https://www.linkedin.com/company/ai-identity",
+    "https://x.com/AiIdentity",
+    "https://www.linkedin.com/in/jeff-leva-a7373958",
     "https://github.com/Levaj2000/AI-Identity",
   ],
   foundingDate: "2026",
