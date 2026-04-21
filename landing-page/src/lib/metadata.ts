@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 const BASE_URL = "https://www.ai-identity.co";
 const SITE_NAME = "AI Identity";
 const DEFAULT_OG_IMAGE = "/images/og-image.png";
-const TWITTER_HANDLE = "@ai_identity_co";
+const TWITTER_HANDLE = "@AiIdentity";
 
 interface PageMetadataOptions {
   title: string;
