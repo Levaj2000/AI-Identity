@@ -29,6 +29,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session  # noqa: TC002 — db.query(...) at runtime
 
 from common.compliance.builders.eu_ai_act import build_eu_ai_act_bundle
+from common.compliance.builders.nist_ai_rmf import build_nist_ai_rmf_bundle
 from common.compliance.builders.placeholder import build_placeholder_bundle
 from common.compliance.builders.soc2 import build_soc2_bundle
 from common.compliance.bundle import ComplianceExportBundle
@@ -129,6 +130,17 @@ def run_export_job(
             )
         elif job.profile == "eu_ai_act_2024":
             build_eu_ai_act_bundle(
+                bundle,
+                db=db,
+                org_id=job.org_id,
+                export_id=job.id,
+                audit_period_start=period_start,
+                audit_period_end=period_end,
+                built_at=now,
+                agent_ids=job.agent_ids,
+            )
+        elif job.profile == "nist_ai_rmf_1_0":
+            build_nist_ai_rmf_bundle(
                 bundle,
                 db=db,
                 org_id=job.org_id,
