@@ -268,3 +268,36 @@ spec:
       ports:
         - { protocol: TCP, port: 8001 }
         - { protocol: TCP, port: 8002 }
+
+---
+# Egress: api + gateway → GCE/GKE instance metadata server (169.254.169.254:80).
+# Required by Workload Identity: google-auth fetches OAuth tokens for GCP API
+# calls (KMS AsymmetricSign for the forensic signer, etc.) by hitting the
+# metadata server over plain HTTP. The `allow-egress-https` rule above
+# explicitly excludes 169.254.0.0/16 from its 0.0.0.0/0 egress, so without
+# this dedicated rule every WI token fetch times out after 3s.
+#
+# First surfaced when the SOC 2 compliance export builder (#275) tried to
+# sign a manifest in prod — KMS sign hung for 2 minutes then timed out
+# with `metadata.google.internal:80` connection error.
+#
+# In GKE Autopilot the actual handler is `gke-metadata-server` daemonset
+# which intercepts traffic to 169.254.169.254 — same IP, same port, same
+# rule applies.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-gce-metadata
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: [api, gateway] }
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 169.254.169.254/32
+      ports:
+        - { protocol: TCP, port: 80 }
