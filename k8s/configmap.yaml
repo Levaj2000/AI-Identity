@@ -12,6 +12,14 @@ data:
   API_KEY_PREFIX: "aid_sk_"
   ADMIN_KEY_PREFIX: "aid_admin_"
   APP_VERSION: "0.2.0"
+  # Forensic signing key — GCP KMS key-version resource path. Consumed by
+  # the session-close attestation router (#263) and the compliance-export
+  # builder (#275). Workload Identity via ai-identity-forensic-signer SA
+  # grants the API pod the `cloudkms.signerVerifier` role on this key.
+  # Rotation (docs/forensics/key-rotation.md): bump the .../cryptoKeyVersions/N
+  # suffix, redeploy, then disable the old version once all outstanding
+  # attestations are verified. Old key versions stay ENABLED for verify.
+  FORENSIC_SIGNING_KEY_ID: "projects/project-8bbb04f8-fda8-462e-bc2/locations/us-east1/keyRings/ai-identity-forensic/cryptoKeys/session-attestation/cryptoKeyVersions/1"
   # Stripe price IDs are public per-product identifiers (not secrets). Moved
   # here from the K8s Secret during the Secret Manager migration so sensitive
   # values (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) remain in Secret Manager
