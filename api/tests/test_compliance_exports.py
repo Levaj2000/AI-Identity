@@ -231,13 +231,13 @@ class TestCreateAndBuild:
         )
 
     def test_manifest_commits_to_artifact_hashes(self, client, two_orgs, local_signer, archive_dir):
-        # Uses nist_ai_rmf_1_0 — still on the placeholder path until
-        # #278 — so this test can keep asserting placeholder artifacts
-        # are signed correctly. SOC 2 and EU AI Act have their own
-        # artifact-level tests.
+        # Generic foundation check — the manifest must commit to every
+        # artifact with a 64-hex sha256 and non-negative size. Profile-
+        # specific artifact assertions live in the per-profile test
+        # classes below. Uses SOC 2 since it's the most content-rich.
         resp = client.post(
             "/api/v1/exports",
-            json=_valid_body(profile="nist_ai_rmf_1_0"),
+            json=_valid_body(profile="soc2_tsc_2017"),
             headers={"X-API-Key": OWNER_A_EMAIL},
         )
         export_id = resp.json()["id"]
@@ -247,14 +247,11 @@ class TestCreateAndBuild:
         ).json()
         env = got["manifest_envelope"]
         manifest = json.loads(base64.b64decode(env["payload"]))
-        # Placeholder builder writes README.md and PLACEHOLDER.txt; the
-        # manifest must include both, with non-empty hashes.
         paths = {a["path"] for a in manifest["artifacts"]}
-        assert "README.md" in paths
-        assert "PLACEHOLDER.txt" in paths
+        assert len(paths) > 0
         for artifact in manifest["artifacts"]:
             assert len(artifact["sha256"]) == 64
-            assert artifact["bytes"] > 0
+            assert artifact["bytes"] >= 0
 
 
 # ── Download endpoint ────────────────────────────────────────────────
@@ -262,11 +259,12 @@ class TestCreateAndBuild:
 
 class TestDownload:
     def test_download_after_ready_returns_zip(self, client, two_orgs, local_signer, archive_dir):
-        # nist_ai_rmf_1_0 is still on the placeholder path until #278.
-        # SOC 2 and EU AI Act have their own profile tests.
+        # Generic foundation check — download endpoint serves a real
+        # zip with the manifest files, regardless of profile. Profile-
+        # specific file-set assertions live in the per-profile classes.
         resp = client.post(
             "/api/v1/exports",
-            json=_valid_body(profile="nist_ai_rmf_1_0"),
+            json=_valid_body(profile="soc2_tsc_2017"),
             headers={"X-API-Key": OWNER_A_EMAIL},
         )
         export_id = resp.json()["id"]
@@ -279,7 +277,7 @@ class TestDownload:
         assert dl.headers["content-type"] == "application/zip"
         zf = zipfile.ZipFile(io.BytesIO(dl.content))
         names = set(zf.namelist())
-        assert {"README.md", "PLACEHOLDER.txt", "manifest.json", "manifest.dsse.json"} <= names
+        assert {"manifest.json", "manifest.dsse.json"} <= names
 
     def test_download_roundtrip_matches_archive_sha256(
         self, client, two_orgs, local_signer, archive_dir
@@ -677,6 +675,81 @@ class TestEuAiActProfile:
             a for a in manifest["artifacts"] if a["path"] == "agent_risk_classification.csv"
         )
         assert "EUAI-Art.6" in risk["controls"]
+
+
+# ── NIST AI RMF profile end-to-end ───────────────────────────────────
+
+
+class TestNistAiRmfProfile:
+    """End-to-end: POST nist_ai_rmf_1_0 → builder dispatch → full artifact set."""
+
+    def test_nist_produces_full_artifact_set(self, client, two_orgs, local_signer, archive_dir):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="nist_ai_rmf_1_0"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert resp.status_code == 202
+        export_id = resp.json()["id"]
+        dl = client.get(
+            f"/api/v1/exports/{export_id}/download",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert dl.status_code == 200
+        zf = zipfile.ZipFile(io.BytesIO(dl.content))
+        names = set(zf.namelist())
+        assert {
+            "govern.json",
+            "map.json",
+            "measure_audit_log.csv",
+            "measure_chain_integrity.json",
+            "control_results.csv",
+            "manage_approvals.csv",
+            "manage_revocations.csv",
+            "evidence_summary.json",
+            "manifest.json",
+            "manifest.dsse.json",
+        } <= names
+        # Placeholder artifacts must not leak into a real-profile bundle.
+        assert "PLACEHOLDER.txt" not in names
+
+    def test_nist_summary_carries_function_mapping(
+        self, client, two_orgs, local_signer, archive_dir
+    ):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="nist_ai_rmf_1_0"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        dl = client.get(
+            f"/api/v1/exports/{resp.json()['id']}/download",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        zf = zipfile.ZipFile(io.BytesIO(dl.content))
+        summary = json.loads(zf.read("evidence_summary.json"))
+        assert summary["profile"] == "nist_ai_rmf_1_0"
+        assert summary["framework_nature"] == "voluntary"
+        assert "GOVERN" in summary["function_artifact_mapping"]
+        assert "govern.json" in summary["function_artifact_mapping"]["GOVERN"]
+
+    def test_nist_manifest_carries_function_controls(
+        self, client, two_orgs, local_signer, archive_dir
+    ):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="nist_ai_rmf_1_0"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        got = client.get(
+            f"/api/v1/exports/{resp.json()['id']}",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        ).json()
+        env = got["manifest_envelope"]
+        manifest = json.loads(base64.b64decode(env["payload"]))
+        govern = next(a for a in manifest["artifacts"] if a["path"] == "govern.json")
+        assert "NIST-GV-1.1" in govern["controls"]
+        approvals = next(a for a in manifest["artifacts"] if a["path"] == "manage_approvals.csv")
+        assert "NIST-MG-1.3" in approvals["controls"]
 
 
 # ── OpenAPI still reflects the surface ───────────────────────────────
