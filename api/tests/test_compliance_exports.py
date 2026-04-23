@@ -899,6 +899,163 @@ class TestRetentionCleanup:
         assert real.json()["archives_deleted"] == 0
 
 
+# ── Cancel endpoint ──────────────────────────────────────────────────
+
+
+class TestCancelExport:
+    """POST /api/v1/exports/{id}/cancel."""
+
+    def test_cancel_queued_job_transitions_to_failed(
+        self, client, two_orgs, local_signer, archive_dir, db_session
+    ):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        export_id = uuid.UUID(resp.json()["id"])
+        # Force back to queued — the inline BackgroundTask would have
+        # already completed it otherwise and cancel would be a no-op.
+        (
+            db_session.query(ComplianceExport)
+            .filter(ComplianceExport.id == export_id)
+            .update({"status": "queued"})
+        )
+        db_session.commit()
+
+        cancel_resp = client.post(
+            f"/api/v1/exports/{export_id}/cancel",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert cancel_resp.status_code == 200
+        body = cancel_resp.json()
+        assert body["status"] == "failed"
+        assert body["error"]["code"] == "cancelled"
+        assert "Cancelled by user" in body["error"]["message"]
+
+    def test_cancel_ready_job_returns_409(self, client, two_orgs, local_signer, archive_dir):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        export_id = resp.json()["id"]
+        # BackgroundTask already ran to ready — cancel should 409.
+        cancel_resp = client.post(
+            f"/api/v1/exports/{export_id}/cancel",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert cancel_resp.status_code == 409
+        assert cancel_resp.json()["error"]["code"] == "export_not_cancellable"
+
+    def test_cancel_failed_job_returns_409(
+        self, client, two_orgs, local_signer, archive_dir, db_session
+    ):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        export_id = uuid.UUID(resp.json()["id"])
+        (
+            db_session.query(ComplianceExport)
+            .filter(ComplianceExport.id == export_id)
+            .update({"status": "failed", "error_code": "test", "error_message": "x"})
+        )
+        db_session.commit()
+
+        cancel_resp = client.post(
+            f"/api/v1/exports/{export_id}/cancel",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert cancel_resp.status_code == 409
+
+    def test_cancel_unknown_id_returns_404(self, client, two_orgs, local_signer, archive_dir):
+        cancel_resp = client.post(
+            f"/api/v1/exports/{uuid.uuid4()}/cancel",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert cancel_resp.status_code == 404
+
+    def test_cancel_other_org_returns_404_not_403(
+        self, client, two_orgs, local_signer, archive_dir, db_session
+    ):
+        # Owner A creates + freezes as queued
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        export_id = uuid.UUID(resp.json()["id"])
+        (
+            db_session.query(ComplianceExport)
+            .filter(ComplianceExport.id == export_id)
+            .update({"status": "queued"})
+        )
+        db_session.commit()
+
+        # Owner B (different org) tries to cancel — 404, not 403
+        other = client.post(
+            f"/api/v1/exports/{export_id}/cancel",
+            headers={"X-API-Key": OWNER_B_EMAIL},
+        )
+        assert other.status_code == 404
+
+    def test_cancel_plain_member_returns_403(
+        self, client, two_orgs, local_signer, archive_dir, db_session
+    ):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        export_id = uuid.UUID(resp.json()["id"])
+        (
+            db_session.query(ComplianceExport)
+            .filter(ComplianceExport.id == export_id)
+            .update({"status": "queued"})
+        )
+        db_session.commit()
+
+        member_resp = client.post(
+            f"/api/v1/exports/{export_id}/cancel",
+            headers={"X-API-Key": MEMBER_A_EMAIL},
+        )
+        assert member_resp.status_code == 403
+
+    def test_cancelled_scope_releases_idempotency_guard(
+        self, client, two_orgs, local_signer, archive_dir, db_session
+    ):
+        """After cancel, a fresh POST for the same scope should succeed
+        instead of 409'ing on the orphan. This is the user-visible win.
+        """
+        first = client.post(
+            "/api/v1/exports",
+            json=_valid_body(),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        export_id = uuid.UUID(first.json()["id"])
+        (
+            db_session.query(ComplianceExport)
+            .filter(ComplianceExport.id == export_id)
+            .update({"status": "queued"})
+        )
+        db_session.commit()
+
+        # Cancel + re-request with the same scope.
+        client.post(
+            f"/api/v1/exports/{export_id}/cancel",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        second = client.post(
+            "/api/v1/exports",
+            json=_valid_body(),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert second.status_code == 202
+        assert second.json()["id"] != str(export_id)
+
+
 # ── NIST AI RMF profile end-to-end ───────────────────────────────────
 
 
