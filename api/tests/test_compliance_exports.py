@@ -677,6 +677,228 @@ class TestEuAiActProfile:
         assert "EUAI-Art.6" in risk["controls"]
 
 
+# ── Cost guardrails (rate limits + size cap + retention cleanup) ─────
+
+
+class TestRateLimits:
+    """POST rate limits per ADR-002."""
+
+    def test_concurrent_limit_returns_429_with_retry_after(
+        self, client, two_orgs, local_signer, archive_dir, monkeypatch, db_session
+    ):
+        from common.config.settings import settings
+
+        # Squeeze the concurrent limit to 2 so the test doesn't have to
+        # queue five real builds.
+        monkeypatch.setattr(
+            settings,
+            "compliance_export_max_concurrent_per_org",
+            2,
+            raising=False,
+        )
+        # Queue two jobs and freeze them at queued so the third trips
+        # the concurrent limit instead of the idempotency index.
+        for period_days_ago in (10, 20):
+            resp = client.post(
+                "/api/v1/exports",
+                json=_valid_body(
+                    audit_period_start=(
+                        datetime.now(UTC) - timedelta(days=30 + period_days_ago)
+                    ).isoformat(),
+                    audit_period_end=(
+                        datetime.now(UTC) - timedelta(days=period_days_ago)
+                    ).isoformat(),
+                ),
+                headers={"X-API-Key": OWNER_A_EMAIL},
+            )
+            job_id = uuid.UUID(resp.json()["id"])
+            (
+                db_session.query(ComplianceExport)
+                .filter(ComplianceExport.id == job_id)
+                .update({"status": "queued"})
+            )
+        db_session.commit()
+
+        third = client.post(
+            "/api/v1/exports",
+            json=_valid_body(
+                audit_period_start=(datetime.now(UTC) - timedelta(days=5)).isoformat(),
+                audit_period_end=datetime.now(UTC).isoformat(),
+            ),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert third.status_code == 429
+        assert third.json()["error"]["code"] == "rate_limit_exceeded_concurrent"
+        assert third.headers.get("Retry-After")
+
+    def test_daily_limit_returns_429(
+        self, client, two_orgs, local_signer, archive_dir, monkeypatch
+    ):
+        from common.config.settings import settings
+
+        monkeypatch.setattr(settings, "compliance_export_max_per_day_per_org", 2, raising=False)
+        # Three distinct scopes within the last 24h → third trips daily.
+        now = datetime.now(UTC)
+        for day_offset in range(3):
+            resp = client.post(
+                "/api/v1/exports",
+                json=_valid_body(
+                    audit_period_start=(now - timedelta(days=30 + day_offset)).isoformat(),
+                    audit_period_end=(now - timedelta(days=day_offset)).isoformat(),
+                ),
+                headers={"X-API-Key": OWNER_A_EMAIL},
+            )
+            if day_offset < 2:
+                assert resp.status_code == 202
+            else:
+                assert resp.status_code == 429
+                assert resp.json()["error"]["code"] == "rate_limit_exceeded_daily"
+
+
+class TestArchiveSizeCap:
+    """10 GB archive cap per ADR-002."""
+
+    def test_oversized_archive_fails_with_stable_error_code(
+        self, client, two_orgs, local_signer, archive_dir, monkeypatch
+    ):
+        from common.config.settings import settings
+
+        # 1 byte cap — anything the builder produces will blow through.
+        monkeypatch.setattr(settings, "compliance_export_archive_bytes_cap", 1, raising=False)
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="soc2_tsc_2017"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        export_id = resp.json()["id"]
+
+        got = client.get(
+            f"/api/v1/exports/{export_id}",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        body = got.json()
+        assert body["status"] == "failed"
+        assert body["error"]["code"] == "archive_too_large"
+        # Archive file should have been deleted — download endpoint
+        # 409s because the job is failed, not ready.
+        dl = client.get(
+            f"/api/v1/exports/{export_id}/download",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert dl.status_code == 409
+
+
+class TestRetentionCleanup:
+    """POST /api/internal/compliance-exports/cleanup."""
+
+    def test_requires_internal_key(self, client, two_orgs):
+        resp = client.post("/api/internal/compliance-exports/cleanup")
+        assert resp.status_code == 401
+
+    def test_dry_run_reports_candidates_without_deleting(
+        self, client, two_orgs, local_signer, archive_dir, monkeypatch, db_session
+    ):
+        from common.config.settings import settings
+
+        monkeypatch.setattr(settings, "internal_service_key", "test-internal-key", raising=False)
+        # Build a real export, then age its completed_at past the cutoff.
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="soc2_tsc_2017"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        export_id = uuid.UUID(resp.json()["id"])
+        aged_completed = datetime.now(UTC) - timedelta(days=45)
+        (
+            db_session.query(ComplianceExport)
+            .filter(ComplianceExport.id == export_id)
+            .update({"completed_at": aged_completed})
+        )
+        db_session.commit()
+
+        dry = client.post(
+            "/api/internal/compliance-exports/cleanup?dry_run=true",
+            headers={"x-internal-key": "test-internal-key"},
+        )
+        assert dry.status_code == 200
+        body = dry.json()
+        assert body["status"] == "dry_run"
+        assert body["candidates"] == 1
+        assert str(export_id) in body["candidate_ids"]
+        assert body["archives_deleted"] == 0
+        # Archive file still on disk after dry run.
+        row = db_session.query(ComplianceExport).filter(ComplianceExport.id == export_id).first()
+        assert row.archive_storage_path is not None
+
+    def test_real_run_deletes_archive_and_clears_pointer(
+        self, client, two_orgs, local_signer, archive_dir, monkeypatch, db_session
+    ):
+        import os
+
+        from common.config.settings import settings
+
+        monkeypatch.setattr(settings, "internal_service_key", "test-internal-key", raising=False)
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="soc2_tsc_2017"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        export_id = uuid.UUID(resp.json()["id"])
+        aged = datetime.now(UTC) - timedelta(days=45)
+        (
+            db_session.query(ComplianceExport)
+            .filter(ComplianceExport.id == export_id)
+            .update({"completed_at": aged})
+        )
+        db_session.commit()
+        path_before = (
+            db_session.query(ComplianceExport)
+            .filter(ComplianceExport.id == export_id)
+            .first()
+            .archive_storage_path
+        )
+        assert os.path.exists(path_before)
+
+        real = client.post(
+            "/api/internal/compliance-exports/cleanup?dry_run=false",
+            headers={"x-internal-key": "test-internal-key"},
+        )
+        assert real.status_code == 200
+        body = real.json()
+        assert body["status"] == "ok"
+        assert body["archives_deleted"] == 1
+        assert body["rows_updated"] == 1
+
+        # Archive file gone; download endpoint now returns 404.
+        assert not os.path.exists(path_before)
+        dl = client.get(
+            f"/api/v1/exports/{export_id}/download",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert dl.status_code == 404
+
+    def test_recent_jobs_are_not_candidates(
+        self, client, two_orgs, local_signer, archive_dir, monkeypatch
+    ):
+        from common.config.settings import settings
+
+        monkeypatch.setattr(settings, "internal_service_key", "test-internal-key", raising=False)
+        # Fresh export, completed_at stays at "now" — well inside the
+        # 30-day window.
+        client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="soc2_tsc_2017"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+
+        real = client.post(
+            "/api/internal/compliance-exports/cleanup?dry_run=false",
+            headers={"x-internal-key": "test-internal-key"},
+        )
+        assert real.status_code == 200
+        assert real.json()["archives_deleted"] == 0
+
+
 # ── NIST AI RMF profile end-to-end ───────────────────────────────────
 
 
