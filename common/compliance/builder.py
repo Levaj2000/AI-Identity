@@ -170,6 +170,32 @@ def run_export_job(
             signer=signer,
         )
 
+        # --- Size cap (ADR-002 cost guardrail) ------------------------
+        # Enforced AFTER seal so we have a final archive size to check
+        # against. The archive file is GC'd on overflow so an
+        # oversized artifact doesn't linger on disk.
+        bytes_cap = default_settings.compliance_export_archive_bytes_cap
+        if bundle.archive_bytes is not None and bundle.archive_bytes > bytes_cap:
+            try:
+                bundle.archive_path.unlink(missing_ok=True)
+            except OSError:
+                logger.exception(
+                    "failed to GC oversized archive; leaving on disk",
+                    extra={"job_id": str(job.id), "path": str(bundle.archive_path)},
+                )
+            transition_to_failed(
+                db,
+                job,
+                error_code="archive_too_large",
+                error_message=(
+                    f"archive size {bundle.archive_bytes} bytes exceeds the "
+                    f"{bytes_cap}-byte cap; narrow the period or agent_ids scope"
+                ),
+                completed_at=datetime.datetime.now(tz=datetime.UTC),
+            )
+            db.commit()
+            return
+
         # --- Transition -----------------------------------------------
         # `archive_url` stays null in this foundation PR — the download
         # endpoint serves from `archive_storage_path` instead. Signed

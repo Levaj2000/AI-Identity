@@ -1,0 +1,76 @@
+# Daily compliance-export retention cleanup (03:30 UTC).
+# ADR-002 §"Cost guardrails" — 30-day default retention for archive
+# files. Source-of-truth evidence (audit_log, attestations) is
+# untouched; only the ZIP is GC'd. A client can always re-request a
+# build from the same period to regenerate.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: compliance-export-cleanup
+  namespace: ai-identity
+spec:
+  # 03:30 UTC — off-peak, and 30 minutes offset from the user-cleanup
+  # cron so they don't hammer the DB at the same minute.
+  schedule: "30 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            # Targeted by NetworkPolicy `allow-cron-egress-to-api` and the
+            # gateway/cron clause of `allow-internal-to-api`. Required for
+            # this job to reach api-service:8001 under the namespace default-deny.
+            tier: cron
+        spec:
+          serviceAccountName: ai-identity-workload
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 100
+            runAsGroup: 101
+            fsGroup: 101
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: curl
+              # Pinned by digest (curlimages/curl:8.14.1) — matches
+              # cronjob-cleanup.yaml so the image is shared across
+              # crons and only rotates once.
+              image: curlimages/curl@sha256:9a6f6a17667960e077f1b153009aaf18ac99a622221084e1938a45a06fff057a
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  curl -sf -X POST \
+                    -H "x-internal-key: $(cat /mnt/secrets/INTERNAL_SERVICE_KEY)" \
+                    "http://api-service.ai-identity.svc.cluster.local:8001/api/internal/compliance-exports/cleanup?dry_run=false"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "64Mi"
+                limits:
+                  cpu: "100m"
+                  memory: "128Mi"
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+                - name: secrets-store
+                  mountPath: /mnt/secrets
+                  readOnly: true
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: secrets-store
+              csi:
+                driver: secrets-store-gke.csi.k8s.io
+                readOnly: true
+                volumeAttributes:
+                  secretProviderClass: ai-identity-cron-secrets
+          restartPolicy: OnFailure
