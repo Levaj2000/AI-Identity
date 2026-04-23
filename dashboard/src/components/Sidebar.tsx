@@ -104,6 +104,9 @@ const navItems: NavItem[] = [
     end: false,
   },
   {
+    // Single nav entry — the page itself has tabs for "Audit Log" and
+    // "Framework Exports". `end: false` so the highlight covers both
+    // /dashboard/compliance and /dashboard/compliance/exports.
     label: 'Compliance',
     to: '/dashboard/compliance',
     icon: (
@@ -118,22 +121,6 @@ const navItems: NavItem[] = [
           d="M9.661 2.237a.531.531 0 01.678 0 11.947 11.947 0 007.078 2.749.5.5 0 01.479.425c.069.52.104 1.05.104 1.59 0 5.162-3.26 9.563-7.834 11.256a.48.48 0 01-.332 0C5.26 16.564 2 12.163 2 7c0-.538.035-1.069.104-1.589a.5.5 0 01.48-.425 11.947 11.947 0 007.077-2.75zm4.196 5.954a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
           clipRule="evenodd"
         />
-      </svg>
-    ),
-    end: true,
-  },
-  {
-    label: 'Compliance Exports',
-    to: '/dashboard/compliance/exports',
-    icon: (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        className="h-5 w-5"
-      >
-        <path d="M10 2a.75.75 0 01.75.75v7.94l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V2.75A.75.75 0 0110 2z" />
-        <path d="M3 13.25a.75.75 0 01.75.75v2a.75.75 0 00.75.75h11a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0115.5 18.5h-11A2.25 2.25 0 012.25 16.25v-2a.75.75 0 01.75-1z" />
       </svg>
     ),
     end: false,
