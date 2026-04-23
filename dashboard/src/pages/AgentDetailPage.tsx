@@ -7,6 +7,7 @@ import { AgentStatusBadge } from '../components/AgentStatusBadge'
 import { CapabilitySelect } from '../components/forms/CapabilitySelect'
 import { KeyValueEditor } from '../components/forms/KeyValueEditor'
 import { ConfirmModal } from '../components/modals/ConfirmModal'
+import { ANNEX_III_CATEGORIES, NOT_IN_SCOPE, riskClassLabel, riskClassStatus } from '../lib/euAiAct'
 import { relativeTime } from '../lib/time'
 import type { Agent, AgentUpdate, ValidationErrorItem } from '../types/api'
 
@@ -22,6 +23,12 @@ interface EditForm {
   description: string
   capabilities: string[]
   metadataEntries: KeyValueEntry[]
+  /**
+   * Raw stored value: empty string = unclassified (null on the API),
+   * 'not_in_scope' = explicit out-of-scope, or an Annex III code.
+   * Kept as a flat string so the <select> binding is trivial.
+   */
+  euAiActRiskClass: string
 }
 
 // ─── Helpers ────────────────────────────────────────────────────
@@ -46,6 +53,7 @@ function buildEditForm(agent: Agent): EditForm {
       key,
       value: String(value),
     })),
+    euAiActRiskClass: agent.eu_ai_act_risk_class ?? '',
   }
 }
 
@@ -75,6 +83,21 @@ function buildChanges(form: EditForm, agent: Agent): AgentUpdate | null {
   if (JSON.stringify(newMetadata) !== JSON.stringify(agent.metadata)) {
     changes.metadata = newMetadata
     hasChanges = true
+  }
+
+  // Empty select value → deployer hasn't made a classification decision yet.
+  // Send the raw value through; API validator accepts Annex III codes and
+  // 'not_in_scope' only (empty string would be rejected) — so we convert
+  // empty back to null to mean "leave unclassified." PUT is partial-update,
+  // so omitting it when unchanged is what we want.
+  const currentRaw = agent.eu_ai_act_risk_class ?? ''
+  if (form.euAiActRiskClass !== currentRaw) {
+    // API rejects '' as an invalid code. Treat empty as "leave unchanged"
+    // — the API has no "clear" path per the AgentUpdate schema comment.
+    if (form.euAiActRiskClass !== '') {
+      changes.eu_ai_act_risk_class = form.euAiActRiskClass
+      hasChanges = true
+    }
   }
 
   return hasChanges ? changes : null
@@ -113,6 +136,7 @@ export function AgentDetailPage() {
     description: '',
     capabilities: [],
     metadataEntries: [],
+    euAiActRiskClass: '',
   })
   const [isSaving, setIsSaving] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -695,6 +719,69 @@ export function AgentDetailPage() {
               </div>
             ) : (
               <p className="text-sm italic text-gray-400 dark:text-[#52525b]">No metadata</p>
+            )}
+          </div>
+
+          {/* EU AI Act classification */}
+          <div>
+            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
+              EU AI Act classification
+            </h3>
+            <p className="mb-2 text-xs text-gray-500 dark:text-[#71717a]">
+              Annex III high-risk category this agent falls under. Surfaces in the EU AI Act and
+              NIST compliance exports. Pick <em>Not in scope</em> only if the deployer has evaluated
+              the agent and determined it is not a high-risk AI system.
+            </p>
+            {isEditing ? (
+              <>
+                <select
+                  id="edit-eu-ai-act-risk-class"
+                  value={editForm.euAiActRiskClass}
+                  onChange={(e) => setEditForm({ ...editForm, euAiActRiskClass: e.target.value })}
+                  className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors dark:bg-[#04070D] dark:text-[#e4e4e7] ${
+                    fieldErrors.eu_ai_act_risk_class
+                      ? 'border-red-500 dark:border-red-500'
+                      : 'border-gray-300 focus:border-[#A6DAFF] dark:border-[#2a2a2d] dark:focus:border-[#A6DAFF]'
+                  }`}
+                  aria-label="EU AI Act Annex III classification"
+                >
+                  <option value="">— Not classified —</option>
+                  <option value={NOT_IN_SCOPE}>Not in scope (evaluated out)</option>
+                  {ANNEX_III_CATEGORIES.map(({ code, label }) => (
+                    <option key={code} value={code}>
+                      {code} — {label}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.eu_ai_act_risk_class && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                    {fieldErrors.eu_ai_act_risk_class}
+                  </p>
+                )}
+                {editForm.euAiActRiskClass === '' && agent.eu_ai_act_risk_class !== null && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                    API doesn't support clearing a previously-set classification via this form.
+                    Leave your existing value selected or pick a new one.
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span
+                  className={`rounded-md px-2 py-0.5 text-xs ${
+                    riskClassStatus(agent.eu_ai_act_risk_class) === 'in_scope'
+                      ? 'border border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300'
+                      : riskClassStatus(agent.eu_ai_act_risk_class) === 'out_of_scope'
+                        ? 'border border-gray-200 bg-gray-100 text-gray-600 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#a1a1aa]'
+                        : 'border border-dashed border-gray-300 text-gray-500 dark:border-[#3f3f46] dark:text-[#71717a]'
+                  }`}
+                >
+                  {agent.eu_ai_act_risk_class ?? 'unclassified'}
+                </span>
+                <span className="text-sm text-gray-600 dark:text-[#a1a1aa]">
+                  {riskClassLabel(agent.eu_ai_act_risk_class)}
+                </span>
+              </div>
             )}
           </div>
 
