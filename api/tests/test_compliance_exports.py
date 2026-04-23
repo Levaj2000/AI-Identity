@@ -231,9 +231,12 @@ class TestCreateAndBuild:
         )
 
     def test_manifest_commits_to_artifact_hashes(self, client, two_orgs, local_signer, archive_dir):
+        # Uses eu_ai_act_2024 to exercise the still-placeholder path
+        # and keep this test focused on foundation manifest behavior.
+        # SOC 2 gets its own artifact-level tests in TestSoc2Profile.
         resp = client.post(
             "/api/v1/exports",
-            json=_valid_body(),
+            json=_valid_body(profile="eu_ai_act_2024"),
             headers={"X-API-Key": OWNER_A_EMAIL},
         )
         export_id = resp.json()["id"]
@@ -258,9 +261,11 @@ class TestCreateAndBuild:
 
 class TestDownload:
     def test_download_after_ready_returns_zip(self, client, two_orgs, local_signer, archive_dir):
+        # eu_ai_act_2024 exercises the placeholder path — SOC 2 artifact
+        # set is covered in TestSoc2Profile below.
         resp = client.post(
             "/api/v1/exports",
-            json=_valid_body(),
+            json=_valid_body(profile="eu_ai_act_2024"),
             headers={"X-API-Key": OWNER_A_EMAIL},
         )
         export_id = resp.json()["id"]
@@ -507,6 +512,88 @@ class TestList:
             headers={"X-API-Key": OWNER_A_EMAIL},
         ).json()
         assert all(item["profile"] == "soc2_tsc_2017" for item in listed["items"])
+
+
+# ── SOC 2 profile end-to-end ─────────────────────────────────────────
+
+
+class TestSoc2Profile:
+    """End-to-end: POST soc2_tsc_2017 → builder dispatch → full artifact set."""
+
+    def test_soc2_profile_produces_full_artifact_set(
+        self, client, two_orgs, local_signer, archive_dir
+    ):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="soc2_tsc_2017"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert resp.status_code == 202
+        export_id = resp.json()["id"]
+
+        dl = client.get(
+            f"/api/v1/exports/{export_id}/download",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert dl.status_code == 200
+        zf = zipfile.ZipFile(io.BytesIO(dl.content))
+        names = set(zf.namelist())
+        # SOC 2 set per docs/compliance/export-profiles.md §SOC 2.
+        # attestations/ and policy_snapshots/ may be empty (no seeds
+        # in this fixture), so we don't assert those directories.
+        assert {
+            "agent_inventory.csv",
+            "access_log.csv",
+            "change_log.csv",
+            "control_results.csv",
+            "chain_integrity.json",
+            "evidence_summary.json",
+            "manifest.json",
+            "manifest.dsse.json",
+        } <= names
+        # Placeholder artifacts must NOT appear for soc2.
+        assert "PLACEHOLDER.txt" not in names
+
+    def test_soc2_evidence_summary_profile_field(self, client, two_orgs, local_signer, archive_dir):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="soc2_tsc_2017"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        export_id = resp.json()["id"]
+        dl = client.get(
+            f"/api/v1/exports/{export_id}/download",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        zf = zipfile.ZipFile(io.BytesIO(dl.content))
+        summary = json.loads(zf.read("evidence_summary.json"))
+        assert summary["profile"] == "soc2_tsc_2017"
+        assert summary["scope"]["whole_org"] is True
+        assert "artifact_control_mapping" in summary
+        assert "SOC2-CC6.1" in summary["artifact_control_mapping"]["access_log.csv"]
+
+    def test_soc2_manifest_commits_soc2_artifacts(
+        self, client, two_orgs, local_signer, archive_dir
+    ):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="soc2_tsc_2017"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        got = client.get(
+            f"/api/v1/exports/{resp.json()['id']}",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        ).json()
+        env = got["manifest_envelope"]
+        manifest = json.loads(base64.b64decode(env["payload"]))
+        paths = {a["path"] for a in manifest["artifacts"]}
+        assert "access_log.csv" in paths
+        assert "change_log.csv" in paths
+        assert "control_results.csv" in paths
+        assert "chain_integrity.json" in paths
+        # Control tags round-trip through the manifest.
+        access = next(a for a in manifest["artifacts"] if a["path"] == "access_log.csv")
+        assert "SOC2-CC6.1" in access["controls"]
 
 
 # ── OpenAPI still reflects the surface ───────────────────────────────

@@ -29,6 +29,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session  # noqa: TC002 — db.query(...) at runtime
 
 from common.compliance.builders.placeholder import build_placeholder_bundle
+from common.compliance.builders.soc2 import build_soc2_bundle
 from common.compliance.bundle import ComplianceExportBundle
 from common.compliance.job import (
     transition_to_building,
@@ -111,17 +112,30 @@ def run_export_job(
         period_start = _ensure_utc(job.audit_period_start)
         period_end = _ensure_utc(job.audit_period_end)
 
-        # Placeholder builder — every profile, until the real per-profile
-        # builders land.
-        build_placeholder_bundle(
-            bundle,
-            profile=job.profile,
-            org_id=job.org_id,
-            export_id=job.id,
-            audit_period_start=period_start,
-            audit_period_end=period_end,
-            built_at=now,
-        )
+        # Dispatch to the profile-specific builder. Profiles without a
+        # dedicated builder yet fall back to the placeholder — which
+        # still produces a fully-signed, verifiable bundle.
+        if job.profile == "soc2_tsc_2017":
+            build_soc2_bundle(
+                bundle,
+                db=db,
+                org_id=job.org_id,
+                export_id=job.id,
+                audit_period_start=period_start,
+                audit_period_end=period_end,
+                built_at=now,
+                agent_ids=job.agent_ids,
+            )
+        else:
+            build_placeholder_bundle(
+                bundle,
+                profile=job.profile,
+                org_id=job.org_id,
+                export_id=job.id,
+                audit_period_start=period_start,
+                audit_period_end=period_end,
+                built_at=now,
+            )
 
         bundle.seal(
             profile=job.profile,
