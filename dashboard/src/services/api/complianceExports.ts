@@ -50,6 +50,20 @@ export function getExport(exportId: string): Promise<ComplianceExport> {
 }
 
 /**
+ * Cancel a queued or building export.
+ *
+ * Transitions the job to `failed` with `error_code=cancelled`.
+ * 409s with `export_not_cancellable` if the job is already terminal
+ * (ready / failed) — the UI should disable the button in those states
+ * so that path is defensive, not expected.
+ */
+export function cancelExport(exportId: string): Promise<ComplianceExport> {
+  return apiFetch<ComplianceExport>(`${BASE}/${exportId}/cancel`, {
+    method: 'POST',
+  })
+}
+
+/**
  * Download the archive ZIP for a ready export.
  *
  * Raw fetch because the response is binary — `apiFetch` assumes JSON
