@@ -59,7 +59,6 @@ from common.models import (
     ForensicAttestation,
     OrgMembership,
     Policy,
-    User,
 )
 from common.validation.eu_ai_act import ANNEX_III_CATEGORIES, NOT_IN_SCOPE
 
@@ -499,7 +498,12 @@ def _write_control_results(
     audit_period_end: datetime.datetime,
 ) -> int:
     """Automated compliance-check results in the period. MS-4.1."""
-    org_user_ids = [u[0] for u in db.query(User.id).filter(User.org_id == org_id).all()]
+    # See soc2._write_control_results — same workaround for the
+    # users.org_id schema drift (column is VARCHAR in prod, model
+    # says UUID). OrgMembership is UUID-correct.
+    org_user_ids = [
+        m.user_id for m in db.query(OrgMembership).filter(OrgMembership.org_id == org_id).all()
+    ]
     report_query = (
         db.query(ComplianceReport)
         .filter(
