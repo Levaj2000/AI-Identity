@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { GoogleForStartupsCompact } from "./GoogleForStartupsBadge";
 
 // ── Tier Data ───────────────────────────────────────────────────────
 
@@ -504,6 +505,11 @@ export default function Pricing() {
             );
           })}
         </motion.div>
+
+        {/* ── Trust signal under the tier CTAs ─────────────────────── */}
+        <div className="mt-8 flex justify-center">
+          <GoogleForStartupsCompact />
+        </div>
 
         {/* ── Usage Estimator ────────────────────────────────────────── */}
         <UsageEstimator />
