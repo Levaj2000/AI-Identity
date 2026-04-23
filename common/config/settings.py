@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     audit_debug_ttl_hours: int = 24
     audit_debug_log_dir: str = "/tmp/ai-identity/audit-debug"
 
+    # Compliance export builder — where ZIP archives live on disk.
+    # GCS + signed URLs land in the storage-backend refactor; for now
+    # we serve downloads directly via an authenticated endpoint.
+    compliance_export_archive_dir: str = "/tmp/ai-identity/compliance-exports"
+
     # Stripe billing
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
