@@ -26,8 +26,8 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -118,18 +118,30 @@ class ComplianceExport(Base):
     )
 
     __table_args__ = (
-        # Idempotency guard — return 409 on duplicate in-flight job.
-        # agent_ids_hash is empty-string for whole-org, so the index
-        # distinguishes ("org X, profile Y, range Z, whole org") from
-        # ("org X, profile Y, range Z, agents [A,B]").
-        UniqueConstraint(
+        # Idempotency guard — return 409 on duplicate IN-FLIGHT job.
+        # PARTIAL unique index: only enforces on status ∈ (queued,
+        # building). Terminal rows (ready/failed) can accumulate per
+        # scope without conflict, so cancel / orphan-reap / repeated
+        # retries after a failed build all work.
+        #
+        # The original UniqueConstraint (#275) included `status` in
+        # the column set without a WHERE clause; that meant only one
+        # `failed` row could exist per scope, which broke every
+        # transition-to-failed once the first one landed. This
+        # partial index is the correction.
+        Index(
+            "uq_compliance_export_inflight",
             "org_id",
             "profile",
             "audit_period_start",
             "audit_period_end",
             "agent_ids_hash",
-            "status",
-            name="uq_compliance_export_inflight",
+            unique=True,
+            postgresql_where=text("status IN ('queued', 'building')"),
+            # SQLite also supports partial indexes; needed for the
+            # in-memory test DB that reaches the model directly via
+            # metadata.create_all (no Alembic migration path).
+            sqlite_where=text("status IN ('queued', 'building')"),
         ),
         # List endpoint: newest first, per-org.
         Index(
