@@ -120,6 +120,7 @@ def create_agent(
         status=AgentStatus.active.value,
         capabilities=body.capabilities,
         metadata_=body.metadata,
+        eu_ai_act_risk_class=body.eu_ai_act_risk_class,
     )
     # If user belongs to an org, assign agent to that org
     if user.org_id:
@@ -410,6 +411,7 @@ def _agent_to_response(agent: Agent) -> AgentResponse:
         status=agent.status,
         capabilities=agent.capabilities,
         metadata=agent.metadata_,
+        eu_ai_act_risk_class=agent.eu_ai_act_risk_class,
         created_at=agent.created_at,
         updated_at=agent.updated_at,
     )
