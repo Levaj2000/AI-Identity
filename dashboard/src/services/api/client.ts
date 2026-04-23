@@ -76,6 +76,18 @@ export async function parseErrorResponse(response: Response): Promise<ApiError> 
     } else if (body.message) {
       message = body.message
       code = body.code || 'API_ERROR'
+    } else if (body.error && typeof body.error === 'object') {
+      // Canonical API error envelope from our backend:
+      //   { "error": { "code": "some_stable_code", "message": "..." } }
+      // Used by the app-wide http_exception_handler and by any
+      // JSONResponse-returning endpoint that wants to keep its code
+      // intact (compliance exports, rate-limit 429s, etc).
+      if (typeof body.error.message === 'string') {
+        message = body.error.message
+      }
+      if (typeof body.error.code === 'string') {
+        code = body.error.code
+      }
     }
   } catch {
     // Response body wasn't JSON — keep defaults
