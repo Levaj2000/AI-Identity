@@ -120,6 +120,22 @@ const navItems: NavItem[] = [
         />
       </svg>
     ),
+    end: true,
+  },
+  {
+    label: 'Compliance Exports',
+    to: '/dashboard/compliance/exports',
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 20 20"
+        fill="currentColor"
+        className="h-5 w-5"
+      >
+        <path d="M10 2a.75.75 0 01.75.75v7.94l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V2.75A.75.75 0 0110 2z" />
+        <path d="M3 13.25a.75.75 0 01.75.75v2a.75.75 0 00.75.75h11a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0115.5 18.5h-11A2.25 2.25 0 012.25 16.25v-2a.75.75 0 01.75-1z" />
+      </svg>
+    ),
     end: false,
   },
   {
