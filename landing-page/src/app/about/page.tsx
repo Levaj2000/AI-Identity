@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { generatePageMetadata } from "@/lib/metadata";
+import { GoogleForStartupsInline } from "@/components/GoogleForStartupsBadge";
 
 export const metadata: Metadata = generatePageMetadata({
   title: "About AI Identity — Company, Team, Mission & Stage",
@@ -29,6 +30,9 @@ export default function About() {
             AI Identity gives every autonomous AI agent its own cryptographic identity, scoped
             permissions, and a tamper-evident audit trail — so security, platform, and compliance
             teams can deploy agents with accountability built in.
+          </p>
+          <p className="mt-6 text-sm text-[rgba(213,219,230,0.7)]">
+            <GoogleForStartupsInline />
           </p>
         </div>
       </section>
