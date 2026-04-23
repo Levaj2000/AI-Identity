@@ -1,55 +1,56 @@
-"""Compliance export API — stub (#273).
+"""Compliance export API.
 
-This module ships the contract for Milestone #34's compliance export
-pipeline. The endpoints are wired, the schemas are authoritative, and
-OpenAPI picks everything up — but the builder itself is not yet
-implemented. Every write-side endpoint returns 501 Not Implemented
-with a stable error code so downstream consumers can integrate
-against the real response shape today.
+Async job-based export per ADR-002. ``POST /api/v1/exports`` queues a
+build, the background builder turns it into a signed, hash-committed
+ZIP, and ``GET /api/v1/exports/{id}`` polls status until
+``status == "ready"``. An authenticated ``GET
+/api/v1/exports/{id}/download`` streams the archive bytes.
 
 Design reference: ``docs/ADR-002-compliance-exports.md``.
 Scoping doc: ``docs/compliance/export-profiles.md``.
 
-What this stub does today:
-
-* Validates the POST request body against the real Pydantic schema —
-  bad profile / bad date range / mixed-tenant agent_ids fail fast with
-  proper 400s, **not** 501. Clients can write their own validation
-  tests against the stub.
-* Enforces authZ (org owner/admin, or platform admin) — a non-admin
-  caller gets 403 before the 501.
-* Returns a 501 with a documented ``error_code`` on the actual build
-  request.
-* Returns a 404-not-403 on cross-tenant GETs, matching #264.
-
-What it does NOT do yet:
-
-* No ``compliance_exports`` table. GET/list both 501 since there's
-  nowhere to read from.
-* No worker, no archive build, no GCS signed URLs.
-* No rate limiting (the ADR's 5-concurrent / 20-per-day caps land
-  with the builder).
-
-Implementation follow-on is a separate sprint item tracked under
-Milestone #34.
+This replaces the #273 stub — every endpoint now does real work
+against ``compliance_exports``. The profile builders themselves are
+still placeholders (foundation PR) so the archive contents are
+intentionally minimal; that's #3/#4/#5 in the milestone breakdown.
 """
 
 from __future__ import annotations
 
+import datetime
 import logging
-import uuid  # noqa: TC003 — used at runtime by Pydantic model fields
+import uuid  # noqa: TC003 — FastAPI resolves path param annotations at runtime
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session  # noqa: TC002 — runtime Depends target
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    Query,
+    status,
+)
+from fastapi.responses import FileResponse, JSONResponse
+from sqlalchemy.orm import Session  # noqa: TC002 — FastAPI Depends target
 
 from api.app.auth import get_current_user
-from common.models import Agent, OrgMembership, User, get_db
+from common.compliance.agent_ids_hash import agent_ids_hash
+from common.compliance.builder import run_export_job
+from common.compliance.job import BUILDING, QUEUED
+from common.models import (
+    Agent,
+    ComplianceExport,
+    OrgMembership,
+    SessionLocal,
+    User,
+    get_db,
+)
 from common.schemas.compliance_export import (
     ExportCreateRequest,
     ExportListResponse,
     ExportResponse,
+    ExportStatus,
 )
 
 logger = logging.getLogger("ai_identity.api.compliance_exports")
@@ -57,17 +58,16 @@ logger = logging.getLogger("ai_identity.api.compliance_exports")
 router = APIRouter(prefix="/api/v1/exports", tags=["compliance.exports"])
 
 
-# ── AuthZ helper ─────────────────────────────────────────────────────
+# ── AuthZ helpers ────────────────────────────────────────────────────
 
 
 def _assert_org_admin(db: Session, user: User, org_id: uuid.UUID) -> None:
     """Raise 403 unless the caller is an owner/admin of ``org_id``.
 
-    Mirrors the predicate used by the attestation sign endpoint
-    (``api/app/routers/attestations.py::_assert_org_admin``). Export
-    creation is a destructive administrative action in the same sense
-    — it produces a permanent, signed record of an org's activity —
-    so we gate it the same way.
+    Mirrors the predicate used by the attestation sign endpoint. Export
+    creation is a destructive administrative action — it produces a
+    permanent, signed record of an org's activity — so we gate it the
+    same way.
     """
     if user.role == "admin":
         return
@@ -90,18 +90,16 @@ def _assert_org_admin(db: Session, user: User, org_id: uuid.UUID) -> None:
 def _caller_org_id(db: Session, user: User) -> uuid.UUID:
     """Resolve the org the caller is acting as.
 
-    The export API is intentionally not self-declaring on ``org_id`` —
-    preserves the "caller cannot export across orgs" invariant from
-    #263. Callers with multiple memberships get their primary org
-    (``user.org_id``). Platform admins without an org get a 400 —
-    they must use an admin-scoped call shape that isn't part of v1.
+    Preserves the "caller cannot export across orgs" invariant from
+    #263. Platform admins without a primary org get a 400 — they must
+    use an admin-scoped call shape that isn't part of v1.
     """
     if user.org_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
                 "caller has no primary org; platform admins must specify "
-                "a target org (not supported in v1 stub)"
+                "a target org (not supported in v1)"
             ),
         )
     return user.org_id
@@ -110,13 +108,7 @@ def _caller_org_id(db: Session, user: User) -> uuid.UUID:
 def _verify_agent_ids_belong_to_org(
     db: Session, agent_ids: list[uuid.UUID] | None, org_id: uuid.UUID
 ) -> None:
-    """Reject any agent id that belongs to a different org.
-
-    Cross-tenant leakage guard. Same discipline as the attestation
-    sign endpoint's cross-org range check (#263). Runs before we issue
-    a 501 on the build itself so clients get a fast, specific 400 for
-    this particular misuse pattern.
-    """
+    """Reject any agent id that belongs to a different org."""
     if not agent_ids:
         return
     rows = db.query(Agent.id, Agent.org_id).filter(Agent.id.in_(agent_ids)).all()
@@ -138,37 +130,62 @@ def _verify_agent_ids_belong_to_org(
         )
 
 
-# ── Stub responses ───────────────────────────────────────────────────
+# ── Row → response ───────────────────────────────────────────────────
 
 
-_STUB_ERROR_CODE = "export_builder_not_implemented"
-_STUB_MESSAGE = (
-    "The compliance export builder is scoped (#273 ADR) but not yet "
-    "implemented. This endpoint will return 202 Accepted once the "
-    "builder lands in the follow-on sprint. See "
-    "docs/ADR-002-compliance-exports.md for the full contract."
-)
+def _to_response(job: ComplianceExport) -> ExportResponse:
+    """Map a ``ComplianceExport`` row to the API response shape."""
+    error = None
+    if job.status == "failed" and job.error_code is not None:
+        from common.schemas.compliance_export import ExportError
 
-
-def _stub_501(extra: dict | None = None) -> JSONResponse:
-    """Build the standard 501 body.
-
-    Matches the application-wide error envelope (see
-    ``api/app/main.py::http_exception_handler``) so clients handling
-    errors generically don't need a special case for this endpoint.
-    """
-    body = {
-        "error": {
-            "code": _STUB_ERROR_CODE,
-            "message": _STUB_MESSAGE,
-        }
-    }
-    if extra:
-        body["error"].update(extra)
-    return JSONResponse(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        content=body,
+        error = ExportError(
+            code=job.error_code,
+            message=job.error_message or "",
+        )
+    return ExportResponse(
+        id=job.id,
+        org_id=job.org_id,
+        requested_by=job.requested_by,
+        profile=job.profile,
+        audit_period_start=job.audit_period_start,
+        audit_period_end=job.audit_period_end,
+        agent_ids=job.agent_ids,
+        status=ExportStatus(job.status),
+        progress_pct=job.progress_pct,
+        archive_url=job.archive_url,
+        archive_url_expires_at=job.archive_url_expires_at,
+        archive_sha256=job.archive_sha256,
+        archive_bytes=job.archive_bytes,
+        manifest_envelope=job.manifest_envelope,
+        created_at=job.created_at,
+        completed_at=job.completed_at,
+        error=error,
     )
+
+
+# ── Background task wrapper ──────────────────────────────────────────
+
+
+# Module-level session factory — tests override this to point at
+# their in-memory SQLite sessionmaker. Production is SessionLocal.
+_background_session_factory = SessionLocal
+
+
+def _run_job_in_background(job_id: uuid.UUID) -> None:
+    """Open a fresh session for the background builder.
+
+    The request-scoped session from ``get_db`` is closed by the time
+    BackgroundTasks runs, so we open our own. Running this in the
+    request thread is fine for the foundation — the placeholder
+    builder finishes in milliseconds. Real profile builders will move
+    to a Cloud Run job + Pub/Sub per ADR-002.
+    """
+    db = _background_session_factory()
+    try:
+        run_export_job(db, job_id)
+    finally:
+        db.close()
 
 
 # ── Endpoints ────────────────────────────────────────────────────────
@@ -178,64 +195,109 @@ def _stub_501(extra: dict | None = None) -> JSONResponse:
     "",
     response_model=ExportResponse,
     status_code=status.HTTP_202_ACCEPTED,
-    summary="Create a compliance export job (stub — returns 501)",
+    summary="Create a compliance export job",
     responses={
-        202: {"description": "Export job accepted (once the builder lands)."},
+        202: {"description": "Export job accepted. Poll GET /exports/{id} for status."},
         400: {"description": "Validation error (bad profile, period, or agent_ids)."},
         403: {"description": "Caller is not an org owner/admin."},
-        501: {
+        409: {
             "description": (
-                f"Builder not yet implemented. Body includes error.code == '{_STUB_ERROR_CODE}'."
+                "An export for the same (profile, period, agent_ids) is already "
+                "in-flight for this org. Body contains the existing job."
             )
         },
     },
 )
 def create_export(
     body: ExportCreateRequest,
+    background_tasks: BackgroundTasks,
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
-) -> JSONResponse:
-    """Create an asynchronous export build.
+) -> ExportResponse:
+    """Queue an async export build.
 
-    This endpoint is a stub: request validation + authZ + tenancy
-    checks run, but the final step returns 501. Use it to integrate
-    against the contract today and flip to a live build once the
-    follow-on sprint ships.
+    Returns 202 immediately with the queued job. The background builder
+    transitions it to ``building`` then to ``ready`` (or ``failed``).
+    Clients poll ``GET /exports/{id}`` to observe the state change.
     """
     org_id = _caller_org_id(db, user)
     _assert_org_admin(db, user, org_id)
     _verify_agent_ids_belong_to_org(db, body.agent_ids, org_id)
 
+    ids_hash = agent_ids_hash(body.agent_ids)
+
+    # Idempotency: if a queued/building job for this exact scope already
+    # exists, return it with 409. Matches the ADR's "don't build the
+    # same thing twice" discipline; the client can choose to poll or
+    # cancel-and-retry.
+    existing = (
+        db.query(ComplianceExport)
+        .filter(
+            ComplianceExport.org_id == org_id,
+            ComplianceExport.profile == body.profile.value,
+            ComplianceExport.audit_period_start == body.audit_period_start,
+            ComplianceExport.audit_period_end == body.audit_period_end,
+            ComplianceExport.agent_ids_hash == ids_hash,
+            ComplianceExport.status.in_((QUEUED, BUILDING)),
+        )
+        .first()
+    )
+    if existing is not None:
+        # Return JSONResponse directly — the app-wide HTTPException
+        # handler flattens structured details into a generic envelope,
+        # which would clobber the structured error code the client
+        # relies on.
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "error": {
+                    "code": "export_already_inflight",
+                    "message": "An export for the same scope is already queued or building.",
+                    "existing_export_id": str(existing.id),
+                }
+            },
+        )
+
+    job = ComplianceExport(
+        org_id=org_id,
+        requested_by=user.id,
+        profile=body.profile.value,
+        audit_period_start=body.audit_period_start,
+        audit_period_end=body.audit_period_end,
+        agent_ids=body.agent_ids,
+        agent_ids_hash=ids_hash,
+        status=QUEUED,
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    background_tasks.add_task(_run_job_in_background, job.id)
+
     logger.info(
-        "compliance export stub hit",
+        "compliance export queued",
         extra={
+            "job_id": str(job.id),
             "org_id": str(org_id),
-            "profile": body.profile.value,
-            "period_days": (body.audit_period_end - body.audit_period_start).days,
+            "profile": job.profile,
+            "period_days": (job.audit_period_end - job.audit_period_start).days,
             "agent_ids_count": len(body.agent_ids) if body.agent_ids else 0,
         },
     )
 
-    return _stub_501(
-        extra={
-            "profile": body.profile.value,
-            "org_id": str(org_id),
-        }
-    )
+    return _to_response(job)
 
 
 @router.get(
     "/{export_id}",
     response_model=ExportResponse,
-    summary="Fetch a compliance export job (stub — returns 501)",
+    summary="Fetch a compliance export job",
     responses={
-        200: {"description": "Export job (once the builder lands and persistence exists)."},
-        403: {"description": "Reserved — collapses into 404 today to avoid leaking tenancy."},
-        404: {"description": "Export id not found, or belongs to another org."},
-        501: {
+        200: {"description": "Current job state."},
+        404: {
             "description": (
-                "Persistence not yet implemented. Body includes "
-                f"error.code == '{_STUB_ERROR_CODE}'."
+                "Export id not found, or belongs to another org (404-not-403 "
+                "by the tenancy discipline from #264)."
             )
         },
     },
@@ -244,34 +306,106 @@ def get_export(
     export_id: uuid.UUID,
     user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
-) -> JSONResponse:
-    """Retrieve an export job by id.
+) -> ExportResponse:
+    """Retrieve a single export job by id."""
+    org_id = _caller_org_id(db, user)
+    job = (
+        db.query(ComplianceExport)
+        .filter(
+            ComplianceExport.id == export_id,
+            ComplianceExport.org_id == org_id,
+        )
+        .first()
+    )
+    # Platform admins may fetch across orgs; everyone else gets 404.
+    if job is None and user.role == "admin":
+        job = db.query(ComplianceExport).filter(ComplianceExport.id == export_id).first()
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="export not found",
+        )
+    return _to_response(job)
 
-    Stub — there is no ``compliance_exports`` table yet, so there are
-    no rows to return. Returns 501 unconditionally for authorized
-    callers. Once the table lands, the 501 is replaced by the real
-    lookup and the 404-not-403 tenancy discipline from #264.
+
+@router.get(
+    "/{export_id}/download",
+    summary="Download a completed export archive",
+    responses={
+        200: {
+            "description": (
+                "ZIP archive bytes. Same signed manifest as referenced in "
+                "GET /exports/{id} (``manifest_envelope``)."
+            ),
+            "content": {"application/zip": {}},
+        },
+        404: {"description": "Export not found, wrong org, or not ready yet."},
+        409: {"description": "Export is not in ready state."},
+    },
+)
+def download_export(
+    export_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> FileResponse:
+    """Stream the archive ZIP to an authorized caller.
+
+    Foundation PR ships direct file serving from local disk. The GCS
+    signed-URL path lands with the storage-backend refactor — at that
+    point ``archive_url`` on the job becomes the primary download
+    surface and this endpoint becomes a fallback.
     """
-    # Enforce auth eagerly so the stub mirrors real endpoint behavior
-    # (authorized callers get 501; unauthenticated get 401 from the
-    # dependency).
-    _ = _caller_org_id(db, user)
-    return _stub_501(extra={"export_id": str(export_id)})
+    org_id = _caller_org_id(db, user)
+    job = (
+        db.query(ComplianceExport)
+        .filter(
+            ComplianceExport.id == export_id,
+            ComplianceExport.org_id == org_id,
+        )
+        .first()
+    )
+    if job is None and user.role == "admin":
+        job = db.query(ComplianceExport).filter(ComplianceExport.id == export_id).first()
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="export not found",
+        )
+    if job.status != "ready":
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "error": {
+                    "code": "export_not_ready",
+                    "message": f"export is in {job.status!r} state; no archive to download",
+                }
+            },
+        )
+    if not job.archive_storage_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="archive not found on disk",
+        )
+    archive_path = Path(job.archive_storage_path)
+    if not archive_path.exists():
+        # Archive was garbage-collected past retention, or storage
+        # moved — tell the client to re-request a build rather than
+        # 500ing on a stale pointer.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="archive expired; request a new export",
+        )
+    return FileResponse(
+        archive_path,
+        media_type="application/zip",
+        filename=f"export-{job.id}.zip",
+    )
 
 
 @router.get(
     "",
     response_model=ExportListResponse,
-    summary="List compliance exports (stub — returns 501)",
-    responses={
-        200: {"description": "List of export jobs (once persistence lands)."},
-        501: {
-            "description": (
-                "Persistence not yet implemented. Body includes "
-                f"error.code == '{_STUB_ERROR_CODE}'."
-            )
-        },
-    },
+    summary="List compliance exports",
 )
 def list_exports(
     user: Annotated[User, Depends(get_current_user)],
@@ -285,21 +419,36 @@ def list_exports(
     limit: int = Query(20, ge=1, le=100),
     before: str | None = Query(
         None,
-        description="Opaque pagination cursor from a previous response.",
+        description="ISO-8601 created_at cursor from a previous response.",
     ),
-) -> JSONResponse:
-    """List the caller's org's export jobs.
+) -> ExportListResponse:
+    """List the caller's org's export jobs, newest first.
 
-    Stub — see :func:`get_export` for the reasoning.
+    Cursor-based pagination on ``created_at`` — stable even under
+    concurrent inserts because export jobs are never updated after
+    creation except for status transitions (which don't move the
+    ordering column).
     """
-    _ = _caller_org_id(db, user)
-    return _stub_501(
-        extra={
-            "filter": {
-                "profile": profile,
-                "status": statuses,
-                "limit": limit,
-                "before": before,
-            }
-        }
-    )
+    org_id = _caller_org_id(db, user)
+    query = db.query(ComplianceExport).filter(ComplianceExport.org_id == org_id)
+    if profile:
+        query = query.filter(ComplianceExport.profile == profile)
+    if statuses:
+        query = query.filter(ComplianceExport.status == statuses)
+    if before:
+        try:
+            cursor_dt = datetime.datetime.fromisoformat(before)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"invalid 'before' cursor: {exc}",
+            ) from exc
+        query = query.filter(ComplianceExport.created_at < cursor_dt)
+
+    # Fetch one extra to decide whether there's a next cursor without a
+    # second COUNT query.
+    rows = query.order_by(ComplianceExport.created_at.desc()).limit(limit + 1).all()
+    has_more = len(rows) > limit
+    items = [_to_response(r) for r in rows[:limit]]
+    next_cursor = rows[limit - 1].created_at.isoformat() if has_more else None
+    return ExportListResponse(items=items, next_cursor=next_cursor)
