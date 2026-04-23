@@ -132,6 +132,39 @@ gcloud iam service-accounts add-iam-policy-binding "$GCP_SA_EMAIL" \
   --condition=None >/dev/null
 echo "✓ Workload Identity bound: ${NS}/${K8S_SA_NAME} → $GCP_SA_EMAIL"
 
+# ── 6a. Secret Manager per-secret access ───────────────────────────────────
+# When the API pod adopts this SA (see k8s/api-deployment.yaml comment on
+# serviceAccountName) it still needs Secret Manager CSI to mount the 11
+# secrets behind the `ai-identity-secrets` SPC. Mirror the same per-secret
+# grants `setup-secret-manager.sh` issues to `ai-identity-workload` — the
+# set of secrets is kept in lockstep there. If you add a new secret to
+# the SPC, add it to BOTH scripts.
+echo "• granting roles/secretmanager.secretAccessor on SPC-mounted secrets"
+SPC_SECRETS=(
+  ai-identity-AUDIT_HMAC_KEY
+  ai-identity-CLERK_ISSUER
+  ai-identity-CREDENTIAL_ENCRYPTION_KEY
+  ai-identity-DATABASE_URL
+  ai-identity-INTERNAL_SERVICE_KEY
+  ai-identity-PERPLEXITY_API_KEY
+  ai-identity-REDIS_URL
+  ai-identity-RESEND_API_KEY
+  ai-identity-SENTRY_DSN
+  ai-identity-STRIPE_SECRET_KEY
+  ai-identity-STRIPE_WEBHOOK_SECRET
+)
+for SECRET in "${SPC_SECRETS[@]}"; do
+  if ! gcloud secrets describe "$SECRET" --project="$PROJECT_ID" >/dev/null 2>&1; then
+    echo "  ⚠ $SECRET does not exist — skipping (run setup-secret-manager.sh first)"
+    continue
+  fi
+  gcloud secrets add-iam-policy-binding "$SECRET" \
+    --member="serviceAccount:$GCP_SA_EMAIL" \
+    --role="roles/secretmanager.secretAccessor" \
+    --project="$PROJECT_ID" --condition=None >/dev/null 2>&1
+done
+echo "✓ per-secret secretmanager.secretAccessor bound on ${#SPC_SECRETS[@]} secrets"
+
 # ── 6. Cloud KMS Data Access audit logs ────────────────────────────────────
 # Every Sign call becomes an auditable external record. Critical for the
 # forensic product: the signing event itself is logged by Google outside
