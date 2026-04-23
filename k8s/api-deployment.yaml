@@ -15,9 +15,27 @@ spec:
       labels:
         app: api
     spec:
-      # Bound to GCP SA ai-identity-workload@ via Workload Identity for
-      # Secret Manager CSI access. See k8s/serviceaccount.yaml.
-      serviceAccountName: ai-identity-workload
+      # Bound to GCP SA ai-identity-forensic-signer@ via Workload Identity.
+      # This SA rolls two capabilities onto the API pod:
+      #
+      #   1. KMS signerVerifier on the session-attestation key — needed by
+      #      session-close attestation signing (#263) and compliance-export
+      #      bundle signing (#275), both of which call KMS AsymmetricSign
+      #      directly from this process.
+      #   2. Per-secret secretmanager.secretAccessor on the 11 entries
+      #      behind `ai-identity-secrets` SPC — needed by the Secret
+      #      Manager CSI mount below.
+      #
+      # Both grants are provisioned atomically by
+      # `scripts/setup-forensic-signer.sh` (re-run if you rotate secrets
+      # or add new ones to the SPC).
+      #
+      # The dedicated-SA isolation described in
+      # k8s/forensic-signer-serviceaccount.yaml is preserved for a FUTURE
+      # split: moving export builds (and eventually attestation signs) to
+      # a Cloud Run job per ADR-002 §"Build pipeline". Until that worker
+      # lands, the API pod is the signer and needs both capabilities.
+      serviceAccountName: ai-identity-forensic-signer
       # automountServiceAccountToken left at the default (true) because the
       # Secret Manager CSI driver needs the projected SA token to exchange
       # for a GCP access token via Workload Identity. The token is for a SA
