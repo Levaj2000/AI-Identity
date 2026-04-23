@@ -578,3 +578,104 @@ class TestCapabilitiesAndMetadata:
             headers=auth_headers,
         )
         assert resp.status_code == 422
+
+
+# ── EU AI Act risk class (Annex III) ────────────────────────────────────
+
+
+class TestEuAiActRiskClass:
+    """Agent.eu_ai_act_risk_class — dependency of #273 compliance export."""
+
+    def test_create_without_risk_class_defaults_to_null(self, client, auth_headers):
+        """Omitting the field leaves the agent unclassified."""
+        resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Unclassified"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        assert resp.json()["agent"]["eu_ai_act_risk_class"] is None
+
+    def test_create_with_annex_iii_category(self, client, auth_headers):
+        """Valid Annex III codes are accepted and persisted."""
+        resp = client.post(
+            "/api/v1/agents",
+            json={"name": "HR Screening Bot", "eu_ai_act_risk_class": "4(a)"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        assert resp.json()["agent"]["eu_ai_act_risk_class"] == "4(a)"
+
+    def test_create_with_not_in_scope_sentinel(self, client, auth_headers):
+        """'not_in_scope' is the explicit 'evaluated and out of scope' marker."""
+        resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Internal Tool", "eu_ai_act_risk_class": "not_in_scope"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        assert resp.json()["agent"]["eu_ai_act_risk_class"] == "not_in_scope"
+
+    def test_create_with_invalid_risk_class_returns_422(self, client, auth_headers):
+        """Unknown codes are rejected before the DB is touched."""
+        resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Bad Class", "eu_ai_act_risk_class": "9(z)"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_create_with_freeform_text_returns_422(self, client, auth_headers):
+        """The field is not a freeform description — validation is strict."""
+        resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Freeform", "eu_ai_act_risk_class": "high-risk"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_update_sets_risk_class(self, client, auth_headers):
+        """PUT can set a classification on a previously-unclassified agent."""
+        create_resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Classify Later"},
+            headers=auth_headers,
+        )
+        agent_id = create_resp.json()["agent"]["id"]
+
+        resp = client.put(
+            f"/api/v1/agents/{agent_id}",
+            json={"eu_ai_act_risk_class": "3(a)"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["eu_ai_act_risk_class"] == "3(a)"
+
+    def test_update_rejects_invalid_risk_class(self, client, auth_headers):
+        """PUT validates the same allowlist as POST."""
+        create_resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Bad Update"},
+            headers=auth_headers,
+        )
+        agent_id = create_resp.json()["agent"]["id"]
+
+        resp = client.put(
+            f"/api/v1/agents/{agent_id}",
+            json={"eu_ai_act_risk_class": "ANNEX_III_3A"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 422
+
+    def test_get_returns_risk_class(self, client, auth_headers):
+        """GET surfaces the stored classification for export builder consumers."""
+        create_resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Credit Scoring", "eu_ai_act_risk_class": "5(b)"},
+            headers=auth_headers,
+        )
+        agent_id = create_resp.json()["agent"]["id"]
+
+        resp = client.get(f"/api/v1/agents/{agent_id}", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["eu_ai_act_risk_class"] == "5(b)"
