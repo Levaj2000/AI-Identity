@@ -289,3 +289,46 @@ export interface AgentAssignment {
   role: 'owner' | 'operator' | 'viewer'
   created_at: string
 }
+
+// ─── Compliance Exports ─────────────────────────────────────────
+
+export type ExportProfile = 'soc2_tsc_2017' | 'eu_ai_act_2024' | 'nist_ai_rmf_1_0'
+
+export type ExportStatus = 'queued' | 'building' | 'ready' | 'failed'
+
+export interface ExportCreateRequest {
+  profile: ExportProfile
+  audit_period_start: string
+  audit_period_end: string
+  agent_ids?: string[] | null
+}
+
+export interface ExportErrorDetail {
+  code: string
+  message: string
+}
+
+export interface ComplianceExport {
+  id: string
+  org_id: string
+  requested_by: string | null
+  profile: ExportProfile
+  audit_period_start: string
+  audit_period_end: string
+  agent_ids: string[] | null
+  status: ExportStatus
+  progress_pct: number | null
+  archive_url: string | null
+  archive_url_expires_at: string | null
+  archive_sha256: string | null
+  archive_bytes: number | null
+  manifest_envelope: Record<string, unknown> | null
+  created_at: string
+  completed_at: string | null
+  error: ExportErrorDetail | null
+}
+
+export interface ComplianceExportListResponse {
+  items: ComplianceExport[]
+  next_cursor: string | null
+}
