@@ -27,6 +27,8 @@ export interface Agent {
   status: AgentStatus
   capabilities: string[]
   metadata: Record<string, unknown>
+  /** EU AI Act Annex III category code, 'not_in_scope', or null if not yet classified. */
+  eu_ai_act_risk_class: string | null
   created_at: string
   updated_at: string
 }
@@ -36,6 +38,7 @@ export interface AgentCreate {
   description?: string | null
   capabilities?: string[]
   metadata?: Record<string, unknown>
+  eu_ai_act_risk_class?: string | null
 }
 
 export interface AgentUpdate {
@@ -44,6 +47,7 @@ export interface AgentUpdate {
   capabilities?: string[] | null
   metadata?: Record<string, unknown> | null
   status?: 'active' | 'suspended' | null
+  eu_ai_act_risk_class?: string | null
 }
 
 export interface AgentCreateResponse {

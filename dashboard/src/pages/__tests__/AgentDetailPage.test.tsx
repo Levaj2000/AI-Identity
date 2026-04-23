@@ -80,6 +80,7 @@ const mockAgent = {
   status: 'active' as const,
   capabilities: ['chat_completion', 'function_calling'],
   metadata: { framework: 'langchain', env: 'production' },
+  eu_ai_act_risk_class: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-03-01T00:00:00Z',
 }

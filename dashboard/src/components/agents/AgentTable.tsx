@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AgentStatusBadge } from '../AgentStatusBadge'
 import { relativeTime } from '../../lib/time'
+import { riskClassLabel, riskClassStatus } from '../../lib/euAiAct'
 import { purgeSingleAgent } from '../../services/api/admin'
 import type { Agent } from '../../types/api'
 
@@ -52,6 +53,12 @@ export function AgentTable({ agents, isAdmin, onAgentDeleted }: AgentTableProps)
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
               Capabilities
+            </th>
+            <th
+              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]"
+              title="EU AI Act Annex III classification"
+            >
+              EU AI Act
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
               Created
@@ -112,6 +119,22 @@ export function AgentTable({ agents, isAdmin, onAgentDeleted }: AgentTableProps)
                     <span className="text-xs text-gray-400 dark:text-[#52525b]">&mdash;</span>
                   )}
                 </div>
+              </td>
+
+              {/* EU AI Act Annex III classification */}
+              <td className="whitespace-nowrap px-6 py-4">
+                <span
+                  className={`rounded-md px-2 py-0.5 text-xs ${
+                    riskClassStatus(agent.eu_ai_act_risk_class) === 'in_scope'
+                      ? 'border border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300'
+                      : riskClassStatus(agent.eu_ai_act_risk_class) === 'out_of_scope'
+                        ? 'border border-gray-200 bg-gray-100 text-gray-600 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#a1a1aa]'
+                        : 'border border-dashed border-gray-300 text-gray-500 dark:border-[#3f3f46] dark:text-[#71717a]'
+                  }`}
+                  title={riskClassLabel(agent.eu_ai_act_risk_class)}
+                >
+                  {agent.eu_ai_act_risk_class ?? 'unclassified'}
+                </span>
               </td>
 
               {/* Created date */}
