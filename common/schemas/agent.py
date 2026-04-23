@@ -3,7 +3,9 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+from common.validation.eu_ai_act import validate_risk_class
 
 # ── User Schemas ─────────────────────────────────────────────────────────
 
@@ -61,6 +63,21 @@ class AgentCreate(BaseModel):
         description="Freeform key-value pairs for filtering and grouping",
         examples=[{"framework": "langchain", "environment": "production"}],
     )
+    eu_ai_act_risk_class: str | None = Field(
+        None,
+        description=(
+            "EU AI Act Annex III category code (e.g. '3(a)', '4(b)') or "
+            "'not_in_scope' if the deployer has determined this agent is "
+            "not a high-risk system under Annex III. `null` means not "
+            "classified yet. Consumed by the compliance export builder."
+        ),
+        examples=["4(b)", "not_in_scope"],
+    )
+
+    @field_validator("eu_ai_act_risk_class")
+    @classmethod
+    def _validate_risk_class(cls, v: str | None) -> str | None:
+        return validate_risk_class(v)
 
 
 class AgentUpdate(BaseModel):
@@ -93,6 +110,21 @@ class AgentUpdate(BaseModel):
         pattern="^(active|suspended)$",
         description="Set agent status (active or suspended). Use DELETE to revoke.",
     )
+    eu_ai_act_risk_class: str | None = Field(
+        None,
+        description=(
+            "Update the EU AI Act Annex III classification. Pass an Annex "
+            "III category code, 'not_in_scope', or omit to leave unchanged. "
+            "There is no way to clear a previously-set classification via "
+            "this endpoint — that would require explicit auditor review."
+        ),
+        examples=["3(a)"],
+    )
+
+    @field_validator("eu_ai_act_risk_class")
+    @classmethod
+    def _validate_risk_class(cls, v: str | None) -> str | None:
+        return validate_risk_class(v)
 
 
 class AgentResponse(BaseModel):
@@ -106,6 +138,12 @@ class AgentResponse(BaseModel):
     status: str = Field(description="Current status: active, suspended, or revoked")
     capabilities: list = Field(description="List of agent capabilities")
     metadata: dict = Field(description="Freeform key-value metadata")
+    eu_ai_act_risk_class: str | None = Field(
+        None,
+        description=(
+            "EU AI Act Annex III category code, 'not_in_scope', or null if not yet classified."
+        ),
+    )
     created_at: datetime = Field(description="When the agent was created")
     updated_at: datetime = Field(description="When the agent was last modified")
 
@@ -121,6 +159,7 @@ class AgentResponse(BaseModel):
                     "status": "active",
                     "capabilities": ["chat_completion", "function_calling"],
                     "metadata": {"framework": "langchain", "environment": "production"},
+                    "eu_ai_act_risk_class": "4(b)",
                     "created_at": "2026-03-10T12:00:00Z",
                     "updated_at": "2026-03-10T12:00:00Z",
                 }
