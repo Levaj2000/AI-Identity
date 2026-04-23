@@ -237,6 +237,25 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("Compliance auto-seed skipped: %s", e)
 
+    # Reap any compliance-export jobs stuck in queued/building from a
+    # previous pod that got terminated mid-build. Without this, orphan
+    # rows block re-requests with the same scope via the idempotency
+    # guard. Runs non-fatally — a DB blip shouldn't stop the API from
+    # booting. See common.compliance.orphan_cleanup for the policy.
+    try:
+        from common.compliance.orphan_cleanup import reap_orphaned_exports
+        from common.models.base import SessionLocal
+
+        db = SessionLocal()
+        try:
+            reaped = reap_orphaned_exports(db)
+            if reaped:
+                logger.info("Reaped %d orphaned compliance export(s) at startup", reaped)
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning("Orphan export cleanup skipped: %s", e)
+
     yield
 
 

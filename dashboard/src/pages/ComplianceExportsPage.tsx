@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ConfirmModal } from '../components/modals/ConfirmModal'
 import { relativeTime } from '../lib/time'
-import { createExport, downloadExportAsFile, listExports } from '../services/api/complianceExports'
+import {
+  cancelExport,
+  createExport,
+  downloadExportAsFile,
+  listExports,
+} from '../services/api/complianceExports'
 import { isApiError } from '../services/api/client'
 import type { ComplianceExport, ExportProfile, ValidationErrorItem } from '../types/api'
 
@@ -106,6 +112,11 @@ export function ComplianceExportsPage() {
   const [listError, setListError] = useState<string | null>(null)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
+  // Cancel flow — two-step with a confirm modal so a misclick on the
+  // row doesn't nuke an actively-building export.
+  const [cancelTarget, setCancelTarget] = useState<ComplianceExport | null>(null)
+  const [cancelling, setCancelling] = useState(false)
+
   const refresh = useCallback(async () => {
     setListLoading(true)
     setListError(null)
@@ -172,6 +183,20 @@ export function ComplianceExportsPage() {
       )
     } finally {
       setDownloadingId(null)
+    }
+  }
+
+  const handleCancelConfirm = async () => {
+    if (!cancelTarget) return
+    setCancelling(true)
+    try {
+      await cancelExport(cancelTarget.id)
+      setCancelTarget(null)
+      await refresh()
+    } catch (err) {
+      setListError(isApiError(err) ? err.message : 'Cancel failed.')
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -385,6 +410,13 @@ export function ComplianceExportsPage() {
                       >
                         {downloadingId === exp.id ? 'Downloading…' : 'Download'}
                       </button>
+                    ) : exp.status === 'queued' || exp.status === 'building' ? (
+                      <button
+                        onClick={() => setCancelTarget(exp)}
+                        className="rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:bg-[#1a1a1d] dark:text-red-300 dark:hover:bg-red-500/10"
+                      >
+                        Cancel
+                      </button>
                     ) : (
                       <span className="text-xs text-gray-400 dark:text-[#52525b]">—</span>
                     )}
@@ -395,6 +427,22 @@ export function ComplianceExportsPage() {
           </table>
         )}
       </div>
+
+      {cancelTarget && (
+        <ConfirmModal
+          title="Cancel export?"
+          message={
+            cancelTarget.status === 'building'
+              ? 'This export is currently building. Cancelling marks it as failed — the archive (if any work has been done) is discarded. You can request a fresh export with the same scope immediately after.'
+              : 'This export is queued but not yet started. Cancelling removes it from the queue so you can request a new one with the same scope.'
+          }
+          confirmLabel="Cancel export"
+          confirmVariant="danger"
+          isLoading={cancelling}
+          onConfirm={() => void handleCancelConfirm()}
+          onCancel={() => setCancelTarget(null)}
+        />
+      )}
     </div>
   )
 }

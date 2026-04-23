@@ -456,6 +456,95 @@ def get_export(
     return _to_response(job)
 
 
+@router.post(
+    "/{export_id}/cancel",
+    response_model=ExportResponse,
+    summary="Cancel a queued or building export job",
+    responses={
+        200: {"description": "Job transitioned to failed with error_code=cancelled."},
+        403: {"description": "Caller is not an org owner/admin."},
+        404: {"description": "Export id not found or belongs to another org."},
+        409: {
+            "description": (
+                "Job is already in a terminal state (ready/failed); nothing to "
+                "cancel. Body includes error.code == 'export_not_cancellable'."
+            )
+        },
+    },
+)
+def cancel_export(
+    export_id: uuid.UUID,
+    user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> ExportResponse | JSONResponse:
+    """Cancel an in-flight export.
+
+    Transitions the job to ``failed`` with ``error_code=cancelled``.
+    The main use case today is unblocking the scope-idempotency
+    guard when a previous pod was killed mid-build and left the job
+    orphaned; the 10-minute lifespan reaper (#284) will eventually
+    catch these, but a user-driven cancel is faster.
+
+    AuthZ matches create: caller must be an org owner/admin for the
+    owning org (or a platform admin). Same 404-not-403 tenancy
+    discipline as ``GET /exports/{id}``.
+    """
+    org_id = _caller_org_id(db, user)
+    _assert_org_admin(db, user, org_id)
+
+    job = (
+        db.query(ComplianceExport)
+        .filter(
+            ComplianceExport.id == export_id,
+            ComplianceExport.org_id == org_id,
+        )
+        .first()
+    )
+    # Platform admins can cancel across orgs to unstick customer support.
+    if job is None and user.role == "admin":
+        job = db.query(ComplianceExport).filter(ComplianceExport.id == export_id).first()
+    if job is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="export not found",
+        )
+
+    if job.status not in (QUEUED, BUILDING):
+        # Can't cancel a job that's already terminal. Structured
+        # JSONResponse (not HTTPException) so the stable error code
+        # reaches the client — the app-wide handler flattens details.
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "error": {
+                    "code": "export_not_cancellable",
+                    "message": (
+                        f"Job is in {job.status!r}; only queued/building jobs can be cancelled."
+                    ),
+                    "current_status": job.status,
+                }
+            },
+        )
+
+    now = datetime.datetime.now(tz=datetime.UTC)
+    job.status = "failed"
+    job.error_code = "cancelled"
+    job.error_message = f"Cancelled by user {user.id} at {now.isoformat()}."
+    job.completed_at = now
+    db.commit()
+    db.refresh(job)
+
+    logger.info(
+        "compliance export cancelled",
+        extra={
+            "job_id": str(job.id),
+            "org_id": str(job.org_id),
+            "cancelled_by": str(user.id),
+        },
+    )
+    return _to_response(job)
+
+
 @router.get(
     "/{export_id}/download",
     summary="Download a completed export archive",
