@@ -12,6 +12,7 @@ import { LoginPage } from './pages/LoginPage'
 import { DemoPage } from './pages/DemoPage'
 import { CompliancePage } from './pages/CompliancePage'
 import { ComplianceExportsPage } from './pages/ComplianceExportsPage'
+import { ComplianceLayout } from './layouts/ComplianceLayout'
 import { UsageBillingPage } from './pages/UsageBillingPage'
 import { AdminPage } from './pages/AdminPage'
 import { AdminUserDetailPage } from './pages/AdminUserDetailPage'
@@ -47,8 +48,10 @@ function App() {
         <Route path="keys" element={<KeysPage />} />
         <Route path="organization" element={<OrganizationPage />} />
         <Route path="usage" element={<UsageBillingPage />} />
-        <Route path="compliance" element={<CompliancePage />} />
-        <Route path="compliance/exports" element={<ComplianceExportsPage />} />
+        <Route path="compliance" element={<ComplianceLayout />}>
+          <Route index element={<CompliancePage />} />
+          <Route path="exports" element={<ComplianceExportsPage />} />
+        </Route>
         <Route path="forensics" element={<ForensicsPage />} />
         <Route path="qa" element={<QAChecklistPage />} />
         <Route path="properties" element={<WebPropertiesPage />} />
