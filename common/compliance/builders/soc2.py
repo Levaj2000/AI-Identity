@@ -44,8 +44,8 @@ from common.models import (
     ComplianceReport,
     ComplianceResult,
     ForensicAttestation,
+    OrgMembership,
     Policy,
-    User,
 )
 
 # Action types the gateway/API writes into audit_log.request_metadata
@@ -470,10 +470,17 @@ def _write_control_results(
     Scope narrowing by ``agent_ids`` is applied when the report
     targeted a specific agent.
     """
-    # Resolve in-org user ids via users.org_id — the denormalized field
-    # is the fastest path to "any report whose requester is in this
-    # org" without a second join.
-    org_user_ids = [u[0] for u in db.query(User.id).filter(User.org_id == org_id).all()]
+    # Resolve in-org user ids via OrgMembership rather than the
+    # denormalized User.org_id field. Production schema drift: the
+    # users.org_id column was created as VARCHAR in an early migration
+    # but the model says UUID, so direct comparisons fail with
+    # `operator does not exist: character varying = uuid`.
+    # OrgMembership is UUID-correct, so going through the join table
+    # works and is also semantically more accurate (active members of
+    # an org, not stale denormalized pointers).
+    org_user_ids = [
+        m.user_id for m in db.query(OrgMembership).filter(OrgMembership.org_id == org_id).all()
+    ]
 
     report_query = (
         db.query(ComplianceReport)
