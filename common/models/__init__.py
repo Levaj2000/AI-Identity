@@ -16,6 +16,7 @@ from common.models.compliance import (
     ComplianceReport,
     ComplianceResult,
 )
+from common.models.compliance_export import ComplianceExport
 from common.models.dismissed_shadow import DismissedShadowAgent
 from common.models.org_membership import OrgMembership, OrgRole
 from common.models.organization import Organization
@@ -53,6 +54,7 @@ __all__ = [
     "ComplianceCheck",
     "ComplianceReport",
     "ComplianceResult",
+    "ComplianceExport",
     "UserTier",
     "TIER_QUOTAS",
     "QARun",
