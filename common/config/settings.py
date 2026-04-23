@@ -63,6 +63,19 @@ class Settings(BaseSettings):
     # GCS + signed URLs land in the storage-backend refactor; for now
     # we serve downloads directly via an authenticated endpoint.
     compliance_export_archive_dir: str = "/tmp/ai-identity/compliance-exports"
+    # Cost guardrails per ADR-002. Tune per-tier later; defaults
+    # protect the worker pool and disk from a single runaway org.
+    compliance_export_max_concurrent_per_org: int = 5
+    compliance_export_max_per_day_per_org: int = 20
+    # 10 GB — absolute ceiling per archive. If a build crosses this,
+    # the orchestrator fails the job mid-flight rather than streaming
+    # a DoS-sized blob onto disk.
+    compliance_export_archive_bytes_cap: int = 10 * 1024 * 1024 * 1024
+    # Retention for the archive file; source-of-truth evidence
+    # (audit_log, attestations) is retained separately per org policy.
+    # After this window the file is GC'd and download 404s; a client
+    # can re-request a build from the same period to regenerate.
+    compliance_export_retention_days: int = 30
 
     # Stripe billing
     stripe_secret_key: str = ""

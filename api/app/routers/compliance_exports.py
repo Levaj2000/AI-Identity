@@ -20,6 +20,7 @@ from __future__ import annotations
 import datetime
 import logging
 import uuid  # noqa: TC003 — FastAPI resolves path param annotations at runtime
+from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
 
@@ -38,6 +39,7 @@ from api.app.auth import get_current_user
 from common.compliance.agent_ids_hash import agent_ids_hash
 from common.compliance.builder import run_export_job
 from common.compliance.job import BUILDING, QUEUED
+from common.config.settings import settings as default_settings
 from common.models import (
     Agent,
     ComplianceExport,
@@ -130,6 +132,119 @@ def _verify_agent_ids_belong_to_org(
         )
 
 
+# ── Rate limits (ADR-002 cost guardrails) ────────────────────────────
+
+
+def _enforce_rate_limits(db: Session, org_id: uuid.UUID) -> JSONResponse | None:
+    """Enforce the ADR-002 per-org cost guardrails.
+
+    Two separate limits are checked:
+
+    1. **Max concurrent builds** — count of jobs currently in ``queued``
+       or ``building`` state. Protects the worker pool from a single
+       org starving everyone else.
+    2. **Max exports per rolling 24 hours** — count of jobs created in
+       the last 24 hours regardless of terminal state. Protects
+       storage + KMS sign volume from an abusive-or-misconfigured
+       retry loop.
+
+    Returns ``None`` when the request is allowed. Returns a 429
+    ``JSONResponse`` with a structured ``error.code`` and
+    ``Retry-After`` header when one of the limits is breached — the
+    caller short-circuits and returns that response directly.
+    """
+    now = datetime.datetime.now(tz=datetime.UTC)
+    window_start = now - timedelta(hours=24)
+
+    concurrent = (
+        db.query(ComplianceExport)
+        .filter(
+            ComplianceExport.org_id == org_id,
+            ComplianceExport.status.in_((QUEUED, BUILDING)),
+        )
+        .count()
+    )
+    if concurrent >= default_settings.compliance_export_max_concurrent_per_org:
+        # Concurrent limit — retry in a few minutes once current
+        # builds drain. 60 seconds is a reasonable hint; real wait
+        # depends on bundle size.
+        return _rate_limit_response(
+            code="rate_limit_exceeded_concurrent",
+            message=(
+                "Too many concurrent export builds for this org; wait "
+                "for one to finish before queueing another."
+            ),
+            limit=default_settings.compliance_export_max_concurrent_per_org,
+            observed=concurrent,
+            retry_after_seconds=60,
+        )
+
+    daily = (
+        db.query(ComplianceExport)
+        .filter(
+            ComplianceExport.org_id == org_id,
+            ComplianceExport.created_at >= window_start,
+        )
+        .count()
+    )
+    if daily >= default_settings.compliance_export_max_per_day_per_org:
+        # Daily limit — retry on a window-rolling basis. The Retry-After
+        # is a conservative estimate: time until the oldest request in
+        # the window ages out.
+        oldest = (
+            db.query(ComplianceExport)
+            .filter(
+                ComplianceExport.org_id == org_id,
+                ComplianceExport.created_at >= window_start,
+            )
+            .order_by(ComplianceExport.created_at.asc())
+            .first()
+        )
+        retry_after = 3600  # 1h default fallback
+        if oldest is not None:
+            oldest_created = oldest.created_at
+            if oldest_created.tzinfo is None:
+                oldest_created = oldest_created.replace(tzinfo=datetime.UTC)
+            seconds_until_rolls_off = int(
+                (oldest_created + timedelta(hours=24) - now).total_seconds()
+            )
+            retry_after = max(60, min(seconds_until_rolls_off, 86400))
+        return _rate_limit_response(
+            code="rate_limit_exceeded_daily",
+            message=(
+                "Daily export quota for this org exhausted; wait for "
+                "the 24-hour rolling window to advance."
+            ),
+            limit=default_settings.compliance_export_max_per_day_per_org,
+            observed=daily,
+            retry_after_seconds=retry_after,
+        )
+
+    return None
+
+
+def _rate_limit_response(
+    *,
+    code: str,
+    message: str,
+    limit: int,
+    observed: int,
+    retry_after_seconds: int,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={
+            "error": {
+                "code": code,
+                "message": message,
+                "limit": limit,
+                "observed": observed,
+            }
+        },
+        headers={"Retry-After": str(retry_after_seconds)},
+    )
+
+
 # ── Row → response ───────────────────────────────────────────────────
 
 
@@ -206,6 +321,12 @@ def _run_job_in_background(job_id: uuid.UUID) -> None:
                 "in-flight for this org. Body contains the existing job."
             )
         },
+        429: {
+            "description": (
+                "Rate limit: max concurrent builds or daily quota hit. "
+                "Retry-After header carries the recommended cooldown."
+            )
+        },
     },
 )
 def create_export(
@@ -223,6 +344,13 @@ def create_export(
     org_id = _caller_org_id(db, user)
     _assert_org_admin(db, user, org_id)
     _verify_agent_ids_belong_to_org(db, body.agent_ids, org_id)
+
+    # Cost guardrails before touching the DB with a new row. Order
+    # matters — 409 idempotency runs after so a caller legitimately
+    # re-checking a queued job doesn't get a misleading 429.
+    rate_limit_response = _enforce_rate_limits(db, org_id)
+    if rate_limit_response is not None:
+        return rate_limit_response
 
     ids_hash = agent_ids_hash(body.agent_ids)
 
