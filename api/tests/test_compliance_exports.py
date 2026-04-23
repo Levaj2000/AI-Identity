@@ -231,12 +231,13 @@ class TestCreateAndBuild:
         )
 
     def test_manifest_commits_to_artifact_hashes(self, client, two_orgs, local_signer, archive_dir):
-        # Uses eu_ai_act_2024 to exercise the still-placeholder path
-        # and keep this test focused on foundation manifest behavior.
-        # SOC 2 gets its own artifact-level tests in TestSoc2Profile.
+        # Uses nist_ai_rmf_1_0 — still on the placeholder path until
+        # #278 — so this test can keep asserting placeholder artifacts
+        # are signed correctly. SOC 2 and EU AI Act have their own
+        # artifact-level tests.
         resp = client.post(
             "/api/v1/exports",
-            json=_valid_body(profile="eu_ai_act_2024"),
+            json=_valid_body(profile="nist_ai_rmf_1_0"),
             headers={"X-API-Key": OWNER_A_EMAIL},
         )
         export_id = resp.json()["id"]
@@ -261,11 +262,11 @@ class TestCreateAndBuild:
 
 class TestDownload:
     def test_download_after_ready_returns_zip(self, client, two_orgs, local_signer, archive_dir):
-        # eu_ai_act_2024 exercises the placeholder path — SOC 2 artifact
-        # set is covered in TestSoc2Profile below.
+        # nist_ai_rmf_1_0 is still on the placeholder path until #278.
+        # SOC 2 and EU AI Act have their own profile tests.
         resp = client.post(
             "/api/v1/exports",
-            json=_valid_body(profile="eu_ai_act_2024"),
+            json=_valid_body(profile="nist_ai_rmf_1_0"),
             headers={"X-API-Key": OWNER_A_EMAIL},
         )
         export_id = resp.json()["id"]
@@ -594,6 +595,88 @@ class TestSoc2Profile:
         # Control tags round-trip through the manifest.
         access = next(a for a in manifest["artifacts"] if a["path"] == "access_log.csv")
         assert "SOC2-CC6.1" in access["controls"]
+
+
+# ── EU AI Act profile end-to-end ─────────────────────────────────────
+
+
+class TestEuAiActProfile:
+    """End-to-end: POST eu_ai_act_2024 → builder dispatch → full artifact set."""
+
+    def test_eu_ai_act_produces_full_artifact_set(
+        self, client, two_orgs, local_signer, archive_dir
+    ):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="eu_ai_act_2024"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert resp.status_code == 202
+        export_id = resp.json()["id"]
+
+        dl = client.get(
+            f"/api/v1/exports/{export_id}/download",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert dl.status_code == 200
+        zf = zipfile.ZipFile(io.BytesIO(dl.content))
+        names = set(zf.namelist())
+        assert {
+            "annex_iv_documentation.json",
+            "access_log.csv",
+            "chain_integrity.json",
+            "human_oversight_log.csv",
+            "agent_risk_classification.csv",
+            "policy_change_log.csv",
+            "capability_disclosures.csv",
+            "agent_inventory.csv",
+            "evidence_summary.json",
+            "manifest.json",
+            "manifest.dsse.json",
+        } <= names
+        # Placeholder must not leak into a real-profile bundle.
+        assert "PLACEHOLDER.txt" not in names
+
+    def test_eu_ai_act_summary_guardrail_flags_unclassified(
+        self, client, two_orgs, local_signer, archive_dir
+    ):
+        # two_orgs seeds Agent A with default eu_ai_act_risk_class=null —
+        # the summary's unclassified_agents count should therefore be ≥ 1.
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="eu_ai_act_2024"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        export_id = resp.json()["id"]
+        dl = client.get(
+            f"/api/v1/exports/{export_id}/download",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        zf = zipfile.ZipFile(io.BytesIO(dl.content))
+        summary = json.loads(zf.read("evidence_summary.json"))
+        assert summary["profile"] == "eu_ai_act_2024"
+        assert summary["guardrail_facts"]["unclassified_agents"] >= 1
+
+    def test_eu_ai_act_manifest_carries_article_controls(
+        self, client, two_orgs, local_signer, archive_dir
+    ):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile="eu_ai_act_2024"),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        got = client.get(
+            f"/api/v1/exports/{resp.json()['id']}",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        ).json()
+        env = got["manifest_envelope"]
+        manifest = json.loads(base64.b64decode(env["payload"]))
+        access = next(a for a in manifest["artifacts"] if a["path"] == "access_log.csv")
+        assert access["controls"] == ["EUAI-Art.12"]
+        risk = next(
+            a for a in manifest["artifacts"] if a["path"] == "agent_risk_classification.csv"
+        )
+        assert "EUAI-Art.6" in risk["controls"]
 
 
 # ── OpenAPI still reflects the surface ───────────────────────────────
