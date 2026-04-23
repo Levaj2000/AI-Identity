@@ -44,6 +44,13 @@ class Agent(Base):
     capabilities: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
     metadata_: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
 
+    # EU AI Act Annex III classification. Nullable → unclassified.
+    # Non-null is validated against common.validation.eu_ai_act.ALLOWED_RISK_CLASSES
+    # at the schema layer; stored as opaque text here so the canonical
+    # list can evolve without schema migrations. Consumed by the
+    # compliance export builder (#273) for the EU AI Act profile.
+    eu_ai_act_risk_class: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
     # Timestamps
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
