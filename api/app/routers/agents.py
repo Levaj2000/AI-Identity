@@ -2,13 +2,15 @@
 
 import logging
 import uuid
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import String, cast, func
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
 from api.app.quota import check_agent_quota
+from common.audit.request_context import extract_audit_context
 from common.audit.writer import create_audit_entry
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
 from common.capabilities import build_policy_rules_from_capabilities
@@ -23,6 +25,18 @@ from common.schemas.agent import (
     AgentUpdate,
 )
 from common.validation.policy import PolicyValidator
+
+# Mutable agent fields tracked in `agent_updated` diffs. Order matters
+# for test stability but not for the signed payload (JCS sorts keys).
+# Adding a field here automatically surfaces it in change_log.csv.
+_DIFFABLE_AGENT_FIELDS: tuple[str, ...] = (
+    "name",
+    "description",
+    "status",
+    "capabilities",
+    "metadata_",
+    "eu_ai_act_risk_class",
+)
 
 logger = logging.getLogger("ai_identity.api.agents")
 
@@ -98,6 +112,7 @@ def _sync_capability_policy(db: Session, agent_id: uuid.UUID, capabilities: list
 )
 def create_agent(
     body: AgentCreate,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -167,6 +182,7 @@ def create_agent(
             "action_type": "agent_created",
             "resource_type": "agent",
             "agent_name": agent.name,
+            **extract_audit_context(request),
         },
     )
 
@@ -275,6 +291,7 @@ def get_agent(
 def update_agent(
     agent_id: uuid.UUID,
     body: AgentUpdate,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -297,6 +314,11 @@ def update_agent(
     if "metadata" in update_data:
         update_data["metadata_"] = update_data.pop("metadata")
 
+    # Snapshot "before" values for every diffable field before we
+    # mutate the ORM object. Doing this pre-commit keeps the diff
+    # accurate even if SQLAlchemy's attribute-refresh semantics change.
+    before_snapshot = {f: getattr(agent, f) for f in _DIFFABLE_AGENT_FIELDS}
+
     for field, value in update_data.items():
         setattr(agent, field, value)
 
@@ -307,7 +329,19 @@ def update_agent(
     db.commit()
     db.refresh(agent)
 
-    logger.info("Agent updated: %s (%s)", agent.name, agent.id)
+    after_snapshot = {f: getattr(agent, f) for f in _DIFFABLE_AGENT_FIELDS}
+    diff = _compute_diff(before_snapshot, after_snapshot)
+
+    logger.info("Agent updated: %s (%s) — %d field(s) changed", agent.name, agent.id, len(diff))
+
+    metadata: dict[str, Any] = {
+        "action_type": "agent_updated",
+        "resource_type": "agent",
+        "agent_name": agent.name,
+        **extract_audit_context(request),
+    }
+    if diff:
+        metadata["diff"] = diff
 
     create_audit_entry(
         db,
@@ -316,11 +350,7 @@ def update_agent(
         method="PUT",
         decision="allowed",
         user_id=user.id,
-        request_metadata={
-            "action_type": "agent_updated",
-            "resource_type": "agent",
-            "agent_name": agent.name,
-        },
+        request_metadata=metadata,
     )
 
     return _agent_to_response(agent)
@@ -341,6 +371,7 @@ def update_agent(
 )
 def delete_agent(
     agent_id: uuid.UUID,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -388,6 +419,7 @@ def delete_agent(
             "old_status": "active",
             "new_status": "revoked",
             "keys_revoked": str(revoked_count),
+            **extract_audit_context(request),
         },
     )
 
@@ -395,6 +427,26 @@ def delete_agent(
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
+
+
+def _compute_diff(
+    before: dict[str, Any],
+    after: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """Return ``{field: {"before": X, "after": Y}}`` for changed fields.
+
+    Unchanged fields are omitted entirely so an auditor sees *only*
+    what moved. ``metadata_`` is surfaced as ``metadata`` in the diff
+    to match the public schema field name.
+    """
+    diff: dict[str, dict[str, Any]] = {}
+    for field, before_value in before.items():
+        after_value = after.get(field)
+        if before_value == after_value:
+            continue
+        key = "metadata" if field == "metadata_" else field
+        diff[key] = {"before": before_value, "after": after_value}
+    return diff
 
 
 def _agent_to_response(agent: Agent) -> AgentResponse:

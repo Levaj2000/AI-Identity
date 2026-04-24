@@ -2,7 +2,7 @@
 
 import uuid
 
-from common.models import AgentKey, KeyStatus
+from common.models import AgentKey, AuditLog, KeyStatus
 
 # ── POST /api/v1/agents ─────────────────────────────────────────────────
 
@@ -679,3 +679,132 @@ class TestEuAiActRiskClass:
         resp = client.get(f"/api/v1/agents/{agent_id}", headers=auth_headers)
         assert resp.status_code == 200
         assert resp.json()["eu_ai_act_risk_class"] == "5(b)"
+
+
+# ── Change-log v2.1 enrichment ──────────────────────────────────────────
+
+
+class TestChangeLogV21Enrichment:
+    """Source context + diff enrichment on agent lifecycle audit writes.
+
+    See docs/specs/change-log-export-schema-v2.md §Source context and
+    §Change payload. These assertions land on the raw AuditLog row
+    because the export builder is already covered in
+    common/tests/test_compliance_soc2.py.
+    """
+
+    def _lifecycle_entry(self, db_session, agent_id: str, action_type: str) -> AuditLog:
+        """Fetch the most recent lifecycle audit row for an agent.
+
+        Uses a Python-side filter on request_metadata because tests run
+        against SQLite (no JSONB ``.astext`` operator); production runs
+        Postgres and the export builder uses JSON path querying directly.
+        """
+        rows = (
+            db_session.query(AuditLog)
+            .filter(AuditLog.agent_id == uuid.UUID(agent_id))
+            .order_by(AuditLog.id.desc())
+            .all()
+        )
+        for row in rows:
+            if (row.request_metadata or {}).get("action_type") == action_type:
+                return row
+        return None
+
+    def test_create_records_ip_and_user_agent(self, client, auth_headers, db_session):
+        resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Context Agent"},
+            headers={**auth_headers, "user-agent": "ai-identity-test/1.0"},
+        )
+        agent_id = resp.json()["agent"]["id"]
+        entry = self._lifecycle_entry(db_session, agent_id, "agent_created")
+        # TestClient sets client.host to "testclient" by default.
+        assert entry.request_metadata["ip_address"]
+        assert entry.request_metadata["user_agent"] == "ai-identity-test/1.0"
+
+    def test_update_records_ip_user_agent_and_diff(self, client, auth_headers, db_session):
+        create_resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Before Name", "capabilities": ["old"]},
+            headers=auth_headers,
+        )
+        agent_id = create_resp.json()["agent"]["id"]
+
+        resp = client.put(
+            f"/api/v1/agents/{agent_id}",
+            json={"name": "After Name", "capabilities": ["new"]},
+            headers={**auth_headers, "user-agent": "diff-test/2.0"},
+        )
+        assert resp.status_code == 200
+
+        entry = self._lifecycle_entry(db_session, agent_id, "agent_updated")
+        meta = entry.request_metadata
+        assert meta["user_agent"] == "diff-test/2.0"
+        assert meta["ip_address"]
+        diff = meta["diff"]
+        assert diff["name"] == {"before": "Before Name", "after": "After Name"}
+        assert diff["capabilities"] == {"before": ["old"], "after": ["new"]}
+        # Unchanged fields must not appear in the diff.
+        assert "description" not in diff
+        assert "eu_ai_act_risk_class" not in diff
+
+    def test_update_with_no_effective_change_omits_diff(self, client, auth_headers, db_session):
+        """Setting a field to its current value should produce an empty diff.
+
+        The writer then omits the `diff` key entirely so auditors don't
+        see noise rows. The `agent_updated` entry still records ip/ua.
+        """
+        create_resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Same Name"},
+            headers=auth_headers,
+        )
+        agent_id = create_resp.json()["agent"]["id"]
+
+        resp = client.put(
+            f"/api/v1/agents/{agent_id}",
+            json={"name": "Same Name"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+
+        entry = self._lifecycle_entry(db_session, agent_id, "agent_updated")
+        assert "diff" not in entry.request_metadata
+        assert "ip_address" in entry.request_metadata
+
+    def test_delete_records_ip_and_user_agent(self, client, auth_headers, db_session):
+        create_resp = client.post(
+            "/api/v1/agents",
+            json={"name": "To Delete"},
+            headers=auth_headers,
+        )
+        agent_id = create_resp.json()["agent"]["id"]
+
+        resp = client.delete(
+            f"/api/v1/agents/{agent_id}",
+            headers={**auth_headers, "user-agent": "revoke-test/1.0"},
+        )
+        assert resp.status_code == 200
+
+        entry = self._lifecycle_entry(db_session, agent_id, "agent_revoked")
+        assert entry.request_metadata["user_agent"] == "revoke-test/1.0"
+        assert entry.request_metadata["ip_address"]
+        # Original promoted fields must still be present.
+        assert entry.request_metadata["old_status"] == "active"
+        assert entry.request_metadata["new_status"] == "revoked"
+
+    def test_x_forwarded_for_wins_over_client_host(self, client, auth_headers, db_session):
+        """Behind a load balancer, X-Forwarded-For gives the real client IP."""
+        resp = client.post(
+            "/api/v1/agents",
+            json={"name": "Proxy Test"},
+            headers={
+                **auth_headers,
+                "x-forwarded-for": "203.0.113.7, 10.0.0.1",
+                "user-agent": "xff-test/1.0",
+            },
+        )
+        agent_id = resp.json()["agent"]["id"]
+        entry = self._lifecycle_entry(db_session, agent_id, "agent_created")
+        assert entry.request_metadata["ip_address"] == "203.0.113.7"
