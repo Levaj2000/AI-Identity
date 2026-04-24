@@ -56,14 +56,19 @@ def build_manifest(
     built_at: datetime.datetime,
     signer_key_id: str,
     artifacts: list[dict],
+    artifact_schema_versions: dict[str, str] | None = None,
 ) -> dict:
     """Build the canonical manifest dict.
 
     Callers should not hand-construct this — routing through this
     builder guarantees the schema version, field order, and RFC 3339
     timestamp serialization match what the auditor CLI expects.
+
+    ``artifact_schema_versions`` maps artifact path → version string
+    (e.g. ``{"change_log.csv": "2.0"}``). Omitted when empty so
+    pre-v2 manifests stay byte-identical for regression tests.
     """
-    return {
+    manifest: dict = {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "export_id": str(export_id),
         "org_id": str(org_id),
@@ -74,6 +79,9 @@ def build_manifest(
         "signer_key_id": signer_key_id,
         "artifacts": artifacts,
     }
+    if artifact_schema_versions:
+        manifest["artifact_schema_versions"] = dict(artifact_schema_versions)
+    return manifest
 
 
 def canonical_manifest_bytes(manifest: dict) -> bytes:

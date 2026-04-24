@@ -38,6 +38,8 @@ from common.audit.writer import verify_chain
 from common.compliance.bundle import (
     ComplianceExportBundle,  # noqa: TC001 — used at runtime via bundle.write_*
 )
+from common.compliance.change_log_signer import sign_row
+from common.forensic.signer import SignerHandle  # noqa: TC001 — runtime arg
 from common.models import (
     Agent,
     AuditLog,
@@ -46,6 +48,39 @@ from common.models import (
     ForensicAttestation,
     OrgMembership,
     Policy,
+    User,
+)
+
+# Bumped whenever the change_log.csv column set changes in a
+# non-additive way. Mirrored into manifest.json so auditors can
+# version-gate their ingestion. See
+# docs/specs/change-log-export-schema-v2.md §Versioning.
+CHANGE_LOG_SCHEMA_VERSION = "2.0"
+
+# Keys in request_metadata that the v2 change_log promotes to their
+# own columns. Anything else falls through to details_json so we don't
+# lose information that older rows may carry.
+_PROMOTED_METADATA_KEYS: frozenset[str] = frozenset(
+    {
+        "action_type",
+        "resource_type",
+        "agent_name",
+        "decision_reason",
+        "policy_version",
+        "ip_address",
+        "user_agent",
+        "session_id",
+        "request_id",
+        "key_prefix",
+        "key_type",
+        "grace_hours",
+        "old_status",
+        "new_status",
+        "diff",
+        "actor_email",
+        "actor_principal",
+        "actor_type",
+    }
 )
 
 # Action types the gateway/API writes into audit_log.request_metadata
@@ -79,6 +114,7 @@ def build_soc2_bundle(
     audit_period_end: datetime.datetime,
     built_at: datetime.datetime,
     agent_ids: list[uuid.UUID] | None,
+    signer: SignerHandle,
 ) -> None:
     """Populate ``bundle`` with the full SOC 2 TSC 2017 evidence set.
 
@@ -108,7 +144,9 @@ def build_soc2_bundle(
         scope_agent_ids=scope_agent_ids,
         audit_period_start=audit_period_start,
         audit_period_end=audit_period_end,
+        signer=signer,
     )
+    bundle.artifact_schema_versions["change_log.csv"] = CHANGE_LOG_SCHEMA_VERSION
     attestation_count = _write_attestations(
         bundle,
         db,
@@ -316,8 +354,15 @@ def _write_change_log(
     scope_agent_ids: list[uuid.UUID],
     audit_period_start: datetime.datetime,
     audit_period_end: datetime.datetime,
+    signer: SignerHandle,
 ) -> int:
     """Agent / policy / key lifecycle events. CC6.2, CC6.6, CC8.1.
+
+    v2 schema — see ``docs/specs/change-log-export-schema-v2.md``.
+    Every row carries the audit_log HMAC chain hashes verbatim plus a
+    per-row ECDSA-P256-SHA256 signature over the canonical payload so
+    auditors can verify individual rows offline (sampling + redaction
+    stay valid).
 
     Reconstructed from audit_log by filtering ``request_metadata.action_type``
     against the canonical lifecycle set. That's the source of truth for
@@ -336,32 +381,87 @@ def _write_change_log(
     if scope_agent_ids:
         query = query.filter(AuditLog.agent_id.in_(scope_agent_ids))
 
-    rows = []
-    for entry in query.all():
+    # Materialize once — we need a second pass for the user lookup.
+    entries = query.all()
+
+    # Pre-load users for actor_email / actor_principal enrichment in one
+    # round-trip. An export-time lookup is acceptable because
+    # actor_email is a display field — it's not covered by the row
+    # signature, so stale email state is not a correctness issue.
+    actor_user_ids = {e.user_id for e in entries if e.user_id is not None}
+    user_rows = db.query(User).filter(User.id.in_(actor_user_ids)).all() if actor_user_ids else []
+    user_by_id = {u.id: u for u in user_rows}
+
+    rows: list[dict] = []
+    for entry in entries:
         metadata = entry.request_metadata or {}
         action = metadata.get("action_type")
         if action not in _LIFECYCLE_ACTIONS:
             continue
-        rows.append(
-            {
-                "audit_log_id": entry.id,
-                "created_at": _rfc3339(entry.created_at),
-                "action_type": action,
-                "resource_type": metadata.get("resource_type", ""),
-                "agent_id": str(entry.agent_id) if entry.agent_id else "",
-                "agent_name": entry.agent_name or metadata.get("agent_name", ""),
-                "actor_user_id": str(entry.user_id) if entry.user_id else "",
-                "decision": entry.decision,
-                "details_json": json.dumps(
-                    {
-                        k: v
-                        for k, v in metadata.items()
-                        if k not in {"action_type", "resource_type"}
-                    },
-                    sort_keys=True,
-                ),
-            }
-        )
+
+        user = user_by_id.get(entry.user_id) if entry.user_id else None
+        actor_email, actor_principal, actor_type = _resolve_actor(metadata, user)
+
+        diff_obj = metadata.get("diff")
+        diff_json_str = json.dumps(diff_obj, sort_keys=True) if diff_obj else ""
+
+        # Everything not promoted to a dedicated column stays in
+        # details_json so older rows and future metadata extensions
+        # are not dropped on the floor.
+        residual = {k: v for k, v in metadata.items() if k not in _PROMOTED_METADATA_KEYS}
+        details_json_str = json.dumps(residual, sort_keys=True) if residual else "{}"
+
+        row = {
+            # Identity + timing
+            "audit_log_id": entry.id,
+            "created_at": _rfc3339(entry.created_at),
+            "action_type": action,
+            "resource_type": metadata.get("resource_type", ""),
+            "agent_id": str(entry.agent_id) if entry.agent_id else "",
+            "agent_name": entry.agent_name or metadata.get("agent_name", ""),
+            # Actor
+            "actor_user_id": str(entry.user_id) if entry.user_id else "",
+            "actor_email": actor_email,
+            "actor_principal": actor_principal,
+            "actor_type": actor_type,
+            # Decision
+            "decision": entry.decision,
+            "decision_reason": str(metadata.get("decision_reason", "")),
+            "policy_version": str(metadata.get("policy_version", "")),
+            # Source context
+            "ip_address": str(metadata.get("ip_address", "")),
+            "user_agent": _truncate(str(metadata.get("user_agent", "")), 256),
+            "session_id": str(metadata.get("session_id", "")),
+            "request_id": str(metadata.get("request_id", "")),
+            "correlation_id": entry.correlation_id or "",
+            # Change payload (flattened high-signal fields)
+            "key_prefix": str(metadata.get("key_prefix", "")),
+            "key_type": str(metadata.get("key_type", "")),
+            "grace_hours": _coerce_int_str(metadata.get("grace_hours")),
+            "old_status": str(metadata.get("old_status", "")),
+            "new_status": str(metadata.get("new_status", "")),
+            "diff_json": diff_json_str,
+            "details_json": details_json_str,
+            # Cryptographic proof (populated below)
+            "entry_hash": entry.entry_hash,
+            "prev_hash": entry.prev_hash,
+            "signature": "",
+            "signing_key_id": "",
+            "chain_segment": "",
+        }
+
+        # The signer expects diff_json / details_json as structured
+        # objects, not CSV-flattened strings, so rebuild a shadow dict
+        # for signing purposes.
+        signing_row = dict(row)
+        signing_row["diff_json"] = diff_obj if diff_obj else {}
+        signing_row["details_json"] = residual
+        signature_b64, signing_key_id = sign_row(signing_row, signer)
+        row["signature"] = signature_b64
+        row["signing_key_id"] = signing_key_id
+
+        rows.append(row)
+
     _write_csv(
         bundle,
         path="change_log.csv",
@@ -373,13 +473,74 @@ def _write_change_log(
             "agent_id",
             "agent_name",
             "actor_user_id",
+            "actor_email",
+            "actor_principal",
+            "actor_type",
             "decision",
+            "decision_reason",
+            "policy_version",
+            "ip_address",
+            "user_agent",
+            "session_id",
+            "request_id",
+            "correlation_id",
+            "key_prefix",
+            "key_type",
+            "grace_hours",
+            "old_status",
+            "new_status",
+            "diff_json",
             "details_json",
+            "entry_hash",
+            "prev_hash",
+            "signature",
+            "signing_key_id",
+            "chain_segment",
         ],
         rows=rows,
         controls=["SOC2-CC6.2", "SOC2-CC6.6", "SOC2-CC8.1"],
     )
     return len(rows)
+
+
+def _resolve_actor(
+    metadata: dict,
+    user: User | None,
+) -> tuple[str, str, str]:
+    """Return ``(actor_email, actor_principal, actor_type)`` for a row.
+
+    Prefers explicit metadata when the writer populated it (e.g. for
+    service/automation actors that don't have a User row). Falls back
+    to the joined User for human-initiated events.
+    """
+    actor_type = metadata.get("actor_type") or ("user" if user else "system")
+    actor_email = metadata.get("actor_email") or (user.email if user else "")
+    principal = metadata.get("actor_principal")
+    if not principal:
+        if actor_type == "user" and actor_email:
+            principal = f"user:{actor_email}"
+        elif actor_type == "service":
+            principal = "service:unknown"
+        elif actor_type == "api_key":
+            key_prefix = metadata.get("key_prefix") or "unknown"
+            principal = f"api_key:{key_prefix}"
+        else:
+            principal = "system:internal"
+    return str(actor_email), str(principal), str(actor_type)
+
+
+def _coerce_int_str(value: object) -> str:
+    """Stringify integer metadata values, empty string for None/missing."""
+    if value is None or value == "":
+        return ""
+    try:
+        return str(int(value))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _truncate(value: str, limit: int) -> str:
+    return value if len(value) <= limit else value[:limit]
 
 
 def _write_attestations(

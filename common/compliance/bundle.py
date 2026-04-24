@@ -70,6 +70,11 @@ class ComplianceExportBundle:
     _entries: list[_BundleEntry] = field(default_factory=list)
     _sealed: bool = False
 
+    # Per-artifact schema versions surfaced into manifest.json so an
+    # auditor can version-gate ingestion without parsing the CSV header.
+    # Populated by profile builders (e.g. change_log.csv → "2.0").
+    artifact_schema_versions: dict[str, str] = field(default_factory=dict)
+
     # Populated on seal() — None beforehand.
     archive_sha256: str | None = None
     archive_bytes: int | None = None
@@ -184,6 +189,7 @@ class ComplianceExportBundle:
                 }
                 for e in self._entries
             ],
+            artifact_schema_versions=dict(self.artifact_schema_versions),
         )
         envelope = sign_manifest(manifest, signer)
         # Persist both the DSSE envelope (authoritative) and a
