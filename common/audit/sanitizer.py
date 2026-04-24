@@ -52,6 +52,22 @@ ALLOWED_METADATA_KEYS: frozenset[str] = frozenset(
         "key_prefix",
         "keys_revoked",
         "grace_hours",
+        # Change-log v2.1 source context. SOC 2 CC7.2 and HIPAA
+        # §164.312(b) both expect source IP and user agent on audit
+        # records — their absence is a reviewer finding. Writers are
+        # responsible for only emitting these on lifecycle audit
+        # rows; the request-path sanitizer chain upstream of this
+        # allowlist already scrubs them from per-request audit entries
+        # where they'd be noise and a GDPR liability.
+        # Org-level IP redaction (/24 or /48) is the Q1 follow-up in
+        # docs/specs/change-log-export-schema-v2.md §Open questions.
+        "ip_address",
+        "user_agent",
+        # diff dict for agent_updated / policy_updated — the sanitizer
+        # passes nested objects through untouched when the key is
+        # allowlisted. Schema-validated upstream by the router-side
+        # _compute_diff helper.
+        "diff",
     }
 )
 
@@ -93,12 +109,15 @@ PII_FIELD_BLOCKLIST: frozenset[str] = frozenset(
         "dob",
         "birthday",
         # Network / tracking
+        # NOTE: ip_address and user_agent were historically blocklisted
+        # here but are now ALLOWLISTED above for change-log v2.1
+        # compliance (SOC 2 CC7.2 / HIPAA §164.312(b)). Keep the
+        # aliases blocked so nobody smuggles them in under a variant
+        # name — only the canonical spellings are audit-compliant.
         "ip",
-        "ip_address",
         "client_ip",
         "remote_addr",
         "x_forwarded_for",
-        "user_agent",
         "ua",
         "referer",
         "referrer",
@@ -232,13 +251,21 @@ def sanitize_metadata(
     pii_keys: list[str] = []
 
     for key, value in metadata.items():
-        # Check PII blocklist FIRST — log the attempt
-        if is_pii_field(key):
+        # Explicit allowlist wins over PII pattern matching. A key
+        # being in ALLOWED_METADATA_KEYS means the team has reviewed
+        # and approved it for audit logging (e.g. ip_address /
+        # user_agent for change-log v2.1 compliance). Without this
+        # short-circuit the `ip_addr` pattern would strip the
+        # approved `ip_address` field.
+        is_allowlisted = key in ALLOWED_METADATA_KEYS or key in trusted_structured_keys
+
+        # Check PII blocklist for non-allowlisted keys — log the attempt
+        if not is_allowlisted and is_pii_field(key):
             pii_keys.append(key)
             continue
 
-        # Trusted structured keys (Pydantic-validated) bypass the allowlist
-        # and the flat-value restriction. Still subject to PII name check above.
+        # Trusted structured keys (Pydantic-validated) bypass the
+        # flat-value restriction.
         if key in trusted_structured_keys:
             clean[key] = value
             continue
@@ -252,8 +279,14 @@ def sanitize_metadata(
         if isinstance(value, str) and len(value) > MAX_METADATA_VALUE_LENGTH:
             value = value[:MAX_METADATA_VALUE_LENGTH] + "…[truncated]"
 
-        # Only store simple types (str, int, float, bool, None)
-        if isinstance(value, (str, int, float, bool)) or value is None:
+        # Allow nested dicts for `diff` (change-log v2.1); otherwise
+        # restrict to simple types to preserve the existing contract.
+        if (
+            isinstance(value, (str, int, float, bool))
+            or value is None
+            or key == "diff"
+            and isinstance(value, dict)
+        ):
             clean[key] = value
         else:
             # Complex types (lists, dicts, etc.) are not permitted

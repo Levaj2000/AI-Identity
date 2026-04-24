@@ -4,11 +4,12 @@ import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
 from api.app.quota import check_key_quota
+from common.audit.request_context import extract_audit_context
 from common.audit.writer import create_audit_entry
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
 from common.models import AgentKey, AgentStatus, KeyStatus, KeyType, User, get_db
@@ -65,6 +66,7 @@ def _revoke_expired_keys(db: Session, agent_id: uuid.UUID) -> int:
 )
 def create_key(
     agent_id: uuid.UUID,
+    request: Request,
     key_type: str = Query(
         "runtime",
         pattern="^(runtime|admin)$",
@@ -124,6 +126,7 @@ def create_key(
             "resource_type": "api_key",
             "key_type": key_type,
             "key_prefix": agent_key.key_prefix,
+            **extract_audit_context(request),
         },
     )
 
@@ -198,6 +201,7 @@ def list_keys(
 )
 def rotate_key(
     agent_id: uuid.UUID,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -271,6 +275,7 @@ def rotate_key(
             "key_type": inherited_type,
             "key_prefix": new_key.key_prefix,
             "grace_hours": str(ROTATION_GRACE_HOURS),
+            **extract_audit_context(request),
         },
     )
 
@@ -297,6 +302,7 @@ def rotate_key(
 def revoke_key(
     agent_id: uuid.UUID,
     key_id: int,
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -334,6 +340,7 @@ def revoke_key(
             "key_prefix": key.key_prefix,
             "old_status": "active",
             "new_status": "revoked",
+            **extract_audit_context(request),
         },
     )
 

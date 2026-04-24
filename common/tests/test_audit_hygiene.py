@@ -115,8 +115,6 @@ class TestPIIRejection:
         [
             "email",
             "phone",
-            "ip_address",
-            "user_agent",
             "name",
             "authorization",
             "password",
@@ -134,7 +132,13 @@ class TestPIIRejection:
         ],
     )
     def test_pii_fields_blocked(self, field):
-        """Known PII fields are rejected from metadata."""
+        """Known PII fields are rejected from metadata.
+
+        NOTE: ``ip_address`` and ``user_agent`` were in this list before
+        change-log v2.1. They are now allowlisted for SOC 2 CC7.2 /
+        HIPAA §164.312(b) compliance — see ``test_ip_and_ua_allowlisted_for_compliance``
+        below for the positive assertion.
+        """
         metadata = {"status_code": 200, field: "sensitive-data"}
         result = sanitize_metadata(metadata)
         assert field not in result
@@ -146,17 +150,40 @@ class TestPIIRejection:
             "status_code": 200,
             "email": "user@example.com",
             "phone": "555-1234",
-            "ip_address": "192.168.1.1",
+            "client_ip": "192.168.1.1",  # aliases of ip_address stay blocked
             "body": '{"secret": "data"}',
         }
         result = sanitize_metadata(metadata)
         assert result == {"status_code": 200}
 
+    def test_ip_and_ua_allowlisted_for_compliance(self):
+        """change_log v2.1: ip_address + user_agent survive sanitization.
+
+        SOC 2 CC7.2 and HIPAA §164.312(b) expect these on audit rows.
+        Only the canonical spellings are allowlisted — aliases like
+        ``client_ip`` / ``remote_addr`` / ``ua`` stay blocked so they
+        can't sneak in under a variant name.
+        """
+        metadata = {
+            "ip_address": "203.0.113.7",
+            "user_agent": "ai-identity-sdk/1.0",
+            "action_type": "agent_created",
+            "resource_type": "agent",
+        }
+        result = sanitize_metadata(metadata)
+        assert result["ip_address"] == "203.0.113.7"
+        assert result["user_agent"] == "ai-identity-sdk/1.0"
+
     def test_is_pii_field_explicit_blocklist(self):
-        """is_pii_field catches explicitly blocklisted names."""
+        """is_pii_field catches explicitly blocklisted names.
+
+        ``ip_address`` was removed from the blocklist in change-log
+        v2.1 (see sanitizer.py §Change-log v2.1 source context).
+        The allowlist-wins rule in ``sanitize_metadata`` means any
+        PII pattern match on an allowlisted key is overridden.
+        """
         assert is_pii_field("email")
         assert is_pii_field("phone_number")
-        assert is_pii_field("ip_address")
         assert is_pii_field("authorization")
         assert is_pii_field("body")
         assert is_pii_field("request_body")
@@ -164,6 +191,10 @@ class TestPIIRejection:
         assert is_pii_field("cookie")
         assert is_pii_field("ssn")
         assert is_pii_field("credit_card")
+        # Aliases of the canonical allowlisted spellings are still PII.
+        assert is_pii_field("client_ip")
+        assert is_pii_field("remote_addr")
+        assert is_pii_field("x_forwarded_for")
 
     def test_is_pii_field_pattern_detection(self):
         """is_pii_field catches PII-like patterns not in the explicit list."""
@@ -286,13 +317,18 @@ class TestPIIScan:
     """Verify that a PII scan of audit entries returns zero hits."""
 
     def test_pii_scan_clean_entries(self, db_session):
-        """Create entries with PII in metadata and verify none persisted."""
+        """Create entries with PII in metadata and verify none persisted.
+
+        ``ip_address`` and ``user_agent`` are intentionally excluded
+        from this scan — they are allowlisted as of change-log v2.1
+        for SOC 2 / HIPAA audit compliance. See
+        ``TestPIIRejection::test_ip_and_ua_allowlisted_for_compliance``.
+        """
         # Try to inject various PII into metadata
         pii_metadata = {
             "email": "user@example.com",
             "phone": "555-123-4567",
-            "ip_address": "10.0.0.1",
-            "user_agent": "Mozilla/5.0",
+            "client_ip": "10.0.0.1",  # alias stays blocked
             "authorization": "Bearer eyJhbGci...",
             "cookie": "session=abc123",
             "body": '{"prompt": "confidential info"}',
@@ -310,9 +346,14 @@ class TestPIIScan:
             request_metadata=pii_metadata,
         )
 
-        # Scan all fields for PII
+        # Scan all fields for PII. Allowlisted compliance fields that
+        # happen to match a PII pattern (ip_address matches ip_addr)
+        # are OK by policy — is_pii_field is a name-based heuristic,
+        # and the allowlist-wins rule is the authoritative gate.
         stored = entry.request_metadata
         for key in stored:
+            if key in {"ip_address", "user_agent"}:
+                continue
             assert not is_pii_field(key), f"PII field '{key}' found in audit entry"
 
         # Verify the clean fields survived
