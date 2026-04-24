@@ -35,9 +35,14 @@ def extract_audit_context(request: Request | None) -> dict[str, str]:
     production runs behind a GCP L7 load balancer that sets it; falls
     back to ``request.client.host`` for direct connections. Either
     way we end up with the client-observed address, not the proxy's.
+
+    ``request_id`` is the short per-HTTP-request identifier set by the
+    API middleware on ``request.state.request_id``. ``correlation_id``
+    is denormalized to a top-level AuditLog column already, so it
+    isn't surfaced through this dict — see ``AuditLog.correlation_id``.
     """
     if request is None:
-        return {"ip_address": "", "user_agent": ""}
+        return {"ip_address": "", "user_agent": "", "request_id": ""}
 
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
@@ -51,4 +56,13 @@ def extract_audit_context(request: Request | None) -> dict[str, str]:
 
     user_agent = (request.headers.get("user-agent") or "")[:_USER_AGENT_MAX_LEN]
 
-    return {"ip_address": ip_address, "user_agent": user_agent}
+    # request.state attributes only exist if the middleware ran. Use
+    # getattr with a default so tests that bypass the middleware (or
+    # background jobs that don't have one) still produce a valid dict.
+    request_id = getattr(request.state, "request_id", "") or ""
+
+    return {
+        "ip_address": ip_address,
+        "user_agent": user_agent,
+        "request_id": request_id,
+    }
