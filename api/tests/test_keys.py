@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from common.auth.keys import hash_key
-from common.models import AgentKey, KeyStatus
+from common.models import AgentKey, AuditLog, KeyStatus
 
 
 def _create_agent(client, auth_headers, name="Test Agent"):
@@ -390,3 +390,67 @@ class TestRotateKey:
             headers=auth_headers,
         )
         assert resp.status_code == 400
+
+
+# ── Change-log v2.1 enrichment ──────────────────────────────────────────
+
+
+class TestKeyLifecycleAuditEnrichment:
+    """Source context is captured on every key lifecycle audit row.
+
+    Paired with the equivalent tests in test_agents.py — auditor needs
+    ip/ua on the full lifecycle surface, not just the agent CRUD.
+    """
+
+    def _lifecycle_entry(self, db_session, agent_id: str, action_type: str) -> AuditLog:
+        """SQLite-friendly: filter in Python (see test_agents.py for rationale)."""
+        rows = (
+            db_session.query(AuditLog)
+            .filter(AuditLog.agent_id == uuid.UUID(agent_id))
+            .order_by(AuditLog.id.desc())
+            .all()
+        )
+        for row in rows:
+            if (row.request_metadata or {}).get("action_type") == action_type:
+                return row
+        return None
+
+    def test_create_key_records_ip_and_user_agent(self, client, auth_headers, db_session):
+        agent_id, _ = _create_agent(client, auth_headers)
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys",
+            headers={**auth_headers, "user-agent": "create-key-test/1.0"},
+        )
+        assert resp.status_code == 201
+        entry = self._lifecycle_entry(db_session, agent_id, "key_created")
+        assert entry.request_metadata["user_agent"] == "create-key-test/1.0"
+        assert entry.request_metadata["ip_address"]
+        assert entry.request_metadata["key_prefix"]
+
+    def test_rotate_key_records_ip_and_user_agent(self, client, auth_headers, db_session):
+        agent_id, _ = _create_agent(client, auth_headers)
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/rotate",
+            headers={**auth_headers, "user-agent": "rotate-test/1.0"},
+        )
+        assert resp.status_code == 201
+        entry = self._lifecycle_entry(db_session, agent_id, "key_rotated")
+        assert entry.request_metadata["user_agent"] == "rotate-test/1.0"
+        assert entry.request_metadata["ip_address"]
+        assert entry.request_metadata["grace_hours"] == "24"
+
+    def test_revoke_key_records_ip_and_user_agent(self, client, auth_headers, db_session):
+        agent_id, _ = _create_agent(client, auth_headers)
+        keys_resp = client.get(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers)
+        key_id = keys_resp.json()["items"][0]["id"]
+
+        resp = client.delete(
+            f"/api/v1/agents/{agent_id}/keys/{key_id}",
+            headers={**auth_headers, "user-agent": "revoke-key-test/1.0"},
+        )
+        assert resp.status_code == 200
+        entry = self._lifecycle_entry(db_session, agent_id, "key_revoked")
+        assert entry.request_metadata["user_agent"] == "revoke-key-test/1.0"
+        assert entry.request_metadata["ip_address"]
+        assert entry.request_metadata["old_status"] == "active"
+        assert entry.request_metadata["new_status"] == "revoked"
