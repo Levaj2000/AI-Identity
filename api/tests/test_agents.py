@@ -794,6 +794,25 @@ class TestChangeLogV21Enrichment:
         assert entry.request_metadata["old_status"] == "active"
         assert entry.request_metadata["new_status"] == "revoked"
 
+    def test_request_id_captured_from_middleware(self, client, auth_headers, db_session):
+        """v2.1.1: request.state.request_id (set by middleware) lands in
+        the change_log. correlation_id continues to come from the
+        denormalized top-level AuditLog column.
+        """
+        resp = client.post(
+            "/api/v1/agents",
+            json={"name": "ReqID Agent"},
+            headers=auth_headers,
+        )
+        agent_id = resp.json()["agent"]["id"]
+        entry = self._lifecycle_entry(db_session, agent_id, "agent_created")
+        # Middleware always sets request_id; we just need it non-empty
+        # and a hex-shaped string (8 chars per main.py's slicing).
+        request_id = entry.request_metadata["request_id"]
+        assert request_id, "request_id should be populated by middleware"
+        assert len(request_id) == 8
+        int(request_id, 16)  # raises if not hex
+
     def test_x_forwarded_for_wins_over_client_host(self, client, auth_headers, db_session):
         """Behind a load balancer, X-Forwarded-For gives the real client IP."""
         resp = client.post(
