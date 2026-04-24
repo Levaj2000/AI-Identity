@@ -127,6 +127,7 @@ def run_export_job(
                 audit_period_end=period_end,
                 built_at=now,
                 agent_ids=job.agent_ids,
+                signer=signer,
             )
         elif job.profile == "eu_ai_act_2024":
             build_eu_ai_act_bundle(
