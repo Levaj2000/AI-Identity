@@ -292,6 +292,7 @@ def _build_bundle(
     built_at = now
 
     bundle = ComplianceExportBundle.create(tmp_path / "soc2.zip", export_id=uuid.uuid4())
+    signer, _ = _local_signer()
     build_soc2_bundle(
         bundle,
         db=db_session,
@@ -301,8 +302,8 @@ def _build_bundle(
         audit_period_end=period_end,
         built_at=built_at,
         agent_ids=agent_ids,
+        signer=signer,
     )
-    signer, _ = _local_signer()
     bundle.seal(
         profile="soc2_tsc_2017",
         audit_period_start=period_start,
@@ -418,6 +419,178 @@ class TestChangeLog:
         for row in rows:
             assert row["action_type"] in {"agent_updated", "agent_revoked"}
 
+    def test_change_log_v2_columns_present(self, db_session, org_a, monkeypatch, tmp_path):
+        _seed_audit(db_session, org_a, monkeypatch)
+        bundle = _build_bundle(tmp_path, db_session, org_a)
+        with (
+            zipfile.ZipFile(bundle.archive_path) as zf,
+            zf.open("change_log.csv") as fp,
+        ):
+            text = io.TextIOWrapper(fp, encoding="utf-8")
+            reader = csv.DictReader(text)
+            header = list(reader.fieldnames or [])
+        # The v2 column set is contractual — reviewers should see this
+        # fail loudly if columns are reordered or dropped.
+        assert header == [
+            "audit_log_id",
+            "created_at",
+            "action_type",
+            "resource_type",
+            "agent_id",
+            "agent_name",
+            "actor_user_id",
+            "actor_email",
+            "actor_principal",
+            "actor_type",
+            "decision",
+            "decision_reason",
+            "policy_version",
+            "ip_address",
+            "user_agent",
+            "session_id",
+            "request_id",
+            "correlation_id",
+            "key_prefix",
+            "key_type",
+            "grace_hours",
+            "old_status",
+            "new_status",
+            "diff_json",
+            "details_json",
+            "entry_hash",
+            "prev_hash",
+            "signature",
+            "signing_key_id",
+            "chain_segment",
+        ]
+
+    def test_change_log_hmac_hashes_populated(self, db_session, org_a, monkeypatch, tmp_path):
+        _seed_audit(db_session, org_a, monkeypatch)
+        bundle = _build_bundle(tmp_path, db_session, org_a)
+        with zipfile.ZipFile(bundle.archive_path) as zf:
+            rows = _read_csv(zf, "change_log.csv")
+        for row in rows:
+            assert len(row["entry_hash"]) == 64  # hex SHA256
+            assert row["prev_hash"]  # non-empty (GENESIS or prior)
+
+    def test_change_log_row_signatures_verify(self, db_session, org_a, monkeypatch, tmp_path):
+        """Every row's signature must verify under the signer's pubkey.
+
+        This is the core v2 guarantee — auditors can sample rows and
+        verify them offline without trusting AI Identity's systems.
+        """
+        from common.compliance.change_log_signer import signing_input
+
+        _seed_audit(db_session, org_a, monkeypatch)
+        # Build with a known signer so we control the pubkey.
+        signer, public_pem = _local_signer()
+        bundle = ComplianceExportBundle.create(tmp_path / "soc2.zip", export_id=uuid.uuid4())
+        now = datetime.datetime.now(tz=datetime.UTC)
+        build_soc2_bundle(
+            bundle,
+            db=db_session,
+            org_id=org_a["org"].id,
+            export_id=bundle.export_id,
+            audit_period_start=now - datetime.timedelta(days=30),
+            audit_period_end=now + datetime.timedelta(days=1),
+            built_at=now,
+            agent_ids=None,
+            signer=signer,
+        )
+        bundle.seal(
+            profile="soc2_tsc_2017",
+            audit_period_start=now - datetime.timedelta(days=30),
+            audit_period_end=now + datetime.timedelta(days=1),
+            built_at=now,
+            org_id=org_a["org"].id,
+            signer=signer,
+        )
+
+        with zipfile.ZipFile(bundle.archive_path) as zf:
+            rows = _read_csv(zf, "change_log.csv")
+
+        assert rows, "need at least one row to verify signatures"
+        public_key = serialization.load_pem_public_key(public_pem)
+        for row in rows:
+            # Reconstruct the object-form diff/details for signing.
+            diff_obj = json.loads(row["diff_json"]) if row["diff_json"] else {}
+            details_obj = json.loads(row["details_json"]) if row["details_json"] else {}
+            sig_row = dict(row)
+            sig_row["audit_log_id"] = int(row["audit_log_id"])
+            sig_row["diff_json"] = diff_obj
+            sig_row["details_json"] = details_obj
+            signing_bytes = signing_input(sig_row)
+            sig_der = base64.b64decode(row["signature"])
+            public_key.verify(sig_der, signing_bytes, ec.ECDSA(hashes.SHA256()))
+
+    def test_change_log_schema_version_in_manifest(self, db_session, org_a, monkeypatch, tmp_path):
+        _seed_audit(db_session, org_a, monkeypatch)
+        bundle = _build_bundle(tmp_path, db_session, org_a)
+        with zipfile.ZipFile(bundle.archive_path) as zf:
+            manifest = json.loads(zf.read("manifest.json"))
+        assert manifest["artifact_schema_versions"]["change_log.csv"] == "2.0"
+
+    def test_verify_change_log_cli_exits_zero_on_valid_export(
+        self, db_session, org_a, monkeypatch, tmp_path
+    ):
+        """End-to-end: build a real export, verify it with the CLI."""
+        import subprocess
+        import sys as _sys
+
+        _seed_audit(db_session, org_a, monkeypatch)
+        signer, public_pem = _local_signer()
+        bundle = ComplianceExportBundle.create(tmp_path / "soc2.zip", export_id=uuid.uuid4())
+        now = datetime.datetime.now(tz=datetime.UTC)
+        build_soc2_bundle(
+            bundle,
+            db=db_session,
+            org_id=org_a["org"].id,
+            export_id=bundle.export_id,
+            audit_period_start=now - datetime.timedelta(days=30),
+            audit_period_end=now + datetime.timedelta(days=1),
+            built_at=now,
+            agent_ids=None,
+            signer=signer,
+        )
+        bundle.seal(
+            profile="soc2_tsc_2017",
+            audit_period_start=now - datetime.timedelta(days=30),
+            audit_period_end=now + datetime.timedelta(days=1),
+            built_at=now,
+            org_id=org_a["org"].id,
+            signer=signer,
+        )
+
+        # Extract the CSV + write pubkey to disk for the CLI.
+        csv_path = tmp_path / "change_log.csv"
+        manifest_path = tmp_path / "manifest.json"
+        pubkey_path = tmp_path / "pubkey.pem"
+        pubkey_path.write_bytes(public_pem)
+        with zipfile.ZipFile(bundle.archive_path) as zf:
+            csv_path.write_bytes(zf.read("change_log.csv"))
+            manifest_path.write_bytes(zf.read("manifest.json"))
+
+        repo_root = Path(__file__).resolve().parents[2]
+        result = subprocess.run(
+            [
+                _sys.executable,
+                str(repo_root / "scripts" / "verify_change_log.py"),
+                "--pubkey",
+                str(pubkey_path),
+                "--manifest",
+                str(manifest_path),
+                str(csv_path),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, (
+            f"verify_change_log.py exited {result.returncode}\n"
+            f"stdout: {result.stdout}\nstderr: {result.stderr}"
+        )
+        assert "OK" in result.stdout
+
 
 class TestAttestations:
     def test_attestation_envelope_round_trips(self, db_session, org_a, monkeypatch, tmp_path):
@@ -532,14 +705,17 @@ class TestDeterminism:
         _seed_control_results(db_session, org_a)
         _seed_policy(db_session, org_a)
 
-        # Build twice, into distinct paths. Artifact bytes (not the
-        # outer ZIP — timestamps/signature differ) must match.
+        # Build twice, into distinct paths. Artifact bytes must match
+        # for artifacts whose content is fully determined by DB state.
+        # change_log.csv carries per-row ECDSA signatures (v2 schema)
+        # and is non-deterministic for the same reason the outer
+        # manifest envelope is — ECDSA nonce. Verified separately via
+        # row-level signature verification in TestChangeLog.
         bundle_a = _build_bundle(tmp_path / "a", db_session, org_a)
         bundle_b = _build_bundle(tmp_path / "b", db_session, org_a)
         artifacts = [
             "agent_inventory.csv",
             "access_log.csv",
-            "change_log.csv",
             "control_results.csv",
         ]
         with (
