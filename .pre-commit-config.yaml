@@ -48,3 +48,13 @@ repos:
         language: system
         pass_filenames: false
         files: ^dashboard/.*\.(ts|tsx|json|css|html)$
+
+  # ── Brand consistency: Four Pillars canon ─────────────────────────────
+  - repo: local
+    hooks:
+      - id: brand-pillar-consistency
+        name: brand consistency (Four Pillars canon)
+        entry: scripts/check-pillar-consistency.sh
+        language: system
+        pass_filenames: false
+        files: ^(landing-page|docs|marketing)/.*\.(ts|tsx|js|jsx|html|md|mdx)$
