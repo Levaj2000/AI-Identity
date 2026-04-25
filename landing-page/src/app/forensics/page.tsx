@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { generatePageMetadata } from "@/lib/metadata";
+import { pillars, PILLARS_HEADING, PILLARS_SUBHEADING } from "@/data/pillars";
 
 export const metadata: Metadata = generatePageMetadata({
   title: "AI Agent Forensics — Cryptographically Signed Evidence, Verified Offline",
@@ -88,29 +89,6 @@ const forensicFeatures = [
         <circle cx="12" cy="12" r="3" />
       </svg>
     ),
-  },
-];
-
-const pillars = [
-  {
-    pillar: "Identity",
-    question: "Who is this agent?",
-    capability: "Per-agent API keys, lifecycle management, scoped credentials.",
-  },
-  {
-    pillar: "Policy",
-    question: "What is it allowed to do?",
-    capability: "Fail-closed gateway, deny-by-default policy evaluation.",
-  },
-  {
-    pillar: "Compliance",
-    question: "Can we prove rules were followed?",
-    capability: "DSSE-signed session attestations, HMAC-verifiable audit logs, automated compliance assessments.",
-  },
-  {
-    pillar: "Forensics",
-    question: "What happened, provably?",
-    capability: "Hash-chained logs, incident replay, export, offline cryptographic verification.",
   },
 ];
 
@@ -218,9 +196,9 @@ export default function Forensics() {
       {/* Four Pillars */}
       <section className="pb-20 px-6 md:px-12">
         <div className="max-w-[900px] mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 text-center">The Four Pillars of AI Agent Governance</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 text-center">{PILLARS_HEADING}</h2>
           <p className="text-sm text-gray-400 text-center mb-10 max-w-[560px] mx-auto">
-            Most solutions cover one or two. AI Identity covers all four.
+            {PILLARS_SUBHEADING}
           </p>
           <div className="overflow-hidden rounded-xl border border-white/10">
             <table className="w-full text-sm">
