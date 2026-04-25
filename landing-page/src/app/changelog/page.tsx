@@ -18,6 +18,18 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: "0.2.1",
+    date: "April 25, 2026",
+    type: "enhancement",
+    title: "Brand Consistency: Four Pillars Unified",
+    items: [
+      "Unified the Four Pillars governance framework (Identity, Policy, Compliance, Forensics) across /, /product, and /forensics — single source of truth in src/data/pillars.ts",
+      "Removed legacy 'three pillars' framing from /product page that pre-dated the Forensics-as-flagship positioning",
+      "Updated 'Compliance in the age of autonomous AI' blog post to anchor on the canonical four-pillar framework",
+      "Added pre-commit guard preventing future pillar-count regressions outside brand-voice docs",
+    ],
+  },
+  {
     version: "0.2.0",
     date: "April 6, 2026",
     type: "feature",
