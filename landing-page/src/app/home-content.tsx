@@ -5,6 +5,7 @@ import Link from "next/link";
 import BadgeFramerComponent from "@/framer/elements/badge";
 import MainButtonFramerComponent from "@/framer/main-button";
 import { GoogleForStartupsStrip } from "@/components/GoogleForStartupsBadge";
+import { pillars, PILLARS_HEADING, PILLARS_SUBHEADING } from "@/data/pillars";
 
 const steps = [
   {
@@ -744,10 +745,10 @@ export default function HomeContent() {
           {/* Four Pillars Table */}
           <div className="mt-16 max-w-[900px] mx-auto">
             <h3 className="text-xl md:text-2xl font-medium text-white mb-2 text-center">
-              The Four Pillars of AI Agent Governance
+              {PILLARS_HEADING}
             </h3>
             <p className="text-sm text-[rgba(213,219,230,0.5)] text-center mb-8">
-              Most solutions cover one or two. AI Identity covers all four.
+              {PILLARS_SUBHEADING}
             </p>
             <div className="overflow-hidden rounded-xl border border-[rgba(216,231,242,0.07)]">
               <table className="w-full text-sm">
@@ -759,12 +760,7 @@ export default function HomeContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { pillar: "Identity", question: "Who is this agent?", capability: "Per-agent API keys, lifecycle management, scoped credentials." },
-                    { pillar: "Policy", question: "What is it allowed to do?", capability: "Fail-closed gateway, deny-by-default policy evaluation." },
-                    { pillar: "Compliance", question: "Can we prove rules were followed?", capability: "HMAC-verifiable audit logs, automated assessments." },
-                    { pillar: "Forensics", question: "What happened, provably?", capability: "Hash-chained logs, incident replay, export, verify." },
-                  ].map((p, i) => (
+                  {pillars.map((p, i) => (
                     <tr key={p.pillar} className={`${i % 2 === 0 ? "bg-white/[0.02]" : ""} ${p.pillar === "Forensics" ? "border-l-2 border-l-[rgb(166,218,255)]" : ""}`}>
                       <td className="px-5 py-3 font-semibold text-white whitespace-nowrap">{p.pillar}</td>
                       <td className="px-5 py-3 text-[rgba(213,219,230,0.5)] italic">{p.question}</td>

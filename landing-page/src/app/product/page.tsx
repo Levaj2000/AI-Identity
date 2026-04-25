@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { generatePageMetadata } from "@/lib/metadata";
+import { pillars, PILLARS_HEADING, PILLARS_SUBHEADING } from "@/data/pillars";
 
 export const metadata: Metadata = generatePageMetadata({
   title: "Product Walkthrough — AI Identity Dashboard, Gateway & Forensics",
@@ -324,35 +325,45 @@ export default function ProductPage() {
         </div>
       </section>
 
-      {/* Three pillars */}
+      {/* Four Pillars */}
       <section className="pb-20 px-6 md:px-12">
-        <div className="max-w-[1100px] mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 text-center">
-            Three pillars, one platform
+        <div className="max-w-[900px] mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 text-center">
+            {PILLARS_HEADING}
           </h2>
-          <p className="text-sm text-gray-400 text-center max-w-[640px] mx-auto mb-10">
-            Identity, policy, and evidence for every AI agent in your organization.
+          <p className="text-sm text-gray-400 text-center mb-10 max-w-[640px] mx-auto">
+            {PILLARS_SUBHEADING}
           </p>
-          <div className="grid md:grid-cols-3 gap-4">
-            {[
-              {
-                k: "Identity",
-                d: "Per-agent API keys, scoped permissions, lifecycle management, and shadow-agent detection — all at the API layer.",
-              },
-              {
-                k: "Policy",
-                d: "Deny-by-default gateway that enforces scope, rate limits, spending caps, and human-in-the-loop approvals before any upstream call.",
-              },
-              {
-                k: "Evidence",
-                d: "HMAC hash-chained logs, DSSE + ECDSA P-256 signed attestations, and an offline verification CLI. Auditors verify without trusting us.",
-              },
-            ].map((p) => (
-              <div key={p.k} className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-                <h3 className="text-base font-semibold text-white mb-2">{p.k}</h3>
-                <p className="text-sm text-gray-400 leading-relaxed">{p.d}</p>
-              </div>
-            ))}
+          <div className="overflow-hidden rounded-xl border border-white/10">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-white/[0.05]">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[rgb(166,218,255)] uppercase tracking-wider">
+                    Pillar
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[rgb(166,218,255)] uppercase tracking-wider">
+                    Core Question
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[rgb(166,218,255)] uppercase tracking-wider">
+                    AI Identity Capability
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {pillars.map((p, i) => (
+                  <tr
+                    key={p.pillar}
+                    className={`${i % 2 === 0 ? "bg-white/[0.02]" : "bg-transparent"} ${p.pillar === "Forensics" ? "border-l-2 border-l-[rgb(166,218,255)]" : ""}`}
+                  >
+                    <td className="px-6 py-4 font-semibold text-white whitespace-nowrap">
+                      {p.pillar}
+                    </td>
+                    <td className="px-6 py-4 text-gray-400 italic">{p.question}</td>
+                    <td className="px-6 py-4 text-gray-300">{p.capability}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </section>
