@@ -540,6 +540,7 @@ from api.app.routers.policy_evaluate import router as policy_evaluate_router  # 
 from api.app.routers.qa import router as qa_router  # noqa: E402
 from api.app.routers.shadow import router as shadow_router  # noqa: E402
 from api.app.routers.usage import router as usage_router  # noqa: E402
+from api.app.routers.verify import router as verify_router  # noqa: E402
 from common.observability.router import router as metrics_router  # noqa: E402
 
 app.include_router(admin_router)
@@ -568,6 +569,7 @@ app.include_router(organizations_router)
 app.include_router(agent_assignments_router)
 app.include_router(approvals_router)
 app.include_router(shadow_router)
+app.include_router(verify_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────
 
