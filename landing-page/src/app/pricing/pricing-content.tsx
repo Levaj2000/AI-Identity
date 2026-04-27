@@ -66,6 +66,29 @@ const tiers = [
     featured: false,
   },
   {
+    name: "Business+",
+    monthlyPrice: 599,
+    annualPrice: 509,
+    description: "For high-volume teams approaching enterprise scale.",
+    features: [
+      "500 agents",
+      "1,500,000 requests/mo",
+      "Up to 50 team members",
+      "Priority support + dedicated hours",
+      "2-year audit retention",
+      "100 upstream credentials",
+      "Custom policies",
+      "SAML / SCIM",
+      "Team roles & permissions",
+      "Agent-level role assignments",
+      "Anomaly detection",
+      "99.5% uptime SLA",
+    ],
+    cta: "Start Business+ Trial",
+    ctaHref: "https://dashboard.ai-identity.co",
+    featured: false,
+  },
+  {
     name: "Enterprise",
     monthlyPrice: -1,
     annualPrice: -1,
@@ -96,27 +119,29 @@ interface ComparisonRow {
   free: string | boolean;
   pro: string | boolean;
   business: string | boolean;
+  businessPlus: string | boolean;
   enterprise: string | boolean;
 }
 
 const comparisonRows: ComparisonRow[] = [
-  { feature: "Agents", free: "5", pro: "50", business: "200", enterprise: "Unlimited" },
-  { feature: "Requests / month", free: "2,000", pro: "75,000", business: "500,000", enterprise: "Unlimited" },
-  { feature: "Upstream credentials", free: "1", pro: "10", business: "50", enterprise: "Unlimited" },
-  { feature: "Audit log retention", free: "30 days", pro: "90 days", business: "1 year", enterprise: "Unlimited" },
-  { feature: "Tamper-proof audit chain", free: true, pro: true, business: true, enterprise: true },
-  { feature: "Key rotation (zero-downtime)", free: false, pro: true, business: true, enterprise: true },
-  { feature: "Gateway policy enforcement", free: false, pro: true, business: true, enterprise: true },
-  { feature: "Custom policies", free: false, pro: false, business: true, enterprise: true },
-  { feature: "Team members", free: "1", pro: "5", business: "25", enterprise: "Unlimited" },
-  { feature: "Team roles & permissions", free: false, pro: false, business: true, enterprise: true },
-  { feature: "Agent-level assignments", free: false, pro: false, business: true, enterprise: true },
-  { feature: "SSO", free: false, pro: "Basic", business: "SAML / SCIM", enterprise: "Full" },
-  { feature: "Priority support", free: false, pro: false, business: true, enterprise: true },
-  { feature: "SLA guarantee", free: false, pro: false, business: false, enterprise: true },
-  { feature: "Compliance evidence export", free: false, pro: false, business: false, enterprise: true },
-  { feature: "Human-in-the-loop review", free: false, pro: false, business: false, enterprise: true },
-  { feature: "On-premise / VPC", free: false, pro: false, business: false, enterprise: true },
+  { feature: "Agents", free: "5", pro: "50", business: "200", businessPlus: "500", enterprise: "Unlimited" },
+  { feature: "Requests / month", free: "2,000", pro: "75,000", business: "500,000", businessPlus: "1,500,000", enterprise: "Unlimited" },
+  { feature: "Upstream credentials", free: "1", pro: "10", business: "50", businessPlus: "100", enterprise: "Unlimited" },
+  { feature: "Audit log retention", free: "30 days", pro: "90 days", business: "1 year", businessPlus: "2 years", enterprise: "Unlimited" },
+  { feature: "Tamper-proof audit chain", free: true, pro: true, business: true, businessPlus: true, enterprise: true },
+  { feature: "Key rotation (zero-downtime)", free: false, pro: true, business: true, businessPlus: true, enterprise: true },
+  { feature: "Gateway policy enforcement", free: false, pro: true, business: true, businessPlus: true, enterprise: true },
+  { feature: "Custom policies", free: false, pro: false, business: true, businessPlus: true, enterprise: true },
+  { feature: "Team members", free: "1", pro: "5", business: "25", businessPlus: "50", enterprise: "Unlimited" },
+  { feature: "Team roles & permissions", free: false, pro: false, business: true, businessPlus: true, enterprise: true },
+  { feature: "Agent-level assignments", free: false, pro: false, business: true, businessPlus: true, enterprise: true },
+  { feature: "SSO", free: false, pro: "Basic", business: "SAML / SCIM", businessPlus: "SAML / SCIM", enterprise: "Full" },
+  { feature: "Priority support", free: false, pro: false, business: true, businessPlus: "Dedicated hours", enterprise: true },
+  { feature: "Anomaly detection", free: false, pro: false, business: false, businessPlus: true, enterprise: true },
+  { feature: "SLA guarantee", free: false, pro: false, business: false, businessPlus: "99.5%", enterprise: "Custom" },
+  { feature: "Compliance evidence export", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
+  { feature: "Human-in-the-loop review", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
+  { feature: "On-premise / VPC", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
 ];
 
 // ── FAQ Data ────────────────────────────────────────────────────────
@@ -143,8 +168,12 @@ const faqs = [
     a: "Yes. Our Founder Rate gives the first 5\u201310 customers 50% off for 6 months in exchange for a case study and feedback. Qualifying open-source projects get Pro free. Email us at sales@ai-identity.co.",
   },
   {
+    q: "When should I pick Business+ over Business or Enterprise?",
+    a: "Business+ is for teams that have outgrown Business (more than 200 agents or 500K requests/mo) but don't yet need on-premise deployment, full SSO, or compliance evidence export. It adds anomaly detection and a 99.5% uptime SLA on top of Business. If you need VPC isolation or HITL review, go straight to Enterprise.",
+  },
+  {
     q: "How does Enterprise pricing work?",
-    a: "Enterprise pricing is based on your agent count, request volume, and deployment requirements. We'll scope it on a call \u2014 most Enterprise deals start around $1,200/mo.",
+    a: "Enterprise pricing is based on your agent count, request volume, and deployment topology. Multi-tenant Enterprise typically starts at $1,500/mo; dedicated VPC deployments start at $3,000/mo. We'll scope it on a call.",
   },
 ];
 
@@ -189,6 +218,7 @@ const tierThresholds = [
   { name: "Free", maxAgents: 5, maxRequests: 2_000, price: "$0/mo" },
   { name: "Pro", maxAgents: 50, maxRequests: 75_000, price: "$79/mo" },
   { name: "Business", maxAgents: 200, maxRequests: 500_000, price: "$299/mo" },
+  { name: "Business+", maxAgents: 500, maxRequests: 1_500_000, price: "$599/mo" },
   { name: "Enterprise", maxAgents: Infinity, maxRequests: Infinity, price: "Custom" },
 ];
 
@@ -205,6 +235,7 @@ function UsageEstimator() {
     Free: "text-gray-400",
     Pro: "text-[rgb(166,218,255)]",
     Business: "text-blue-400",
+    "Business+": "text-indigo-400",
     Enterprise: "text-purple-400",
   };
 
@@ -354,7 +385,7 @@ export default function PricingContent() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto"
         >
           {tiers.map((tier) => {
             const isCustom = tier.monthlyPrice < 0;
@@ -446,6 +477,7 @@ export default function PricingContent() {
                   <th className="py-4 px-4 text-center text-sm font-medium text-[rgba(213,219,230,0.6)]">Free</th>
                   <th className="py-4 px-4 text-center text-sm font-semibold text-[rgb(166,218,255)]">Pro</th>
                   <th className="py-4 px-4 text-center text-sm font-medium text-[rgba(213,219,230,0.6)]">Business</th>
+                  <th className="py-4 px-4 text-center text-sm font-medium text-[rgba(213,219,230,0.6)]">Business+</th>
                   <th className="py-4 px-4 text-center text-sm font-medium text-[rgba(213,219,230,0.6)]">Enterprise</th>
                 </tr>
               </thead>
@@ -456,6 +488,7 @@ export default function PricingContent() {
                     <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.free} /></span></td>
                     <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.pro} /></span></td>
                     <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.business} /></span></td>
+                    <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.businessPlus} /></span></td>
                     <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.enterprise} /></span></td>
                   </tr>
                 ))}
