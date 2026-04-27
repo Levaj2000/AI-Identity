@@ -239,6 +239,13 @@ export interface AuditSummaryRequest {
   start_date?: string
   end_date?: string
   decision?: string
+  endpoint?: string
+  action_type?: string
+  model?: string
+  cost_min?: number
+  cost_max?: number
+  /** Analyst intent hint forwarded to the LLM (e.g. "Explain this deny cluster"). */
+  focus_hint?: string
   max_events?: number
 }
 
