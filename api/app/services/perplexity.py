@@ -46,6 +46,10 @@ Follow these rules exactly:
 - Recommendations must be operational and specific.
 - The audit record is the primary evidence. Do not reference external URLs, \
 web sources, or citation numbers. Ground all statements in the provided data.
+- If the input includes an "analyst_focus" field, treat it as the analyst's \
+specific question and tailor the executive_summary, assessment, and \
+recommended_follow_ups to answer it directly. Set the title to reflect the \
+focus (e.g. "Deny cluster — 02:23 PM" or "Single event analysis").
 - Output valid JSON only. No markdown fences, no commentary outside the JSON.
 
 Return JSON in this exact shape:
