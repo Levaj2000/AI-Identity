@@ -29,11 +29,13 @@ interface Props {
   data: AuditSummaryResponse | null
   loading: boolean
   error: string | null
+  /** Human-readable description of what's being analyzed (e.g. "Analyzing 55 visible events"). */
+  scopeLabel?: string
   onClose: () => void
   onRegenerate: () => void
 }
 
-export function AISummaryPanel({ data, loading, error, onClose, onRegenerate }: Props) {
+export function AISummaryPanel({ data, loading, error, scopeLabel, onClose, onRegenerate }: Props) {
   return (
     <>
       {/* Backdrop */}
@@ -42,15 +44,25 @@ export function AISummaryPanel({ data, loading, error, onClose, onRegenerate }: 
       {/* Drawer */}
       <div className="fixed right-0 top-0 bottom-0 w-full max-w-xl bg-zinc-900 border-l border-zinc-700 z-50 overflow-y-auto shadow-2xl animate-slide-in flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-zinc-900/95 backdrop-blur border-b border-zinc-700 px-6 py-4 flex items-center justify-between z-10">
-          <div className="flex items-center gap-3">
-            <span className="text-lg">✨</span>
-            <h2 className="text-lg font-semibold text-zinc-100">{data?.title || 'AI Analysis'}</h2>
-            {data && (
-              <span className="text-xs text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">
-                {data.events_analyzed} events · {data.model_used}
-              </span>
-            )}
+        <div className="sticky top-0 bg-zinc-900/95 backdrop-blur border-b border-zinc-700 px-6 py-4 flex items-start justify-between z-10">
+          <div className="flex items-start gap-3 min-w-0">
+            <span className="text-lg leading-6">✨</span>
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-zinc-100 truncate">
+                {data?.title || 'AI Analysis'}
+              </h2>
+              {scopeLabel && (
+                <p className="text-xs text-purple-300/90 mt-0.5 truncate" title={scopeLabel}>
+                  {scopeLabel}
+                </p>
+              )}
+              {data && (
+                <span className="inline-block mt-1.5 text-xs text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">
+                  {data.events_analyzed} event{data.events_analyzed === 1 ? '' : 's'} ·{' '}
+                  {data.model_used}
+                </span>
+              )}
+            </div>
           </div>
           <button
             onClick={onClose}

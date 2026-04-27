@@ -329,18 +329,43 @@ export function ForensicsPage() {
 
   // ── AI Summary handler ───────────────────────────────────────
 
-  const handleSummarize = useCallback(async () => {
+  /** Track what the active summary is scoped to, for the panel header. */
+  const [summaryScope, setSummaryScope] = useState<string>('')
+
+  /** Build the request body that mirrors the currently visible filter set. */
+  const buildVisibleScopeParams = useCallback((): Record<string, unknown> => {
+    const params: Record<string, unknown> = { max_events: 200 }
+    const effectiveAgentId = deepLinkedAgentId || selectedAgent
+    if (effectiveAgentId) params.agent_id = effectiveAgentId
+    if (startDate) params.start_date = new Date(startDate).toISOString()
+    if (endDate) params.end_date = new Date(endDate).toISOString()
+    if (filterDecision) params.decision = filterDecision
+    if (filterEndpoint) params.endpoint = filterEndpoint
+    if (filterActionType) params.action_type = filterActionType
+    if (filterModel) params.model = filterModel
+    if (filterCostMin) params.cost_min = parseFloat(filterCostMin)
+    if (filterCostMax) params.cost_max = parseFloat(filterCostMax)
+    return params
+  }, [
+    deepLinkedAgentId,
+    selectedAgent,
+    startDate,
+    endDate,
+    filterDecision,
+    filterEndpoint,
+    filterActionType,
+    filterModel,
+    filterCostMin,
+    filterCostMax,
+  ])
+
+  /** Run a summary call with the given params and scope label. */
+  const runSummary = useCallback(async (params: Record<string, unknown>, scopeLabel: string) => {
     setSummaryLoading(true)
     setSummaryError(null)
+    setSummaryScope(scopeLabel)
     setShowSummaryPanel(true)
     try {
-      const params: Record<string, unknown> = { max_events: 200 }
-      const effectiveAgentId = deepLinkedAgentId || selectedAgent
-      if (effectiveAgentId) params.agent_id = effectiveAgentId
-      if (startDate) params.start_date = new Date(startDate).toISOString()
-      if (endDate) params.end_date = new Date(endDate).toISOString()
-      if (filterDecision) params.decision = filterDecision
-
       const data = await fetchAuditSummary(params)
       setSummaryData(data)
     } catch (err: unknown) {
@@ -355,7 +380,65 @@ export function ForensicsPage() {
     } finally {
       setSummaryLoading(false)
     }
-  }, [deepLinkedAgentId, selectedAgent, startDate, endDate, filterDecision])
+  }, [])
+
+  const handleSummarize = useCallback(() => {
+    const params = buildVisibleScopeParams()
+    const scopeLabel = `Analyzing ${entries.length} visible event${entries.length === 1 ? '' : 's'}`
+    return runSummary(params, scopeLabel)
+  }, [buildVisibleScopeParams, runSummary, entries.length])
+
+  /** Explain a specific anomaly (deny cluster, latency spike, cost outlier). */
+  const handleExplainAnomaly = useCallback(
+    (anchor: AuditLogEntry, anomalyType: 'deny_cluster' | 'latency_spike' | 'cost_outlier') => {
+      const anchorTime = new Date(anchor.created_at).getTime()
+      let eventIds: number[]
+      let scopeLabel: string
+      let focusHint: string
+
+      if (anomalyType === 'deny_cluster') {
+        // Gather all denies within ±60s of the anchor
+        const window = entries.filter((e) => {
+          const isDeny = e.decision === 'deny' || e.decision === 'denied'
+          if (!isDeny) return false
+          return Math.abs(new Date(e.created_at).getTime() - anchorTime) <= 60_000
+        })
+        eventIds = window.map((e) => e.id)
+        scopeLabel = `Deny cluster — ${window.length} denies within 60s of ${new Date(anchor.created_at).toLocaleTimeString()}`
+        focusHint = `The analyst clicked on a deny cluster: ${window.length} denied requests within a 60-second window. Explain the most likely root cause based on deny_reason values, endpoints hit, and agents involved. Recommend specific remediation steps.`
+      } else if (anomalyType === 'latency_spike') {
+        eventIds = [anchor.id]
+        scopeLabel = `Latency spike — ${anchor.method} ${anchor.endpoint} (${anchor.latency_ms}ms)`
+        focusHint = `The analyst clicked on a latency spike. Explain why this single request was unusually slow given the agent's typical baseline, and what to investigate.`
+      } else {
+        eventIds = [anchor.id]
+        scopeLabel = `Cost outlier — ${anchor.method} ${anchor.endpoint} ($${anchor.cost_estimate_usd?.toFixed(4)})`
+        focusHint = `The analyst clicked on a cost outlier. Explain why this single request cost more than the agent's typical baseline, and whether this looks operational or anomalous.`
+      }
+
+      const params: Record<string, unknown> = {
+        event_ids: eventIds,
+        max_events: Math.max(eventIds.length, 1),
+        focus_hint: focusHint,
+      }
+      return runSummary(params, scopeLabel)
+    },
+    [entries, runSummary],
+  )
+
+  /** Explain a single event from the EventDetailDrawer. */
+  const handleExplainEvent = useCallback(
+    (event: AuditLogEntry) => {
+      const params: Record<string, unknown> = {
+        event_ids: [event.id],
+        max_events: 1,
+        focus_hint: `The analyst clicked "Explain this event" on a single ${event.decision} request to ${event.method} ${event.endpoint}. Explain the decision rationale (use deny_reason if present), what the actor was trying to do, and whether this looks routine or suspicious.`,
+      }
+      const scopeLabel = `Single event — #${event.entry_hash.slice(0, 8)}`
+      return runSummary(params, scopeLabel)
+    },
+    [runSummary],
+  )
 
   // ── Pagination ────────────────────────────────────────────────
 
@@ -447,6 +530,7 @@ export function ForensicsPage() {
           <button
             onClick={handleSummarize}
             disabled={summaryLoading || entries.length === 0}
+            title={`Analyze the ${entries.length} event${entries.length === 1 ? '' : 's'} matching your current filters`}
             className="px-3 py-2 text-sm font-medium text-zinc-100 bg-purple-500/90 hover:bg-purple-400/90 rounded-lg transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
           >
             {summaryLoading ? (
@@ -464,7 +548,7 @@ export function ForensicsPage() {
                 >
                   <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a1 1 0 01-.784.785l-1.192.238a1 1 0 000 1.962l1.192.238a1 1 0 01.785.785l.238 1.192a1 1 0 001.962 0l.238-1.192a1 1 0 01.785-.785l1.192-.238a1 1 0 000-1.962l-1.192-.238a1 1 0 01-.785-.785l-.238-1.192zM6.949 5.684a1 1 0 00-1.898 0l-.683 2.051a1 1 0 01-.633.633l-2.051.683a1 1 0 000 1.898l2.051.684a1 1 0 01.633.632l.683 2.051a1 1 0 001.898 0l.683-2.051a1 1 0 01.633-.633l2.051-.683a1 1 0 000-1.898l-2.051-.683a1 1 0 01-.633-.633L6.95 5.684zM13.949 13.684a1 1 0 00-1.898 0l-.184.551a1 1 0 01-.632.633l-.551.183a1 1 0 000 1.898l.551.183a1 1 0 01.633.633l.183.551a1 1 0 001.898 0l.184-.551a1 1 0 01.632-.633l.551-.183a1 1 0 000-1.898l-.551-.184a1 1 0 01-.633-.632l-.183-.551z" />
                 </svg>
-                What happened here?
+                Explain {entries.length} visible event{entries.length === 1 ? '' : 's'}
               </>
             )}
           </button>
@@ -763,7 +847,11 @@ export function ForensicsPage() {
         </div>
       ) : viewMode === 'timeline' ? (
         <div className="bg-zinc-800/30 border border-zinc-700 rounded-xl p-6">
-          <ForensicsTimeline events={entries} onEventClick={setSelectedEvent} />
+          <ForensicsTimeline
+            events={entries}
+            onEventClick={setSelectedEvent}
+            onExplainAnomaly={handleExplainAnomaly}
+          />
         </div>
       ) : (
         /* Table View */
@@ -901,6 +989,7 @@ export function ForensicsPage() {
           onClose={() => setSelectedEvent(null)}
           events={entries}
           onNavigate={setSelectedEvent}
+          onExplain={handleExplainEvent}
         />
       )}
 
@@ -910,6 +999,7 @@ export function ForensicsPage() {
           data={summaryData}
           loading={summaryLoading}
           error={summaryError}
+          scopeLabel={summaryScope}
           onClose={() => setShowSummaryPanel(false)}
           onRegenerate={handleSummarize}
         />
