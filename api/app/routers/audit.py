@@ -431,6 +431,11 @@ def audit_summarize(
             decision=body.decision,
             start_date=body.start_date,
             end_date=body.end_date,
+            endpoint=body.endpoint,
+            action_type=body.action_type,
+            model=body.model,
+            cost_min=body.cost_min,
+            cost_max=body.cost_max,
             user_id=user.id,
         )
 
@@ -513,6 +518,8 @@ def audit_summarize(
         "events": event_details,
         "notes": "; ".join(notes_parts) if notes_parts else "No additional notes",
     }
+    if body.focus_hint:
+        event_data["analyst_focus"] = body.focus_hint
 
     # ── Call Perplexity ────────────────────────────────────────────
     try:
