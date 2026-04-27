@@ -28,6 +28,7 @@ import { ForensicsTimeline } from '../components/forensics/ForensicsTimeline'
 import { IncidentReconstructModal } from '../components/forensics/IncidentReconstructModal'
 import { EventDetailDrawer } from '../components/forensics/EventDetailDrawer'
 import { AISummaryPanel } from '../components/forensics/AISummaryPanel'
+import { AILensMenu } from '../components/forensics/AILensMenu'
 import { detectAnomalies } from '../components/forensics/anomalyDetection'
 import { HashChainView } from '../components/forensics/HashChainView'
 
@@ -440,6 +441,83 @@ export function ForensicsPage() {
     [runSummary],
   )
 
+  // ── AI Lenses (P3) ───────────────────────────────────────────
+
+  /** Lens: focus on denied requests in the visible window. */
+  const handleExplainDenials = useCallback(() => {
+    const denials = entries.filter((e) => e.decision === 'deny' || e.decision === 'denied')
+    const params = buildVisibleScopeParams()
+    // Force-narrow to denials regardless of the user's Decision filter setting
+    params.decision = 'denied'
+    params.focus_hint =
+      'Focus exclusively on denied requests. Group denials by deny_reason and identify the top 2-3 root causes. For each cause, list affected agents/endpoints and recommend a specific operational fix (policy change, key rotation, capability adjustment). Do not summarize allowed traffic.'
+    const scopeLabel = `Denials lens — ${denials.length} denied event${denials.length === 1 ? '' : 's'} in view`
+    return runSummary(params, scopeLabel)
+  }, [entries, buildVisibleScopeParams, runSummary])
+
+  /** Lens: focus on anomalies (deny clusters, latency spikes, cost outliers). */
+  const handleSpotAnomalies = useCallback(() => {
+    const anomalyMap = detectAnomalies(entries)
+    const anomalousIds = Array.from(anomalyMap.keys())
+    if (anomalousIds.length === 0) {
+      // Defensive — the menu disables this when there are no anomalies, but if
+      // the user invokes it via keyboard before state updates, fall back to
+      // visible-scope explanation.
+      return handleSummarize()
+    }
+    // Tally by category so the LLM has accurate counts up front.
+    let denyClusters = 0
+    let latencySpikes = 0
+    let costOutliers = 0
+    for (const flags of anomalyMap.values()) {
+      for (const f of flags) {
+        if (f.type === 'deny_cluster') denyClusters++
+        else if (f.type === 'latency_spike') latencySpikes++
+        else if (f.type === 'cost_outlier') costOutliers++
+      }
+    }
+    const params: Record<string, unknown> = {
+      event_ids: anomalousIds,
+      max_events: Math.max(anomalousIds.length, 1),
+      focus_hint: `These ${anomalousIds.length} events were flagged as anomalies by client-side detection: ${denyClusters} deny-cluster flags, ${latencySpikes} latency-spike flags, ${costOutliers} cost-outlier flags. Explain what's unusual about each category, identify which warrant immediate investigation vs. likely-operational noise, and recommend monitoring thresholds.`,
+    }
+    const scopeLabel = `Anomalies lens — ${anomalousIds.length} flagged event${anomalousIds.length === 1 ? '' : 's'}`
+    return runSummary(params, scopeLabel)
+  }, [entries, runSummary, handleSummarize])
+
+  /** Lens: actor-ordered narrative — who did what, in what order. */
+  const handleReconstructActors = useCallback(() => {
+    const params = buildVisibleScopeParams()
+    params.focus_hint =
+      'Build an actor-ordered narrative. For each distinct user_id and agent_id, describe the sequence of operations they performed during this window in chronological order. Highlight privilege-sensitive actions (key rotation, agent revocation, policy changes) and any unusual ordering (e.g. revoke followed by re-create). The title should be "Actor timeline — [window summary]".'
+    const scopeLabel = `Actor timeline — ${entries.length} event${entries.length === 1 ? '' : 's'} in view`
+    return runSummary(params, scopeLabel)
+  }, [entries.length, buildVisibleScopeParams, runSummary])
+
+  /** Dispatch a lens selection from the AILensMenu. */
+  const handleLensSelect = useCallback(
+    (lens: 'explain_visible' | 'explain_denials' | 'spot_anomalies' | 'reconstruct_actors') => {
+      switch (lens) {
+        case 'explain_visible':
+          return handleSummarize()
+        case 'explain_denials':
+          return handleExplainDenials()
+        case 'spot_anomalies':
+          return handleSpotAnomalies()
+        case 'reconstruct_actors':
+          return handleReconstructActors()
+      }
+    },
+    [handleSummarize, handleExplainDenials, handleSpotAnomalies, handleReconstructActors],
+  )
+
+  /** Memoize hasDenials/hasAnomalies for the lens menu so it can disable empty lenses. */
+  const visibleHasDenials = useMemo(
+    () => entries.some((e) => e.decision === 'deny' || e.decision === 'denied'),
+    [entries],
+  )
+  const visibleHasAnomalies = useMemo(() => detectAnomalies(entries).size > 0, [entries])
+
   // ── Pagination ────────────────────────────────────────────────
 
   const totalPages = Math.ceil(total / limit)
@@ -527,31 +605,13 @@ export function ForensicsPage() {
             </button>
           )}
 
-          <button
-            onClick={handleSummarize}
-            disabled={summaryLoading || entries.length === 0}
-            title={`Analyze the ${entries.length} event${entries.length === 1 ? '' : 's'} matching your current filters`}
-            className="px-3 py-2 text-sm font-medium text-zinc-100 bg-purple-500/90 hover:bg-purple-400/90 rounded-lg transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
-          >
-            {summaryLoading ? (
-              <>
-                <div className="h-3.5 w-3.5 border-2 border-zinc-200 border-t-transparent rounded-full animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-3.5 w-3.5"
-                >
-                  <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a1 1 0 01-.784.785l-1.192.238a1 1 0 000 1.962l1.192.238a1 1 0 01.785.785l.238 1.192a1 1 0 001.962 0l.238-1.192a1 1 0 01.785-.785l1.192-.238a1 1 0 000-1.962l-1.192-.238a1 1 0 01-.785-.785l-.238-1.192zM6.949 5.684a1 1 0 00-1.898 0l-.683 2.051a1 1 0 01-.633.633l-2.051.683a1 1 0 000 1.898l2.051.684a1 1 0 01.633.632l.683 2.051a1 1 0 001.898 0l.683-2.051a1 1 0 01.633-.633l2.051-.683a1 1 0 000-1.898l-2.051-.683a1 1 0 01-.633-.633L6.95 5.684zM13.949 13.684a1 1 0 00-1.898 0l-.184.551a1 1 0 01-.632.633l-.551.183a1 1 0 000 1.898l.551.183a1 1 0 01.633.633l.183.551a1 1 0 001.898 0l.184-.551a1 1 0 01.632-.633l.551-.183a1 1 0 000-1.898l-.551-.184a1 1 0 01-.633-.632l-.183-.551z" />
-                </svg>
-                Explain {entries.length} visible event{entries.length === 1 ? '' : 's'}
-              </>
-            )}
-          </button>
+          <AILensMenu
+            visibleCount={entries.length}
+            hasDenials={visibleHasDenials}
+            hasAnomalies={visibleHasAnomalies}
+            loading={summaryLoading}
+            onSelect={handleLensSelect}
+          />
           <button
             onClick={exportCSV}
             className="px-3 py-2 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors border border-zinc-600"
