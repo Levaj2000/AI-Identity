@@ -360,28 +360,73 @@ export function ForensicsPage() {
     filterCostMax,
   ])
 
-  /** Run a summary call with the given params and scope label. */
-  const runSummary = useCallback(async (params: Record<string, unknown>, scopeLabel: string) => {
-    setSummaryLoading(true)
-    setSummaryError(null)
-    setSummaryScope(scopeLabel)
-    setShowSummaryPanel(true)
-    try {
-      const data = await fetchAuditSummary(params)
-      setSummaryData(data)
-    } catch (err: unknown) {
-      const apiErr = err as { status?: number; message?: string }
-      if (apiErr.status === 403) {
-        setSummaryError('AI Summaries require a Pro or higher plan.')
-      } else if (apiErr.status === 429) {
-        setSummaryError('Rate limit reached. Please try again later.')
-      } else {
-        setSummaryError('Failed to generate summary. Please try again.')
+  // Client-side cache for /audit/summarize results, keyed by JSON-stringified
+  // params. Avoids re-hitting the LLM (and its rate limit) when the analyst
+  // toggles between lenses on the same window. Cleared on full page reload.
+  const summaryCacheRef = useRef<Map<string, AuditSummaryResponse>>(new Map())
+
+  // Track the most recent summary call so the Regenerate button can re-run
+  // the exact same lens with force=true (bypassing cache).
+  const lastSummaryRequestRef = useRef<{
+    params: Record<string, unknown>
+    scopeLabel: string
+  } | null>(null)
+
+  /** Run a summary call with the given params and scope label.
+   *
+   * Caches results by params. Pass `{ force: true }` to bypass the cache —
+   * used by the Regenerate button.
+   */
+  const runSummary = useCallback(
+    async (params: Record<string, unknown>, scopeLabel: string, opts?: { force?: boolean }) => {
+      setSummaryScope(scopeLabel)
+      setShowSummaryPanel(true)
+      lastSummaryRequestRef.current = { params, scopeLabel }
+
+      const cacheKey = JSON.stringify(params)
+      if (!opts?.force) {
+        const cached = summaryCacheRef.current.get(cacheKey)
+        if (cached) {
+          setSummaryData(cached)
+          setSummaryError(null)
+          setSummaryLoading(false)
+          return
+        }
       }
-    } finally {
-      setSummaryLoading(false)
+
+      setSummaryLoading(true)
+      setSummaryError(null)
+      try {
+        const data = await fetchAuditSummary(params)
+        summaryCacheRef.current.set(cacheKey, data)
+        setSummaryData(data)
+      } catch (err: unknown) {
+        const apiErr = err as { status?: number; message?: string }
+        if (apiErr.status === 403) {
+          setSummaryError('AI Summaries require a Pro or higher plan.')
+        } else if (apiErr.status === 429) {
+          setSummaryError('Rate limit reached. Please try again later.')
+        } else {
+          setSummaryError('Failed to generate summary. Please try again.')
+        }
+      } finally {
+        setSummaryLoading(false)
+      }
+    },
+    [],
+  )
+
+  /** Regenerate the most recent summary, bypassing the cache. */
+  const handleRegenerate = useCallback(() => {
+    const last = lastSummaryRequestRef.current
+    if (!last) {
+      // Nothing to regenerate — fall back to the broad visible-scope summary.
+      const params = buildVisibleScopeParams()
+      const scopeLabel = `Analyzing ${entries.length} visible event${entries.length === 1 ? '' : 's'}`
+      return runSummary(params, scopeLabel, { force: true })
     }
-  }, [])
+    return runSummary(last.params, last.scopeLabel, { force: true })
+  }, [runSummary, buildVisibleScopeParams, entries.length])
 
   const handleSummarize = useCallback(() => {
     const params = buildVisibleScopeParams()
@@ -1061,7 +1106,7 @@ export function ForensicsPage() {
           error={summaryError}
           scopeLabel={summaryScope}
           onClose={() => setShowSummaryPanel(false)}
-          onRegenerate={handleSummarize}
+          onRegenerate={handleRegenerate}
         />
       )}
     </div>
