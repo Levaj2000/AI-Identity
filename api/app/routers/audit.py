@@ -69,6 +69,12 @@ def _is_org_admin(db: Session, user: User, org_id: uuid.UUID) -> bool:
     return membership is not None
 
 
+def _normalize_decision(decision: str | None) -> str | None:
+    """Map long-form API values ("allowed"/"denied") to short form stored in DB ("allow"/"deny")."""
+    _map = {"allowed": "allow", "denied": "deny"}
+    return _map.get(decision, decision) if decision else decision
+
+
 def _build_audit_query(
     db: Session,
     user_agent_ids: list[uuid.UUID],
@@ -90,6 +96,8 @@ def _build_audit_query(
     matches the current user) so the Forensics page can display them.
     """
     from sqlalchemy import or_
+
+    decision = _normalize_decision(decision)
 
     # Base scope: entries for registered agents OR entries owned by this user
     # (shadow agent denials from inactive agents have user_id set)
@@ -260,6 +268,7 @@ def list_audit_logs(
     Supports filtering by agent, decision, date range, endpoint,
     metadata action_type, metadata model, and cost range.
     """
+    decision = _normalize_decision(decision)
     # Org owners/admins get org-wide visibility via the fast org_id index.
     # Uses denormalized audit_log.org_id (populated at write time) so the
     # query stays flat even at 100+ agents in the org.
@@ -1035,6 +1044,7 @@ def admin_list_audit_logs(
             detail="Owner or admin role in this organization is required",
         )
 
+    decision = _normalize_decision(decision)
     query = db.query(AuditLog).filter(AuditLog.org_id == org_id)
 
     if agent_id:
