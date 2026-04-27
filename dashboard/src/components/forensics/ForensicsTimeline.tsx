@@ -8,7 +8,7 @@
 
 import { useMemo } from 'react'
 import type { AuditLogEntry } from '../../types/api'
-import { detectAnomalies } from './anomalyDetection'
+import { detectAnomalies, type AnomalyType } from './anomalyDetection'
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -61,9 +61,11 @@ function methodBadge(m: string) {
 interface Props {
   events: AuditLogEntry[]
   onEventClick?: (event: AuditLogEntry) => void
+  /** Called when an analyst clicks an anomaly pill to ask the AI to explain it. */
+  onExplainAnomaly?: (event: AuditLogEntry, type: AnomalyType) => void
 }
 
-export function ForensicsTimeline({ events, onEventClick }: Props) {
+export function ForensicsTimeline({ events, onEventClick, onExplainAnomaly }: Props) {
   const anomalyMap = useMemo(() => detectAnomalies(events), [events])
 
   if (events.length === 0) {
@@ -141,21 +143,45 @@ export function ForensicsTimeline({ events, onEventClick }: Props) {
                 {/* Anomaly pills */}
                 {anomalies && anomalies.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1.5">
-                    {anomalies.map((a, i) => (
-                      <span
-                        key={i}
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          a.type === 'deny_cluster'
-                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                            : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
-                        }`}
-                      >
-                        {a.type === 'latency_spike' && '⚡ '}
-                        {a.type === 'cost_outlier' && '💰 '}
-                        {a.type === 'deny_cluster' && '🚨 '}
-                        {a.detail}
-                      </span>
-                    ))}
+                    {anomalies.map((a, i) => {
+                      const baseClasses = `inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        a.type === 'deny_cluster'
+                          ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                          : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                      }`
+                      const icon =
+                        a.type === 'latency_spike'
+                          ? '⚡ '
+                          : a.type === 'cost_outlier'
+                            ? '💰 '
+                            : '🚨 '
+
+                      if (!onExplainAnomaly) {
+                        return (
+                          <span key={i} className={baseClasses}>
+                            {icon}
+                            {a.detail}
+                          </span>
+                        )
+                      }
+
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={(ev) => {
+                            ev.stopPropagation()
+                            onExplainAnomaly(event, a.type)
+                          }}
+                          className={`${baseClasses} hover:brightness-125 hover:border-current transition-all cursor-pointer`}
+                          title={`Ask AI to explain this ${a.type.replace('_', ' ')}`}
+                        >
+                          {icon}
+                          {a.detail}
+                          <span className="ml-1 opacity-70">✨ Explain</span>
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
               </div>

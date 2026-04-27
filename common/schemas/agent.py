@@ -452,6 +452,20 @@ class AuditSummaryRequest(BaseModel):
     start_date: datetime | None = Field(None, description="Window start")
     end_date: datetime | None = Field(None, description="Window end")
     decision: str | None = Field(None, description="Filter by decision (allow/deny/error)")
+    endpoint: str | None = Field(None, description="Filter by endpoint (partial match)")
+    action_type: str | None = Field(None, description="Filter by metadata action_type")
+    model: str | None = Field(None, description="Filter by metadata model")
+    cost_min: float | None = Field(None, description="Minimum cost_estimate_usd")
+    cost_max: float | None = Field(None, description="Maximum cost_estimate_usd")
+    focus_hint: str | None = Field(
+        None,
+        max_length=200,
+        description=(
+            "Optional analyst intent hint forwarded to the LLM "
+            "(e.g. 'Explain this deny cluster', 'Why was this single event denied?'). "
+            "Used to focus the analysis without changing the JSON schema."
+        ),
+    )
     max_events: int = Field(100, ge=1, le=500, description="Max events to include in summary")
 
 
