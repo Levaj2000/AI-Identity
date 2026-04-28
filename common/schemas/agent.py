@@ -459,11 +459,13 @@ class AuditSummaryRequest(BaseModel):
     cost_max: float | None = Field(None, description="Maximum cost_estimate_usd")
     focus_hint: str | None = Field(
         None,
-        max_length=200,
+        max_length=500,
         description=(
             "Optional analyst intent hint forwarded to the LLM "
             "(e.g. 'Explain this deny cluster', 'Why was this single event denied?'). "
-            "Used to focus the analysis without changing the JSON schema."
+            "Used to focus the analysis without changing the JSON schema. "
+            "Lens-style prompts (denials, anomalies, actor timeline) typically "
+            "run 200-400 chars, so the cap is generous to avoid silent 422s."
         ),
     )
     max_events: int = Field(100, ge=1, le=500, description="Max events to include in summary")

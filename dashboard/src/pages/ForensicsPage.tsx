@@ -451,15 +451,15 @@ export function ForensicsPage() {
         })
         eventIds = window.map((e) => e.id)
         scopeLabel = `Deny cluster — ${window.length} denies within 60s of ${new Date(anchor.created_at).toLocaleTimeString()}`
-        focusHint = `The analyst clicked on a deny cluster: ${window.length} denied requests within a 60-second window. Explain the most likely root cause based on deny_reason values, endpoints hit, and agents involved. Recommend specific remediation steps.`
+        focusHint = `Deny cluster of ${window.length} requests within 60s. Identify the root cause from deny_reason, endpoints, and agents involved. Recommend remediation.`
       } else if (anomalyType === 'latency_spike') {
         eventIds = [anchor.id]
         scopeLabel = `Latency spike — ${anchor.method} ${anchor.endpoint} (${anchor.latency_ms}ms)`
-        focusHint = `The analyst clicked on a latency spike. Explain why this single request was unusually slow given the agent's typical baseline, and what to investigate.`
+        focusHint = `Latency spike. Explain why this request was slower than the agent's baseline and what to investigate.`
       } else {
         eventIds = [anchor.id]
         scopeLabel = `Cost outlier — ${anchor.method} ${anchor.endpoint} ($${anchor.cost_estimate_usd?.toFixed(4)})`
-        focusHint = `The analyst clicked on a cost outlier. Explain why this single request cost more than the agent's typical baseline, and whether this looks operational or anomalous.`
+        focusHint = `Cost outlier. Explain why this request cost more than the agent's baseline and whether this looks operational or anomalous.`
       }
 
       const params: Record<string, unknown> = {
@@ -478,7 +478,7 @@ export function ForensicsPage() {
       const params: Record<string, unknown> = {
         event_ids: [event.id],
         max_events: 1,
-        focus_hint: `The analyst clicked "Explain this event" on a single ${event.decision} request to ${event.method} ${event.endpoint}. Explain the decision rationale (use deny_reason if present), what the actor was trying to do, and whether this looks routine or suspicious.`,
+        focus_hint: `Explain this single ${event.decision} request: the policy rationale (use deny_reason if present), what the actor attempted, and whether this looks routine or suspicious.`,
       }
       const scopeLabel = `Single event — #${event.entry_hash.slice(0, 8)}`
       return runSummary(params, scopeLabel)
@@ -495,7 +495,7 @@ export function ForensicsPage() {
     // Force-narrow to denials regardless of the user's Decision filter setting
     params.decision = 'denied'
     params.focus_hint =
-      'Focus exclusively on denied requests. Group denials by deny_reason and identify the top 2-3 root causes. For each cause, list affected agents/endpoints and recommend a specific operational fix (policy change, key rotation, capability adjustment). Do not summarize allowed traffic.'
+      'Focus on denials only. Group by deny_reason, identify the top root causes, list affected agents/endpoints, and recommend operational fixes (policy, key rotation, capabilities). Skip allowed traffic.'
     const scopeLabel = `Denials lens — ${denials.length} denied event${denials.length === 1 ? '' : 's'} in view`
     return runSummary(params, scopeLabel)
   }, [entries, buildVisibleScopeParams, runSummary])
@@ -524,7 +524,7 @@ export function ForensicsPage() {
     const params: Record<string, unknown> = {
       event_ids: anomalousIds,
       max_events: Math.max(anomalousIds.length, 1),
-      focus_hint: `These ${anomalousIds.length} events were flagged as anomalies by client-side detection: ${denyClusters} deny-cluster flags, ${latencySpikes} latency-spike flags, ${costOutliers} cost-outlier flags. Explain what's unusual about each category, identify which warrant immediate investigation vs. likely-operational noise, and recommend monitoring thresholds.`,
+      focus_hint: `${anomalousIds.length} flagged anomalies: ${denyClusters} deny clusters, ${latencySpikes} latency spikes, ${costOutliers} cost outliers. Explain each category, flag which warrant investigation vs operational noise, and recommend monitoring thresholds.`,
     }
     const scopeLabel = `Anomalies lens — ${anomalousIds.length} flagged event${anomalousIds.length === 1 ? '' : 's'}`
     return runSummary(params, scopeLabel)
@@ -534,7 +534,7 @@ export function ForensicsPage() {
   const handleReconstructActors = useCallback(() => {
     const params = buildVisibleScopeParams()
     params.focus_hint =
-      'Build an actor-ordered narrative. For each distinct user_id and agent_id, describe the sequence of operations they performed during this window in chronological order. Highlight privilege-sensitive actions (key rotation, agent revocation, policy changes) and any unusual ordering (e.g. revoke followed by re-create). The title should be "Actor timeline — [window summary]".'
+      'Build an actor-ordered narrative. For each user_id/agent_id, list operations chronologically. Highlight privilege-sensitive actions (key rotation, revocation, policy changes) and unusual ordering.'
     const scopeLabel = `Actor timeline — ${entries.length} event${entries.length === 1 ? '' : 's'} in view`
     return runSummary(params, scopeLabel)
   }, [entries.length, buildVisibleScopeParams, runSummary])
