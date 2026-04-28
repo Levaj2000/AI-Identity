@@ -29,6 +29,10 @@ import { IncidentReconstructModal } from '../components/forensics/IncidentRecons
 import { EventDetailDrawer } from '../components/forensics/EventDetailDrawer'
 import { AISummaryPanel } from '../components/forensics/AISummaryPanel'
 import { AILensMenu } from '../components/forensics/AILensMenu'
+import {
+  ForensicsAlertBanner,
+  type ForensicsAlert,
+} from '../components/forensics/ForensicsAlertBanner'
 import { detectAnomalies } from '../components/forensics/anomalyDetection'
 import { HashChainView } from '../components/forensics/HashChainView'
 
@@ -571,6 +575,120 @@ export function ForensicsPage() {
   // Anomaly detection for table view highlighting
   const anomalyMap = useMemo(() => detectAnomalies(entries), [entries])
 
+  // ── Proactive alerts (P4) ─────────────────────────────────────
+
+  /** Dismissed-alert fingerprints, persisted in sessionStorage so navigating
+   *  away and back does not re-prompt. New fingerprints (different anomaly)
+   *  re-trigger the banner. Cleared on tab close. */
+  const SESSION_KEY = 'forensics-dismissed-alerts'
+  const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(() => {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY)
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set()
+    } catch {
+      return new Set()
+    }
+  })
+
+  const handleDismissAlert = useCallback((fingerprint: string) => {
+    setDismissedAlerts((prev) => {
+      const next = new Set(prev)
+      next.add(fingerprint)
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(Array.from(next)))
+      } catch {
+        // sessionStorage may be unavailable (private mode, quota) — fail silent
+      }
+      return next
+    })
+  }, [])
+
+  /** Alerts derived from current anomalies + chain status. Filtered by
+   *  dismissal fingerprints. */
+  const alerts = useMemo<ForensicsAlert[]>(() => {
+    const out: ForensicsAlert[] = []
+
+    // 1. Largest deny cluster — pick the event whose detail reports the
+    //    highest count, use it as the anchor for "Investigate cluster".
+    let topCluster: { event: AuditLogEntry; count: number } | null = null
+    for (const [eventId, flags] of anomalyMap) {
+      const cluster = flags.find((f) => f.type === 'deny_cluster')
+      if (!cluster) continue
+      const match = cluster.detail.match(/^(\d+)/)
+      const n = match ? parseInt(match[1], 10) : 0
+      if (!topCluster || n > topCluster.count) {
+        const event = entries.find((e) => e.id === eventId)
+        if (event) topCluster = { event, count: n }
+      }
+    }
+    if (topCluster) {
+      const anchorIso = topCluster.event.created_at
+      const fingerprint = `dc:${topCluster.count}:${anchorIso}`
+      const anchor = topCluster.event
+      const cnt = topCluster.count
+      out.push({
+        fingerprint,
+        severity: 'high',
+        icon: '🚨',
+        title: `Deny cluster detected — ${cnt} denies within 60s`,
+        description: `Anchor: ${new Date(anchorIso).toLocaleString()}. Click to ask the AI for the likely root cause and remediation.`,
+        ctaLabel: 'Investigate cluster',
+        onCTA: () => handleExplainAnomaly(anchor, 'deny_cluster'),
+      })
+    }
+
+    // 2. Chain integrity break — only when the user has run Verify and it failed.
+    if (chainValid === false) {
+      const fingerprint = `cb:${chainMessage || 'broken'}`
+      out.push({
+        fingerprint,
+        severity: 'high',
+        icon: '⛓️',
+        title: 'Audit chain integrity broken',
+        description:
+          chainMessage ||
+          'HMAC verification failed. The audit trail may have been tampered with or has data corruption.',
+        ctaLabel: 'See anomalies',
+        onCTA: () => handleSpotAnomalies(),
+      })
+    }
+
+    // 3. Aggregate latency / cost spikes — medium severity, only when meaningful.
+    let latencySpikes = 0
+    let costOutliers = 0
+    for (const flags of anomalyMap.values()) {
+      for (const f of flags) {
+        if (f.type === 'latency_spike') latencySpikes++
+        else if (f.type === 'cost_outlier') costOutliers++
+      }
+    }
+    if (latencySpikes >= 3 || costOutliers >= 2) {
+      const fingerprint = `agg:${latencySpikes}:${costOutliers}`
+      const parts: string[] = []
+      if (latencySpikes >= 3) parts.push(`${latencySpikes} latency spikes`)
+      if (costOutliers >= 2) parts.push(`${costOutliers} cost outliers`)
+      out.push({
+        fingerprint,
+        severity: 'medium',
+        icon: '📊',
+        title: `Performance anomalies detected`,
+        description: `${parts.join(' and ')} above the agent's baseline. AI can flag which warrant investigation.`,
+        ctaLabel: 'Spot anomalies',
+        onCTA: () => handleSpotAnomalies(),
+      })
+    }
+
+    return out.filter((a) => !dismissedAlerts.has(a.fingerprint))
+  }, [
+    anomalyMap,
+    entries,
+    chainValid,
+    chainMessage,
+    dismissedAlerts,
+    handleExplainAnomaly,
+    handleSpotAnomalies,
+  ])
+
   // ── Render ────────────────────────────────────────────────────
 
   return (
@@ -686,6 +804,9 @@ export function ForensicsPage() {
           </button>
         </div>
       )}
+
+      {/* Proactive anomaly alerts */}
+      <ForensicsAlertBanner alerts={alerts} onDismiss={handleDismissAlert} />
 
       {/* Filters */}
       <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
