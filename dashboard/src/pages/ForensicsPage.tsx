@@ -727,7 +727,7 @@ export function ForensicsPage() {
               disabled={chainVerifying}
               title={
                 chainValid
-                  ? `${chainEntriesVerified.toLocaleString()} audit entries verified. Each row's HMAC-SHA256 hash was recomputed and matched the stored value, and the prev_hash chain was unbroken — proving no rows were modified or deleted. Click to re-run.`
+                  ? `${chainEntriesVerified.toLocaleString()} audit entries verified across the entire chain — independent of the date range and filters shown on the page (HMAC chain integrity is end-to-end by design). Each row's HMAC-SHA256 hash was recomputed and matched the stored value, and the prev_hash links were unbroken — proving no rows were modified, deleted, or reordered. Click to re-run.`
                   : `Tampering detected${chainFirstBrokenId !== null ? ` at entry #${chainFirstBrokenId}` : ''}. ${chainMessage} Click to re-run.`
               }
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
@@ -765,12 +765,39 @@ export function ForensicsPage() {
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
                   Tamper-Evident · {chainEntriesVerified.toLocaleString()}{' '}
                   {chainEntriesVerified === 1 ? 'entry' : 'entries'} verified
+                  <span className="text-emerald-400/60 ml-0.5">(full chain)</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-3 w-3 opacity-70"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
                 </>
               ) : (
                 <>
                   <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
                   Tampering Detected
                   {chainFirstBrokenId !== null && ` · entry #${chainFirstBrokenId}`}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-3 w-3 opacity-70"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
                 </>
               )}
             </button>
@@ -778,7 +805,7 @@ export function ForensicsPage() {
             <button
               onClick={handleVerifyChain}
               disabled={chainVerifying}
-              title="Run cryptographic verification of the entire audit log. Recomputes each row's HMAC-SHA256 hash and checks the prev_hash chain to prove no entries were modified, deleted, or reordered. Same algorithm runs in the offline CLI auditors can use."
+              title="Run cryptographic verification of the entire audit chain — independent of the date range and filters shown on the page (chain integrity is end-to-end by design). Recomputes each row's HMAC-SHA256 hash and checks the prev_hash links to prove no entries were modified, deleted, or reordered. Same algorithm runs in the offline CLI auditors can use."
               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border border-zinc-600 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 transition-colors disabled:opacity-50"
             >
               {chainVerifying ? (
@@ -820,6 +847,19 @@ export function ForensicsPage() {
                     />
                   </svg>
                   Tamper Evidence Check
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-3 w-3 opacity-70"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
                 </>
               )}
             </button>
