@@ -94,9 +94,11 @@ export function ForensicsPage() {
   // View mode
   const [viewMode, setViewMode] = useState<'timeline' | 'table'>('timeline')
 
-  // Chain verification
+  // Chain verification (cryptographic tamper-evidence check)
   const [chainValid, setChainValid] = useState<boolean | null>(null)
   const [chainMessage, setChainMessage] = useState<string>('')
+  const [chainEntriesVerified, setChainEntriesVerified] = useState<number>(0)
+  const [chainFirstBrokenId, setChainFirstBrokenId] = useState<number | null>(null)
 
   // Incident reconstruction
   const [reconstructData, setReconstructData] = useState<AuditReconstructResponse | null>(null)
@@ -229,9 +231,13 @@ export function ForensicsPage() {
       const r = await verifyAuditChain(effectiveAgentId || undefined)
       setChainValid(r.valid)
       setChainMessage(r.message)
+      setChainEntriesVerified(r.entries_verified)
+      setChainFirstBrokenId(r.first_broken_id)
     } catch {
       setChainValid(null)
       setChainMessage('')
+      setChainEntriesVerified(0)
+      setChainFirstBrokenId(null)
     } finally {
       setChainVerifying(false)
     }
@@ -241,6 +247,8 @@ export function ForensicsPage() {
   useEffect(() => {
     setChainValid(null)
     setChainMessage('')
+    setChainEntriesVerified(0)
+    setChainFirstBrokenId(null)
   }, [effectiveAgentId])
 
   // ── Incident reconstruction ───────────────────────────────────
@@ -710,25 +718,67 @@ export function ForensicsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Chain verification — on-demand */}
+          {/* Tamper-evidence check — on-demand HMAC chain verification.
+              Click runs cryptographic verification of every audit row; the
+              result pill shows what was checked and is clickable to re-run. */}
           {chainValid !== null ? (
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+            <button
+              onClick={handleVerifyChain}
+              disabled={chainVerifying}
+              title={
                 chainValid
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                  ? `${chainEntriesVerified.toLocaleString()} audit entries verified. Each row's HMAC-SHA256 hash was recomputed and matched the stored value, and the prev_hash chain was unbroken — proving no rows were modified or deleted. Click to re-run.`
+                  : `Tampering detected${chainFirstBrokenId !== null ? ` at entry #${chainFirstBrokenId}` : ''}. ${chainMessage} Click to re-run.`
+              }
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                chainValid
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/15'
+                  : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/15'
               }`}
             >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${chainValid ? 'bg-emerald-400' : 'bg-red-400'}`}
-              />
-              Chain {chainValid ? 'Intact' : 'Broken'}
-              {chainMessage && <span className="sr-only">{chainMessage}</span>}
-            </span>
+              {chainVerifying ? (
+                <>
+                  <svg
+                    className="h-3 w-3 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  Re-checking...
+                </>
+              ) : chainValid ? (
+                <>
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  Tamper-Evident · {chainEntriesVerified.toLocaleString()}{' '}
+                  {chainEntriesVerified === 1 ? 'entry' : 'entries'} verified
+                </>
+              ) : (
+                <>
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                  Tampering Detected
+                  {chainFirstBrokenId !== null && ` · entry #${chainFirstBrokenId}`}
+                </>
+              )}
+            </button>
           ) : (
             <button
               onClick={handleVerifyChain}
               disabled={chainVerifying}
+              title="Run cryptographic verification of the entire audit log. Recomputes each row's HMAC-SHA256 hash and checks the prev_hash chain to prove no entries were modified, deleted, or reordered. Same algorithm runs in the offline CLI auditors can use."
               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border border-zinc-600 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 transition-colors disabled:opacity-50"
             >
               {chainVerifying ? (
@@ -769,7 +819,7 @@ export function ForensicsPage() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  Verify Chain
+                  Tamper Evidence Check
                 </>
               )}
             </button>
