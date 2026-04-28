@@ -689,6 +689,13 @@ export function ForensicsPage() {
     handleSpotAnomalies,
   ])
 
+  /** When a HIGH-severity alert is showing (deny cluster, chain break), the
+   *  banner already provides a focused CTA — surfacing the broad lens menu
+   *  alongside it creates two competing buttons about the same data. We hide
+   *  the lens menu in that case. Medium banners (perf anomalies) cover only
+   *  one intent so the lens menu stays available. */
+  const hasHighSeverityAlert = useMemo(() => alerts.some((a) => a.severity === 'high'), [alerts])
+
   // ── Render ────────────────────────────────────────────────────
 
   return (
@@ -768,13 +775,15 @@ export function ForensicsPage() {
             </button>
           )}
 
-          <AILensMenu
-            visibleCount={entries.length}
-            hasDenials={visibleHasDenials}
-            hasAnomalies={visibleHasAnomalies}
-            loading={summaryLoading}
-            onSelect={handleLensSelect}
-          />
+          {!hasHighSeverityAlert && (
+            <AILensMenu
+              visibleCount={entries.length}
+              hasDenials={visibleHasDenials}
+              hasAnomalies={visibleHasAnomalies}
+              loading={summaryLoading}
+              onSelect={handleLensSelect}
+            />
+          )}
           <button
             onClick={exportCSV}
             className="px-3 py-2 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors border border-zinc-600"
