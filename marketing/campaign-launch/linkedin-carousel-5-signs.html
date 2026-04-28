@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #111;
+  }
+
+  .slide {
+    width: 1080px;
+    height: 1350px;
+    background: linear-gradient(180deg, #04070D 0%, #0A0F1A 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 90px;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide::before {
+    content: '';
+    position: absolute;
+    top: -200px;
+    right: -200px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(166,218,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .logo {
+    position: absolute;
+    bottom: 50px;
+    left: 90px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.5px;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    border: 2px solid rgba(166,218,255,0.4);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: rgba(166,218,255,0.6);
+  }
+
+  .slide-number {
+    position: absolute;
+    bottom: 50px;
+    right: 90px;
+    font-size: 18px;
+    color: rgba(255,255,255,0.2);
+    font-weight: 500;
+  }
+
+  /* Cover slide */
+  .cover .badge {
+    display: inline-block;
+    background: rgba(166,218,255,0.1);
+    border: 1px solid rgba(166,218,255,0.25);
+    color: #A6DAFF;
+    font-size: 22px;
+    font-weight: 600;
+    padding: 12px 28px;
+    border-radius: 40px;
+    margin-bottom: 50px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .cover h1 {
+    font-size: 72px;
+    font-weight: 800;
+    color: #FFFFFF;
+    line-height: 1.15;
+    margin-bottom: 40px;
+    letter-spacing: -1px;
+  }
+
+  .cover h1 span {
+    color: #A6DAFF;
+  }
+
+  .cover .subtitle {
+    font-size: 28px;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.5;
+    max-width: 750px;
+  }
+
+  /* Sign slides */
+  .sign-number {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .sign-number .num {
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #EF4444;
+    font-size: 20px;
+    font-weight: 700;
+    padding: 10px 24px;
+    border-radius: 30px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .sign-title {
+    font-size: 52px;
+    font-weight: 800;
+    color: #FFFFFF;
+    line-height: 1.2;
+    margin-bottom: 45px;
+    letter-spacing: -0.5px;
+  }
+
+  .sign-body {
+    font-size: 26px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.7;
+    margin-bottom: 50px;
+    max-width: 850px;
+  }
+
+  .sign-quote {
+    font-size: 28px;
+    color: rgba(255,255,255,0.45);
+    font-style: italic;
+    border-left: 3px solid rgba(239,68,68,0.4);
+    padding-left: 28px;
+    margin: 35px 0 50px 0;
+    line-height: 1.6;
+  }
+
+  .fix-box {
+    background: rgba(34,197,94,0.08);
+    border: 1px solid rgba(34,197,94,0.2);
+    border-radius: 16px;
+    padding: 30px 36px;
+    margin-top: auto;
+    margin-bottom: 60px;
+  }
+
+  .fix-box .fix-label {
+    color: #22C55E;
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .fix-box .fix-text {
+    color: rgba(255,255,255,0.75);
+    font-size: 24px;
+    line-height: 1.6;
+  }
+
+  /* Scorecard slide */
+  .scorecard-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    margin-bottom: 40px;
+    padding: 28px 32px;
+    border-radius: 14px;
+  }
+
+  .scorecard-item.green { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.15); }
+  .scorecard-item.yellow { background: rgba(234,179,8,0.08); border: 1px solid rgba(234,179,8,0.15); }
+  .scorecard-item.red { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.15); }
+
+  .scorecard-range {
+    font-size: 24px;
+    font-weight: 700;
+    min-width: 100px;
+  }
+
+  .scorecard-range.green { color: #22C55E; }
+  .scorecard-range.yellow { color: #EAB308; }
+  .scorecard-range.red { color: #EF4444; }
+
+  .scorecard-text {
+    font-size: 24px;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.5;
+  }
+
+  .scorecard-title {
+    font-size: 52px;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin-bottom: 55px;
+    letter-spacing: -0.5px;
+  }
+
+  /* CTA slide */
+  .cta-slide h2 {
+    font-size: 56px;
+    font-weight: 800;
+    color: #FFFFFF;
+    line-height: 1.2;
+    margin-bottom: 50px;
+    letter-spacing: -0.5px;
+  }
+
+  .cta-slide h2 span {
+    color: #A6DAFF;
+  }
+
+  .cta-features {
+    list-style: none;
+    margin-bottom: 55px;
+  }
+
+  .cta-features li {
+    font-size: 28px;
+    color: rgba(255,255,255,0.65);
+    padding: 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .cta-features li .check {
+    color: #22C55E;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+
+  .cta-url {
+    display: inline-block;
+    background: linear-gradient(135deg, rgba(166,218,255,0.15), rgba(166,218,255,0.08));
+    border: 1px solid rgba(166,218,255,0.3);
+    color: #A6DAFF;
+    font-size: 32px;
+    font-weight: 700;
+    padding: 22px 48px;
+    border-radius: 14px;
+    letter-spacing: 0.5px;
+  }
+
+  .cta-free {
+    font-size: 22px;
+    color: rgba(255,255,255,0.4);
+    margin-top: 28px;
+  }
+
+  .divider {
+    width: 80px;
+    height: 4px;
+    background: linear-gradient(90deg, #A6DAFF, transparent);
+    border-radius: 2px;
+    margin-bottom: 40px;
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Cover -->
+<div class="slide cover">
+  <div class="badge">AI Agent Governance</div>
+  <h1>5 Signs Your AI Agents Aren't <span>Audit-Ready</span></h1>
+  <p class="subtitle">The compliance gaps most teams don't see until an auditor asks.</p>
+  <div class="logo"><div class="logo-icon">AI</div> AI Identity</div>
+</div>
+
+<!-- SLIDE 2: Sign #1 -->
+<div class="slide">
+  <div class="sign-number"><span class="num">Sign #1</span></div>
+  <div class="sign-title">Your agents share API keys</div>
+  <p class="sign-body">If multiple agents use the same credentials, you can't attribute actions to a specific agent.</p>
+  <div class="sign-quote">An auditor asks: "Which agent accessed patient records at 2:47 PM?"<br><br>Your answer: "We don't know. They all use the same key."</div>
+  <div class="fix-box">
+    <div class="fix-label">The Fix</div>
+    <div class="fix-text">Per-agent identity with scoped permissions. Every agent gets its own credentials.</div>
+  </div>
+  <div class="logo"><div class="logo-icon">AI</div> AI Identity</div>
+  <div class="slide-number">1 / 5</div>
+</div>
+
+<!-- SLIDE 3: Sign #2 -->
+<div class="slide">
+  <div class="sign-number"><span class="num">Sign #2</span></div>
+  <div class="sign-title">Your audit logs are in application code</div>
+  <p class="sign-body">Console.log and application-level logging can be modified, deleted, or silently fail.</p>
+  <div class="sign-quote">That's not an audit trail.<br>That's a hope trail.</div>
+  <p class="sign-body">Regulators require tamper-evident records that can be independently verified.</p>
+  <div class="fix-box">
+    <div class="fix-label">The Fix</div>
+    <div class="fix-text">Cryptographically chained audit logs (HMAC-SHA256) that prove no entries were altered or deleted.</div>
+  </div>
+  <div class="logo"><div class="logo-icon">AI</div> AI Identity</div>
+  <div class="slide-number">2 / 5</div>
+</div>
+
+<!-- SLIDE 4: Sign #3 -->
+<div class="slide">
+  <div class="sign-number"><span class="num">Sign #3</span></div>
+  <div class="sign-title">You can't replay what an agent did</div>
+  <p class="sign-body">When something goes wrong, can you step through the exact sequence of an agent's decisions?</p>
+  <div class="sign-quote">Or do you spend hours piecing together scattered logs across 4 different systems?</div>
+  <div class="fix-box">
+    <div class="fix-label">The Fix</div>
+    <div class="fix-text">Forensic replay. Step through any agent session with full chain-of-thought capture.</div>
+  </div>
+  <div class="logo"><div class="logo-icon">AI</div> AI Identity</div>
+  <div class="slide-number">3 / 5</div>
+</div>
+
+<!-- SLIDE 5: Sign #4 -->
+<div class="slide">
+  <div class="sign-number"><span class="num">Sign #4</span></div>
+  <div class="sign-title">Your agents fail open</div>
+  <p class="sign-body">What happens when your governance layer goes down?</p>
+  <div class="sign-quote">If agents keep running unmonitored, that's like removing the security cameras and hoping nothing happens.</div>
+  <div class="fix-box">
+    <div class="fix-label">The Fix</div>
+    <div class="fix-text">Fail-closed enforcement. Requests denied on timeout, error, or ambiguity. No silent bypasses.</div>
+  </div>
+  <div class="logo"><div class="logo-icon">AI</div> AI Identity</div>
+  <div class="slide-number">4 / 5</div>
+</div>
+
+<!-- SLIDE 6: Sign #5 -->
+<div class="slide">
+  <div class="sign-number"><span class="num">Sign #5</span></div>
+  <div class="sign-title">No human-in-the-loop for high-risk actions</div>
+  <p class="sign-body">AI agents making financial transactions. Accessing medical records. Modifying production systems.</p>
+  <div class="sign-quote">No approval gate means you're one hallucination away from a compliance incident.</div>
+  <div class="fix-box">
+    <div class="fix-label">The Fix</div>
+    <div class="fix-text">Configurable approval gates enforced at the gateway level — not optional middleware agents can skip.</div>
+  </div>
+  <div class="logo"><div class="logo-icon">AI</div> AI Identity</div>
+  <div class="slide-number">5 / 5</div>
+</div>
+
+<!-- SLIDE 7: Scorecard -->
+<div class="slide">
+  <div class="divider"></div>
+  <div class="scorecard-title">How did you score?</div>
+
+  <div class="scorecard-item green">
+    <span class="scorecard-range green">0 — 1</span>
+    <span class="scorecard-text">You're ahead of most teams. Fine-tune your governance.</span>
+  </div>
+
+  <div class="scorecard-item yellow">
+    <span class="scorecard-range yellow">2 — 3</span>
+    <span class="scorecard-text">Gaps exist. Address them before your next audit cycle.</span>
+  </div>
+
+  <div class="scorecard-item red">
+    <span class="scorecard-range red">4 — 5</span>
+    <span class="scorecard-text">Your agents are operating without a safety net. Fix this now.</span>
+  </div>
+
+  <div class="logo"><div class="logo-icon">AI</div> AI Identity</div>
+</div>
+
+<!-- SLIDE 8: CTA -->
+<div class="slide cta-slide">
+  <div class="divider"></div>
+  <h2>Governance infrastructure for <span>AI agents</span></h2>
+  <ul class="cta-features">
+    <li><span class="check">&#10003;</span> Per-agent identity with scoped permissions</li>
+    <li><span class="check">&#10003;</span> Tamper-proof audit trails</li>
+    <li><span class="check">&#10003;</span> Deny-by-default policy enforcement</li>
+    <li><span class="check">&#10003;</span> Deploy in 15 minutes</li>
+  </ul>
+  <div class="cta-url">ai-identity.co</div>
+  <div class="cta-free">Free tier available — 5 agents, 2K requests/month</div>
+  <div class="logo"><div class="logo-icon">AI</div> AI Identity</div>
+</div>
+
+</body>
+</html>

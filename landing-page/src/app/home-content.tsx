@@ -799,12 +799,13 @@ export default function HomeContent() {
             </h2>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 max-w-6xl mx-auto">
             {[
               { name: "Free", price: "$0", period: "/mo", highlight: "5 agents", desc: "Perfect for prototyping", featured: false },
               { name: "Pro", price: "$79", period: "/mo", highlight: "50 agents", desc: "For teams in production", featured: true },
               { name: "Business", price: "$299", period: "/mo", highlight: "200 agents", desc: "Advanced requirements", featured: false },
-              { name: "Enterprise", price: "Custom", period: "", highlight: "Unlimited", desc: "Compliance & on-prem", featured: false },
+              { name: "Business+", price: "$599", period: "/mo", highlight: "500 agents", desc: "High-volume, pre-Enterprise", featured: false },
+              { name: "Enterprise", price: "Custom", period: "", highlight: "Unlimited", desc: "Compliance-sensitive deployments", featured: false },
             ].map((tier) => (
               <a
                 key={tier.name}

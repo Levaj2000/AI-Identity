@@ -51,3 +51,14 @@ docker-compose.override.yml
 # Logs
 *.log
 .claude/worktrees/
+
+# AI Identity dogfood persona credentials — never commit
+ai-identity-creds.env
+ai-identity-creds.env.local
+**/ai-identity-creds.env
+.persona-keys
+
+# Large binary assets (Apple iWork, oversized PDFs) — use external storage
+*.numbers
+*.key
+marketing/linkedin/*.pdf

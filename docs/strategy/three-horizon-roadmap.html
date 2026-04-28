@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI Identity — Three-Horizon Product Roadmap</title>
+<style>
+  :root {
+    --navy:        #0B1F3A;
+    --navy-2:      #0E2747;
+    --navy-3:      #143257;
+    --ice:         #6FB7E8;
+    --ice-soft:    #A8D5F0;
+    --ice-deep:    #4A8FBF;
+    --amber:       #F2A93B;
+    --amber-soft:  rgba(242, 169, 59, 0.18);
+    --amber-line:  rgba(242, 169, 59, 0.55);
+    --warm:        #F4F4F2;
+    --warm-dim:    #C9CCD1;
+    --muted:       #8C99AC;
+    --rule:        rgba(168, 213, 240, 0.18);
+    --rule-strong: rgba(168, 213, 240, 0.32);
+    --shadow:      0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.35);
+    --font:        system-ui, -apple-system, "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--navy); color: var(--warm); font-family: var(--font); }
+  body {
+    min-height: 100vh;
+    padding: 28px 32px 48px;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(111,183,232,0.08), transparent 60%),
+      radial-gradient(900px 500px at -10% 40%, rgba(242,169,59,0.05), transparent 60%),
+      var(--navy);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1400px; margin: 0 auto; }
+
+  /* ----- Header ----- */
+  header.banner {
+    border-left: 4px solid var(--amber);
+    padding: 14px 0 14px 18px;
+    margin-bottom: 22px;
+  }
+  header.banner h1 {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    margin: 0 0 4px;
+    color: var(--warm);
+  }
+  header.banner .sub {
+    color: var(--ice-soft);
+    font-size: 14px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  header.banner .date {
+    color: var(--warm-dim);
+    font-size: 13px;
+    margin-top: 6px;
+  }
+
+  /* ----- Horizon strip ----- */
+  .horizons {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .horizon {
+    background: linear-gradient(180deg, var(--navy-2), var(--navy));
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--ice);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+  }
+  .horizon.h2 { border-left-color: var(--ice-soft); }
+  .horizon.h3 { border-left-color: var(--amber); }
+  .horizon .tag {
+    color: var(--ice-soft);
+    font-size: 11px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .horizon.h3 .tag { color: var(--amber); }
+  .horizon .name {
+    margin: 4px 0 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--warm);
+  }
+  .horizon .desc {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--warm-dim);
+  }
+
+  /* ----- Chart shell ----- */
+  .chart-card {
+    background: linear-gradient(180deg, #0C2342, #0A1C36);
+    border: 1px solid var(--rule);
+    box-shadow: var(--shadow);
+    padding: 18px 18px 14px;
+  }
+  .chart-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+  .chart-title h2 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: var(--ice-soft);
+    text-transform: uppercase;
+    margin: 0;
+  }
+  .chart-title .meta {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  svg.gantt {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  /* SVG text styles via CSS for crispness */
+  svg text { font-family: var(--font); fill: var(--warm); }
+  text.month  { fill: var(--warm-dim); font-size: 11px; }
+  text.year   { fill: var(--ice-soft); font-size: 11px; font-weight: 600; letter-spacing: 0.6px; }
+  text.lane   { fill: var(--warm); font-size: 13px; font-weight: 600; cursor: pointer; }
+  text.lane-sub { fill: var(--muted); font-size: 11px; }
+  text.bar-label { fill: var(--navy); font-size: 11px; font-weight: 600; pointer-events: none; }
+  text.bar-label-light { fill: var(--warm); font-size: 11px; font-weight: 600; pointer-events: none; }
+  text.gate-label { fill: var(--amber); font-size: 10.5px; font-weight: 600; letter-spacing: 0.3px; }
+  text.milestone-label { fill: var(--warm); font-size: 10.5px; font-weight: 600; pointer-events: none; }
+  text.today-label { fill: var(--amber); font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+
+  .grid-line { stroke: var(--rule); stroke-width: 1; }
+  .grid-line.strong { stroke: var(--rule-strong); }
+  .lane-row-bg { fill: rgba(255,255,255,0.015); }
+  .lane-row-bg.alt { fill: rgba(255,255,255,0.035); }
+
+  .bar { cursor: pointer; }
+  .bar rect.bar-fill { transition: filter 120ms ease; }
+  .bar:hover rect.bar-fill { filter: brightness(1.15); }
+
+  .gate-line { stroke: var(--amber); stroke-width: 2; stroke-dasharray: 4 4; }
+  .gate-band { fill: var(--amber-soft); }
+  .today-line { stroke: var(--amber); stroke-width: 2.5; }
+
+  .milestone { cursor: pointer; }
+  .milestone polygon { stroke: var(--navy); stroke-width: 1.5; transition: filter 120ms ease; }
+  .milestone:hover polygon { filter: brightness(1.2) drop-shadow(0 0 4px var(--amber)); }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: #07172E;
+    border: 1px solid var(--ice-deep);
+    border-left: 3px solid var(--amber);
+    color: var(--warm);
+    padding: 8px 11px;
+    font-size: 12px;
+    line-height: 1.4;
+    max-width: 280px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 120ms ease, transform 120ms ease;
+    z-index: 1000;
+  }
+  #tooltip.show { opacity: 1; transform: translateY(0); }
+  #tooltip .ttl { color: var(--ice-soft); font-weight: 600; margin-bottom: 3px; }
+  #tooltip .rng { color: var(--amber); font-size: 11px; margin-bottom: 3px; }
+  #tooltip .desc { color: var(--warm-dim); }
+
+  /* Detail panel */
+  #detail {
+    margin-top: 18px;
+    background: linear-gradient(180deg, var(--navy-2), var(--navy));
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--amber);
+    padding: 16px 18px;
+    display: none;
+  }
+  #detail.open { display: block; }
+  #detail .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  #detail h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--warm);
+    margin: 0;
+  }
+  #detail .close {
+    background: transparent;
+    border: 1px solid var(--rule-strong);
+    color: var(--warm-dim);
+    font-size: 11px;
+    padding: 3px 9px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+  }
+  #detail .close:hover { color: var(--warm); border-color: var(--ice-soft); }
+  #detail dl { display: grid; grid-template-columns: 130px 1fr; gap: 8px 14px; margin: 0; }
+  #detail dt { color: var(--ice-soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; padding-top: 2px; }
+  #detail dd { margin: 0; color: var(--warm-dim); font-size: 13px; line-height: 1.5; }
+
+  /* Legend */
+  .legend {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px 28px;
+    padding: 12px 16px;
+    border: 1px solid var(--rule);
+    background: rgba(255,255,255,0.02);
+    font-size: 12px;
+    color: var(--warm-dim);
+  }
+  .legend .item { display: flex; align-items: center; gap: 8px; }
+  .legend .swatch {
+    width: 22px; height: 12px; display: inline-block;
+  }
+  .legend .swatch.ice { background: var(--ice); }
+  .legend .swatch.ice-soft { background: var(--ice-soft); }
+  .legend .swatch.dashed {
+    background: repeating-linear-gradient(45deg, var(--ice-deep), var(--ice-deep) 4px, transparent 4px, transparent 8px);
+    border: 1px dashed var(--ice-soft);
+  }
+  .legend .swatch.amber-bar { background: var(--amber); }
+  .legend .swatch.today { background: linear-gradient(to right, var(--amber), var(--amber)); width: 3px; height: 18px; }
+  .legend .diamond {
+    width: 12px; height: 12px;
+    background: var(--amber);
+    transform: rotate(45deg);
+    display: inline-block;
+    border: 1.5px solid var(--navy);
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 22px;
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+    letter-spacing: 0.3px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="banner">
+    <h1>AI Identity — Three-Horizon Product Roadmap</h1>
+    <div class="sub">Trust Root for the Agent Economy</div>
+    <div class="date">As of 25 April 2026 • 18-month outlook through September 2027</div>
+  </header>
+
+  <section class="horizons" aria-label="Strategic horizons">
+    <div class="horizon h1">
+      <div class="tag">Horizon 1 · Now</div>
+      <div class="name">Ship the Identity Platform</div>
+      <div class="desc">Convert design partners on the horizontal control plane (P1). The hard gate before any new product spend.</div>
+    </div>
+    <div class="horizon h2">
+      <div class="tag">Horizon 2 · Next</div>
+      <div class="name">Win the Spend &amp; Mandate Wedge</div>
+      <div class="desc">Vertical wedge into SecOps + Audit (P2) and the cryptographic mandate substrate for commerce (P3).</div>
+    </div>
+    <div class="horizon h3">
+      <div class="tag">Horizon 3 · Later</div>
+      <div class="name">Become the Trust Root</div>
+      <div class="desc">Verification side of the mandate (P4) plus regulated-buyer audit SKU (P5). Design only until signal lands.</div>
+    </div>
+  </section>
+
+  <div class="chart-card">
+    <div class="chart-title">
+      <h2>Product Timelines · Milestones · Decision Gates</h2>
+      <div class="meta">Hover bars and diamonds for detail · Click a swimlane label for product profile</div>
+    </div>
+    <svg class="gantt" id="gantt" viewBox="0 0 1380 540" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Gantt chart of products P1 through P5 from April 2026 to September 2027"></svg>
+  </div>
+
+  <div id="detail" role="region" aria-live="polite">
+    <div class="head">
+      <h3 id="detail-title"></h3>
+      <button class="close" id="detail-close" aria-label="Close detail panel">CLOSE</button>
+    </div>
+    <dl id="detail-body"></dl>
+  </div>
+
+  <div class="legend" aria-label="Legend">
+    <div class="item"><span class="swatch ice"></span> P1 Platform · shipping</div>
+    <div class="item"><span class="swatch ice-soft"></span> Active build phase (P2 / P3 / P4)</div>
+    <div class="item"><span class="swatch dashed"></span> Gated or design-only phase</div>
+    <div class="item"><span class="diamond"></span> Milestone</div>
+    <div class="item"><span class="swatch amber-bar"></span> Hard gate / decision point</div>
+    <div class="item"><span class="swatch today"></span> Today (25 Apr 2026)</div>
+  </div>
+
+  <footer>
+    Last updated 2026-04-25 · Source: CEO Dashboard decisions #31–#33, milestones #36–#41
+  </footer>
+
+</div>
+
+<div id="tooltip" role="tooltip"></div>
+
+<script>
+(function () {
+  // ----- Time axis: months from Apr 2026 to Sep 2027 (18 months inclusive) -----
+  const MONTHS = [];
+  for (let y = 2026, m = 3; !(y === 2027 && m === 9); ) {
+    MONTHS.push({ y, m });
+    m++;
+    if (m > 11) { m = 0; y++; }
+  }
+  MONTHS.push({ y: 2027, m: 8 }); // Sep 2027 inclusive
+
+  const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  // ----- Layout constants (SVG units) -----
+  const VB_W = 1380;
+  const LANE_LABEL_W = 220;
+  const CHART_X0 = LANE_LABEL_W + 14;
+  const CHART_X1 = VB_W - 18;
+  const CHART_W = CHART_X1 - CHART_X0;
+  const HEADER_H = 56;             // month/year header band
+  const LANES = [
+    { id: "P1", name: "P1 — AI Identity Platform",   sub: "Horizontal control plane · shipping" },
+    { id: "P2", name: "P2 — Agent Spend Control",    sub: "Vertical wedge · SecOps + Audit buyer" },
+    { id: "P3", name: "P3 — Agent Mandate Service",  sub: "H2 anchor · bridge to commerce" },
+    { id: "P4", name: "P4 — Merchant-Side Trust API", sub: "Emerges from P3 · verification side" },
+    { id: "P5", name: "P5 — Audit-as-a-Service",     sub: "P1 Enterprise SKU · bundled" },
+  ];
+  const LANE_H = 78;
+  const LANE_Y0 = HEADER_H + 8;
+  const TOTAL_H = LANE_Y0 + LANES.length * LANE_H + 24;
+
+  // Set viewBox height dynamically
+  const svg = document.getElementById("gantt");
+  svg.setAttribute("viewBox", `0 0 ${VB_W} ${TOTAL_H}`);
+
+  // ----- Date helpers -----
+  const TIMELINE_START = new Date(2026, 3, 1);   // 1 Apr 2026
+  const TIMELINE_END   = new Date(2027, 8, 30);  // 30 Sep 2027
+  const TIMELINE_MS = TIMELINE_END - TIMELINE_START;
+
+  function dateToX(d) {
+    const t = (d - TIMELINE_START) / TIMELINE_MS;
+    const clamped = Math.max(0, Math.min(1, t));
+    return CHART_X0 + clamped * CHART_W;
+  }
+  function fmtDate(d) {
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+  function fmtRange(a, b) {
+    return fmtDate(a) + "  →  " + fmtDate(b);
+  }
+
+  // ----- SVG helpers -----
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function txt(parent, x, y, str, cls, anchor) {
+    const t = el("text", { x, y, class: cls || "" }, parent);
+    if (anchor) t.setAttribute("text-anchor", anchor);
+    t.textContent = str;
+    return t;
+  }
+
+  // ===== Build header (months/years) =====
+  const monthW = CHART_W / MONTHS.length;
+  const headerG = el("g", { id: "header" }, svg);
+
+  // Year groupings (visual)
+  let curYear = null, yearStartIdx = 0;
+  MONTHS.forEach((mo, i) => {
+    if (curYear === null) { curYear = mo.y; yearStartIdx = 0; }
+    if (mo.y !== curYear || i === MONTHS.length - 1) {
+      const endIdx = (mo.y !== curYear) ? i : i + 1;
+      const x0 = CHART_X0 + yearStartIdx * monthW;
+      const x1 = CHART_X0 + endIdx * monthW;
+      txt(headerG, (x0 + x1) / 2, 16, String(curYear), "year", "middle");
+      // light divider between years
+      if (mo.y !== curYear) {
+        el("line", { x1: x0 + (endIdx - yearStartIdx) * monthW, y1: 22, x2: x0 + (endIdx - yearStartIdx) * monthW, y2: TOTAL_H - 6, class: "grid-line strong" }, svg);
+      }
+      curYear = mo.y;
+      yearStartIdx = i;
+    }
+  });
+
+  // Month tick labels + vertical gridlines
+  MONTHS.forEach((mo, i) => {
+    const x = CHART_X0 + i * monthW;
+    txt(headerG, x + monthW / 2, 38, MONTH_NAMES[mo.m], "month", "middle");
+    el("line", { x1: x, y1: 44, x2: x, y2: TOTAL_H - 6, class: "grid-line" }, svg);
+  });
+  // Right edge
+  el("line", { x1: CHART_X1, y1: 44, x2: CHART_X1, y2: TOTAL_H - 6, class: "grid-line strong" }, svg);
+
+  // Header bottom rule
+  el("line", { x1: CHART_X0, y1: HEADER_H - 4, x2: CHART_X1, y2: HEADER_H - 4, class: "grid-line strong" }, svg);
+
+  // ===== Build swimlanes =====
+  const lanesG = el("g", { id: "lanes" }, svg);
+  const laneY = {}; // map lane id -> top y of lane
+  LANES.forEach((lane, i) => {
+    const y = LANE_Y0 + i * LANE_H;
+    laneY[lane.id] = y;
+    // alternating row bg
+    el("rect", {
+      x: 0, y: y, width: VB_W, height: LANE_H,
+      class: "lane-row-bg" + (i % 2 ? " alt" : "")
+    }, lanesG);
+
+    // Lane label (clickable)
+    const labelG = el("g", { class: "lane-label", "data-lane": lane.id, role: "button", tabindex: "0" }, lanesG);
+    txt(labelG, 14, y + 30, lane.name, "lane");
+    txt(labelG, 14, y + 48, lane.sub, "lane-sub");
+    // small chevron
+    txt(labelG, 14, y + 64, "›  click for product profile", "lane-sub");
+    labelG.style.cursor = "pointer";
+
+    // bottom rule
+    el("line", { x1: CHART_X0, y1: y + LANE_H, x2: CHART_X1, y2: y + LANE_H, class: "grid-line" }, lanesG);
+  });
+
+  // ===== Decision gates (drawn under bars but over grid) =====
+  const gates = [
+    { date: new Date(2026, 5, 30), label: "P1 GATE", tooltip: "P1 → P2 Hard Gate", desc: "3 paid design partners required before P2 build cycles >30%" },
+    { date: new Date(2026, 8, 30), label: "P2 ALPHA REVIEW", tooltip: "P2 alpha → beta review", desc: "False-positive rate, customer fit decision" },
+    { date: new Date(2027, 2, 31), label: "P3 PILOT GO/NO-GO", tooltip: "P3 partner pilot decision", desc: "Ship/no-ship on P3 partner pilot" },
+  ];
+  const gatesG = el("g", { id: "gates" }, svg);
+  gates.forEach((g, idx) => {
+    const x = dateToX(g.date);
+    // amber band (subtle)
+    el("rect", { x: x - 6, y: HEADER_H - 4, width: 12, height: TOTAL_H - HEADER_H - 2, class: "gate-band" }, gatesG);
+    // line
+    el("line", { x1: x, y1: HEADER_H - 4, x2: x, y2: TOTAL_H - 6, class: "gate-line" }, gatesG);
+    // label - rotate near top so they don't overlap bars
+    const labelY = HEADER_H + 4 + (idx % 2) * 11;
+    const t = txt(gatesG, x + 6, labelY, g.label, "gate-label");
+    // tooltip on label
+    const labelHit = el("rect", { x: x - 4, y: HEADER_H - 4, width: 14, height: 24, fill: "transparent", style: "cursor:help" }, gatesG);
+    labelHit.addEventListener("mouseenter", (e) => showTip(e, g.tooltip, fmtDate(g.date), g.desc));
+    labelHit.addEventListener("mousemove", moveTip);
+    labelHit.addEventListener("mouseleave", hideTip);
+  });
+
+  // The most prominent gate (Jun 30 2026) gets a stronger highlight band across the chart
+  const hardGateX = dateToX(new Date(2026, 5, 30));
+  el("rect", { x: hardGateX - 10, y: HEADER_H - 4, width: 20, height: TOTAL_H - HEADER_H - 2,
+               fill: "rgba(242,169,59,0.12)" }, gatesG);
+
+  // ===== Bars =====
+  const barsG = el("g", { id: "bars" }, svg);
+
+  function drawBar(laneId, start, end, opts) {
+    opts = opts || {};
+    const y0 = laneY[laneId];
+    const x = dateToX(start);
+    const w = Math.max(2, dateToX(end) - x);
+    const h = opts.height || 22;
+    const yOffset = opts.yOffset != null ? opts.yOffset : 18;
+    const y = y0 + yOffset;
+
+    const g = el("g", { class: "bar" }, barsG);
+    const fill = opts.fill || "var(--ice)";
+    const rect = el("rect", {
+      x, y, width: w, height: h,
+      fill: fill,
+      class: "bar-fill",
+      rx: 1, ry: 1,
+    }, g);
+    if (opts.dashed) {
+      rect.setAttribute("stroke", opts.stroke || "var(--ice-soft)");
+      rect.setAttribute("stroke-width", "1.2");
+      rect.setAttribute("stroke-dasharray", "4 3");
+      rect.setAttribute("fill-opacity", "0.35");
+    }
+    if (opts.translucent) {
+      rect.setAttribute("fill-opacity", "0.55");
+      rect.setAttribute("stroke", "var(--amber)");
+      rect.setAttribute("stroke-width", "1.2");
+      rect.setAttribute("stroke-dasharray", "5 3");
+    }
+
+    // Label inside bar if room
+    if (opts.label && w > 60) {
+      const lbl = txt(g, x + 8, y + h / 2 + 4, opts.label, opts.lightLabel ? "bar-label-light" : "bar-label");
+    } else if (opts.label) {
+      // place outside to right
+      txt(g, x + w + 6, y + h / 2 + 4, opts.label, "milestone-label");
+    }
+
+    // tooltip
+    g.addEventListener("mouseenter", (e) => showTip(e, opts.title || opts.label || "", fmtRange(start, end), opts.desc || ""));
+    g.addEventListener("mousemove", moveTip);
+    g.addEventListener("mouseleave", hideTip);
+    return g;
+  }
+
+  // -- P1: full timeline, two phases stacked horizontally --
+  drawBar("P1",
+    new Date(2026, 3, 25),
+    new Date(2026, 5, 30),
+    { fill: "var(--ice)", label: "Design partner conversion", title: "P1 · Design Partner Conversion",
+      desc: "Convert pilots to 3 paid design partners before unlocking P2 build budget. Hard gate Jun 30." });
+  drawBar("P1",
+    new Date(2026, 6, 1),
+    new Date(2027, 8, 30),
+    { fill: "var(--ice-deep)", label: "Enterprise expansion (shipping)", lightLabel: true,
+      title: "P1 · Enterprise Expansion",
+      desc: "Ongoing expansion across enterprise. P1 ships continuously through the planning horizon." });
+
+  // -- P2: discovery -> alpha (gated) -> beta -> GA --
+  drawBar("P2",
+    new Date(2026, 4, 1),
+    new Date(2026, 5, 30),
+    { fill: "var(--ice-soft)", label: "Discovery", title: "P2 · Discovery Sprint",
+      desc: "Customer + buyer discovery. Defines fit and false-positive tolerance." });
+  drawBar("P2",
+    new Date(2026, 6, 1),
+    new Date(2026, 8, 30),
+    { fill: "var(--ice-soft)", translucent: true, label: "Alpha build  [gated]", lightLabel: true,
+      title: "P2 · Alpha Build (gated by P1 hard gate)",
+      desc: "Conditional on P1 clearing 3-paid-partner gate. Build cycles >30% blocked otherwise." });
+  drawBar("P2",
+    new Date(2026, 9, 1),
+    new Date(2026, 11, 31),
+    { fill: "var(--ice-soft)", label: "Beta", title: "P2 · Beta",
+      desc: "Closed beta with selected customers. Tune detectors, baselines, case management." });
+  drawBar("P2",
+    new Date(2027, 0, 1),
+    new Date(2027, 5, 30),
+    { fill: "var(--ice)", label: "Path to GA", title: "P2 · Path to GA",
+      desc: "Hardening, pricing, packaging. GA target Jun 2027." });
+
+  // -- P3: light standards engagement -> issuance alpha -> verification + pilot -> beta --
+  drawBar("P3",
+    new Date(2026, 6, 1),
+    new Date(2026, 8, 30),
+    { fill: "var(--ice-soft)", dashed: true, label: "Standards engagement (light)",
+      title: "P3 · Standards Engagement",
+      desc: "Light, parallel to P2 alpha. Position in mandate / agent-credential standards bodies." });
+  drawBar("P3",
+    new Date(2026, 9, 1),
+    new Date(2026, 11, 31),
+    { fill: "var(--ice-soft)", label: "Issuance API alpha", title: "P3 · Issuance API Alpha",
+      desc: "Mandate Service v1 — issuance side. Issuer = same buyer as P1." });
+  drawBar("P3",
+    new Date(2027, 0, 1),
+    new Date(2027, 2, 31),
+    { fill: "var(--ice-soft)", label: "Verification API + pilot", title: "P3 · Verification API + First Partner Pilot",
+      desc: "Adds verifier role. First merchant/rail partner pilot. Go/no-go gate Mar 31." });
+  drawBar("P3",
+    new Date(2027, 3, 1),
+    new Date(2027, 5, 30),
+    { fill: "var(--ice)", label: "Beta", title: "P3 · Beta",
+      desc: "Beta with multiple verifiers. Substrate hardens." });
+
+  // -- P4: design only --
+  drawBar("P4",
+    new Date(2027, 3, 1),
+    new Date(2027, 8, 30),
+    { fill: "var(--ice-soft)", dashed: true, label: "Design only — do not pre-build",
+      title: "P4 · Merchant-Side Trust API (Design)",
+      desc: "Verification side of P3 data model. Buyer: B2B marketplaces, payment processors. Hold build until P3 verifier signal lands." });
+
+  // -- P5: bundled SKU, dashed/translucent --
+  drawBar("P5",
+    new Date(2026, 9, 1),
+    new Date(2027, 5, 30),
+    { fill: "var(--ice-deep)", dashed: true, label: "Bundled SKU in P1 Enterprise tier",
+      title: "P5 · Audit-as-a-Service",
+      desc: "Not a separate product. SKU within P1 Enterprise. CCO/CRO buyer at regulated mid-market+." });
+
+  // ===== Milestones (diamonds) =====
+  const milestones = [
+    { id: "#36", title: "P2 Discovery Sprint Complete", date: new Date(2026, 5, 6),  lane: "P2", desc: "Discovery findings synthesized; alpha build scoped." },
+    { id: "#37", title: "P1: 3 Paid Design Partners (HARD GATE)", date: new Date(2026, 5, 30), lane: "P1", hard: true, desc: "Hard gate: must clear before P2 build cycles >30%." },
+    { id: "#38", title: "P2 Alpha Shipped", date: new Date(2026, 8, 30), lane: "P2", desc: "Alpha shipped to first cohort." },
+    { id: "#39", title: "P3 Mandate Service v1 (Issuance)", date: new Date(2026, 11, 31), lane: "P3", desc: "Cryptographic mandate substrate v1, issuance side." },
+    { id: "#40", title: "P3 Verification API + First Partner Pilot", date: new Date(2027, 2, 31), lane: "P3", desc: "Verification API live. First merchant/rail pilot started." },
+    { id: "#41a", title: "P2 GA + P3 Beta + P4 Design", date: new Date(2027, 5, 30), lane: "P2", spanLane: "P3", desc: "Triple convergence: P2 hits GA, P3 enters beta, P4 design complete." },
+  ];
+  const msG = el("g", { id: "milestones" }, svg);
+  milestones.forEach((m) => {
+    const x = dateToX(m.date);
+    const yLane = laneY[m.lane];
+    const cy = yLane + 54;
+    drawDiamond(msG, x, cy, m, m.hard);
+    if (m.spanLane) {
+      const cy2 = laneY[m.spanLane] + 54;
+      drawDiamond(msG, x, cy2, m, m.hard);
+      // connector
+      el("line", { x1: x, y1: cy + 8, x2: x, y2: cy2 - 8, stroke: "var(--amber)", "stroke-width": 1, "stroke-dasharray": "2 2", opacity: "0.7" }, msG);
+    }
+
+    // small label above the topmost diamond
+    const labelY = yLane + 36;
+    txt(msG, x, labelY, m.id, "milestone-label", "middle");
+  });
+
+  function drawDiamond(parent, x, y, m, hard) {
+    const g = el("g", { class: "milestone", transform: `translate(${x},${y})` }, parent);
+    const size = hard ? 11 : 8;
+    const fill = hard ? "var(--amber)" : "var(--ice-soft)";
+    const stroke = hard ? "#7a4f10" : "var(--navy)";
+    const points = `0,${-size} ${size},0 0,${size} ${-size},0`;
+    const poly = el("polygon", { points, fill, stroke, "stroke-width": hard ? 2 : 1.5 }, g);
+    g.addEventListener("mouseenter", (e) => showTip(e, m.id + " " + m.title, fmtDate(m.date), m.desc || ""));
+    g.addEventListener("mousemove", moveTip);
+    g.addEventListener("mouseleave", hideTip);
+  }
+
+  // ===== Today line =====
+  const TODAY = new Date(2026, 3, 25);
+  const todayX = dateToX(TODAY);
+  const todayG = el("g", { id: "today" }, svg);
+  el("line", { x1: todayX, y1: HEADER_H - 8, x2: todayX, y2: TOTAL_H - 6, class: "today-line" }, todayG);
+  // little flag
+  el("polygon", {
+    points: `${todayX},${HEADER_H - 8} ${todayX + 38},${HEADER_H - 8} ${todayX + 32},${HEADER_H - 2} ${todayX + 38},${HEADER_H + 4} ${todayX},${HEADER_H + 4}`,
+    fill: "var(--amber)"
+  }, todayG);
+  txt(todayG, todayX + 4, HEADER_H - 1, "TODAY", "today-label").setAttribute("fill", "var(--navy)");
+
+  // ===== Tooltip =====
+  const tip = document.getElementById("tooltip");
+  function showTip(e, title, range, desc) {
+    tip.innerHTML = `<div class="ttl">${escape(title)}</div>${range ? `<div class="rng">${escape(range)}</div>` : ""}${desc ? `<div class="desc">${escape(desc)}</div>` : ""}`;
+    tip.classList.add("show");
+    moveTip(e);
+  }
+  function moveTip(e) {
+    const pad = 14;
+    let x = e.clientX + pad;
+    let y = e.clientY + pad;
+    const rect = tip.getBoundingClientRect();
+    if (x + rect.width > window.innerWidth - 8) x = e.clientX - rect.width - pad;
+    if (y + rect.height > window.innerHeight - 8) y = e.clientY - rect.height - pad;
+    tip.style.left = x + "px";
+    tip.style.top = y + "px";
+  }
+  function hideTip() { tip.classList.remove("show"); }
+  function escape(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+  }
+
+  // ===== Detail panel =====
+  const PROFILES = {
+    P1: {
+      title: "P1 — AI Identity Platform",
+      items: {
+        "Pillars":     "All four (Identity · Policy · Forensics · Compliance)",
+        "Buyer":       "Platform Engineering (bottom-up)",
+        "Demarcation": "Horizontal control plane for any agent action.",
+      }
+    },
+    P2: {
+      title: "P2 — Agent Spend Control",
+      items: {
+        "Pillars":     "All four + new (detectors, baselines, case management)",
+        "Buyer":       "SecOps + Internal Audit (then Finance / Procurement)",
+        "Demarcation": "Vertical app on financial events; agent-side ingestion only in alpha.",
+      }
+    },
+    P3: {
+      title: "P3 — Agent Mandate Service",
+      items: {
+        "Pillars":     "Identity + Policy + Forensics",
+        "Buyer":       "Same as P1 (issuers) → expands to merchants / rails (verifiers)",
+        "Demarcation": "Cryptographic mandate substrate. Not a payment rail. Not a fraud engine.",
+      }
+    },
+    P4: {
+      title: "P4 — Merchant-Side Trust API",
+      items: {
+        "Pillars":     "Identity + Forensics + Compliance",
+        "Buyer":       "B2B marketplaces, payment processors",
+        "Demarcation": "Verification side of the P3 data model. Do not pre-build.",
+      }
+    },
+    P5: {
+      title: "P5 — Audit-as-a-Service",
+      items: {
+        "Pillars":     "Forensics + Compliance",
+        "Buyer":       "CCO / CRO at regulated mid-market+",
+        "Demarcation": "SKU in P1 Enterprise tier, not a separate product.",
+      }
+    },
+  };
+
+  const detail = document.getElementById("detail");
+  const dTitle = document.getElementById("detail-title");
+  const dBody  = document.getElementById("detail-body");
+  document.getElementById("detail-close").addEventListener("click", () => detail.classList.remove("open"));
+
+  document.querySelectorAll(".lane-label").forEach(el => {
+    el.addEventListener("click", () => openLane(el.getAttribute("data-lane")));
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openLane(el.getAttribute("data-lane")); }
+    });
+  });
+  function openLane(id) {
+    const p = PROFILES[id];
+    if (!p) return;
+    dTitle.textContent = p.title;
+    dBody.innerHTML = "";
+    for (const k in p.items) {
+      const dt = document.createElement("dt"); dt.textContent = k;
+      const dd = document.createElement("dd"); dd.textContent = p.items[k];
+      dBody.appendChild(dt); dBody.appendChild(dd);
+    }
+    detail.classList.add("open");
+    detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+})();
+</script>
+</body>
+</html>
