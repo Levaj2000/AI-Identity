@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "COMMIT_MSG=$(git log -1 --pretty=%B 2>/dev/null) && CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null) && if echo \"$COMMIT_MSG\" | head -1 | grep -qE '^Merge '; then exit 0; fi && MEANINGFUL=$(echo \"$CHANGED_FILES\" | grep -vE '(node_modules/|package-lock\\.json|yarn\\.lock|pnpm-lock\\.yaml|\\.claude/plans/)' || true) && if [ -z \"$MEANINGFUL\" ]; then exit 0; fi && if echo \"$CHANGED_FILES\" | grep -qE '^CHANGELOG\\.md$'; then exit 0; fi && FIRST_LINE=$(echo \"$COMMIT_MSG\" | head -1) && printf '{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"additionalContext\":\"A commit was just made without updating CHANGELOG.md. Commit: %s. Files changed: %s. Please suggest a Keep a Changelog entry for the [Unreleased] section and ask the user if they want to add it.\"}}' \"$FIRST_LINE\" \"$(echo $MEANINGFUL | tr '\\n' ', ')\"",
+            "timeout": 10,
+            "statusMessage": "Checking changelog..."
+          }
+        ]
+      }
+    ]
+  }
+}

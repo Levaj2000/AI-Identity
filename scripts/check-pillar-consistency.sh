@@ -40,6 +40,7 @@ for dir in "${SEARCH_DIRS[@]}"; do
     --include='*.ts' --include='*.tsx' \
     --include='*.js' --include='*.jsx' \
     --include='*.html' --include='*.md' --include='*.mdx' \
+    --exclude-dir=dist --exclude-dir=.next --exclude-dir=node_modules \
     "$dir" 2>/dev/null || true)
 done
 
