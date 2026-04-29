@@ -223,8 +223,8 @@ async def create_ticket(
             ticket_number=ticket.ticket_number,
             subject=ticket.subject,
             description=ticket.description,
-            priority=ticket.priority.value,
-            category=ticket.category.value,
+            priority=ticket.priority,  # Already a string in the database
+            category=ticket.category,  # Already a string in the database
             user_email=user.email,
             user_name=None,  # User model doesn't have first_name field
             agent_name=agent_name,
