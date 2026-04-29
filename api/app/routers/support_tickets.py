@@ -9,6 +9,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
+from api.app.email import send_support_ticket_notification
 from common.models import Agent, AuditLog, Organization, SupportTicket, TicketComment, User, get_db
 from common.models.support_ticket import TicketCategory, TicketPriority, TicketStatus
 from common.schemas.support_ticket import (
@@ -209,6 +210,28 @@ async def create_ticket(
         user.email,
         ticket.subject,
     )
+
+    # Send email notification to support team (fire-and-forget)
+    try:
+        agent_name = None
+        if data.related_agent_id:
+            agent = db.query(Agent).filter(Agent.id == data.related_agent_id).first()
+            if agent:
+                agent_name = agent.name
+
+        send_support_ticket_notification(
+            ticket_number=ticket.ticket_number,
+            subject=ticket.subject,
+            description=ticket.description,
+            priority=ticket.priority.value,
+            category=ticket.category.value,
+            user_email=user.email,
+            user_name=None,  # User model doesn't have first_name field
+            agent_name=agent_name,
+        )
+    except Exception as e:
+        # Never block ticket creation on email failure
+        logger.error("Failed to send ticket notification email: %s", e)
 
     return _build_ticket_response(ticket, db, include_comments=True)
 
