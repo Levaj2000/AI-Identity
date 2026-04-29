@@ -208,6 +208,56 @@ def _followup_html(name: str) -> str:
 </p>""")
 
 
+def send_support_ticket_notification(
+    ticket_number: str,
+    subject: str,
+    description: str,
+    priority: str,
+    category: str,
+    user_email: str,
+    user_name: str | None = None,
+    agent_name: str | None = None,
+) -> str | None:
+    """Notify support team when a new ticket is created.
+
+    Fire-and-forget — never blocks ticket creation.
+    Returns the Resend email ID on success, None otherwise.
+    """
+    if not _is_configured():
+        logger.info("Resend not configured — skipping ticket notification for %s", ticket_number)
+        return None
+
+    resend.api_key = settings.resend_api_key
+
+    try:
+        result = resend.Emails.send(
+            {
+                "from": settings.resend_from_email,
+                "to": ["jeff@ai-identity.co"],
+                "reply_to": user_email,  # Allow direct reply to customer
+                "subject": f"New Support Ticket: {ticket_number} - {subject}",
+                "html": _support_ticket_notification_html(
+                    ticket_number=ticket_number,
+                    subject=subject,
+                    description=description,
+                    priority=priority,
+                    category=category,
+                    user_email=user_email,
+                    user_name=user_name,
+                    agent_name=agent_name,
+                ),
+            }
+        )
+        email_id = result.get("id") if isinstance(result, dict) else getattr(result, "id", None)
+        logger.info(
+            "Support ticket notification sent: ticket=%s, resend_id=%s", ticket_number, email_id
+        )
+        return email_id
+    except Exception as e:
+        logger.error("Failed to send ticket notification for %s: %s", ticket_number, e)
+        return None
+
+
 def _signup_notification_html(user_email: str) -> str:
     """Internal notification — new user signed up."""
     from datetime import datetime
@@ -241,4 +291,81 @@ def _signup_notification_html(user_email: str) -> str:
 
 <p style="font-size:13px;color:#6b7280;">
   A welcome email has been sent to the user. Check the QA Checklist for their onboarding run when ready.
+</p>""")
+
+
+def _support_ticket_notification_html(
+    ticket_number: str,
+    subject: str,
+    description: str,
+    priority: str,
+    category: str,
+    user_email: str,
+    user_name: str | None = None,
+    agent_name: str | None = None,
+) -> str:
+    """Support ticket notification — sent to jeff@ai-identity.co."""
+    from datetime import datetime
+
+    now = datetime.now(UTC).strftime("%b %d, %Y at %I:%M %p UTC")
+    name_display = user_name or user_email.split("@")[0].title()
+
+    # Priority badge colors
+    priority_colors = {
+        "low": "#10B981",
+        "medium": "#F59E0B",
+        "high": "#EF4444",
+        "critical": "#DC2626",
+    }
+    priority_color = priority_colors.get(priority.lower(), "#6B7280")
+
+    agent_row = ""
+    if agent_name:
+        agent_row = f"""
+  <tr>
+    <td style="padding:8px 0;color:#6b7280;font-size:14px;">Related Agent</td>
+    <td style="padding:8px 0;">{agent_name}</td>
+  </tr>"""
+
+    return _email_wrapper(f"""\
+<p style="font-size:16px;font-weight:600;color:#EF4444;">New Support Ticket</p>
+
+<div style="background:#FEF2F2;border-left:4px solid {priority_color};padding:12px 16px;margin:16px 0;border-radius:4px;">
+  <p style="margin:0;font-weight:600;font-size:15px;">{subject}</p>
+  <p style="margin:4px 0 0;color:#6b7280;font-size:13px;">
+    <span style="background:{priority_color};color:white;padding:2px 8px;border-radius:4px;font-weight:600;text-transform:uppercase;font-size:11px;">{priority}</span>
+    <span style="margin-left:8px;">{category}</span>
+  </p>
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr>
+    <td style="padding:8px 0;color:#6b7280;font-size:14px;">Ticket Number</td>
+    <td style="padding:8px 0;font-weight:600;font-family:monospace;">{ticket_number}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#6b7280;font-size:14px;">Customer</td>
+    <td style="padding:8px 0;">{name_display} ({user_email})</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#6b7280;font-size:14px;">Created</td>
+    <td style="padding:8px 0;">{now}</td>
+  </tr>{agent_row}
+</table>
+
+<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:16px;margin:16px 0;">
+  <p style="margin:0 0 8px;color:#6b7280;font-size:13px;font-weight:600;">Description:</p>
+  <p style="margin:0;color:#1F2937;white-space:pre-wrap;">{description}</p>
+</div>
+
+<table cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;">
+  <tr>
+    <td style="background:#F59E0B;border-radius:6px;padding:10px 20px;">
+      <a href="https://dashboard.ai-identity.co/dashboard/support/{ticket_number.split("-")[-1]}" style="color:#0A0A0B;text-decoration:none;font-weight:600;font-size:14px;">View Ticket in Dashboard</a>
+    </td>
+  </tr>
+</table>
+
+<p style="font-size:13px;color:#6b7280;">
+  Reply directly to this email to respond to the customer.
 </p>""")
