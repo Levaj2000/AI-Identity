@@ -98,6 +98,111 @@ export interface AgentKeyListResponse {
 
 export interface AgentKeyRotateResponse {
   new_key: AgentKey
+  /** Plaintext API key (aid_sk_…) — shown only once */
+  api_key: string
+}
+
+// ─── Support Tickets ─────────────────────────────────────────────
+
+export type TicketPriority = 'low' | 'medium' | 'high' | 'urgent'
+export type TicketStatus = 'open' | 'in_progress' | 'waiting_customer' | 'resolved' | 'closed'
+export type TicketCategory = 'technical' | 'billing' | 'feature_request' | 'bug' | 'other'
+
+export interface TicketCreate {
+  subject: string
+  description: string
+  priority?: TicketPriority
+  category?: TicketCategory
+  related_agent_id?: string
+  related_audit_log_ids?: string[]
+}
+
+export interface TicketUpdate {
+  subject?: string
+  description?: string
+  priority?: TicketPriority
+  status?: TicketStatus
+  category?: TicketCategory
+  assigned_to_user_id?: string
+}
+
+export interface CommentCreate {
+  content: string
+  is_internal?: boolean
+}
+
+export interface TicketComment {
+  id: string
+  ticket_id: string
+  user_id: string
+  user_email: string
+  content: string
+  is_internal: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface SupportTicket {
+  id: string
+  ticket_number: string
+  user_id: string
+  org_id: string | null
+  subject: string
+  description: string
+  priority: TicketPriority
+  status: TicketStatus
+  category: TicketCategory | null
+  related_agent_id: string | null
+  related_agent_name: string | null
+  related_audit_log_ids: string[] | null
+  assigned_to_user_id: string | null
+  assigned_to_email: string | null
+  comment_count: number
+  created_at: string
+  updated_at: string
+  resolved_at: string | null
+  closed_at: string | null
+}
+
+export interface TicketDetail extends SupportTicket {
+  comments: TicketComment[]
+  user_email: string
+  org_name: string | null
+}
+
+export interface TicketListResponse {
+  items: SupportTicket[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface TicketContextResponse {
+  ticket_id: string
+  related_agent: {
+    id: string
+    name: string
+    status: string
+    capabilities: string[]
+    created_at: string
+  } | null
+  recent_audit_logs: Array<{
+    id: string
+    action: string
+    timestamp: string
+    agent_id: string | null
+    metadata: Record<string, unknown>
+  }>
+  org_info: {
+    id: string
+    name: string
+    tier: string
+    created_at: string
+  } | null
+}
+
+export interface AgentKeyRotateResponse {
+  new_key: AgentKey
   /** Plaintext API key for the new key — shown only once */
   api_key: string
   /** The old key, now with status=rotated and a 24hr expiry */

@@ -60,3 +60,6 @@ class Organization(Base):
     agents: Mapped[list["Agent"]] = relationship(  # noqa: F821
         back_populates="organization", foreign_keys="Agent.org_id"
     )
+    support_tickets: Mapped[list["SupportTicket"]] = relationship(  # noqa: F821
+        back_populates="organization"
+    )

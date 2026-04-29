@@ -22,6 +22,8 @@ import { QAChecklistPage } from './pages/QAChecklistPage'
 import { WebPropertiesPage } from './pages/WebPropertiesPage'
 import { ForensicsPage } from './pages/ForensicsPage'
 import { OrganizationPage } from './pages/OrganizationPage'
+import { SupportTicketsPage } from './pages/SupportTicketsPage'
+import { TicketDetailPage } from './pages/TicketDetailPage'
 
 function App() {
   return (
@@ -57,6 +59,8 @@ function App() {
         <Route path="properties" element={<WebPropertiesPage />} />
         <Route path="approvals" element={<ApprovalsPage />} />
         <Route path="shadow-agents" element={<ShadowAgentsPage />} />
+        <Route path="support" element={<SupportTicketsPage />} />
+        <Route path="support/:id" element={<TicketDetailPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="admin/users/:id" element={<AdminUserDetailPage />} />
       </Route>
