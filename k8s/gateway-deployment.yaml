@@ -7,6 +7,18 @@ metadata:
     app: gateway
 spec:
   replicas: 1
+  # Surge a fully-ready new pod before terminating the old one. With
+  # HPA minReplicas: 2 and maxUnavailable: 0, the rollout never drops
+  # below the steady-state replica count — combined with the preStop
+  # sleep below and BackendConfig.connectionDraining, this is what
+  # keeps the GCE LB from sending traffic to a SIGTERM'd pod during
+  # rolling deploys (root cause of the 2026-04-29 transient 502 on
+  # gateway.ai-identity.co/health).
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: gateway
@@ -18,6 +30,9 @@ spec:
       # Bound to GCP SA ai-identity-workload@ via Workload Identity for
       # Secret Manager CSI access. See k8s/serviceaccount.yaml.
       serviceAccountName: ai-identity-workload
+      # 60s > preStop sleep (15s) + gunicorn graceful shutdown budget.
+      # Lets in-flight requests finish before SIGKILL.
+      terminationGracePeriodSeconds: 60
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000           # matches Dockerfile.gateway `USER appuser` (uid 1000)
@@ -59,6 +74,15 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
+          # preStop sleep gives the GCE LB / NEG controller time to mark
+          # this pod's endpoint Unhealthy and stop routing new requests
+          # before gunicorn starts its graceful shutdown. Without this,
+          # in-flight + freshly-arriving requests during the propagation
+          # window return 502 at the LB.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
           resources:
             requests:
               cpu: "200m"
