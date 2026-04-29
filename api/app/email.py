@@ -209,6 +209,7 @@ def _followup_html(name: str) -> str:
 
 
 def send_support_ticket_notification(
+    ticket_id: str,
     ticket_number: str,
     subject: str,
     description: str,
@@ -237,6 +238,7 @@ def send_support_ticket_notification(
                 "reply_to": user_email,  # Allow direct reply to customer
                 "subject": f"New Support Ticket: {ticket_number} - {subject}",
                 "html": _support_ticket_notification_html(
+                    ticket_id=ticket_id,
                     ticket_number=ticket_number,
                     subject=subject,
                     description=description,
@@ -295,6 +297,7 @@ def _signup_notification_html(user_email: str) -> str:
 
 
 def _support_ticket_notification_html(
+    ticket_id: str,
     ticket_number: str,
     subject: str,
     description: str,
@@ -361,7 +364,7 @@ def _support_ticket_notification_html(
 <table cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;">
   <tr>
     <td style="background:#F59E0B;border-radius:6px;padding:10px 20px;">
-      <a href="https://dashboard.ai-identity.co/dashboard/support/{ticket_number.split("-")[-1]}" style="color:#0A0A0B;text-decoration:none;font-weight:600;font-size:14px;">View Ticket in Dashboard</a>
+      <a href="https://dashboard.ai-identity.co/dashboard/support/{ticket_id}" style="color:#0A0A0B;text-decoration:none;font-weight:600;font-size:14px;">View Ticket in Dashboard</a>
     </td>
   </tr>
 </table>
