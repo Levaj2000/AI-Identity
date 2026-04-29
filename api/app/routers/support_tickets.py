@@ -220,6 +220,7 @@ async def create_ticket(
                 agent_name = agent.name
 
         send_support_ticket_notification(
+            ticket_id=str(ticket.id),
             ticket_number=ticket.ticket_number,
             subject=ticket.subject,
             description=ticket.description,
