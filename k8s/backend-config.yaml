@@ -23,3 +23,10 @@ spec:
   logging:
     enable: true
     sampleRate: 1.0
+  # Connection draining on the LB side. Default is 0s, which means in-flight
+  # requests can fail the moment a NEG endpoint is removed during a rolling
+  # deploy. 60s gives both the GCE LB and the pod's preStop sleep (15s) +
+  # terminationGracePeriodSeconds (60s) enough overlap to drain cleanly.
+  # Root cause of the 2026-04-29 transient 502 on gateway.ai-identity.co.
+  connectionDraining:
+    drainingTimeoutSec: 60
