@@ -32,3 +32,11 @@ export {
   getForensicVerifyKey,
   regenerateForensicVerifyKey,
 } from './organizations'
+export {
+  createTicket,
+  listTickets,
+  getTicket,
+  updateTicket,
+  addComment,
+  getTicketContext,
+} from './support'
