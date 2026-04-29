@@ -22,6 +22,13 @@ from common.models.org_membership import OrgMembership, OrgRole
 from common.models.organization import Organization
 from common.models.policy import Policy
 from common.models.qa_run import QARun
+from common.models.support_ticket import (
+    SupportTicket,
+    TicketCategory,
+    TicketComment,
+    TicketPriority,
+    TicketStatus,
+)
 from common.models.upstream_credential import (
     CredentialStatus,
     UpstreamCredential,
@@ -67,4 +74,9 @@ __all__ = [
     "ApprovalStatus",
     "BlockedAgent",
     "DismissedShadowAgent",
+    "SupportTicket",
+    "TicketComment",
+    "TicketPriority",
+    "TicketStatus",
+    "TicketCategory",
 ]

@@ -121,6 +121,11 @@ class User(Base):
     agent_assignments: Mapped[list["AgentAssignment"]] = relationship(  # noqa: F821
         cascade="all, delete-orphan", overlaps="user"
     )
+    support_tickets: Mapped[list["SupportTicket"]] = relationship(  # noqa: F821
+        foreign_keys="SupportTicket.user_id",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def quotas(self) -> dict[str, int]:

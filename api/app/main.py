@@ -164,6 +164,11 @@ OPENAPI_TAGS = [
         "agents operating outside your org's registered identities.",
     },
     {
+        "name": "support",
+        "description": "Customer support ticket system — create tickets, add comments, "
+        "track status, and link to agents/audit logs for context-aware support.",
+    },
+    {
         "name": "health",
         "description": "Service health and status endpoints.",
     },
@@ -539,6 +544,7 @@ from api.app.routers.policies import router as policies_router  # noqa: E402
 from api.app.routers.policy_evaluate import router as policy_evaluate_router  # noqa: E402
 from api.app.routers.qa import router as qa_router  # noqa: E402
 from api.app.routers.shadow import router as shadow_router  # noqa: E402
+from api.app.routers.support_tickets import router as support_tickets_router  # noqa: E402
 from api.app.routers.usage import router as usage_router  # noqa: E402
 from api.app.routers.verify import router as verify_router  # noqa: E402
 from common.observability.router import router as metrics_router  # noqa: E402
@@ -569,6 +575,7 @@ app.include_router(organizations_router)
 app.include_router(agent_assignments_router)
 app.include_router(approvals_router)
 app.include_router(shadow_router)
+app.include_router(support_tickets_router)
 app.include_router(verify_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────

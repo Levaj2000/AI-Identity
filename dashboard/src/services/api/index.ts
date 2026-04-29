@@ -2,7 +2,7 @@
  * API client — barrel export.
  *
  * Usage:
- *   import { createAgent, listKeys, isApiError } from '@/services/api'
+ *   import { createAgent, listKeys, isApiError } from '../services/api'
  */
 
 export { apiFetch, getApiKey, setApiKey, clearApiKey, isApiError, toQueryString } from './client'
@@ -32,3 +32,11 @@ export {
   getForensicVerifyKey,
   regenerateForensicVerifyKey,
 } from './organizations'
+export {
+  createTicket,
+  listTickets,
+  getTicket,
+  updateTicket,
+  addComment,
+  getTicketContext,
+} from './support'
