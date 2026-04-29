@@ -3,8 +3,8 @@
  */
 
 import { useState } from 'react'
-import { createTicket } from '@/services/api'
-import type { TicketCategory, TicketPriority } from '@/types/api'
+import { createTicket } from '../../services/api'
+import type { TicketCategory, TicketPriority } from '../../types/api'
 
 interface CreateTicketModalProps {
   isOpen: boolean

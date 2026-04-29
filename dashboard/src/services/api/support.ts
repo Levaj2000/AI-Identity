@@ -11,7 +11,7 @@ import type {
   TicketDetail,
   TicketListResponse,
   TicketUpdate,
-} from '@/types/api'
+} from '../../types/api'
 
 /**
  * Create a new support ticket.
