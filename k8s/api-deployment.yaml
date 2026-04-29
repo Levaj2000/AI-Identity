@@ -7,6 +7,14 @@ metadata:
     app: api
 spec:
   replicas: 1
+  # See k8s/gateway-deployment.yaml for the rationale. Same shape, same
+  # vulnerability — kept in lockstep so a future API rollout doesn't
+  # reproduce the gateway's 2026-04-29 transient 502 incident.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: api
@@ -36,6 +44,9 @@ spec:
       # a Cloud Run job per ADR-002 §"Build pipeline". Until that worker
       # lands, the API pod is the signer and needs both capabilities.
       serviceAccountName: ai-identity-forensic-signer
+      # 60s > preStop sleep (15s) + gunicorn graceful shutdown budget.
+      # Lets in-flight requests finish before SIGKILL.
+      terminationGracePeriodSeconds: 60
       # automountServiceAccountToken left at the default (true) because the
       # Secret Manager CSI driver needs the projected SA token to exchange
       # for a GCP access token via Workload Identity. The token is for a SA
@@ -89,6 +100,14 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
+          # preStop sleep gives the GCE LB / NEG controller time to mark
+          # this pod's endpoint Unhealthy and stop routing new requests
+          # before gunicorn starts its graceful shutdown. See gateway
+          # deployment for the incident this prevents.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
           resources:
             requests:
               cpu: "250m"
