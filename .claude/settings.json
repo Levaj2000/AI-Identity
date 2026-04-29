@@ -1,4 +1,9 @@
 {
+  "sandbox": {
+    "network": {
+      "allowedDomains": ["ceo-agent-evfb.onrender.com"]
+    }
+  },
   "hooks": {
     "Stop": [
       {
