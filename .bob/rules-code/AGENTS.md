@@ -91,6 +91,44 @@ hours_overdue = (now - original_due_at).total_seconds() / 3600
 
 If a query filters by `flag == False` to find work to do, and the handler sets `flag = True` then sets it back to `False` before returning, the guard is permanently disarmed. Either keep the flag set, or add a separate counter cap (e.g. `escalation_count >= 3`) to prevent infinite re-entry. Whenever you reset a flag inside the same handler that set it, write a regression test that runs the handler twice on the same row and asserts the second run is a no-op.
 
+## Lazy-Import Optional System Dependencies
+
+A top-level `import` of a package that requires an OS-level system library or external service to import-time-load (e.g. `clamd` needs ClamAV daemon, `magic`/`python-magic` needs `libmagic`, certain DB drivers need a running DB at handshake) breaks the **entire app**, not just the dependent feature. If `virus_scan.py` does `import clamd` at module top, registering the attachments router in `main.py` transitively imports `clamd`, and the api crashes on startup if ClamAV is not installed. This also blocks every test that imports anything from the api, even tests with no relation to attachments.
+
+`unittest.mock.patch` does **not** solve this. `patch` replaces attributes after import; if the import itself fails, no test fixture ever runs.
+
+Two correct patterns:
+
+```python
+# Pattern 1 — lazy import inside the function (preferred for rarely-used deps)
+async def scan_file(file_path: Path) -> tuple[bool, str | None]:
+    try:
+        import clamd
+    except ImportError:
+        logger.error("clamd not available — failing closed")
+        return (False, "scanner not available")
+    cd = clamd.ClamdUnixSocket()
+    # ...
+```
+
+```python
+# Pattern 2 — try/except at module load with a sentinel (preferred for hot-path deps)
+try:
+    import clamd
+    SCANNER_AVAILABLE = True
+except ImportError:
+    SCANNER_AVAILABLE = False
+
+async def scan_file(file_path: Path):
+    if not SCANNER_AVAILABLE:
+        return (False, "scanner not configured")
+    # ...
+```
+
+A third option is a settings-level feature flag (`if settings.virus_scan_enabled: ...`) that lets tests disable the path entirely without import gymnastics.
+
+The rule of thumb: **if `pip install foo` succeeds but `python -c "import foo"` fails on a machine without the system library, then `foo` must be lazy-imported.** Examples in this codebase: `clamd` (needs ClamAV), `magic`/`python-magic` (needs libmagic), and any future native binding. Do not put these at module top.
+
 ## Enum Storage Pattern
 
 SQLAlchemy stores enum values as strings in the database, not as enum objects. When passing to functions, use the field directly:
