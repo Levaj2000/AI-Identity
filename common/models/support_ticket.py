@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
@@ -86,6 +86,14 @@ class SupportTicket(Base):
 
     # Additional metadata (renamed to avoid conflict with SQLAlchemy's metadata)
     ticket_metadata = Column(JSONB, default=dict)
+
+    # SLA tracking
+    sla_due_at = Column(DateTime(timezone=True), index=True)
+    sla_breached = Column(Boolean, default=False, nullable=False)
+    escalation_count = Column(Integer, default=0, nullable=False)
+    original_sla_due_at = Column(
+        DateTime(timezone=True)
+    )  # Captured on first breach for accurate hours_overdue
 
     # Timestamps
     created_at = Column(
