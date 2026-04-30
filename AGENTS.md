@@ -26,6 +26,12 @@ kubectl rollout restart deploy/api -n ai-identity
 
 Tests use in-memory SQLite, but models use PostgreSQL types. `api/tests/conftest.py` remaps `JSONB → JSON` and `UUID → Uuid()` at import time. This pattern is mandatory - tests will fail without it.
 
+`User.org_id` is a FK to `organizations.id`. The shared `test_user` / `other_user` fixtures do not seed an Organization. If a test sets `user.org_id`, the test (or a local fixture) must `INSERT` the Organization first or every test errors with `FOREIGN KEY constraint failed` before assertions run. See `api/tests/test_audit_org_scoping.py:40-41` for the seed pattern.
+
+## Verification Before Reporting Done
+
+Never claim "tests pass" without running pytest and quoting its summary line verbatim (e.g. `===== 39 passed in 5.91s =====`). If tests cannot be executed in the current environment, say so — do not substitute static review for actual execution. Line counts (`wc -l`) and test counts (`pytest --collect-only -q | tail -1`) are different numbers; quote the pytest one.
+
 ## Brand Consistency (Enforced by Pre-commit)
 
 The "Four Pillars" (Identity → Policy → Compliance → Forensics) is canonical. Never write "three pillars". The pre-commit hook `scripts/check-pillar-consistency.sh` enforces this in `landing-page/`, `docs/`, and `marketing/` directories.

@@ -19,6 +19,30 @@ for table in Base.metadata.tables.values():
 
 This pattern is mandatory - copy it when adding new test files.
 
+## Test Fixtures: Seed FK Parents Before Setting `org_id`
+
+`User.org_id` is a FK to `organizations.id` (`common/models/user.py:69`). The shared `test_user` / `other_user` fixtures in `api/tests/conftest.py` do **not** seed an `Organization` row. If your test needs a populated `user.org_id`, create the Organization first or every test using the fixture will error with `sqlite3.IntegrityError: FOREIGN KEY constraint failed` before any assertion runs.
+
+Canonical seed pattern (see `api/tests/test_audit_org_scoping.py:40-41`):
+```python
+from common.models.organization import Organization
+
+org = Organization(id=ORG_ID, name="Test Org", owner_id=owner.id, tier="business")
+db_session.add(org)
+db_session.commit()
+```
+
+Do not modify the shared `test_user` / `other_user` fixtures to set `org_id` without also adding Organization seeds — every other test file that depends on those fixtures will break.
+
+## Verification Before Reporting Done
+
+Never claim "tests pass" without running them and quoting the actual pytest summary line. Include it verbatim:
+> `===== 39 passed in 5.91s =====`
+
+If you cannot execute the tests in your current environment, say so explicitly. Do not substitute "the implementation looks correct" for "the tests pass."
+
+Line count is not test count. A 725-line test file may contain 39 tests. `wc -l` and `pytest --collect-only -q | tail -1` report different numbers — quote the pytest one.
+
 ## Enum Storage Pattern
 
 SQLAlchemy stores enum values as strings in the database, not as enum objects. When passing to functions, use the field directly:
