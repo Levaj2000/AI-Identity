@@ -2,6 +2,7 @@
 # Pinned to exact versions for reproducible builds.
 # To upgrade: update version here, test, commit.
 fastapi==0.135.1
+python-multipart==0.0.20
 uvicorn[standard]==0.42.0
 gunicorn==23.0.0
 uvloop==0.22.1
@@ -23,6 +24,14 @@ sentry-sdk[fastapi]==2.22.0
 prometheus-client==0.25.0
 jinja2>=3.1
 
+# File upload and storage
+python-magic==0.4.27
+clamd==1.0.2
+aiofiles==23.2.1
+gcloud-aio-storage==9.3.0
+Pillow==11.1.0
+
 # Dev / testing
 pytest==9.0.2
 httpx==0.28.1
+testcontainers[postgres]==4.7.2

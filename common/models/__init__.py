@@ -30,6 +30,7 @@ from common.models.support_ticket import (
     TicketPriority,
     TicketStatus,
 )
+from common.models.ticket_attachment import TicketAttachment
 from common.models.ticket_template import TicketTemplate
 from common.models.upstream_credential import (
     CredentialStatus,
@@ -83,4 +84,5 @@ __all__ = [
     "TicketCategory",
     "CannedResponse",
     "TicketTemplate",
+    "TicketAttachment",
 ]
