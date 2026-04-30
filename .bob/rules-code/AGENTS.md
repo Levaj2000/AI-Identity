@@ -49,6 +49,29 @@ Skipped tests are not passing tests. Report `57 passed, 6 skipped` honestly — 
 
 `pytest.skip("X_KEY not configured")` silently disables a test when `X_KEY` isn't in the environment. The result is a green test run that has tested nothing. Configure the dependency in the test instead — set a fake value via `monkeypatch.setattr(settings, "x_key", "test-value-xyz")` or seed it in `conftest.py` so the test always runs. Reserve env-gated skips for tests that genuinely require an external service that cannot be faked, and mark them with `@pytest.mark.integration` so they are excluded from unit runs deliberately, not invisibly.
 
+## Postgres-Specific Features Require Postgres-Backed Tests
+
+The shared SQLite conftest with `JSONB → JSON, UUID → Uuid()` remap is fine for ordinary SQL — joins, aggregates, indexed lookups, simple WHERE clauses. It is **not** a substitute for testing code that uses Postgres-specific features. Any of the following make SQLite-only coverage a false signal, not coverage:
+
+- **Timezone math on `timestamp with time zone`** — comparisons against `NOW()`, `AT TIME ZONE`, DST-sensitive arithmetic, naive-vs-aware datetime mixing
+- **JSONB operators** — `@>`, `<@`, `?`, `?&`, `?|`, `->`, `->>`, `#>`, `#>>`, `jsonb_set`, `jsonb_path_*`, GIN indexes over JSONB
+- **Array operators** — native arrays, `ANY`, `ALL`, `@>`, `&&`, `array_agg`, `unnest`
+- **Full-text search** — `tsvector`, `to_tsquery`, `ts_rank`, FTS GIN indexes
+- **Advisory locks** — `pg_advisory_lock`, `pg_try_advisory_lock`, `pg_advisory_unlock`
+- **Row-level security** — `CREATE POLICY`, RLS bypass, `SECURITY DEFINER`
+- **Locking semantics** — `SELECT ... FOR UPDATE` with `NOWAIT` or `SKIP LOCKED`, `SERIALIZABLE` isolation
+- **Partial unique indexes** — `UNIQUE INDEX ... WHERE ...` and `ON CONFLICT DO UPDATE` against them
+- **Native enum types** — `CREATE TYPE ... AS ENUM` and ALTER TYPE migrations
+- **`WITH RECURSIVE` CTEs** that depend on Postgres recursion semantics or the `MATERIALIZED` hint
+- **Generated columns** with PG-specific expressions
+- **Trigger semantics** — Postgres triggers fire differently from SQLite triggers in transaction boundaries
+
+If your code uses any of these, you **must** add a Postgres-backed integration test that actually runs against a real Postgres instance. A SQLite-passing test over Postgres-specific code is not coverage; it is a false signal.
+
+Precedent: `api/tests/test_shadow.py` documents its Postgres dependency at the top of the file (JSONB operators) and skips on SQLite. That pattern is acceptable **only** when paired with a real way to run the test against Postgres in CI or a developer environment. It is not acceptable as a way to dodge Postgres validation entirely.
+
+If no Postgres test infrastructure exists for your test path, do not ship SQLite-only coverage and call it done. Raise the gap explicitly in the PR description, propose how the test should run (a Postgres fixture in `conftest.py`, a `docker compose` Postgres service, an `@pytest.mark.integration` marker for selective CI runs), and treat the gap as a blocker until the infrastructure is in place. The canonical example: a `sla_due_at <= datetime.now(UTC)` filter against a `timestamptz` column passes on SQLite but can produce different results on Postgres around DST or naive-vs-aware datetime boundaries — exactly the kind of bug that lands in production because the test environment lied.
+
 ## Mutate-Then-Read Bugs
 
 When a handler mutates a field and then reads it for a derived value (logging, email payloads, return values), capture the original first. Reassigning state and then computing relative-to-state in the same scope produces values that look right in isolation but are wrong by the time they're used:
