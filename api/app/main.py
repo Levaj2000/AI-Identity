@@ -528,6 +528,7 @@ from api.app.routers.audit import router as audit_router  # noqa: E402
 from api.app.routers.audit_sinks import router as audit_sinks_router  # noqa: E402
 from api.app.routers.auth import router as auth_router  # noqa: E402
 from api.app.routers.billing import router as billing_router  # noqa: E402
+from api.app.routers.canned_responses import router as canned_responses_router  # noqa: E402
 from api.app.routers.capabilities import router as capabilities_router  # noqa: E402
 from api.app.routers.cleanup_cron import router as cleanup_cron_router  # noqa: E402
 from api.app.routers.compliance import router as compliance_router  # noqa: E402
@@ -544,8 +545,9 @@ from api.app.routers.policies import router as policies_router  # noqa: E402
 from api.app.routers.policy_evaluate import router as policy_evaluate_router  # noqa: E402
 from api.app.routers.qa import router as qa_router  # noqa: E402
 from api.app.routers.shadow import router as shadow_router  # noqa: E402
-from api.app.routers.sla_escalation_cron import router as sla_escalation_cron_router  # noqa: E402
+from api.app.routers.support_metrics import router as support_metrics_router  # noqa: E402
 from api.app.routers.support_tickets import router as support_tickets_router  # noqa: E402
+from api.app.routers.ticket_templates import router as ticket_templates_router  # noqa: E402
 from api.app.routers.usage import router as usage_router  # noqa: E402
 from api.app.routers.verify import router as verify_router  # noqa: E402
 from common.observability.router import router as metrics_router  # noqa: E402
@@ -559,13 +561,14 @@ app.include_router(audit_router)
 app.include_router(audit_sinks_router)
 app.include_router(auth_router)
 app.include_router(billing_router)
+app.include_router(canned_responses_router)
 app.include_router(compliance_router)
+app.include_router(support_metrics_router)
 app.include_router(compliance_exports_router)
 app.include_router(credentials_router)
 app.include_router(cleanup_cron_router)
 app.include_router(compliance_exports_cron_router)
 app.include_router(email_cron_router)
-app.include_router(sla_escalation_cron_router)
 app.include_router(forensic_keys_router)
 app.include_router(keys_router)
 app.include_router(metrics_router)
@@ -578,6 +581,7 @@ app.include_router(agent_assignments_router)
 app.include_router(approvals_router)
 app.include_router(shadow_router)
 app.include_router(support_tickets_router)
+app.include_router(ticket_templates_router)
 app.include_router(verify_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────
