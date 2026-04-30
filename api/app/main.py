@@ -545,6 +545,7 @@ from api.app.routers.policies import router as policies_router  # noqa: E402
 from api.app.routers.policy_evaluate import router as policy_evaluate_router  # noqa: E402
 from api.app.routers.qa import router as qa_router  # noqa: E402
 from api.app.routers.shadow import router as shadow_router  # noqa: E402
+from api.app.routers.sla_escalation_cron import router as sla_escalation_cron_router  # noqa: E402
 from api.app.routers.support_metrics import router as support_metrics_router  # noqa: E402
 from api.app.routers.support_tickets import router as support_tickets_router  # noqa: E402
 from api.app.routers.ticket_templates import router as ticket_templates_router  # noqa: E402
@@ -569,6 +570,7 @@ app.include_router(credentials_router)
 app.include_router(cleanup_cron_router)
 app.include_router(compliance_exports_cron_router)
 app.include_router(email_cron_router)
+app.include_router(sla_escalation_cron_router)
 app.include_router(forensic_keys_router)
 app.include_router(keys_router)
 app.include_router(metrics_router)
