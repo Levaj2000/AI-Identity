@@ -77,6 +77,16 @@ class Settings(BaseSettings):
     # can re-request a build from the same period to regenerate.
     compliance_export_retention_days: int = 30
 
+    # Storage backend — unified abstraction for compliance exports and attachments
+    # Backend type: "local" for dev/test, "gcs" for production
+    storage_backend: str = "local"
+    # Local storage base directory (used when storage_backend="local")
+    storage_local_base_dir: str = "/tmp/ai-identity/storage"
+    # GCS configuration (used when storage_backend="gcs")
+    storage_gcs_bucket: str = "ai-identity-storage"
+    storage_gcs_project_id: str = ""
+    storage_gcs_credentials_path: str = ""  # Path to service account JSON (empty = use ADC)
+
     # Stripe billing
     stripe_secret_key: str = ""
     stripe_webhook_secret: str = ""
