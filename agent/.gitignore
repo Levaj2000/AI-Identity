@@ -1,0 +1,13 @@
+# Ada local env — never commit real keys
+ada/.env
+*.env.local
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# ADK runtime artifacts
+.adk_session/
+*.log
