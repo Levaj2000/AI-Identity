@@ -10,6 +10,7 @@ from common.models.audit_outbox import AuditLogOutbox, OutboxStatus
 from common.models.audit_sink import AuditLogSink, SinkKind
 from common.models.base import Base, SessionLocal, engine, get_db
 from common.models.blocked_agent import BlockedAgent
+from common.models.canned_response import CannedResponse
 from common.models.compliance import (
     ComplianceCheck,
     ComplianceFramework,
@@ -29,6 +30,7 @@ from common.models.support_ticket import (
     TicketPriority,
     TicketStatus,
 )
+from common.models.ticket_template import TicketTemplate
 from common.models.upstream_credential import (
     CredentialStatus,
     UpstreamCredential,
@@ -79,4 +81,6 @@ __all__ = [
     "TicketPriority",
     "TicketStatus",
     "TicketCategory",
+    "CannedResponse",
+    "TicketTemplate",
 ]
