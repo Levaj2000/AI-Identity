@@ -61,3 +61,7 @@ Any `gcloud secrets versions add ...` writes to live infrastructure. Pair with `
 ## MCP and Browser Tools Available
 
 Advance mode has access to MCP servers and browser automation tools that Code mode does not.
+
+## Default Pull Request Base Branch
+
+When using `create_pull_request`, the base branch is always `main` unless the user has explicitly signaled otherwise. Do not ask "which branch do you want to merge this into" as a routine question — for completed work, the answer is always `main`. Only prompt for a base branch if the user has stated a stacking workflow ("build on top of PR #X", "this depends on the unmerged `feat/Y` branch") or has explicitly named a non-default target. Branch off `main`, target `main`, merge to `main` is the default for every contribution.
