@@ -43,6 +43,31 @@ If you cannot execute the tests in your current environment, say so explicitly. 
 
 Line count is not test count. A 725-line test file may contain 39 tests. `wc -l` and `pytest --collect-only -q | tail -1` report different numbers — quote the pytest one.
 
+Skipped tests are not passing tests. Report `57 passed, 6 skipped` honestly — do not roll the skipped into the headline number. If the 6 skipped tests cover the most important paths (auth, escalation, idempotency), that is a 0-of-6 result on the actual logic, regardless of the green count.
+
+## Don't Gate Tests on Real Env Vars
+
+`pytest.skip("X_KEY not configured")` silently disables a test when `X_KEY` isn't in the environment. The result is a green test run that has tested nothing. Configure the dependency in the test instead — set a fake value via `monkeypatch.setattr(settings, "x_key", "test-value-xyz")` or seed it in `conftest.py` so the test always runs. Reserve env-gated skips for tests that genuinely require an external service that cannot be faked, and mark them with `@pytest.mark.integration` so they are excluded from unit runs deliberately, not invisibly.
+
+## Mutate-Then-Read Bugs
+
+When a handler mutates a field and then reads it for a derived value (logging, email payloads, return values), capture the original first. Reassigning state and then computing relative-to-state in the same scope produces values that look right in isolation but are wrong by the time they're used:
+
+```python
+# WRONG — by the time hours_overdue is computed, sla_due_at has been moved
+ticket.sla_due_at = calculate_new_due_at(...)
+hours_overdue = (now - ticket.sla_due_at).total_seconds() / 3600  # negative
+
+# RIGHT — capture before mutation
+original_due_at = ticket.sla_due_at
+ticket.sla_due_at = calculate_new_due_at(...)
+hours_overdue = (now - original_due_at).total_seconds() / 3600
+```
+
+## Boolean Resets Defeat Their Own Guards
+
+If a query filters by `flag == False` to find work to do, and the handler sets `flag = True` then sets it back to `False` before returning, the guard is permanently disarmed. Either keep the flag set, or add a separate counter cap (e.g. `escalation_count >= 3`) to prevent infinite re-entry. Whenever you reset a flag inside the same handler that set it, write a regression test that runs the handler twice on the same row and asserts the second run is a no-op.
+
 ## Enum Storage Pattern
 
 SQLAlchemy stores enum values as strings in the database, not as enum objects. When passing to functions, use the field directly:
