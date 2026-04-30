@@ -319,33 +319,39 @@ def postgres_container():
 
 @pytest.fixture(scope="session")
 def postgres_engine(postgres_container):
-    """Create a Postgres engine using testcontainers."""
+    """Create a Postgres engine using testcontainers. Schema is created once
+    per session; per-test isolation happens via TRUNCATE in postgres_db."""
     from sqlalchemy import create_engine
 
     engine = create_engine(postgres_container.get_connection_url())
+    Base.metadata.create_all(bind=engine)
     yield engine
     engine.dispose()
 
 
 @pytest.fixture
 def postgres_db(postgres_engine):
-    """Postgres-backed DB session for tests that need real timestamptz / JSONB."""
+    """Postgres-backed DB session — TRUNCATE between tests for isolation.
+
+    Using TRUNCATE CASCADE in reverse-dependency order avoids FK-ordering
+    issues that drop_all hits on Postgres, and keeps the schema stable
+    across the session so tests don't pay create_all/drop_all cost each run.
+    """
+    from sqlalchemy import text
     from sqlalchemy.orm import sessionmaker
 
-    # Create all tables
-    Base.metadata.create_all(bind=postgres_engine)
-
-    # Create session
     session_factory = sessionmaker(bind=postgres_engine)
     session = session_factory()
 
     try:
         yield session
-        session.rollback()
     finally:
         session.close()
-        # Clean up tables
-        Base.metadata.drop_all(bind=postgres_engine)
+        # Truncate all tables in reverse-dependency order with CASCADE
+        # so FK chains don't block cleanup.
+        with postgres_engine.begin() as conn:
+            for table in reversed(Base.metadata.sorted_tables):
+                conn.execute(text(f'TRUNCATE TABLE "{table.name}" CASCADE'))
 
 
 @pytest.fixture
