@@ -29,11 +29,11 @@ export function GoogleForStartupsStrip({ className = "" }: { className?: string 
   return (
     <section
       className={`w-full py-8 px-6 border-y border-[rgba(216,231,242,0.05)] bg-[rgba(166,218,255,0.02)] ${className}`}
-      aria-label="Backed by Google for Startups Cloud Program"
+      aria-label="Part of the Google for Startups Cloud Program"
     >
       <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
         <p className="text-xs uppercase tracking-[0.2em] text-[rgba(213,219,230,0.55)]">
-          Supported by
+          Part of
         </p>
         <Link
           href={PROGRAM_URL}
@@ -56,7 +56,7 @@ export function GoogleForStartupsCompact({ className = "" }: { className?: strin
       rel="noopener noreferrer"
       className={`inline-flex items-center text-xs text-[rgba(213,219,230,0.55)] hover:text-white transition-colors ${className}`}
     >
-      Supported by Google for Startups
+      Part of the Google for Startups Cloud Program
     </Link>
   );
 }
@@ -64,7 +64,7 @@ export function GoogleForStartupsCompact({ className = "" }: { className?: strin
 export function GoogleForStartupsInline({ className = "" }: { className?: string }) {
   return (
     <span className={className}>
-      AI Identity is a{" "}
+      AI Identity is part of the{" "}
       <Link
         href={PROGRAM_URL}
         target="_blank"
@@ -72,8 +72,8 @@ export function GoogleForStartupsInline({ className = "" }: { className?: string
         className="text-[rgb(166,218,255)] hover:underline"
       >
         Google for Startups Cloud Program
-      </Link>{" "}
-      portfolio company.
+      </Link>
+      .
     </span>
   );
 }
