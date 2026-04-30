@@ -7,8 +7,6 @@ Create Date: 2026-04-30 19:36:00.000000
 """
 
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "z7a8b9c0d1e2"
@@ -18,107 +16,70 @@ depends_on = None
 
 
 def upgrade():
-    # Create ticket_attachments table
-    op.create_table(
-        "ticket_attachments",
-        sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("ticket_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("comment_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), nullable=True),
-        sa.Column("org_id", postgresql.UUID(as_uuid=True), nullable=False),
-        sa.Column("filename", sa.String(length=255), nullable=False),
-        sa.Column("original_filename", sa.String(length=255), nullable=False),
-        sa.Column("content_type", sa.String(length=100), nullable=False),
-        sa.Column("size_bytes", sa.BigInteger(), nullable=False),
-        sa.Column("sha256", sa.String(length=64), nullable=False),
-        sa.Column("storage_path", sa.String(length=500), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["comment_id"],
-            ["ticket_comments.id"],
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["org_id"],
-            ["organizations.id"],
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["ticket_id"],
-            ["support_tickets.id"],
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["user_id"],
-            ["users.id"],
-            ondelete="SET NULL",
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("storage_path"),
-    )
+    # Use raw SQL with IF NOT EXISTS for idempotent migration —
+    # production runs Base.metadata.create_all() at app startup, which
+    # may have already created the table before this migration runs.
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS ticket_attachments (
+            id UUID NOT NULL,
+            ticket_id UUID NOT NULL,
+            comment_id UUID,
+            user_id UUID,
+            org_id UUID NOT NULL,
+            filename VARCHAR(255) NOT NULL,
+            original_filename VARCHAR(255) NOT NULL,
+            content_type VARCHAR(100) NOT NULL,
+            size_bytes BIGINT NOT NULL,
+            sha256 VARCHAR(64) NOT NULL,
+            storage_path VARCHAR(500) NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+            deleted_at TIMESTAMP WITH TIME ZONE,
+            PRIMARY KEY (id),
+            FOREIGN KEY(comment_id) REFERENCES ticket_comments (id) ON DELETE CASCADE,
+            FOREIGN KEY(org_id) REFERENCES organizations (id) ON DELETE CASCADE,
+            FOREIGN KEY(ticket_id) REFERENCES support_tickets (id) ON DELETE CASCADE,
+            FOREIGN KEY(user_id) REFERENCES users (id) ON DELETE SET NULL,
+            UNIQUE (storage_path)
+        )
+    """)
 
-    # Create indexes
-    op.create_index(
-        "ix_ticket_attachments_ticket_id",
-        "ticket_attachments",
-        ["ticket_id"],
-        unique=False,
+    # All indexes use IF NOT EXISTS for the same reason
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_ticket_attachments_ticket_id "
+        "ON ticket_attachments (ticket_id)"
     )
-    op.create_index(
-        "ix_ticket_attachments_comment_id",
-        "ticket_attachments",
-        ["comment_id"],
-        unique=False,
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_ticket_attachments_comment_id "
+        "ON ticket_attachments (comment_id)"
     )
-    op.create_index(
-        "ix_ticket_attachments_user_id",
-        "ticket_attachments",
-        ["user_id"],
-        unique=False,
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_ticket_attachments_user_id "
+        "ON ticket_attachments (user_id)"
     )
-    op.create_index(
-        "ix_ticket_attachments_org_id",
-        "ticket_attachments",
-        ["org_id"],
-        unique=False,
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_ticket_attachments_org_id "
+        "ON ticket_attachments (org_id)"
     )
-    op.create_index(
-        "ix_ticket_attachments_ticket_created",
-        "ticket_attachments",
-        ["ticket_id", "created_at"],
-        unique=False,
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_ticket_attachments_ticket_created "
+        "ON ticket_attachments (ticket_id, created_at)"
     )
-    op.create_index(
-        "ix_ticket_attachments_org_created",
-        "ticket_attachments",
-        ["org_id", "created_at"],
-        unique=False,
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_ticket_attachments_org_created "
+        "ON ticket_attachments (org_id, created_at)"
     )
-    op.create_index(
-        "ix_ticket_attachments_deleted",
-        "ticket_attachments",
-        ["deleted_at"],
-        unique=False,
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_ticket_attachments_deleted "
+        "ON ticket_attachments (deleted_at)"
     )
 
 
 def downgrade():
-    # Drop indexes
-    op.drop_index("ix_ticket_attachments_deleted", table_name="ticket_attachments")
-    op.drop_index("ix_ticket_attachments_org_created", table_name="ticket_attachments")
-    op.drop_index("ix_ticket_attachments_ticket_created", table_name="ticket_attachments")
-    op.drop_index("ix_ticket_attachments_org_id", table_name="ticket_attachments")
-    op.drop_index("ix_ticket_attachments_user_id", table_name="ticket_attachments")
-    op.drop_index("ix_ticket_attachments_comment_id", table_name="ticket_attachments")
-    op.drop_index("ix_ticket_attachments_ticket_id", table_name="ticket_attachments")
-
-    # Drop table
-    op.drop_table("ticket_attachments")
-
-# Made with Bob
+    op.execute("DROP INDEX IF EXISTS ix_ticket_attachments_deleted")
+    op.execute("DROP INDEX IF EXISTS ix_ticket_attachments_org_created")
+    op.execute("DROP INDEX IF EXISTS ix_ticket_attachments_ticket_created")
+    op.execute("DROP INDEX IF EXISTS ix_ticket_attachments_org_id")
+    op.execute("DROP INDEX IF EXISTS ix_ticket_attachments_user_id")
+    op.execute("DROP INDEX IF EXISTS ix_ticket_attachments_comment_id")
+    op.execute("DROP INDEX IF EXISTS ix_ticket_attachments_ticket_id")
+    op.execute("DROP TABLE IF EXISTS ticket_attachments")
