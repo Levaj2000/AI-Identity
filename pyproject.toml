@@ -25,6 +25,10 @@ quote-style = "double"
 [tool.pytest.ini_options]
 testpaths = ["api/tests", "gateway/tests", "common/tests"]
 pythonpath = ["."]
+markers = [
+    "postgres: marks tests that require a Postgres database (deselect with '-m \"not postgres\"')",
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
 
 [tool.mypy]
 python_version = "3.11"
