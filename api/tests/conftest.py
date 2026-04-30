@@ -87,9 +87,20 @@ def db_session():
         Base.metadata.drop_all(bind=engine)
 
 
+@pytest.fixture(autouse=True)
+def mock_internal_service_key(monkeypatch):
+    """Set a test internal service key for cron endpoint tests."""
+    from common.config.settings import settings
+
+    monkeypatch.setattr(settings, "internal_service_key", "test-internal-key-xyz")
+
+
 @pytest.fixture
 def test_user(db_session):
-    """Pre-created test user."""
+    """Pre-created test user with organization."""
+    from common.models import Organization
+
+    # Create user first (without org_id)
     user = User(
         id=TEST_USER_ID,
         email=TEST_API_KEY,
@@ -97,6 +108,21 @@ def test_user(db_session):
         tier="enterprise",  # Tests need unlimited quotas
     )
     db_session.add(user)
+    db_session.flush()
+
+    # Create organization
+    org_id = uuid.UUID("00000000-0000-0000-0000-000000000100")
+    org = Organization(
+        id=org_id,
+        name="Test Organization",
+        owner_id=user.id,
+        tier="enterprise",
+    )
+    db_session.add(org)
+    db_session.flush()
+
+    # Wire up user.org_id
+    user.org_id = org_id
     db_session.commit()
     db_session.refresh(user)
     return user
@@ -128,6 +154,9 @@ def auth_headers():
 @pytest.fixture
 def other_user(db_session):
     """A second user for testing ownership isolation."""
+    from common.models import Organization
+
+    # Create user first (without org_id)
     user = User(
         id=uuid.UUID("00000000-0000-0000-0000-000000000002"),
         email="other-user-api-key-87654321",
@@ -135,6 +164,42 @@ def other_user(db_session):
         tier="enterprise",  # Tests need unlimited quotas
     )
     db_session.add(user)
+    db_session.flush()
+
+    # Create organization
+    org_id = uuid.UUID("00000000-0000-0000-0000-000000000200")
+    org = Organization(
+        id=org_id,
+        name="Other Organization",
+        owner_id=user.id,
+        tier="enterprise",
+    )
+    db_session.add(org)
+    db_session.flush()
+
+    # Wire up user.org_id
+    user.org_id = org_id
     db_session.commit()
     db_session.refresh(user)
     return user
+
+
+@pytest.fixture
+def admin_user(db_session):
+    """Admin user for testing admin-only operations."""
+    user = User(
+        id=uuid.UUID("00000000-0000-0000-0000-000000000003"),
+        email="admin-api-key-99999999",
+        role="admin",
+        tier="enterprise",
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def admin_headers(admin_user):
+    """Auth headers for admin user."""
+    return {"X-API-Key": admin_user.email}
