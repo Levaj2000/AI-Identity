@@ -10,6 +10,87 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
+    slug: "ai-agent-incident-response-first-24-hours",
+    title:
+      "When Your AI Agent Goes Wrong: The First 24 Hours of a Forensic Investigation",
+    date: "April 30, 2026",
+    readTime: "11 min read",
+    excerpt:
+      "An autonomous agent just took an action it shouldn't have. The pager is going off, the compliance officer wants answers by Monday, and the next 24 hours will be determined entirely by the substrate that was running at the time of the action. This post is a playbook — hour by hour — for what an AI forensic investigation looks like when the primitives are in place, and what teams without them cannot answer.",
+    tags: [
+      "AI Forensics",
+      "Incident Response",
+      "Audit Trails",
+      "Agent Governance",
+      "Security",
+    ],
+    sections: [
+      {
+        heading: "The Page That Starts the Clock",
+        content: [
+          "Friday afternoon. A finance-operations agent that has been running cleanly for six weeks just executed a wire transfer to a vendor account nobody on the finance team recognizes. The transaction posted in production. The agent's session log says it followed a policy. The compliance officer wants to know — by Monday morning — exactly what happened, who authorized it, what the agent was reasoning about when it took the action, and whether other transactions in the past quarter need to be reviewed.",
+          "This is the moment every team running autonomous AI in production will eventually face. The specifics vary — a healthcare agent that escalated the wrong patient, a legal-research agent that retrieved privileged content from a sealed matter, a customer-support agent that issued refunds outside its scope — but the structure of the incident is identical. An agent took action. The action looks wrong. There are 24 to 72 hours before someone with regulatory or fiduciary standing demands a full reconstruction. What you can answer in that window is determined entirely by the substrate you put in place before the agent ever ran.",
+          "This post is a playbook for what happens in those hours when the substrate exists. It walks through the first 24 hours of an AI forensic investigation hour by hour, naming the artifacts produced at each stage and the questions each artifact lets you answer with primary-source evidence. It is not a theoretical exercise. Every step described here corresponds to a primitive AI Identity ships in production today.",
+        ],
+      },
+      {
+        heading: "Hour 0: The Investigation You Either Have or You Don't",
+        content: [
+          "At hour zero — the moment the page goes off — the determining factor is not the skill of your incident-response team. It is whether your agent stack was built with forensic primitives from the start. Four prerequisites are non-negotiable: every agent has a unique cryptographic identity that cannot be impersonated, every action passes through a fail-closed policy gateway that records its own enforcement decisions, every audit row is bound to the row before it via HMAC-SHA256 in a tamper-evident chain, and every session produces a signed attestation that any auditor can verify offline. None of these can be bolted on after the incident. Either they were running in production at the time of the action, or you have no evidence — only logs.",
+          "Teams without these primitives reach hour zero and discover that the questions they need to answer have no authoritative source of truth. Provider-side logs are mutable. Application logs are timestamped by the application, which means the application could have lied about when an event occurred. The agent's session is a string identifier in a JSON blob, which means the agent could have been anyone. The policy decision was made inline by the agent runtime, which means there is no neutral party that can attest the rule was enforced. These are not hypotheticals — they are the default state of the agent ecosystem in 2026, and they are exactly why \"the audit trail\" is not the same thing as \"evidence.\" The companion post on [why log-based audit trails fail for AI agent governance](/blog/why-log-based-audit-trails-fail-ai-agent-governance) covers this gap in detail.",
+        ],
+      },
+      {
+        heading: "Hour 1: Triage and Evidence Lockdown",
+        content: [
+          "The first technical move in any incident response is to stop the bleeding without destroying the evidence. For an AI agent that just took a problematic action, this means three steps in this order: revoke the agent's keys so it cannot continue to act, snapshot the audit chain at a known boundary so the chain hash for the incident range is fixed and cannot drift, and mint a signed attestation that explicitly covers the incident range — first audit row, last audit row, event count, chain hash — so the proof of what happened is captured before any subsequent activity changes the surrounding context.",
+          "AI Identity makes each of these one API call. Key revocation invalidates the credential immediately at the gateway and rejects all in-flight requests on that key. The audit chain is implicitly snapshot at the moment the next attestation is signed, which the dashboard can trigger on demand or through a scheduled job. The attestation envelope itself is a small DSSE artifact, signed with ECDSA over the P-256 curve, that commits cryptographically to exactly the range of agent activity under investigation. Once these three steps are complete, the evidence is fixed. Anything that happens next happens with the evidence already secured.",
+          "The discipline matters more than the speed. An incident-response team that races into reconstruction before locking down evidence is the same team that, three weeks later, cannot prove the audit trail they are reading is the same audit trail that existed at the time of the incident. The cryptographic primitives exist precisely to take that doubt off the table — but only if they are used in this order, at this stage, every time.",
+        ],
+      },
+      {
+        heading: "Hour 4: Reconstructing What the Agent Actually Did",
+        content: [
+          "With the evidence locked, the next phase is reconstruction. The incident range is a sequence of audit rows, ordered deterministically by audit ID. Each row records the agent's identity, the user and organization on whose behalf the action was taken, the endpoint and HTTP method the agent attempted to call, the enforcement decision (allow, deny, or error), the cost and latency of the call, the structured request context, and the entry hash that binds the row to the row before it. This is not a debug trace. It is the primary source.",
+          "Reconstruction proceeds by reading the rows in order and answering the question each row was created to answer. Did the agent attempt this call? There is a row. Did the gateway allow it? The enforcement decision is an explicit field, set by the gateway, not by the agent. Did the agent succeed? The response status and the next row in the chain show what happened next. Was a tool invoked as part of the response? The next audit row binds the tool call to the same session and step. The full chain of decisions, end to end, is recoverable without reference to vendor-supplied summaries or marketing diagrams.",
+          "The forensic question this phase answers is the simple, devastating one: did the agent do what we think it did, and only what we think it did? The audit chain answers it row by row. Each row is independently verifiable against the entry before it. Tampering with any single row breaks the hash for that row and every row that follows it, and the point of divergence is cryptographically provable. The investigator can hand a junior analyst the chain and a verifier, and the answer is the same regardless of who runs it. The post on [offline attestation verification](/blog/offline-attestation-verification-proving-ai-agent-behavior) walks through the cryptographic construction step by step.",
+        ],
+      },
+      {
+        heading: "Hour 12: Attribution and the Authorization Chain",
+        content: [
+          "Reconstruction tells you what the agent did. Attribution tells you who or what authorized each step. By hour 12, the investigation moves from \"what happened\" to \"who is responsible.\" Every audit row in the incident range carries the agent identity, the user identity behind the agent, the organization the user belongs to, and the policy decision that gated the action. Tracing backward from the failed action through this chain produces a complete picture of how the action was authorized — or how the authorization was bypassed.",
+          "The interesting cases are almost never simple. An agent operating within its scoped permissions but making a poor decision is a different incident than an agent that exceeded its scope, which is different again from an agent whose scope was misconfigured at provisioning time. Per-agent identity and policy decisions logged inline let the investigator distinguish among these cases with primary-source evidence rather than inference. The agent's metadata at the time of the action — its declared capabilities, its allowed tools, its rate limits, its spending caps — is recoverable because it was committed to the audit chain when the action ran. Recreating it from a current snapshot of configuration would be reconstruction, not evidence.",
+          "This is also the phase where attribution touches the broader IAM substrate. Who provisioned the agent? Who granted it the credential it used? Who approved the policy that allowed the action? AI Identity's audit chain is scoped per organization, but the cross-references — to the human IAM, to the change-management system, to the Git repository where the policy lives — let an investigator move from \"the agent did X\" to \"the agent did X because human Y approved policy Z three weeks ago.\" That is the form an enterprise post-mortem actually takes when it is run with intent.",
+        ],
+      },
+      {
+        heading: "Hour 24: Producing Evidence That Holds Up",
+        content: [
+          "At hour 24, the investigation produces an artifact. Not a slide deck. Not a summary memo. An artifact — a small set of bytes — that any auditor, regulator, customer's security team, or opposing counsel can independently verify without trusting the vendor that produced it. For AI Identity, that artifact is a DSSE-signed attestation envelope covering the incident range, a public verification key (or a JWKS endpoint URL), and the offline verifier output. The verifier returns pass or fail in under a second. Its source code is auditable. Its cryptographic primitives are standard.",
+          "This is the form of evidence that survives contact with serious regulatory regimes. EU AI Act Article 12 requires automated decisions to be traceable. SOC 2 Type II requires evidence of controls operating over a reporting period. NIST AI RMF Measure requires the ability to attribute outcomes to specific system components. HIPAA and GLBA require chain of custody for access to protected information. Each of these standards is built around the assumption that evidence can be independently verified by parties outside the entity that produced it. A signed range attestation, paired with a public key and an offline verifier, satisfies that assumption. A vendor-hosted dashboard with a \"trust us\" button does not.",
+          "The same artifact serves multiple audiences from a single forensic event. The compliance officer hands it to the auditor. The CISO hands a redacted version to the customer's security team. Internal counsel hands it to outside counsel. Each downstream consumer runs the same verifier and gets the same answer. The investigation is over not when the report is written, but when the artifact has been independently confirmed by a party outside the chain of trust that produced it. That is the bar for forensic-grade evidence, and it is the bar conventional audit trails do not clear.",
+        ],
+      },
+      {
+        heading: "What Teams Without a Forensic Substrate Cannot Answer",
+        content: [
+          "It is worth being explicit about the alternative. A team running autonomous AI without per-agent cryptographic identity, fail-closed policy enforcement, hash-chained audit trails, and signed range attestations reaches hour 24 of the same incident with a fundamentally different posture. Their evidence is application logs in Datadog, plus a database table of agent activity, plus screenshots of the dashboard taken at the time of triage. Each of these can be tampered with after the fact. None of them can be independently verified. The narrative of what happened is reconstructed from inference, not primary source.",
+          "When the auditor asks \"can you prove this log was not edited after the incident,\" the honest answer in the conventional setup is no. When the regulator asks \"can you prove the agent operated under the same policy at the time of the action that you have in production today,\" the honest answer is no. When opposing counsel in litigation asks \"how did you authenticate the identity of the agent that took this action,\" the honest answer is the application generated a UUID and put it in a JSON field. None of these failures of evidence are recoverable after the fact. They are determined entirely by the substrate that was running at the time of the action.",
+          "The clearest signal that an organization has not crossed this threshold is what happens during the security review of its first regulated customer. The deal stalls at the audit-evidence question. The vendor offers a SOC 2 report from their hosting provider, screenshots of their internal dashboard, and a willingness to share logs on request. The customer's security team — who has run forensic investigations at scale in other domains — recognizes immediately that this is trust, not evidence, and tells the procurement team the deal cannot close. AI Identity exists because this conversation happens at every serious enterprise AI procurement, and because the only path through it is forensic primitives that were running before the incident, not after.",
+        ],
+      },
+      {
+        heading: "Build the Substrate Before the Incident, Not After",
+        content: [
+          "Every AI forensic investigation that succeeds was made possible by decisions taken months before the incident. Per-agent identity at provisioning time. Hash-chained audit at every write. Signed range attestations at every session boundary. An offline verifier in the hands of every customer who needs to confirm claims independently. None of these can be retrofit. They have to be running when the action runs, or the evidence is permanently degraded.",
+          "AI Identity ships this substrate as a production platform. Per-agent cryptographic credentials with deny-by-default scoping. A fail-closed policy gateway that records its own enforcement decisions. HMAC-SHA256 hash-chained audit logs with server-set timestamps and JSON canonicalization (RFC 8785). DSSE-signed range attestations using ECDSA over P-256. An offline verifier CLI written in fewer than 100 lines of Python with no dependency on the vendor service. Read the architecture in detail in [introducing AI forensics](/blog/introducing-ai-forensics), or walk through the runtime in [how it works](/how-it-works).",
+          "For teams already shipping autonomous agents into regulated environments, the question is not whether to build this substrate — the question is whether to build it before the first serious incident or after. The first option produces a forensic investigation that succeeds. The second option produces a deal that does not close, an audit that does not pass, or a regulator that imposes a corrective action plan. Start with the [free tier](/pricing) — five agents and the full forensic substrate included — or talk to the team about a [design partnership](/about) for organizations with specific regulatory requirements.",
+        ],
+      },
+    ],
+  },
+  {
     slug: "offline-attestation-verification-proving-ai-agent-behavior",
     title:
       "Offline Attestation Verification: Proving AI Agent Behavior Without Trusting the Vendor",

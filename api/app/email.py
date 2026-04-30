@@ -257,6 +257,191 @@ def send_support_ticket_notification(
         return email_id
     except Exception as e:
         logger.error("Failed to send ticket notification for %s: %s", ticket_number, e)
+
+
+def send_ticket_created_email(
+    user_email: str,
+    ticket_number: str,
+    subject: str,
+    priority: str,
+) -> str | None:
+    """Send confirmation email to customer when ticket is created.
+
+    Fire-and-forget — never blocks ticket creation.
+    Returns the Resend email ID on success, None otherwise.
+    """
+    if not _is_configured():
+        logger.info("Resend not configured — skipping customer email for %s", ticket_number)
+        return None
+
+    resend.api_key = settings.resend_api_key
+
+    try:
+        result = resend.Emails.send(
+            {
+                "from": settings.resend_from_email,
+                "to": [user_email],
+                "reply_to": settings.resend_reply_to,
+                "subject": f"Support Ticket Created: {ticket_number}",
+                "html": _ticket_created_html(
+                    ticket_number=ticket_number,
+                    subject=subject,
+                    priority=priority,
+                ),
+            }
+        )
+        email_id = result.get("id") if isinstance(result, dict) else getattr(result, "id", None)
+        logger.info(
+            "Ticket created email sent: ticket=%s, user=%s, resend_id=%s",
+            ticket_number,
+            user_email,
+            email_id,
+        )
+        return email_id
+    except Exception as e:
+        logger.error("Failed to send ticket created email for %s: %s", ticket_number, e)
+        return None
+
+
+def send_ticket_status_update_email(
+    user_email: str,
+    ticket_number: str,
+    subject: str,
+    new_status: str,
+    resolution_comment: str | None = None,
+) -> str | None:
+    """Send email when ticket status changes (especially RESOLVED/CLOSED).
+
+    Fire-and-forget — never blocks ticket updates.
+    Returns the Resend email ID on success, None otherwise.
+    """
+    if not _is_configured():
+        logger.info("Resend not configured — skipping status update email for %s", ticket_number)
+        return None
+
+    resend.api_key = settings.resend_api_key
+
+    try:
+        result = resend.Emails.send(
+            {
+                "from": settings.resend_from_email,
+                "to": [user_email],
+                "reply_to": settings.resend_reply_to,
+                "subject": f"Ticket {ticket_number} Status Updated: {new_status.replace('_', ' ').title()}",
+                "html": _ticket_status_update_html(
+                    ticket_number=ticket_number,
+                    subject=subject,
+                    new_status=new_status,
+                    resolution_comment=resolution_comment,
+                ),
+            }
+        )
+        email_id = result.get("id") if isinstance(result, dict) else getattr(result, "id", None)
+        logger.info(
+            "Ticket status update email sent: ticket=%s, status=%s, user=%s, resend_id=%s",
+            ticket_number,
+            new_status,
+            user_email,
+            email_id,
+        )
+        return email_id
+    except Exception as e:
+        logger.error("Failed to send status update email for %s: %s", ticket_number, e)
+        return None
+
+
+def send_ticket_comment_email(
+    user_email: str,
+    ticket_number: str,
+    subject: str,
+    commenter_email: str,
+    comment_preview: str,
+) -> str | None:
+    """Send email when new public comment is added (not for internal comments).
+
+    Fire-and-forget — never blocks comment creation.
+    Returns the Resend email ID on success, None otherwise.
+    """
+    if not _is_configured():
+        logger.info("Resend not configured — skipping comment email for %s", ticket_number)
+        return None
+
+    resend.api_key = settings.resend_api_key
+
+    try:
+        result = resend.Emails.send(
+            {
+                "from": settings.resend_from_email,
+                "to": [user_email],
+                "reply_to": settings.resend_reply_to,
+                "subject": f"New Comment on Ticket {ticket_number}",
+                "html": _ticket_comment_html(
+                    ticket_number=ticket_number,
+                    subject=subject,
+                    commenter_email=commenter_email,
+                    comment_preview=comment_preview,
+                ),
+            }
+        )
+        email_id = result.get("id") if isinstance(result, dict) else getattr(result, "id", None)
+        logger.info(
+            "Ticket comment email sent: ticket=%s, user=%s, resend_id=%s",
+            ticket_number,
+            user_email,
+            email_id,
+        )
+        return email_id
+    except Exception as e:
+        logger.error("Failed to send comment email for %s: %s", ticket_number, e)
+        return None
+
+
+def send_sla_breach_notification(
+    ticket_number: str,
+    subject: str,
+    old_priority: str,
+    new_priority: str,
+    hours_overdue: float,
+) -> str | None:
+    """Send notification when a ticket breaches its SLA.
+
+    Sent to support team only (internal notification).
+    Fire-and-forget — never blocks escalation.
+    Returns the Resend email ID on success, None otherwise.
+    """
+    if not _is_configured():
+        logger.info(
+            "Resend not configured — skipping SLA breach notification for %s", ticket_number
+        )
+        return None
+
+    resend.api_key = settings.resend_api_key
+
+    try:
+        result = resend.Emails.send(
+            {
+                "from": settings.resend_from_email,
+                "to": ["jeff@ai-identity.co"],
+                "reply_to": settings.resend_reply_to,
+                "subject": f"🚨 SLA Breach: {ticket_number} - {subject}",
+                "html": _sla_breach_html(
+                    ticket_number=ticket_number,
+                    subject=subject,
+                    old_priority=old_priority,
+                    new_priority=new_priority,
+                    hours_overdue=hours_overdue,
+                ),
+            }
+        )
+        email_id = result.get("id") if isinstance(result, dict) else getattr(result, "id", None)
+        logger.info(
+            "SLA breach notification sent: ticket=%s, resend_id=%s",
+            ticket_number,
+            email_id,
+        )
+        return email_id
+    except Exception as e:
+        logger.error("Failed to send SLA breach notification for %s: %s", ticket_number, e)
         return None
 
 
@@ -372,3 +557,251 @@ def _support_ticket_notification_html(
 <p style="font-size:13px;color:#6b7280;">
   Reply directly to this email to respond to the customer.
 </p>""")
+
+
+def _ticket_created_html(ticket_number: str, subject: str, priority: str) -> str:
+    """Customer confirmation email — ticket created."""
+    # Priority badge colors
+    priority_colors = {
+        "low": "#10B981",
+        "medium": "#F59E0B",
+        "high": "#EF4444",
+        "urgent": "#DC2626",
+    }
+    priority_color = priority_colors.get(priority.lower(), "#6B7280")
+
+    return _email_wrapper(f"""\
+<p>Your support ticket has been created successfully.</p>
+
+<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:16px;margin:16px 0;">
+  <p style="margin:0 0 8px;color:#6b7280;font-size:13px;font-weight:600;">Ticket Number:</p>
+  <p style="margin:0;font-family:monospace;font-size:16px;font-weight:600;">{ticket_number}</p>
+</div>
+
+<div style="background:#FEF2F2;border-left:4px solid {priority_color};padding:12px 16px;margin:16px 0;border-radius:4px;">
+  <p style="margin:0;font-weight:600;font-size:15px;">{subject}</p>
+  <p style="margin:4px 0 0;color:#6b7280;font-size:13px;">
+    <span style="background:{priority_color};color:white;padding:2px 8px;border-radius:4px;font-weight:600;text-transform:uppercase;font-size:11px;">{priority}</span>
+  </p>
+</div>
+
+<p><strong>What happens next?</strong></p>
+<ul style="padding-left:20px;color:#374151;">
+  <li>Our support team has been notified and will review your ticket</li>
+  <li>You'll receive email updates when there are status changes or new comments</li>
+  <li>You can view your ticket anytime in the dashboard</li>
+</ul>
+
+<table cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;">
+  <tr>
+    <td style="background:#F59E0B;border-radius:6px;padding:10px 20px;">
+      <a href="https://dashboard.ai-identity.co/support" style="color:#0A0A0B;text-decoration:none;font-weight:600;font-size:14px;">View My Tickets</a>
+    </td>
+  </tr>
+</table>
+
+<p style="font-size:13px;color:#6b7280;">
+  You can reply directly to this email to add comments to your ticket.
+</p>
+
+<p>
+  Jeff Leva<br>
+  <span style="color:#6b7280;font-size:13px;">Founder, AI Identity</span>
+</p>""")
+
+
+def _ticket_status_update_html(
+    ticket_number: str,
+    subject: str,
+    new_status: str,
+    resolution_comment: str | None = None,
+) -> str:
+    """Customer notification email — ticket status changed."""
+    status_display = new_status.replace("_", " ").title()
+
+    # Status-specific messaging
+    status_messages = {
+        "in_progress": "Our team is actively working on your ticket.",
+        "waiting_customer": "We need additional information from you to proceed.",
+        "resolved": "Your ticket has been resolved! If you're satisfied with the resolution, no further action is needed.",
+        "closed": "Your ticket has been closed. If you need further assistance, feel free to create a new ticket.",
+    }
+    status_message = status_messages.get(new_status, "Your ticket status has been updated.")
+
+    # Status badge colors
+    status_colors = {
+        "open": "#6B7280",
+        "in_progress": "#F59E0B",
+        "waiting_customer": "#8B5CF6",
+        "resolved": "#10B981",
+        "closed": "#6B7280",
+    }
+    status_color = status_colors.get(new_status, "#6B7280")
+
+    resolution_section = ""
+    if resolution_comment and new_status in ["resolved", "closed"]:
+        resolution_section = f"""
+<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;padding:16px;margin:16px 0;">
+  <p style="margin:0 0 8px;color:#166534;font-size:13px;font-weight:600;">Resolution:</p>
+  <p style="margin:0;color:#166534;white-space:pre-wrap;">{resolution_comment}</p>
+</div>"""
+
+    return _email_wrapper(f"""\
+<p>Your support ticket status has been updated.</p>
+
+<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:16px;margin:16px 0;">
+  <p style="margin:0 0 8px;color:#6b7280;font-size:13px;font-weight:600;">Ticket Number:</p>
+  <p style="margin:0 0 12px;font-family:monospace;font-size:16px;font-weight:600;">{ticket_number}</p>
+
+  <p style="margin:0 0 8px;color:#6b7280;font-size:13px;font-weight:600;">Subject:</p>
+  <p style="margin:0 0 12px;">{subject}</p>
+
+  <p style="margin:0 0 8px;color:#6b7280;font-size:13px;font-weight:600;">New Status:</p>
+  <p style="margin:0;">
+    <span style="background:{status_color};color:white;padding:4px 12px;border-radius:4px;font-weight:600;text-transform:uppercase;font-size:12px;">{status_display}</span>
+  </p>
+</div>
+
+<p>{status_message}</p>
+
+{resolution_section}
+
+<table cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;">
+  <tr>
+    <td style="background:#F59E0B;border-radius:6px;padding:10px 20px;">
+      <a href="https://dashboard.ai-identity.co/support" style="color:#0A0A0B;text-decoration:none;font-weight:600;font-size:14px;">View Ticket</a>
+    </td>
+  </tr>
+</table>
+
+<p style="font-size:13px;color:#6b7280;">
+  Reply to this email to add a comment to your ticket.
+</p>
+
+<p>
+  Jeff Leva<br>
+  <span style="color:#6b7280;font-size:13px;">Founder, AI Identity</span>
+</p>""")
+
+
+def _ticket_comment_html(
+    ticket_number: str,
+    subject: str,
+    commenter_email: str,
+    comment_preview: str,
+) -> str:
+    """Customer notification email — new comment added."""
+    # Truncate preview if too long
+    if len(comment_preview) > 200:
+        comment_preview = comment_preview[:197] + "..."
+
+    return _email_wrapper(f"""\
+<p>A new comment has been added to your support ticket.</p>
+
+<div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:16px;margin:16px 0;">
+  <p style="margin:0 0 8px;color:#6b7280;font-size:13px;font-weight:600;">Ticket Number:</p>
+  <p style="margin:0 0 12px;font-family:monospace;font-size:16px;font-weight:600;">{ticket_number}</p>
+
+  <p style="margin:0 0 8px;color:#6b7280;font-size:13px;font-weight:600;">Subject:</p>
+  <p style="margin:0;">{subject}</p>
+</div>
+
+<div style="background:#FFFBEB;border-left:4px solid #F59E0B;padding:12px 16px;margin:16px 0;border-radius:4px;">
+  <p style="margin:0 0 8px;color:#92400E;font-size:13px;font-weight:600;">From: {commenter_email}</p>
+  <p style="margin:0;color:#78350F;white-space:pre-wrap;">{comment_preview}</p>
+</div>
+
+<table cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;">
+  <tr>
+    <td style="background:#F59E0B;border-radius:6px;padding:10px 20px;">
+      <a href="https://dashboard.ai-identity.co/support" style="color:#0A0A0B;text-decoration:none;font-weight:600;font-size:14px;">View Full Comment</a>
+    </td>
+  </tr>
+</table>
+
+<p style="font-size:13px;color:#6b7280;">
+  Reply to this email to add your own comment.
+</p>
+
+<p>
+  Jeff Leva<br>
+  <span style="color:#6b7280;font-size:13px;">Founder, AI Identity</span>
+</p>""")
+
+
+def _sla_breach_html(
+    ticket_number: str,
+    subject: str,
+    old_priority: str,
+    new_priority: str,
+    hours_overdue: float,
+) -> str:
+    """SLA breach notification — sent to support team."""
+    from datetime import datetime
+
+    now = datetime.now(UTC).strftime("%b %d, %Y at %I:%M %p UTC")
+
+    # Priority badge colors
+    priority_colors = {
+        "low": "#10B981",
+        "medium": "#F59E0B",
+        "high": "#EF4444",
+        "urgent": "#DC2626",
+    }
+    old_color = priority_colors.get(old_priority.lower(), "#6B7280")
+    new_color = priority_colors.get(new_priority.lower(), "#DC2626")
+
+    return _email_wrapper(f"""\
+<p style="font-size:16px;font-weight:600;color:#DC2626;">🚨 SLA Breach Alert</p>
+
+<div style="background:#FEF2F2;border-left:4px solid #DC2626;padding:12px 16px;margin:16px 0;border-radius:4px;">
+  <p style="margin:0;font-weight:600;font-size:15px;">{subject}</p>
+  <p style="margin:4px 0 0;color:#6b7280;font-size:13px;">
+    Ticket {ticket_number} has breached its SLA and has been automatically escalated.
+  </p>
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr>
+    <td style="padding:8px 0;color:#6b7280;font-size:14px;">Ticket Number</td>
+    <td style="padding:8px 0;font-weight:600;font-family:monospace;">{ticket_number}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#6b7280;font-size:14px;">Hours Overdue</td>
+    <td style="padding:8px 0;font-weight:600;color:#DC2626;">{hours_overdue:.1f} hours</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#6b7280;font-size:14px;">Priority Change</td>
+    <td style="padding:8px 0;">
+      <span style="background:{old_color};color:white;padding:2px 8px;border-radius:4px;font-weight:600;text-transform:uppercase;font-size:11px;">{old_priority}</span>
+      <span style="margin:0 8px;">→</span>
+      <span style="background:{new_color};color:white;padding:2px 8px;border-radius:4px;font-weight:600;text-transform:uppercase;font-size:11px;">{new_priority}</span>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:8px 0;color:#6b7280;font-size:14px;">Escalated At</td>
+    <td style="padding:8px 0;">{now}</td>
+  </tr>
+</table>
+
+<div style="background:#FFFBEB;border:1px solid #FCD34D;border-radius:8px;padding:16px;margin:16px 0;">
+  <p style="margin:0;color:#92400E;font-weight:600;">⚠️ Action Required</p>
+  <p style="margin:8px 0 0;color:#78350F;">This ticket requires immediate attention. Please review and respond as soon as possible.</p>
+</div>
+
+<table cellpadding="0" cellspacing="0" border="0" style="margin:16px 0;">
+  <tr>
+    <td style="background:#DC2626;border-radius:6px;padding:10px 20px;">
+      <a href="https://dashboard.ai-identity.co/support" style="color:#FFFFFF;text-decoration:none;font-weight:600;font-size:14px;">View Ticket Now</a>
+    </td>
+  </tr>
+</table>
+
+<p style="font-size:13px;color:#6b7280;">
+  This is an automated notification from the SLA monitoring system.
+</p>""")
+
+
+# Made with Bob
+
+# Made with Bob

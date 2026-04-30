@@ -186,6 +186,11 @@ async def create_ticket(
     # Generate unique ticket number
     ticket_number = _generate_ticket_number(db)
 
+    # Calculate SLA due time
+    from api.app.sla import calculate_sla_due_at
+
+    sla_due_at = calculate_sla_due_at(data.priority, datetime.now(UTC))
+
     # Create ticket
     ticket = SupportTicket(
         ticket_number=ticket_number,
@@ -198,6 +203,9 @@ async def create_ticket(
         category=data.category,
         related_agent_id=data.related_agent_id,
         related_audit_log_ids=data.related_audit_log_ids or [],
+        sla_due_at=sla_due_at,
+        sla_breached=False,
+        escalation_count=0,
     )
 
     db.add(ticket)
@@ -211,7 +219,7 @@ async def create_ticket(
         ticket.subject,
     )
 
-    # Send email notification to support team (fire-and-forget)
+    # Send email notifications (fire-and-forget)
     try:
         agent_name = None
         if data.related_agent_id:
@@ -219,6 +227,7 @@ async def create_ticket(
             if agent:
                 agent_name = agent.name
 
+        # Notify support team
         send_support_ticket_notification(
             ticket_id=str(ticket.id),
             ticket_number=ticket.ticket_number,
@@ -230,9 +239,19 @@ async def create_ticket(
             user_name=None,  # User model doesn't have first_name field
             agent_name=agent_name,
         )
+
+        # Notify customer
+        from api.app.email import send_ticket_created_email
+
+        send_ticket_created_email(
+            user_email=user.email,
+            ticket_number=ticket.ticket_number,
+            subject=ticket.subject,
+            priority=ticket.priority,
+        )
     except Exception as e:
         # Never block ticket creation on email failure
-        logger.error("Failed to send ticket notification email: %s", e)
+        logger.error("Failed to send ticket notification emails: %s", e)
 
     return _build_ticket_response(ticket, db, include_comments=True)
 
@@ -358,10 +377,13 @@ async def update_ticket(
         ticket.priority = data.priority
 
     # Admin-only fields
+    status_changed = False
+    old_status = None
     if user.role == "admin":
         if data.status is not None:
             old_status = ticket.status
             ticket.status = data.status
+            status_changed = True
 
             # Set resolved_at when status changes to resolved
             if data.status == TicketStatus.RESOLVED and old_status != TicketStatus.RESOLVED:
@@ -386,6 +408,35 @@ async def update_ticket(
     db.refresh(ticket)
 
     logger.info("Updated ticket %s by user %s", ticket.ticket_number, user.email)
+
+    # Send status update email if status changed to resolved or closed
+    if status_changed and data.status in [TicketStatus.RESOLVED, TicketStatus.CLOSED]:
+        try:
+            from api.app.email import send_ticket_status_update_email
+
+            # Get the last comment as resolution comment if available
+            resolution_comment = None
+            last_comment = (
+                db.query(TicketComment)
+                .filter(TicketComment.ticket_id == ticket.id)
+                .order_by(TicketComment.created_at.desc())
+                .first()
+            )
+            if last_comment and not last_comment.is_internal:
+                resolution_comment = last_comment.content
+
+            # Get ticket owner
+            ticket_owner = db.query(User).filter(User.id == ticket.user_id).first()
+            if ticket_owner:
+                send_ticket_status_update_email(
+                    user_email=ticket_owner.email,
+                    ticket_number=ticket.ticket_number,
+                    subject=ticket.subject,
+                    new_status=data.status,
+                    resolution_comment=resolution_comment,
+                )
+        except Exception as e:
+            logger.error("Failed to send status update email for %s: %s", ticket.ticket_number, e)
 
     return _build_ticket_response(ticket, db, include_comments=True)
 
@@ -443,6 +494,27 @@ async def add_comment(
         ticket.ticket_number,
         user.email,
     )
+
+    # Send email notification for public comments (not internal, not self-comments)
+    if not data.is_internal and ticket.user_id != user.id:
+        try:
+            from api.app.email import send_ticket_comment_email
+
+            # Get ticket owner
+            ticket_owner = db.query(User).filter(User.id == ticket.user_id).first()
+            if ticket_owner:
+                # Truncate comment for preview
+                comment_preview = data.content[:200] if len(data.content) > 200 else data.content
+
+                send_ticket_comment_email(
+                    user_email=ticket_owner.email,
+                    ticket_number=ticket.ticket_number,
+                    subject=ticket.subject,
+                    commenter_email=user.email,
+                    comment_preview=comment_preview,
+                )
+        except Exception as e:
+            logger.error("Failed to send comment email for %s: %s", ticket.ticket_number, e)
 
     return CommentResponse(
         id=comment.id,
