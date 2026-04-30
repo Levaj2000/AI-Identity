@@ -253,7 +253,7 @@ export default function About() {
               </span>
               <span className="text-[rgba(213,219,230,0.3)]">·</span>
               <span className="text-[rgba(213,219,230,0.9)]">
-                <span className="font-medium">Built on Google Cloud</span>
+                <span className="font-medium">Runs on Google Cloud</span>
               </span>
             </div>
           </div>
