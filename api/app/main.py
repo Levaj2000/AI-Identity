@@ -169,6 +169,11 @@ OPENAPI_TAGS = [
         "track status, and link to agents/audit logs for context-aware support.",
     },
     {
+        "name": "attachments",
+        "description": "File attachments for support tickets — upload, download, and manage "
+        "files with security validation (virus scanning, EXIF stripping, content type verification).",
+    },
+    {
         "name": "health",
         "description": "Service health and status endpoints.",
     },
@@ -518,6 +523,10 @@ from api.app.routers.admin import router as admin_router  # noqa: E402
 from api.app.routers.agent_assignments import router as agent_assignments_router  # noqa: E402
 from api.app.routers.agents import router as agents_router  # noqa: E402
 from api.app.routers.approvals import router as approvals_router  # noqa: E402
+from api.app.routers.attachment_cleanup_cron import (  # noqa: E402
+    router as attachment_cleanup_cron_router,
+)
+from api.app.routers.attachments import router as attachments_router  # noqa: E402
 from api.app.routers.attestations import (  # noqa: E402
     router as attestations_router,
 )
@@ -571,6 +580,8 @@ app.include_router(cleanup_cron_router)
 app.include_router(compliance_exports_cron_router)
 app.include_router(email_cron_router)
 app.include_router(sla_escalation_cron_router)
+app.include_router(attachment_cleanup_cron_router)
+app.include_router(attachments_router)
 app.include_router(forensic_keys_router)
 app.include_router(keys_router)
 app.include_router(metrics_router)
