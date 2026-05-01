@@ -10,4 +10,5 @@ __pycache__/
 
 # ADK runtime artifacts
 .adk_session/
+.adk/
 *.log
