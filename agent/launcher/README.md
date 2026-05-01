@@ -33,11 +33,24 @@ The built `.app` is gitignored under `agent/dist/`.
 `Launch Ada.app/Contents/MacOS/launcher` is a tiny shim that does:
 
 ```bash
-open -a Terminal "${BUNDLE}/Resources/Launch Ada.command"
+open -a Terminal "/Users/jeffleva/Dev/AI-Identity/agent/Launch Ada.command"
 ```
 
-That gives you a visible Terminal window for logs and Ctrl-C-to-stop, while
-the `.app` itself just delegates and exits.
+The path to the source script is baked in at build time. The script itself
+is **not** bundled — the .app delegates to the live file in the repo.
+
+That means: edit `agent/Launch Ada.command`, save, double-click the .app —
+done. No rebuild. The .app is a stable shell; the launcher logic lives in
+the repo where you can change it freely.
+
+You only need to rebuild the .app when:
+
+- The icon changes (`build_icon.py` edited).
+- `Info.plist` (bundle ID, version, display name) changes.
+- The shim itself changes (i.e., what the .app does *before* opening Terminal).
+
+If you move or rename the repo, the shim's hardcoded source path will break;
+the .app will pop a dialog telling you to re-run `build_launcher.sh`.
 
 ## Tweaking the icon
 
