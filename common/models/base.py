@@ -12,6 +12,7 @@ from common.config.settings import settings
 
 logger = logging.getLogger("ai_identity.common.db")
 
+_IS_POSTGRES = settings.database_url.startswith(("postgres://", "postgresql://"))
 _IS_NEON = "neon.tech" in settings.database_url
 
 
@@ -55,16 +56,18 @@ def _connect_with_retry():
     raise last_exc
 
 
-engine = create_engine(
-    settings.database_url,
-    echo=settings.debug,
-    pool_size=10,
-    max_overflow=20,
-    pool_timeout=30,
-    pool_pre_ping=True,
-    pool_recycle=300,
-    creator=_connect_with_retry,
-)
+_engine_kwargs: dict = {
+    "echo": settings.debug,
+    "pool_size": 10,
+    "max_overflow": 20,
+    "pool_timeout": 30,
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+}
+if _IS_POSTGRES:
+    _engine_kwargs["creator"] = _connect_with_retry
+
+engine = create_engine(settings.database_url, **_engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
