@@ -10,6 +10,7 @@ Run from `agent/`:
 from __future__ import annotations
 
 import argparse
+import subprocess
 from pathlib import Path
 
 import uvicorn
@@ -21,6 +22,25 @@ AGENTS_DIR = Path(__file__).parent.resolve()
 # Hidden so ADK's AgentLoader (which scans non-dotfile subdirs of AGENTS_DIR)
 # doesn't try to load the static UI as an agent.
 UI_DIR = AGENTS_DIR / ".ui"
+
+
+def _startup_sha() -> str:
+    """Capture the git SHA at process start so /version reflects loaded code,
+    not what's on disk now (which may have moved underneath us)."""
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(AGENTS_DIR),
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=2,
+        )
+        return out.strip()
+    except (subprocess.SubprocessError, FileNotFoundError, OSError):
+        return "unknown"
+
+
+STARTUP_SHA = _startup_sha()
 
 
 def build_app(*, host: str, port: int):
@@ -37,6 +57,13 @@ def build_app(*, host: str, port: int):
     @app.get("/", include_in_schema=False)
     async def _root():
         return RedirectResponse(url="/ui/")
+
+    @app.get("/version", include_in_schema=False)
+    async def _version():
+        return {
+            "sha": STARTUP_SHA,
+            "short": STARTUP_SHA[:8] if STARTUP_SHA != "unknown" else "unknown",
+        }
 
     return app
 
