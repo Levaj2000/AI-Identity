@@ -44,12 +44,21 @@ def _resolve_safely(path: str) -> Path:
 def read_file(path: str) -> dict:
     """Read a file from the AI Identity repository.
 
+    Returns content with each line prefixed by its line number (e.g.
+    `   42|    except Exception:`). The framing is structural — when Ada
+    cites `path:line`, she should copy the number to the left of the `|`
+    rather than counting or estimating. This is a deliberate guardrail
+    against the citation-fabrication failure mode logged through prompts
+    #2-#4 of the May 1 dogfood session, where conclusions were correct but
+    line numbers drifted by 40-100 lines.
+
     Args:
         path: Repository-relative path (e.g. `api/app/routers/agents.py`).
 
     Returns:
-        dict with `status` ("success" | "error"), `path`, and either `content`
-        or `error_message`. Files larger than ~1 MB are truncated with a note.
+        dict with `status` ("success" | "error"), `path`, and either
+        `content` (line-numbered) + `line_count` or `error_message`. Files
+        larger than ~1 MB are truncated with a note.
     """
     try:
         target = _resolve_safely(path)
@@ -65,12 +74,26 @@ def read_file(path: str) -> dict:
         size = target.stat().st_size
         max_bytes = 1_000_000
         with open(target, encoding="utf-8", errors="replace") as f:
-            content = f.read(max_bytes)
+            raw = f.read(max_bytes)
         truncated = size > max_bytes
+        rel_path = str(target.relative_to(_workspace_root()))
+
+        lines = raw.splitlines()
+        line_count = len(lines)
+        # Width matches the largest line number so columns stay aligned —
+        # easier for the model to read line numbers as a column.
+        width = max(4, len(str(line_count)))
+        header = f"=== {rel_path} ({line_count} lines) ==="
+        if truncated:
+            header += " [truncated at 1 MB]"
+        numbered = "\n".join(f"{i:>{width}}|{line}" for i, line in enumerate(lines, start=1))
+        content = f"{header}\n{numbered}\n"
+
         return {
             "status": "success",
-            "path": str(target.relative_to(_workspace_root())),
+            "path": rel_path,
             "content": content,
+            "line_count": line_count,
             "size_bytes": size,
             "truncated": truncated,
         }
