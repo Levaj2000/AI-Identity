@@ -12,3 +12,6 @@ __pycache__/
 .adk_session/
 .adk/
 *.log
+
+# Launcher build output
+dist/
