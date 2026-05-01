@@ -415,6 +415,14 @@
         // attach a per-turn token accumulator
         wrap.dataset.in = "0";
         wrap.dataset.out = "0";
+        // Per-turn dedup state. ADK can re-emit the same function call and
+        // the same intro text in a final aggregated event after partials —
+        // tracking IDs and finalized text bodies lets us drop the repeats.
+        wrap._adaState = {
+          seenFcIds: new Set(),
+          seenFrIds: new Set(),
+          finalizedText: new Set(),
+        };
         scrollDown();
         return wrap;
       }
@@ -523,7 +531,16 @@
       function appendFunctionCall(turnEl, name, args) {
         const parts = turnEl.querySelector(".parts");
         // Close any open text bubble so subsequent text starts a new one.
-        parts.querySelectorAll("[data-role='text']").forEach((b) => (b.dataset.closed = "1"));
+        // Record the closed bubble's content so a later final aggregated
+        // event re-emitting the same intro text gets dropped.
+        const state = turnEl._adaState;
+        parts.querySelectorAll("[data-role='text']").forEach((b) => {
+          if (b.dataset.closed !== "1") {
+            const raw = b.querySelector(".md")?.dataset.raw;
+            if (raw && state) state.finalizedText.add(raw);
+          }
+          b.dataset.closed = "1";
+        });
 
         // Reuse a tail tool-group with the same name; otherwise start a new one.
         let group = parts.lastElementChild;
@@ -605,6 +622,13 @@
       }
 
       function appendText(turnEl, chunk) {
+        if (!chunk) return;
+        // Drop text that exactly matches a bubble we already closed off via
+        // a tool call — this happens when ADK re-emits the intro paragraph
+        // in a final aggregated event after partial streaming.
+        const state = turnEl._adaState;
+        if (state && state.finalizedText.has(chunk)) return;
+
         const bubble = getOrMakeTextBubble(turnEl);
         const md = bubble.querySelector(".md");
         const prev = md.dataset.raw || "";
@@ -615,7 +639,6 @@
         //   - chunk starts with prev and is longer → cumulative, replace
         //   - otherwise → real delta, append
         let raw;
-        if (!chunk) return;
         if (prev && chunk === prev) return;
         if (prev && chunk.length > prev.length && chunk.startsWith(prev)) {
           raw = chunk;
@@ -726,16 +749,25 @@
 
       function handleEvent(turn, ev) {
         const parts = ev?.content?.parts || [];
+        const state = turn._adaState;
         for (const p of parts) {
-          if (p.text) appendText(turn, p.text);
-          else if (p.functionCall)
+          if (p.text) {
+            appendText(turn, p.text);
+          } else if (p.functionCall) {
+            const id = p.functionCall.id;
+            if (id && state?.seenFcIds.has(id)) continue;
+            if (id && state) state.seenFcIds.add(id);
             appendFunctionCall(turn, p.functionCall.name, p.functionCall.args);
-          else if (p.functionResponse)
+          } else if (p.functionResponse) {
+            const id = p.functionResponse.id;
+            if (id && state?.seenFrIds.has(id)) continue;
+            if (id && state) state.seenFrIds.add(id);
             attachFunctionResponse(
               turn,
               p.functionResponse.name,
               p.functionResponse.response
             );
+          }
         }
         const um = ev?.usageMetadata;
         if (um) {
