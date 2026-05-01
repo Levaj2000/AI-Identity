@@ -248,6 +248,15 @@
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
             </button>
+            <button
+              id="stop"
+              type="button"
+              class="hidden shrink-0 w-10 h-10 rounded-xl bg-red-600 hover:bg-red-500 transition flex items-center justify-center shadow-md shadow-red-700/30"
+              aria-label="Stop"
+              title="Stop (Esc)"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+            </button>
           </form>
           <div class="text-[11px] text-gray-600 text-center mt-2">
             Ada has read-only tools. She'll tell you when an action would need write access.
@@ -265,6 +274,7 @@
       const composer = document.getElementById("composer");
       const input = document.getElementById("input");
       const sendBtn = document.getElementById("send");
+      const stopBtn = document.getElementById("stop");
       const sessionIdEl = document.getElementById("sessionId");
       const statusDot = document.getElementById("statusDot");
       const statusText = document.getElementById("statusText");
@@ -275,6 +285,14 @@
 
       let sessionId = null;
       let inFlight = false;
+      let currentController = null;   // AbortController for the in-flight fetch
+      let currentTurnEl = null;       // assistant turn DOM node for the in-flight request
+
+      function setInFlight(on) {
+        inFlight = on;
+        sendBtn.classList.toggle("hidden", on);
+        stopBtn.classList.toggle("hidden", !on);
+      }
 
       // Vertex AI gemini-2.5-pro list pricing (USD per 1M tokens, ≤200K context).
       // Adjust here if Google updates pricing or you want to factor cached tokens.
@@ -344,6 +362,21 @@
         ) {
           e.preventDefault();
           composer.requestSubmit();
+        }
+      });
+
+      // Stop button: cancel the in-flight fetch via AbortController.
+      function stopCurrent() {
+        if (!inFlight || !currentController) return;
+        currentController.abort();
+      }
+      stopBtn.addEventListener("click", stopCurrent);
+      // Esc anywhere on the page also stops, as long as we're not editing
+      // a different focused input.
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && inFlight) {
+          e.preventDefault();
+          stopCurrent();
         }
       });
 
@@ -558,10 +591,12 @@
 
       async function sendMessage(text) {
         if (inFlight || !text.trim()) return;
-        inFlight = true;
+        setInFlight(true);
         sendBtn.disabled = true;
         appendUser(text);
         const turn = createAssistantTurn();
+        currentTurnEl = turn;
+        currentController = new AbortController();
 
         try {
           await ensureSession();
@@ -578,6 +613,7 @@
               new_message: { role: "user", parts: [{ text }] },
               streaming: true,
             }),
+            signal: currentController.signal,
           });
 
           if (!resp.ok || !resp.body) {
@@ -610,16 +646,26 @@
           }
         } catch (e) {
           turn.querySelector(".thinking")?.remove();
-          const err = document.createElement("div");
-          err.className =
-            "rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-200 px-4 py-2.5 text-sm";
-          err.textContent = "Error: " + (e.message || e);
-          turn.querySelector(".parts").appendChild(err);
-          setStatus(false, "Error · check serve.py");
+          const isAbort = e?.name === "AbortError";
+          const note = document.createElement("div");
+          if (isAbort) {
+            note.className =
+              "text-[11px] text-amber-400/80 italic pl-1 flex items-center gap-1.5";
+            note.innerHTML =
+              `<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg> stopped`;
+          } else {
+            note.className =
+              "rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-200 px-4 py-2.5 text-sm";
+            note.textContent = "Error: " + (e.message || e);
+            setStatus(false, "Error · check serve.py");
+          }
+          turn.querySelector(".parts").appendChild(note);
         } finally {
           turn.querySelector(".thinking")?.remove();
           renderTurnUsage(turn);
-          inFlight = false;
+          currentController = null;
+          currentTurnEl = null;
+          setInFlight(false);
           sendBtn.disabled = false;
           input.focus();
         }
