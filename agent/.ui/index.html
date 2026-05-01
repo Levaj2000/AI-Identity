@@ -500,52 +500,105 @@
         }, 1500);
       }
 
+      // Pull the most informative bit from a tool-call args object so the
+      // collapsed row can show "search_code  pattern: foo" instead of just
+      // the tool name. Falls back to the first short string value.
+      function compactArgSummary(args) {
+        if (!args || typeof args !== "object") return "";
+        const preferred = ["pattern", "path", "agent_id", "query", "path_glob", "url"];
+        for (const k of preferred) {
+          if (args[k] != null && args[k] !== "") {
+            return `${k}: ${truncate(String(args[k]), 64)}`;
+          }
+        }
+        for (const v of Object.values(args)) {
+          if (typeof v === "string" && v) return truncate(v, 64);
+        }
+        return "";
+      }
+      function truncate(s, n) {
+        return s.length > n ? s.slice(0, n - 1) + "…" : s;
+      }
+
       function appendFunctionCall(turnEl, name, args) {
         const parts = turnEl.querySelector(".parts");
-        // close any open text bubble so subsequent text starts a new one
+        // Close any open text bubble so subsequent text starts a new one.
         parts.querySelectorAll("[data-role='text']").forEach((b) => (b.dataset.closed = "1"));
-        const det = document.createElement("details");
-        det.className =
-          "rounded-xl border border-accent-500/20 bg-accent-700/10 text-sm overflow-hidden";
-        det.innerHTML = `
-          <summary class="px-3 py-2 flex items-center gap-2 text-accent-200">
-            <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
-            <span class="font-mono text-[12.5px] font-medium">${escapeHtml(name)}</span>
-            <span class="text-[11px] text-accent-300/70">tool call</span>
+
+        // Reuse a tail tool-group with the same name; otherwise start a new one.
+        let group = parts.lastElementChild;
+        if (
+          !group ||
+          group.dataset.role !== "tool-group" ||
+          group.dataset.toolName !== name
+        ) {
+          group = document.createElement("details");
+          group.dataset.role = "tool-group";
+          group.dataset.toolName = name;
+          // Closed by default — counts in the summary tell the story.
+          group.className =
+            "rounded-lg border border-accent-500/15 bg-accent-700/[0.05] text-sm overflow-hidden";
+          group.innerHTML = `
+            <summary class="px-2.5 py-1.5 flex items-center gap-2 text-accent-200/90 hover:bg-accent-700/10 cursor-pointer select-none">
+              <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+              <span class="font-mono text-[12px]">${escapeHtml(name)}</span>
+              <span class="text-[11px] text-accent-300/60">×<span data-count>0</span></span>
+            </summary>
+            <div data-calls class="px-2 pb-2 pt-1 border-t border-accent-500/15 space-y-1"></div>`;
+          parts.appendChild(group);
+        }
+
+        const calls = group.querySelector("[data-calls]");
+        const counter = group.querySelector("[data-count]");
+
+        // Each call is its own collapsed row inside the group.
+        const row = document.createElement("details");
+        row.className = "rounded border border-white/5 bg-black/20 overflow-hidden";
+        const summary = compactArgSummary(args);
+        row.innerHTML = `
+          <summary class="px-2 py-1 flex items-center gap-2 text-[11.5px] hover:bg-black/30 cursor-pointer select-none">
+            <svg class="chev" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+            <span class="font-mono text-accent-200/70 truncate">${escapeHtml(summary)}</span>
           </summary>
-          <div class="px-3 pb-3 pt-1 border-t border-accent-500/15">
-            <pre class="text-[12px] text-accent-100/90 font-mono whitespace-pre-wrap break-words">${escapeHtml(JSON.stringify(args ?? {}, null, 2))}</pre>
-            <div class="response mt-2 text-[12px] text-gray-300/90"></div>
+          <div class="px-2 pb-2 pt-1 border-t border-white/5">
+            <div class="text-[10px] uppercase tracking-wider text-gray-500 mb-1">args</div>
+            <pre class="text-[11px] text-accent-100/90 font-mono whitespace-pre-wrap break-words">${escapeHtml(JSON.stringify(args ?? {}, null, 2))}</pre>
+            <div data-response class="mt-2 text-[11px] text-gray-300/90"></div>
           </div>`;
-        parts.appendChild(det);
-        return det;
+        calls.appendChild(row);
+        counter.textContent = String(calls.children.length);
+        return row;
       }
 
       function attachFunctionResponse(turnEl, name, response) {
         const parts = turnEl.querySelector(".parts");
-        // find latest open call with matching name and no response yet
-        const calls = [...parts.querySelectorAll("details")].reverse();
-        const target = calls.find((d) => {
-          const sum = d.querySelector("summary .font-mono")?.textContent;
-          const resp = d.querySelector(".response");
-          return sum === name && resp && !resp.dataset.filled;
-        });
+        // Walk back through tool-groups looking for the matching name; inside,
+        // grab the latest row that doesn't yet have a response.
+        const groups = [...parts.querySelectorAll("[data-role='tool-group']")].reverse();
+        let target = null;
+        for (const g of groups) {
+          if (g.dataset.toolName !== name) continue;
+          const rows = [...g.querySelectorAll("[data-calls] > details")].reverse();
+          target = rows.find((r) => {
+            const resp = r.querySelector("[data-response]");
+            return resp && !resp.dataset.filled;
+          });
+          if (target) break;
+        }
         const text =
-          typeof response === "string"
-            ? response
-            : JSON.stringify(response ?? {}, null, 2);
+          typeof response === "string" ? response : JSON.stringify(response ?? {}, null, 2);
         const block = `
-          <div class="text-[10.5px] uppercase tracking-wider text-gray-500 mb-1">response</div>
-          <pre class="font-mono whitespace-pre-wrap break-words bg-black/30 rounded p-2 max-h-72 overflow-y-auto">${escapeHtml(text)}</pre>`;
+          <div class="text-[10px] uppercase tracking-wider text-gray-500 mb-1">response</div>
+          <pre class="font-mono whitespace-pre-wrap break-words bg-black/40 rounded p-2 max-h-72 overflow-y-auto">${escapeHtml(text)}</pre>`;
         if (target) {
-          const resp = target.querySelector(".response");
+          const resp = target.querySelector("[data-response]");
           resp.innerHTML = block;
           resp.dataset.filled = "1";
         } else {
-          // orphan response — render standalone
+          // Orphan response — render as a small standalone row.
           const orphan = document.createElement("div");
           orphan.className =
-            "rounded-xl border border-white/5 bg-ink-800/70 px-3 py-2 text-[12px]";
+            "rounded border border-white/5 bg-ink-800/70 px-2 py-1.5 text-[11.5px]";
           orphan.innerHTML = `<div class="text-gray-400 mb-1">${escapeHtml(name)} → response</div>` + block;
           parts.appendChild(orphan);
         }
