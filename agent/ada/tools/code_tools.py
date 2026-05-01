@@ -127,11 +127,11 @@ def search_code(pattern: str, path_glob: str | None = None) -> dict:
             cmd,
             capture_output=True,
             text=True,
-            timeout=15,
+            timeout=30,
             check=False,
         )
     except subprocess.TimeoutExpired:
-        return {"status": "error", "error_message": "search timed out (15s limit)"}
+        return {"status": "error", "error_message": "search timed out (30s limit)"}
 
     lines = [line for line in result.stdout.splitlines() if line.strip()]
     capped = lines[:200]
