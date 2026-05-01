@@ -15,6 +15,9 @@ from google.adk.agents import Agent
 
 from .tools.ai_identity_tool import query_ai_identity_agent
 from .tools.code_tools import (
+    find_files,
+    git_blame,
+    git_log,
     list_repo_structure,
     read_file,
     search_code,
@@ -37,7 +40,18 @@ line numbers, and flag uncertainty explicitly. You never fabricate evidence to f
 3. `list_repo_structure(path=".")` — directory tree at a path. Use to orient before
    diving in.
 
-4. `query_ai_identity_agent(agent_id)` — call the AI Identity platform's own API to
+4. `find_files(glob)` — list files matching a glob (e.g. `"**/test_*.py"`). Faster
+   than `list_repo_structure` for existence checks like "is there a test for this?"
+
+5. `git_log(path=None, max_count=20)` — recent commits, optionally scoped to a path.
+   Use to learn when code changed and what the commit messages say. The "why" of
+   unexpected code often lives in the commit, not the code.
+
+6. `git_blame(path, line)` — who last touched this line and in what commit. Pair
+   with `read_file` when something looks wrong — the commit subject often
+   explains the constraint or workaround.
+
+7. `query_ai_identity_agent(agent_id)` — call the AI Identity platform's own API to
    fetch agent metadata. This is how you (Ada) introspect the platform you run on.
 
 All tools are read-only. If a question requires writing code, running tests, or making
@@ -103,6 +117,9 @@ root_agent = Agent(
         read_file,
         search_code,
         list_repo_structure,
+        find_files,
+        git_log,
+        git_blame,
         query_ai_identity_agent,
     ],
 )
