@@ -2,8 +2,10 @@
 # Launch Ada — double-clickable Mac launcher.
 #
 # What it does:
-#   1. If Ada is already serving on http://127.0.0.1:8000, just open a browser tab.
-#   2. Otherwise: cd to the agent dir, activate the venv, start serve.py, wait
+#   1. git pull --ff-only origin main so merged PRs land on disk.
+#   2. If Ada is already serving and its startup SHA matches HEAD, just open a
+#      browser tab. If it's running on stale code, kill it and restart.
+#   3. Otherwise: cd to the agent dir, activate the venv, start serve.py, wait
 #      for /health to come up, then open the browser. Keeps this Terminal window
 #      open so you can see logs and Ctrl-C to stop.
 #
@@ -11,6 +13,10 @@
 # by `build_launcher.sh`.
 
 set -u
+
+# Don't block the launcher on a git credential prompt — if auth fails, fall
+# through to "use on-disk code".
+export GIT_TERMINAL_PROMPT=0
 
 PORT=8000
 URL="http://127.0.0.1:${PORT}"
@@ -31,18 +37,51 @@ echo "  │   Ada — AI Identity engineer       │"
 echo "  ╰───────────────────────────────────╯"
 echo ""
 
-# Already running? Just open a tab.
+# Pull latest main so a fresh launch picks up merged PRs. --ff-only refuses to
+# silently merge if the local checkout has diverged; print a warning and carry
+# on with whatever's on disk in that case.
+echo "  ▸ Pulling latest main…"
+if git -C "${AGENT_DIR}" pull --ff-only origin main 2>&1 | sed 's/^/    /'; then
+  HEAD_SHA="$(git -C "${AGENT_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)"
+else
+  echo "  ⚠ git pull failed (diverged branch or offline?) — using on-disk code."
+  HEAD_SHA="$(git -C "${AGENT_DIR}" rev-parse HEAD 2>/dev/null || echo unknown)"
+fi
+echo ""
+
+# Already running? Compare the running server's startup SHA to current HEAD;
+# if they match, just open a tab. If they differ (or /version is missing on an
+# old server), the running process holds stale code — kill it and restart.
 if curl -fsS "${URL}/health" >/dev/null 2>&1; then
-  echo "  ✓ Ada is already serving on ${URL}"
-  echo "  → opening browser…"
-  open "${URL}"
+  RUNNING_SHA="$(curl -fsS "${URL}/version" 2>/dev/null | sed -n 's/.*"sha":"\([^"]*\)".*/\1/p')"
+  if [[ -n "${RUNNING_SHA}" && "${RUNNING_SHA}" == "${HEAD_SHA}" ]]; then
+    echo "  ✓ Ada is already serving on ${URL} (sha ${RUNNING_SHA:0:8})"
+    echo "  → opening browser…"
+    open "${URL}"
+    echo ""
+    echo "  This launcher window is safe to close."
+    echo "  (The Ada server is running in another window.)"
+    echo ""
+    read -n 1 -s -r -p "  Press any key to exit. "
+    echo ""
+    exit 0
+  fi
+
+  if [[ -z "${RUNNING_SHA}" ]]; then
+    echo "  ▸ Running server has no /version endpoint — pre-version-check build. Restarting…"
+  else
+    echo "  ▸ Running server is on ${RUNNING_SHA:0:8}, HEAD is ${HEAD_SHA:0:8} — restarting…"
+  fi
+  STALE_PID="$(lsof -ti tcp:${PORT} 2>/dev/null | head -n 1 || true)"
+  if [[ -n "${STALE_PID}" ]]; then
+    kill "${STALE_PID}" 2>/dev/null || true
+    # Wait for the port to free (up to ~5s).
+    for _ in {1..10}; do
+      curl -fsS "${URL}/health" >/dev/null 2>&1 || break
+      sleep 0.5
+    done
+  fi
   echo ""
-  echo "  This launcher window is safe to close."
-  echo "  (The Ada server is running in another window.)"
-  echo ""
-  read -n 1 -s -r -p "  Press any key to exit. "
-  echo ""
-  exit 0
 fi
 
 if [[ ! -x "${VENV_PY}" ]]; then
