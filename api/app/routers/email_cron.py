@@ -1,6 +1,7 @@
 """Email cron — internal endpoint for scheduled email sends.
 
-Called by Render Cron Job daily. Not exposed in public API docs.
+Called daily by the ``daily-email-followups`` K8s CronJob
+(see ``k8s/cronjob-email.yaml``). Not exposed in public API docs.
 Secured by internal service key.
 """
 
