@@ -36,12 +36,41 @@ gcloud config set project YOUR_PROJECT_ID
 cp ada/.env.example ada/.env
 # Edit ada/.env — fill GOOGLE_CLOUD_PROJECT and AI_IDENTITY_API_KEY
 
-# 4. Run Ada in the terminal
+# 4a. Terminal
 adk run ada
 
-# Or launch the inspector UI in a browser
+# 4b. ADK inspector UI (events, traces, evals)
 adk web
+
+# 4c. Polished chat UI + API on one port (recommended)
+python serve.py
+# → http://127.0.0.1:8000  (UI)
+# → http://127.0.0.1:8000/docs  (FastAPI docs)
 ```
+
+### `serve.py` — chat UI + HTTP API
+
+`agent/serve.py` mounts ADK's full FastAPI app at the root and serves a
+single-file chat UI from `agent/ui/` at `/`. One process, one port.
+
+Useful endpoints once it's running:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET`  | `/` → `/ui/` | Chat UI |
+| `GET`  | `/health` | Liveness |
+| `GET`  | `/list-apps` | Should return `["ada"]` |
+| `POST` | `/apps/ada/users/{user_id}/sessions` | Create a session |
+| `POST` | `/run_sse` | Stream a turn (SSE) |
+
+Share on the LAN:
+
+```bash
+python serve.py --host 0.0.0.0 --port 8000
+```
+
+Once it's behind auth on a real host, this is the same surface a Slack
+slash command, a GitHub PR-review webhook, or a CLI wrapper would call.
 
 ## Registering Ada in AI Identity
 
@@ -68,15 +97,19 @@ debug tool calls.
 ```
 agent/
 ├── requirements.txt
+├── serve.py                    # ADK API + chat UI on one port
+├── .ui/
+│   └── index.html              # single-file polished chat UI (dot-prefixed
+│                               #   so ADK's loader doesn't treat it as an agent)
 └── ada/
     ├── __init__.py
-    ├── agent.py                 # root_agent definition + instruction
+    ├── agent.py                # root_agent definition + instruction
     ├── .env.example
     ├── README.md
     └── tools/
         ├── __init__.py
-        ├── code_tools.py        # read_file, search_code, list_repo_structure
-        └── ai_identity_tool.py  # query_ai_identity_agent
+        ├── code_tools.py       # read_file, search_code, list_repo_structure
+        └── ai_identity_tool.py # query_ai_identity_agent
 ```
 
 ## Why Ada (not Bob v2)?

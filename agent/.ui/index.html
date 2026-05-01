@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ada — AI Identity</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%237c3aed'/%3E%3Ctext x='50' y='62' font-size='44' text-anchor='middle' fill='white' font-family='system-ui'%3EA%3C/text%3E%3C/svg%3E" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+              mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+            },
+            colors: {
+              ink: {
+                950: '#0a0a14',
+                900: '#0f1020',
+                800: '#161830',
+                700: '#1f2240',
+                600: '#2a2e55',
+                500: '#3a3f70',
+              },
+              accent: {
+                400: '#a78bfa',
+                500: '#8b5cf6',
+                600: '#7c3aed',
+                700: '#6d28d9',
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html, body { height: 100%; }
+      body {
+        background:
+          radial-gradient(1200px 600px at 10% -10%, rgba(124,58,237,0.18), transparent 60%),
+          radial-gradient(900px 500px at 110% 110%, rgba(56,189,248,0.10), transparent 55%),
+          #0a0a14;
+        font-feature-settings: "ss01", "cv11";
+      }
+      .glass {
+        background: rgba(20, 22, 45, 0.55);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .scroll-fade {
+        mask-image: linear-gradient(to bottom, transparent 0, black 24px, black calc(100% - 24px), transparent 100%);
+      }
+      .prose-ada {
+        color: #e5e7f0;
+        line-height: 1.65;
+        font-size: 0.95rem;
+      }
+      .prose-ada p { margin: 0.5em 0; }
+      .prose-ada p:first-child { margin-top: 0; }
+      .prose-ada p:last-child { margin-bottom: 0; }
+      .prose-ada code {
+        background: rgba(124,58,237,0.16);
+        color: #e9d5ff;
+        padding: 0.12em 0.38em;
+        border-radius: 4px;
+        font-size: 0.86em;
+        font-family: 'JetBrains Mono', monospace;
+      }
+      .prose-ada pre {
+        background: #0a0a14;
+        border: 1px solid rgba(255,255,255,0.06);
+        padding: 0.85em 1em;
+        border-radius: 10px;
+        overflow-x: auto;
+        margin: 0.7em 0;
+      }
+      .prose-ada pre code {
+        background: transparent;
+        color: #e5e7f0;
+        padding: 0;
+      }
+      .prose-ada ul, .prose-ada ol { padding-left: 1.4em; margin: 0.5em 0; }
+      .prose-ada li { margin: 0.18em 0; }
+      .prose-ada a { color: #a78bfa; text-decoration: underline; text-underline-offset: 3px; }
+      .prose-ada h1, .prose-ada h2, .prose-ada h3 { font-weight: 600; margin: 0.6em 0 0.3em; }
+      .prose-ada blockquote { border-left: 3px solid #6d28d9; padding-left: 0.9em; color: #c7c9d9; }
+
+      .thinking-dot {
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+      .thinking-dot:nth-child(2) { animation-delay: 0.15s; }
+      .thinking-dot:nth-child(3) { animation-delay: 0.3s; }
+      @keyframes pulse {
+        0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+        40% { opacity: 1; transform: translateY(-2px); }
+      }
+
+      .grad-border {
+        position: relative;
+      }
+      .grad-border::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        padding: 1px;
+        background: linear-gradient(135deg, rgba(167,139,250,0.5), rgba(56,189,248,0.2), transparent);
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+                mask-composite: exclude;
+        pointer-events: none;
+      }
+
+      /* Scrollbar */
+      ::-webkit-scrollbar { width: 10px; height: 10px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 5px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.16); }
+
+      details > summary { list-style: none; cursor: pointer; }
+      details > summary::-webkit-details-marker { display: none; }
+      details[open] > summary .chev { transform: rotate(90deg); }
+      .chev { transition: transform 0.15s ease; }
+    </style>
+  </head>
+  <body class="text-gray-100 font-sans">
+    <div class="h-full flex">
+      <!-- Sidebar -->
+      <aside class="w-64 shrink-0 hidden md:flex flex-col border-r border-white/5 bg-ink-950/60 backdrop-blur">
+        <div class="p-5 flex items-center gap-3 border-b border-white/5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center font-bold shadow-lg shadow-accent-700/30">
+            A
+          </div>
+          <div>
+            <div class="font-semibold leading-tight">Ada</div>
+            <div class="text-[11px] text-gray-400 leading-tight">AI Identity · senior eng</div>
+          </div>
+        </div>
+
+        <button
+          id="newChat"
+          class="mx-3 mt-4 mb-2 px-3 py-2 rounded-lg text-sm font-medium bg-accent-600 hover:bg-accent-500 transition shadow-md shadow-accent-700/20"
+        >
+          + New chat
+        </button>
+
+        <div class="px-5 mt-3 text-[11px] uppercase tracking-wider text-gray-500">Tools</div>
+        <ul class="px-3 mt-2 space-y-1 text-sm">
+          <li class="px-2 py-1.5 rounded-md flex items-center gap-2 text-gray-300 hover:bg-white/5">
+            <span class="text-accent-400">▸</span> read_file
+          </li>
+          <li class="px-2 py-1.5 rounded-md flex items-center gap-2 text-gray-300 hover:bg-white/5">
+            <span class="text-accent-400">▸</span> search_code
+          </li>
+          <li class="px-2 py-1.5 rounded-md flex items-center gap-2 text-gray-300 hover:bg-white/5">
+            <span class="text-accent-400">▸</span> list_repo_structure
+          </li>
+          <li class="px-2 py-1.5 rounded-md flex items-center gap-2 text-gray-300 hover:bg-white/5">
+            <span class="text-accent-400">▸</span> query_ai_identity_agent
+          </li>
+        </ul>
+
+        <div class="mt-auto p-4 text-[11px] text-gray-500 border-t border-white/5">
+          <div class="flex items-center gap-2">
+            <span id="statusDot" class="w-2 h-2 rounded-full bg-emerald-400 shadow shadow-emerald-400/40"></span>
+            <span id="statusText">Connected · gemini-2.5-pro</span>
+          </div>
+          <div class="mt-2 truncate" title="">
+            <span class="text-gray-600">session</span>
+            <span id="sessionId" class="ml-1 font-mono">—</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="flex-1 flex flex-col min-w-0">
+        <header class="h-14 px-5 md:px-8 flex items-center justify-between border-b border-white/5">
+          <div class="flex items-center gap-3">
+            <div class="md:hidden w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center text-sm font-bold">A</div>
+            <div>
+              <div class="text-sm font-semibold">Ada</div>
+              <div class="text-[11px] text-gray-500">Reads code · cites lines · won't fake results</div>
+            </div>
+          </div>
+          <div class="text-[11px] text-gray-500 font-mono hidden sm:block">/run_sse · ada</div>
+        </header>
+
+        <div id="messages" class="flex-1 overflow-y-auto scroll-fade px-4 md:px-10 py-8 space-y-6">
+          <!-- empty state -->
+          <div id="emptyState" class="max-w-2xl mx-auto text-center mt-10">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-500 to-accent-700 shadow-xl shadow-accent-700/30 mb-5 text-2xl font-bold">A</div>
+            <h1 class="text-2xl font-semibold tracking-tight">Hello, I'm Ada.</h1>
+            <p class="text-gray-400 mt-2 text-sm">Senior software engineer for the AI Identity codebase. Ask me to read files, trace symbols, or explain how a piece of the system works.</p>
+            <div class="mt-7 grid sm:grid-cols-2 gap-3 text-left">
+              <button class="suggestion glass grad-border rounded-xl p-3.5 hover:bg-ink-800/70 transition text-sm text-gray-200">
+                <div class="text-[11px] text-accent-400 font-medium mb-1">Explore</div>
+                Walk me through how agent registration works in the AI Identity API.
+              </button>
+              <button class="suggestion glass grad-border rounded-xl p-3.5 hover:bg-ink-800/70 transition text-sm text-gray-200">
+                <div class="text-[11px] text-accent-400 font-medium mb-1">Read</div>
+                What does <span class="font-mono text-accent-300">agent/ada/agent.py</span> actually wire up?
+              </button>
+              <button class="suggestion glass grad-border rounded-xl p-3.5 hover:bg-ink-800/70 transition text-sm text-gray-200">
+                <div class="text-[11px] text-accent-400 font-medium mb-1">Search</div>
+                Where do we call <span class="font-mono text-accent-300">query_ai_identity_agent</span>?
+              </button>
+              <button class="suggestion glass grad-border rounded-xl p-3.5 hover:bg-ink-800/70 transition text-sm text-gray-200">
+                <div class="text-[11px] text-accent-400 font-medium mb-1">Review</div>
+                Look at recent support-ticket changes and flag anything risky.
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Composer -->
+        <div class="px-4 md:px-10 pb-6 pt-2">
+          <form id="composer" class="max-w-3xl mx-auto glass grad-border rounded-2xl p-2 flex items-end gap-2 shadow-2xl shadow-black/30">
+            <textarea
+              id="input"
+              rows="1"
+              placeholder="Ask Ada about the code…  (⌘/Ctrl + Enter to send)"
+              class="flex-1 bg-transparent resize-none outline-none px-3 py-2.5 text-[15px] placeholder:text-gray-500 max-h-48"
+            ></textarea>
+            <button
+              id="send"
+              type="submit"
+              class="shrink-0 w-10 h-10 rounded-xl bg-accent-600 hover:bg-accent-500 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center justify-center shadow-md shadow-accent-700/30"
+              aria-label="Send"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </button>
+          </form>
+          <div class="text-[11px] text-gray-600 text-center mt-2">
+            Ada has read-only tools. She'll tell you when an action would need write access.
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const APP_NAME = "ada";
+      const USER_ID = "local-user";
+
+      const messagesEl = document.getElementById("messages");
+      const emptyState = document.getElementById("emptyState");
+      const composer = document.getElementById("composer");
+      const input = document.getElementById("input");
+      const sendBtn = document.getElementById("send");
+      const sessionIdEl = document.getElementById("sessionId");
+      const statusDot = document.getElementById("statusDot");
+      const statusText = document.getElementById("statusText");
+      const newChatBtn = document.getElementById("newChat");
+
+      let sessionId = null;
+      let inFlight = false;
+
+      marked.setOptions({ breaks: true, gfm: true });
+      const renderMd = (s) =>
+        DOMPurify.sanitize(marked.parse(s || ""), { ADD_ATTR: ["target"] });
+
+      function setStatus(ok, text) {
+        statusDot.className =
+          "w-2 h-2 rounded-full shadow " +
+          (ok
+            ? "bg-emerald-400 shadow-emerald-400/40"
+            : "bg-rose-400 shadow-rose-400/40");
+        statusText.textContent = text;
+      }
+
+      async function ensureSession() {
+        if (sessionId) return sessionId;
+        const r = await fetch(`/apps/${APP_NAME}/users/${USER_ID}/sessions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        if (!r.ok) throw new Error(`session create failed: ${r.status}`);
+        const data = await r.json();
+        sessionId = data.id;
+        sessionIdEl.textContent = sessionId.slice(0, 8);
+        sessionIdEl.title = sessionId;
+        return sessionId;
+      }
+
+      function autosize() {
+        input.style.height = "auto";
+        input.style.height = Math.min(input.scrollHeight, 192) + "px";
+      }
+      input.addEventListener("input", autosize);
+      input.addEventListener("keydown", (e) => {
+        if (
+          (e.metaKey || e.ctrlKey) && e.key === "Enter" ||
+          (!e.shiftKey && e.key === "Enter")
+        ) {
+          e.preventDefault();
+          composer.requestSubmit();
+        }
+      });
+
+      // ---- Rendering ----------------------------------------------------------
+
+      function appendUser(text) {
+        emptyState?.remove();
+        const wrap = document.createElement("div");
+        wrap.className = "max-w-3xl mx-auto flex justify-end";
+        wrap.innerHTML = `
+          <div class="max-w-[85%] rounded-2xl rounded-br-sm bg-accent-600/90 text-white px-4 py-2.5 shadow-md shadow-accent-700/20">
+            <div class="prose-ada whitespace-pre-wrap">${escapeHtml(text)}</div>
+          </div>`;
+        messagesEl.appendChild(wrap);
+        scrollDown();
+      }
+
+      function createAssistantTurn() {
+        emptyState?.remove();
+        const wrap = document.createElement("div");
+        wrap.className = "max-w-3xl mx-auto flex justify-start";
+        wrap.innerHTML = `
+          <div class="flex gap-3 max-w-full">
+            <div class="shrink-0 w-8 h-8 rounded-lg bg-gradient-to-br from-accent-500 to-accent-700 flex items-center justify-center text-xs font-bold mt-0.5">A</div>
+            <div class="min-w-0 flex-1 space-y-2">
+              <div class="parts space-y-2"></div>
+              <div class="thinking flex items-center gap-1.5 text-gray-500 text-sm pl-1">
+                <span class="thinking-dot w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                <span class="thinking-dot w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                <span class="thinking-dot w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+              </div>
+            </div>
+          </div>`;
+        messagesEl.appendChild(wrap);
+        scrollDown();
+        return wrap;
+      }
+
+      function getOrMakeTextBubble(turnEl) {
+        const parts = turnEl.querySelector(".parts");
+        let bubble = parts.querySelector("[data-role='text']:last-child");
+        if (!bubble || bubble.dataset.closed === "1") {
+          bubble = document.createElement("div");
+          bubble.dataset.role = "text";
+          bubble.className =
+            "rounded-2xl rounded-bl-sm bg-ink-800/70 border border-white/5 px-4 py-2.5";
+          bubble.innerHTML = `<div class="prose-ada md"></div>`;
+          parts.appendChild(bubble);
+        }
+        return bubble;
+      }
+
+      function appendFunctionCall(turnEl, name, args) {
+        const parts = turnEl.querySelector(".parts");
+        // close any open text bubble so subsequent text starts a new one
+        parts.querySelectorAll("[data-role='text']").forEach((b) => (b.dataset.closed = "1"));
+        const det = document.createElement("details");
+        det.className =
+          "rounded-xl border border-accent-500/20 bg-accent-700/10 text-sm overflow-hidden";
+        det.innerHTML = `
+          <summary class="px-3 py-2 flex items-center gap-2 text-accent-200">
+            <svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+            <span class="font-mono text-[12.5px] font-medium">${escapeHtml(name)}</span>
+            <span class="text-[11px] text-accent-300/70">tool call</span>
+          </summary>
+          <div class="px-3 pb-3 pt-1 border-t border-accent-500/15">
+            <pre class="text-[12px] text-accent-100/90 font-mono whitespace-pre-wrap break-words">${escapeHtml(JSON.stringify(args ?? {}, null, 2))}</pre>
+            <div class="response mt-2 text-[12px] text-gray-300/90"></div>
+          </div>`;
+        parts.appendChild(det);
+        return det;
+      }
+
+      function attachFunctionResponse(turnEl, name, response) {
+        const parts = turnEl.querySelector(".parts");
+        // find latest open call with matching name and no response yet
+        const calls = [...parts.querySelectorAll("details")].reverse();
+        const target = calls.find((d) => {
+          const sum = d.querySelector("summary .font-mono")?.textContent;
+          const resp = d.querySelector(".response");
+          return sum === name && resp && !resp.dataset.filled;
+        });
+        const text =
+          typeof response === "string"
+            ? response
+            : JSON.stringify(response ?? {}, null, 2);
+        const block = `
+          <div class="text-[10.5px] uppercase tracking-wider text-gray-500 mb-1">response</div>
+          <pre class="font-mono whitespace-pre-wrap break-words bg-black/30 rounded p-2 max-h-72 overflow-y-auto">${escapeHtml(text)}</pre>`;
+        if (target) {
+          const resp = target.querySelector(".response");
+          resp.innerHTML = block;
+          resp.dataset.filled = "1";
+        } else {
+          // orphan response — render standalone
+          const orphan = document.createElement("div");
+          orphan.className =
+            "rounded-xl border border-white/5 bg-ink-800/70 px-3 py-2 text-[12px]";
+          orphan.innerHTML = `<div class="text-gray-400 mb-1">${escapeHtml(name)} → response</div>` + block;
+          parts.appendChild(orphan);
+        }
+      }
+
+      function appendText(turnEl, delta) {
+        const bubble = getOrMakeTextBubble(turnEl);
+        const md = bubble.querySelector(".md");
+        md.dataset.raw = (md.dataset.raw || "") + delta;
+        md.innerHTML = renderMd(md.dataset.raw);
+        scrollDown();
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function scrollDown() {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }
+
+      // ---- Streaming ----------------------------------------------------------
+
+      async function sendMessage(text) {
+        if (inFlight || !text.trim()) return;
+        inFlight = true;
+        sendBtn.disabled = true;
+        appendUser(text);
+        const turn = createAssistantTurn();
+
+        try {
+          await ensureSession();
+          const resp = await fetch("/run_sse", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "text/event-stream",
+            },
+            body: JSON.stringify({
+              app_name: APP_NAME,
+              user_id: USER_ID,
+              session_id: sessionId,
+              new_message: { role: "user", parts: [{ text }] },
+              streaming: true,
+            }),
+          });
+
+          if (!resp.ok || !resp.body) {
+            throw new Error(`run_sse ${resp.status}`);
+          }
+
+          const reader = resp.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            // SSE events separated by \n\n
+            let idx;
+            while ((idx = buf.indexOf("\n\n")) !== -1) {
+              const raw = buf.slice(0, idx);
+              buf = buf.slice(idx + 2);
+              const line = raw.split("\n").find((l) => l.startsWith("data:"));
+              if (!line) continue;
+              const json = line.slice(5).trim();
+              if (!json) continue;
+              try {
+                handleEvent(turn, JSON.parse(json));
+              } catch (e) {
+                console.error("bad event", e, json);
+              }
+            }
+          }
+        } catch (e) {
+          turn.querySelector(".thinking")?.remove();
+          const err = document.createElement("div");
+          err.className =
+            "rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-200 px-4 py-2.5 text-sm";
+          err.textContent = "Error: " + (e.message || e);
+          turn.querySelector(".parts").appendChild(err);
+          setStatus(false, "Error · check serve.py");
+        } finally {
+          turn.querySelector(".thinking")?.remove();
+          inFlight = false;
+          sendBtn.disabled = false;
+          input.focus();
+        }
+      }
+
+      function handleEvent(turn, ev) {
+        const parts = ev?.content?.parts || [];
+        for (const p of parts) {
+          if (p.text) appendText(turn, p.text);
+          else if (p.functionCall)
+            appendFunctionCall(turn, p.functionCall.name, p.functionCall.args);
+          else if (p.functionResponse)
+            attachFunctionResponse(
+              turn,
+              p.functionResponse.name,
+              p.functionResponse.response
+            );
+        }
+        if (ev?.error) {
+          const errBubble = document.createElement("div");
+          errBubble.className =
+            "rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-200 px-4 py-2 text-sm";
+          errBubble.textContent = ev.error;
+          turn.querySelector(".parts").appendChild(errBubble);
+        }
+      }
+
+      // ---- Wire up ------------------------------------------------------------
+
+      composer.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const v = input.value;
+        input.value = "";
+        autosize();
+        sendMessage(v);
+      });
+
+      newChatBtn.addEventListener("click", () => {
+        sessionId = null;
+        sessionIdEl.textContent = "—";
+        messagesEl.innerHTML = "";
+        messagesEl.appendChild(emptyState || makeEmptyState());
+      });
+
+      function makeEmptyState() {
+        // fallback if user clicks new chat after we removed the original
+        const div = document.createElement("div");
+        div.id = "emptyState";
+        div.className = "max-w-2xl mx-auto text-center mt-10 text-gray-400";
+        div.textContent = "New chat — say hi to Ada.";
+        return div;
+      }
+
+      document.querySelectorAll(".suggestion").forEach((b) => {
+        b.addEventListener("click", () => {
+          const txt = b.innerText.split("\n").slice(1).join(" ").trim();
+          input.value = txt;
+          autosize();
+          input.focus();
+        });
+      });
+
+      // Health ping
+      fetch("/health")
+        .then((r) => setStatus(r.ok, r.ok ? "Connected · gemini-2.5-pro" : "Server returned " + r.status))
+        .catch(() => setStatus(false, "Disconnected"));
+
+      input.focus();
+    </script>
+  </body>
+</html>
