@@ -180,6 +180,11 @@
             <span class="text-gray-600">session</span>
             <span id="sessionId" class="ml-1 font-mono">—</span>
           </div>
+          <div class="mt-3 pt-3 border-t border-white/5 space-y-1 font-mono text-[10.5px] text-gray-500" title="Cumulative tokens this session. Cost is an estimate based on Vertex AI gemini-2.5-pro list pricing.">
+            <div class="flex justify-between"><span>↑ in</span><span id="sessIn" class="text-gray-300">0</span></div>
+            <div class="flex justify-between"><span>↓ out</span><span id="sessOut" class="text-gray-300">0</span></div>
+            <div class="flex justify-between"><span>~cost</span><span id="sessCost" class="text-accent-300">$0.0000</span></div>
+          </div>
         </div>
       </aside>
 
@@ -261,9 +266,40 @@
       const statusDot = document.getElementById("statusDot");
       const statusText = document.getElementById("statusText");
       const newChatBtn = document.getElementById("newChat");
+      const sessInEl = document.getElementById("sessIn");
+      const sessOutEl = document.getElementById("sessOut");
+      const sessCostEl = document.getElementById("sessCost");
 
       let sessionId = null;
       let inFlight = false;
+
+      // Vertex AI gemini-2.5-pro list pricing (USD per 1M tokens, ≤200K context).
+      // Adjust here if Google updates pricing or you want to factor cached tokens.
+      const PRICE_IN_PER_M = 1.25;
+      const PRICE_OUT_PER_M = 10.0;
+      const sessionTokens = { in: 0, out: 0 };
+
+      const fmtTokens = (n) =>
+        n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k" : String(n);
+      const estCost = (i, o) =>
+        (i / 1_000_000) * PRICE_IN_PER_M + (o / 1_000_000) * PRICE_OUT_PER_M;
+      const fmtCost = (n) => "$" + n.toFixed(n < 0.01 ? 4 : n < 1 ? 3 : 2);
+
+      function bumpSessionTokens(inTok, outTok) {
+        sessionTokens.in += inTok;
+        sessionTokens.out += outTok;
+        sessInEl.textContent = fmtTokens(sessionTokens.in);
+        sessOutEl.textContent = fmtTokens(sessionTokens.out);
+        sessCostEl.textContent = fmtCost(estCost(sessionTokens.in, sessionTokens.out));
+      }
+
+      function resetSessionTokens() {
+        sessionTokens.in = 0;
+        sessionTokens.out = 0;
+        sessInEl.textContent = "0";
+        sessOutEl.textContent = "0";
+        sessCostEl.textContent = "$0.0000";
+      }
 
       marked.setOptions({ breaks: true, gfm: true });
       const renderMd = (s) =>
@@ -336,11 +372,39 @@
                 <span class="thinking-dot w-1.5 h-1.5 rounded-full bg-gray-400"></span>
                 <span class="thinking-dot w-1.5 h-1.5 rounded-full bg-gray-400"></span>
               </div>
+              <div class="usage hidden text-[10.5px] text-gray-500 font-mono pl-1 flex flex-wrap gap-x-3 gap-y-0.5"></div>
             </div>
           </div>`;
         messagesEl.appendChild(wrap);
+        // attach a per-turn token accumulator
+        wrap.dataset.in = "0";
+        wrap.dataset.out = "0";
         scrollDown();
         return wrap;
+      }
+
+      function addTurnUsage(turnEl, inTok, outTok) {
+        const prevIn = +turnEl.dataset.in;
+        const prevOut = +turnEl.dataset.out;
+        // Vertex usage is cumulative-per-call. We sum across calls within a turn,
+        // which can over-count input tokens when a single turn makes multiple
+        // LLM calls that all see the same conversation history. Treat the cost
+        // as a generous upper bound rather than exact.
+        turnEl.dataset.in = String(prevIn + inTok);
+        turnEl.dataset.out = String(prevOut + outTok);
+        bumpSessionTokens(inTok, outTok);
+      }
+
+      function renderTurnUsage(turnEl) {
+        const i = +turnEl.dataset.in;
+        const o = +turnEl.dataset.out;
+        if (!i && !o) return;
+        const u = turnEl.querySelector(".usage");
+        u.classList.remove("hidden");
+        u.innerHTML =
+          `<span title="Input tokens">↑ ${fmtTokens(i)}</span>` +
+          `<span title="Output tokens">↓ ${fmtTokens(o)}</span>` +
+          `<span class="text-accent-300/80" title="Estimated cost at gemini-2.5-pro list pricing">${fmtCost(estCost(i, o))}</span>`;
       }
 
       function getOrMakeTextBubble(turnEl) {
@@ -493,6 +557,7 @@
           setStatus(false, "Error · check serve.py");
         } finally {
           turn.querySelector(".thinking")?.remove();
+          renderTurnUsage(turn);
           inFlight = false;
           sendBtn.disabled = false;
           input.focus();
@@ -511,6 +576,19 @@
               p.functionResponse.name,
               p.functionResponse.response
             );
+        }
+        const um = ev?.usageMetadata;
+        if (um) {
+          // Only count terminal events for a given LLM call (skip streaming
+          // partials that re-report the same usage). Final events have no
+          // `partial: true` flag.
+          if (!ev.partial) {
+            addTurnUsage(
+              turn,
+              um.promptTokenCount || 0,
+              um.candidatesTokenCount || 0
+            );
+          }
         }
         if (ev?.error) {
           const errBubble = document.createElement("div");
@@ -534,6 +612,7 @@
       newChatBtn.addEventListener("click", () => {
         sessionId = null;
         sessionIdEl.textContent = "—";
+        resetSessionTokens();
         messagesEl.innerHTML = "";
         messagesEl.appendChild(emptyState || makeEmptyState());
       });
