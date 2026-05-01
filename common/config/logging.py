@@ -49,7 +49,7 @@ class SanitizingFilter(logging.Filter):
 
 
 class JSONFormatter(logging.Formatter):
-    """Emit log records as single-line JSON for Render / cloud log aggregators."""
+    """Emit log records as single-line JSON for cloud log aggregators."""
 
     def __init__(self, service_name: str = "ai-identity-api", **kwargs):
         super().__init__(**kwargs)
@@ -95,7 +95,7 @@ def setup_logging(service_name: str = "ai-identity-api") -> None:
     # Attach sanitizing filter to root logger — scrubs ALL log output
     root.addFilter(SanitizingFilter())
 
-    # JSON handler → stdout (Render captures stdout)
+    # JSON handler → stdout (GKE captures stdout for Cloud Logging)
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JSONFormatter(service_name=service_name))
     root.addHandler(handler)

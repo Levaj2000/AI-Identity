@@ -89,7 +89,7 @@ async def trigger_qa_run(
     Results are persisted for sign-off tracking.
     """
     api_url = settings.gateway_url.replace(":8002", ":8001")
-    # In production, use the Render URLs
+    # In production, use the public URLs
     if settings.environment == "production":
         api_url = "https://api.ai-identity.co"
         gateway_url = "https://gateway.ai-identity.co"
