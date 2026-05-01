@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ada — AI Identity</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%237c3aed'/%3E%3Ctext x='50' y='62' font-size='44' text-anchor='middle' fill='white' font-family='system-ui'%3EA%3C/text%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23d97706'/%3E%3Ctext x='50' y='62' font-size='44' text-anchor='middle' fill='white' font-family='system-ui'%3EA%3C/text%3E%3C/svg%3E" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
@@ -18,19 +18,22 @@
               mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
             },
             colors: {
+              // Neutral dark palette to match the CEO Dashboard.
               ink: {
-                950: '#0a0a14',
-                900: '#0f1020',
-                800: '#161830',
-                700: '#1f2240',
-                600: '#2a2e55',
-                500: '#3a3f70',
+                950: '#0a0a0a',
+                900: '#111111',
+                800: '#171717',
+                700: '#1f1f1f',
+                600: '#262626',
+                500: '#404040',
               },
+              // Amber accent — matches CEO Dashboard's "AI Identity" brand color.
               accent: {
-                400: '#a78bfa',
-                500: '#8b5cf6',
-                600: '#7c3aed',
-                700: '#6d28d9',
+                300: '#fcd34d',
+                400: '#fbbf24',
+                500: '#f59e0b',
+                600: '#d97706',
+                700: '#b45309',
               },
             },
           },
@@ -47,13 +50,13 @@
       html, body { height: 100%; }
       body {
         background:
-          radial-gradient(1200px 600px at 10% -10%, rgba(124,58,237,0.18), transparent 60%),
-          radial-gradient(900px 500px at 110% 110%, rgba(56,189,248,0.10), transparent 55%),
-          #0a0a14;
+          radial-gradient(1200px 600px at 10% -10%, rgba(217,119,6,0.10), transparent 60%),
+          radial-gradient(900px 500px at 110% 110%, rgba(245,158,11,0.05), transparent 55%),
+          #0a0a0a;
         font-feature-settings: "ss01", "cv11";
       }
       .glass {
-        background: rgba(20, 22, 45, 0.55);
+        background: rgba(23, 23, 23, 0.65);
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
         border: 1px solid rgba(255, 255, 255, 0.06);
@@ -70,8 +73,8 @@
       .prose-ada p:first-child { margin-top: 0; }
       .prose-ada p:last-child { margin-bottom: 0; }
       .prose-ada code {
-        background: rgba(124,58,237,0.16);
-        color: #e9d5ff;
+        background: rgba(217,119,6,0.14);
+        color: #fde68a;
         padding: 0.12em 0.38em;
         border-radius: 4px;
         font-size: 0.86em;
@@ -92,9 +95,9 @@
       }
       .prose-ada ul, .prose-ada ol { padding-left: 1.4em; margin: 0.5em 0; }
       .prose-ada li { margin: 0.18em 0; }
-      .prose-ada a { color: #a78bfa; text-decoration: underline; text-underline-offset: 3px; }
+      .prose-ada a { color: #fbbf24; text-decoration: underline; text-underline-offset: 3px; }
       .prose-ada h1, .prose-ada h2, .prose-ada h3 { font-weight: 600; margin: 0.6em 0 0.3em; }
-      .prose-ada blockquote { border-left: 3px solid #6d28d9; padding-left: 0.9em; color: #c7c9d9; }
+      .prose-ada blockquote { border-left: 3px solid #b45309; padding-left: 0.9em; color: #c7c9d9; }
 
       .thinking-dot {
         animation: pulse 1.2s ease-in-out infinite;
@@ -115,7 +118,7 @@
         inset: 0;
         border-radius: inherit;
         padding: 1px;
-        background: linear-gradient(135deg, rgba(167,139,250,0.5), rgba(56,189,248,0.2), transparent);
+        background: linear-gradient(135deg, rgba(251,191,36,0.4), rgba(217,119,6,0.15), transparent);
         -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
         -webkit-mask-composite: xor;
                 mask-composite: exclude;
@@ -414,11 +417,54 @@
           bubble = document.createElement("div");
           bubble.dataset.role = "text";
           bubble.className =
-            "rounded-2xl rounded-bl-sm bg-ink-800/70 border border-white/5 px-4 py-2.5";
-          bubble.innerHTML = `<div class="prose-ada md"></div>`;
+            "group relative rounded-2xl rounded-bl-sm bg-ink-800/70 border border-white/5 px-4 py-2.5";
+          bubble.innerHTML = `
+            <div class="prose-ada md"></div>
+            <button
+              type="button"
+              data-copy
+              class="copy-btn absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus:opacity-100 transition flex items-center gap-1 rounded-md bg-ink-900/80 border border-white/10 hover:border-accent-500/40 hover:text-accent-300 text-gray-400 text-[11px] px-1.5 py-1"
+              title="Copy to clipboard"
+              aria-label="Copy">
+              <svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span class="copy-label">Copy</span>
+            </button>`;
+          bubble.querySelector("[data-copy]").addEventListener("click", () => copyBubble(bubble));
           parts.appendChild(bubble);
         }
         return bubble;
+      }
+
+      async function copyBubble(bubble) {
+        const md = bubble.querySelector(".md");
+        const text = md?.dataset.raw || md?.innerText || "";
+        if (!text) return;
+        const btn = bubble.querySelector("[data-copy]");
+        const icon = btn.querySelector(".copy-icon");
+        const label = btn.querySelector(".copy-label");
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch {
+          // Fallback for non-secure contexts.
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand("copy"); } catch {}
+          ta.remove();
+        }
+        const prevHTML = icon.outerHTML;
+        const prevLabel = label.textContent;
+        icon.outerHTML = `<svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+        label.textContent = "Copied";
+        btn.classList.add("text-accent-300", "border-accent-500/40");
+        setTimeout(() => {
+          btn.querySelector(".copy-icon").outerHTML = prevHTML;
+          btn.querySelector(".copy-label").textContent = prevLabel;
+          btn.classList.remove("text-accent-300", "border-accent-500/40");
+        }, 1500);
       }
 
       function appendFunctionCall(turnEl, name, args) {
@@ -472,11 +518,26 @@
         }
       }
 
-      function appendText(turnEl, delta) {
+      function appendText(turnEl, chunk) {
         const bubble = getOrMakeTextBubble(turnEl);
         const md = bubble.querySelector(".md");
-        md.dataset.raw = (md.dataset.raw || "") + delta;
-        md.innerHTML = renderMd(md.dataset.raw);
+        const prev = md.dataset.raw || "";
+        // ADK streams partial events with deltas, then often emits a final
+        // aggregated event containing the *full* text. Naively appending
+        // both duplicates the response. Heuristics:
+        //   - chunk == prev  → exact duplicate, skip
+        //   - chunk starts with prev and is longer → cumulative, replace
+        //   - otherwise → real delta, append
+        let raw;
+        if (!chunk) return;
+        if (prev && chunk === prev) return;
+        if (prev && chunk.length > prev.length && chunk.startsWith(prev)) {
+          raw = chunk;
+        } else {
+          raw = prev + chunk;
+        }
+        md.dataset.raw = raw;
+        md.innerHTML = renderMd(raw);
         scrollDown();
       }
 
