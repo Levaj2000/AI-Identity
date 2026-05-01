@@ -1,6 +1,7 @@
 """Cleanup cron — internal endpoint for automated inactive user removal.
 
-Called weekly by Render Cron Job. Not exposed in public API docs.
+Called weekly by the ``weekly-user-cleanup`` K8s CronJob
+(see ``k8s/cronjob-cleanup.yaml``). Not exposed in public API docs.
 Secured by internal service key.
 """
 
