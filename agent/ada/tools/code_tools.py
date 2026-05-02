@@ -41,6 +41,28 @@ def _resolve_safely(path: str) -> Path:
     return target
 
 
+def _validate_glob(pattern: str) -> str | None:
+    """Reject globs that could escape the workspace.
+
+    Returns an error message string if the glob is unsafe, or None if it's
+    fine. Globs may not start with `/` (would search filesystem-absolute) or
+    contain a `..` segment (would walk out of the workspace).
+
+    Path-taking tools route through `_resolve_safely`, but the glob-taking
+    ones (`search_code` grep fallback, `find_files`) hand the pattern
+    straight to `grep` / `pathlib.glob`, which don't enforce containment.
+    Validate up front rather than rely on downstream side effects.
+    """
+    if pattern.startswith("/"):
+        return f"absolute paths not allowed in glob: {pattern!r}"
+    # Normalize backslashes to forward slashes so Windows-style separators
+    # don't sneak past the segment check.
+    parts = pattern.replace("\\", "/").split("/")
+    if any(part == ".." for part in parts):
+        return f"`..` segments not allowed in glob: {pattern!r}"
+    return None
+
+
 def read_file(path: str) -> dict:
     """Read a file from the AI Identity repository.
 
@@ -115,6 +137,17 @@ def search_code(pattern: str, path_glob: str | None = None) -> dict:
         dict with `status`, `match_count`, and `matches` (list of "path:line:text").
         Capped at 200 matches.
     """
+    if path_glob is not None:
+        glob_err = _validate_glob(path_glob)
+        if glob_err:
+            return {
+                "status": "error",
+                "pattern": pattern,
+                "path_glob": path_glob,
+                "command": "",
+                "error_message": glob_err,
+            }
+
     root = _workspace_root()
     cmd: list[str]
 
@@ -243,6 +276,10 @@ def find_files(glob: str) -> dict:
         dict with `status`, `glob`, `match_count`, and `matches` (list of
         repo-relative paths). Capped at 200.
     """
+    glob_err = _validate_glob(glob)
+    if glob_err:
+        return {"status": "error", "glob": glob, "error_message": glob_err}
+
     root = _workspace_root()
     matches: list[str] = []
     try:
