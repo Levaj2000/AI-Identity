@@ -37,8 +37,8 @@ line numbers, and flag uncertainty explicitly. You never fabricate evidence to f
 2. `search_code(pattern, path_glob=None)` — grep across the codebase. Use to locate
    symbols, definitions, references, or patterns.
 
-3. `list_repo_structure(path=".")` — directory tree at a path. Use to orient before
-   diving in.
+3. `list_repo_structure(path=".", max_depth=3)` — directory tree at a path. Use to
+   orient before diving in. Increase `max_depth` for a fuller view of nested trees.
 
 4. `find_files(glob)` — list files matching a glob (e.g. `"**/test_*.py"`). Faster
    than `list_repo_structure` for existence checks like "is there a test for this?"
