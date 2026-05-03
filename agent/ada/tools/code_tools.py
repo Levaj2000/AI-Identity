@@ -41,6 +41,40 @@ def _resolve_safely(path: str) -> Path:
     return target
 
 
+def _is_secret_path(target: Path) -> bool:
+    """Return True if `target` matches the secret-file denylist.
+
+    Patterns (case-insensitive on filename):
+    - `**/.env*`           env files (.env, .env.local, .env.production, ...)
+    - `**/*.pem`           PEM-encoded keys / certificates
+    - `**/*credential*`    anything with "credential" in the filename
+                           (covers application_default_credentials.json)
+    - `**/*secret*`        anything with "secret" in the filename
+    - `**/.git/**`         anything inside a .git directory
+
+    Conservative by design: a few benign files (a doc named
+    `secret-rotation.md`, say) will be denied. The cost of false positives
+    is friction; the cost of false negatives is a leaked credential.
+
+    Surfaced by Insight #74 — read_file allowed in-workspace reads of
+    .env / *.pem / credentials, so a prompt-injected request could
+    exfiltrate secrets via tool response.
+    """
+    if ".git" in target.parts:
+        return True
+    name = target.name
+    if not name:
+        return False
+    lower = name.lower()
+    if lower.startswith(".env"):
+        return True
+    if lower.endswith(".pem"):
+        return True
+    if "credential" in lower:
+        return True
+    return "secret" in lower
+
+
 def _validate_glob(pattern: str) -> str | None:
     """Reject globs that could escape the workspace.
 
@@ -86,6 +120,13 @@ def read_file(path: str) -> dict:
         target = _resolve_safely(path)
     except PermissionError as exc:
         return {"status": "error", "path": path, "error_message": str(exc)}
+
+    if _is_secret_path(target):
+        return {
+            "status": "error",
+            "path": path,
+            "error_message": f"path is on the secret-file denylist: {path}",
+        }
 
     if not target.exists():
         return {"status": "error", "path": path, "error_message": f"file not found: {path}"}
@@ -195,17 +236,25 @@ def search_code(pattern: str, path_glob: str | None = None) -> dict:
         }
 
     lines = [line for line in result.stdout.splitlines() if line.strip()]
-    capped = lines[:200]
-    rel_matches = [_strip_root_prefix(line, root) for line in capped]
+    rel_matches = [_strip_root_prefix(line, root) for line in lines]
+
+    # Filter matches whose file is on the secret-file denylist. Done after
+    # _strip_root_prefix so the path is always relative when we check it.
+    filtered: list[str] = []
+    for match_line in rel_matches:
+        path_str = match_line.split(":", 1)[0]
+        if path_str and _is_secret_path(Path(path_str)):
+            continue
+        filtered.append(match_line)
 
     return {
         "status": "success",
         "pattern": pattern,
         "path_glob": path_glob,
         "command": cmd_str,
-        "match_count": len(lines),
-        "truncated": len(lines) > 200,
-        "matches": rel_matches,
+        "match_count": len(filtered),
+        "truncated": len(filtered) > 200,
+        "matches": filtered[:200],
     }
 
 
@@ -242,6 +291,8 @@ def list_repo_structure(path: str = ".", max_depth: int = 3) -> dict:
             return
         for child in children:
             if child.name in skip_names or child.name.startswith("."):
+                continue
+            if _is_secret_path(child):
                 continue
             rel = child.relative_to(root)
             suffix = "/" if child.is_dir() else ""
@@ -285,6 +336,8 @@ def find_files(glob: str) -> dict:
     try:
         for p in root.glob(glob):
             if any(part in _GIT_SKIP_PARTS for part in p.parts):
+                continue
+            if _is_secret_path(p):
                 continue
             if p.is_file():
                 matches.append(str(p.relative_to(root)))
