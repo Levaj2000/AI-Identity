@@ -1,0 +1,28 @@
+# Build artifacts and dev junk that don't belong in the Cloud Run image.
+
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# macOS launcher artifacts (host-only)
+dist/
+launcher/build_icon.py
+*.icns
+
+# Tests, evals, and CI live alongside the code but aren't needed at
+# runtime — keeping them out trims image size and surface area.
+tests/
+evals/
+
+# Editor / OS files
+.DS_Store
+.idea/
+.vscode/
+
+# Local env (secrets stay in Secret Manager, not the image)
+.env
+.env.*
+ada/.env
+ada/.env.*
