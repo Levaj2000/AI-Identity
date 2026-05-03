@@ -13,6 +13,7 @@ Or launch the inspector UI:
 
 from google.adk.agents import Agent
 
+from .audit import after_tool_audit_callback, before_tool_audit_callback
 from .tools.ai_identity_tool import query_ai_identity_agent
 from .tools.code_tools import (
     find_files,
@@ -135,4 +136,9 @@ root_agent = Agent(
         git_blame,
         query_ai_identity_agent,
     ],
+    # Dogfood: every tool call is audited via AI Identity's gateway. Set
+    # ADA_REQUIRE_AUDIT=1 (with ADA_AGENT_ID + AI_IDENTITY_GATEWAY_URL) to
+    # enforce. Default off so the local launcher is unchanged. See audit.py.
+    before_tool_callback=before_tool_audit_callback,
+    after_tool_callback=after_tool_audit_callback,
 )
