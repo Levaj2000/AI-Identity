@@ -41,6 +41,46 @@ def _resolve_safely(path: str) -> Path:
     return target
 
 
+# Source-file extensions that should never be on the secret denylist.
+# A `.py` module about secrets is not a secret — it's the code that handles
+# secrets. Same for tests, docs, and TS/Go/Rust source. Without this carve-out,
+# the substring matches below denylist legitimate code (e.g. `secrets_handler.py`,
+# `test_code_tools_secrets.py`, `docs/secret-rotation.md`) and Ada cannot read
+# or search them. Surfaced 2026-05-03 when Ada concluded "no tests exist for
+# `_is_secret_path`" because her own test file `test_code_tools_secrets.py`
+# was being filtered out of every search result.
+_CODE_OR_DOC_EXTENSIONS = frozenset(
+    {
+        ".py",
+        ".pyi",
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".mjs",
+        ".cjs",
+        ".go",
+        ".rs",
+        ".java",
+        ".kt",
+        ".swift",
+        ".c",
+        ".cc",
+        ".cpp",
+        ".h",
+        ".hpp",
+        ".rb",
+        ".md",
+        ".rst",
+        ".mdx",
+        ".sql",
+        ".sh",
+        ".bash",
+        ".zsh",
+    }
+)
+
+
 def _is_secret_path(target: Path) -> bool:
     """Return True if `target` matches the secret-file denylist.
 
@@ -52,9 +92,14 @@ def _is_secret_path(target: Path) -> bool:
     - `**/*secret*`        anything with "secret" in the filename
     - `**/.git/**`         anything inside a .git directory
 
-    Conservative by design: a few benign files (a doc named
-    `secret-rotation.md`, say) will be denied. The cost of false positives
-    is friction; the cost of false negatives is a leaked credential.
+    **Carve-out**: code and doc files (`.py`, `.ts`, `.md`, etc — see
+    :data:`_CODE_OR_DOC_EXTENSIONS`) are never on the denylist even if their
+    name matches `*credential*` / `*secret*`. A module that *handles* secrets
+    is not a secret; a test file *about* the denylist is not a secret.
+    Without this carve-out, Ada cannot read her own implementation or tests.
+
+    `.env*` and `*.pem` patterns still apply to any extension because those
+    are data files by convention regardless of suffix.
 
     Surfaced by Insight #74 — read_file allowed in-workspace reads of
     .env / *.pem / credentials, so a prompt-injected request could
@@ -66,10 +111,18 @@ def _is_secret_path(target: Path) -> bool:
     if not name:
         return False
     lower = name.lower()
+    # `.env` and `.pem` checks come first — they apply regardless of the
+    # code/doc carve-out (an `.env.py` shouldn't sneak through, nor a
+    # `key.pem.md`).
     if lower.startswith(".env"):
         return True
     if lower.endswith(".pem"):
         return True
+    # For substring-based heuristics ("credential", "secret"), trust the
+    # source-extension carve-out: a `.py` named `secrets_handler.py` is
+    # source code that *handles* secrets, not a secret itself.
+    if target.suffix.lower() in _CODE_OR_DOC_EXTENSIONS:
+        return False
     if "credential" in lower:
         return True
     return "secret" in lower
@@ -206,18 +259,50 @@ def search_code(pattern: str, path_glob: str | None = None) -> dict:
             cmd += ["-g", path_glob]
         cmd.append(str(root))
     else:
-        cmd = [
-            "grep",
-            "-rn",
-            "--exclude-dir=.git",
-            "--exclude-dir=node_modules",
-            "--exclude-dir=.venv",
-            "--exclude-dir=dist",
-            "--exclude-dir=build",
-            "--exclude-dir=__pycache__",
-            pattern,
-            str(root if not path_glob else root / path_glob),
-        ]
+        # grep fallback. Two paths because grep does not expand `**/` itself
+        # — and `subprocess.run` does not invoke a shell — so passing
+        # `root / "**/test_*.py"` as a positional gives grep a literal path
+        # that does not exist, and the search silently returns 0 matches.
+        # Fixed-up dogfood failure mode: Ada believed "no tests exist" because
+        # her tool was lying; now the tool either uses rg's native glob or
+        # pre-enumerates files via pathlib so the fallback matches reality.
+        if path_glob:
+            try:
+                paths = [str(p) for p in root.glob(path_glob) if p.is_file()]
+            except (OSError, ValueError) as exc:
+                return {
+                    "status": "error",
+                    "pattern": pattern,
+                    "path_glob": path_glob,
+                    "command": "",
+                    "error_message": f"glob enumeration failed: {exc}",
+                }
+            if not paths:
+                # Nothing to search — return clean empty result rather than
+                # invoking grep with no files (which exits 2 and reads as error).
+                return {
+                    "status": "success",
+                    "pattern": pattern,
+                    "path_glob": path_glob,
+                    "command": f"grep -n {pattern!r} <{len(paths)} files matching {path_glob!r}>",
+                    "match_count": 0,
+                    "truncated": False,
+                    "matches": [],
+                }
+            cmd = ["grep", "-Hn", pattern, *paths]
+        else:
+            cmd = [
+                "grep",
+                "-rn",
+                "--exclude-dir=.git",
+                "--exclude-dir=node_modules",
+                "--exclude-dir=.venv",
+                "--exclude-dir=dist",
+                "--exclude-dir=build",
+                "--exclude-dir=__pycache__",
+                pattern,
+                str(root),
+            ]
 
     cmd_str = " ".join(cmd)
     try:

@@ -68,6 +68,47 @@ class TestIsSecretPath:
         assert _is_secret_path(Path("API_SECRET.json")) is True
         assert _is_secret_path(Path("CERT.PEM")) is True
 
+    @pytest.mark.parametrize(
+        "path",
+        [
+            # Source modules that *handle* secrets — code, not a secret.
+            "agent/ada/secrets_handler.py",
+            "common/auth/credentials.py",
+            "src/secret_rotation.py",
+            # Test files about the denylist itself — same logic.
+            "agent/tests/test_code_tools_secrets.py",
+            "agent/tests/test_credential_helpers.py",
+            "tests/test_secret_storage.ts",
+            # Docs *about* secrets.
+            "docs/secret-rotation.md",
+            "README.md",
+            "docs/credential-management.rst",
+            # Other code-or-doc extensions
+            "lib/SecretManager.go",
+            "src/credential_helper.rs",
+            "shell/rotate-secrets.sh",
+        ],
+    )
+    def test_code_and_doc_files_with_secret_in_name_are_safe(self, path: str) -> None:
+        # Regression: 2026-05-03 dogfood failure where Ada's own test file
+        # `test_code_tools_secrets.py` was filtered out of every search
+        # result because the denylist caught the substring "secret" in the
+        # filename. A code or doc file is not a secret.
+        assert _is_secret_path(Path(path)) is False
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            # Even with the source-extension carve-out, files starting with
+            # `.env` stay denylisted — someone naming an env file `.env.py`
+            # to evade the filter is exactly the abuse case.
+            ".env.py",
+            ".env.config.py",
+        ],
+    )
+    def test_env_rule_wins_over_code_carveout(self, path: str) -> None:
+        assert _is_secret_path(Path(path)) is True
+
 
 class TestReadFileBlocksSecrets:
     def test_env_file_denied(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
