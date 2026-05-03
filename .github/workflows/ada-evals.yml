@@ -1,0 +1,44 @@
+name: Ada Evals
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agent/**"
+      - ".github/workflows/ada-evals.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "agent/**"
+      - ".github/workflows/ada-evals.yml"
+
+jobs:
+  citation-gate:
+    name: Citation verifier + golden set
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install minimal eval deps
+        # Static eval mode has no ADK / Vertex / httpx dependency — pure
+        # Python regex + path operations. This keeps the gate fast and cheap
+        # so it can run on every PR that touches agent/ without burning
+        # Vertex tokens or waiting on a heavy install.
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+
+      - name: Run citation eval suite
+        working-directory: agent
+        run: python -m pytest tests/test_evals.py -v
+
+      - name: Run golden-set CLI (sanity)
+        working-directory: agent
+        run: python -m evals.run_evals
