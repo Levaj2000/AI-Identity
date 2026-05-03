@@ -1,0 +1,89 @@
+# Ada — Cloud Build pipeline (build + deploy to Cloud Run).
+#
+# Trigger:
+#   gcloud builds submit --config=agent/cloudbuild.yaml \
+#     --substitutions=SHORT_SHA=$(git rev-parse --short HEAD) .
+# Or via a Cloud Build trigger on PRs / main pushes that touch agent/**.
+#
+# Substitutions (override at trigger creation or via --substitutions):
+#   _REGION         — Artifact Registry + Cloud Run region (default us-east1).
+#   _AR_REPO        — Artifact Registry repo name (default ai-identity).
+#   _SERVICE        — Cloud Run service name (default ada).
+#   _RUNTIME_SA     — Service account Cloud Run runs as. Needs roles/aiplatform.user
+#                     and roles/secretmanager.secretAccessor on the secrets below.
+#   _ADMIN_SECRET   — Secret Manager secret holding the AI Identity admin key
+#                     (mounted as ADA_ADMIN_KEY).
+#   _RUNTIME_SECRET — Secret holding Ada's runtime aid_sk_ key
+#                     (mounted as AI_IDENTITY_API_KEY).
+#   _ADA_AGENT_ID   — Ada's AI Identity agent UUID.
+#   _MEMORY         — Cloud Run memory (default 2Gi).
+#   _CPU            — Cloud Run CPU (default 1).
+#   _MAX_INSTANCES  — Auto-scale ceiling (default 3).
+
+substitutions:
+  _REGION: us-east1
+  _AR_REPO: ai-identity
+  _SERVICE: ada
+  _RUNTIME_SA: ada-runtime@${PROJECT_ID}.iam.gserviceaccount.com
+  _ADMIN_SECRET: ada-admin-key
+  _RUNTIME_SECRET: ada-runtime-key
+  _ADA_AGENT_ID: ""
+  _MEMORY: 2Gi
+  _CPU: "1"
+  _MAX_INSTANCES: "3"
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: build
+    args:
+      - build
+      - -f
+      - agent/Dockerfile
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}:${SHORT_SHA}
+      - -t
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}:latest
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    id: push
+    waitFor: ["build"]
+    args:
+      - push
+      - --all-tags
+      - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}
+
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    id: deploy
+    waitFor: ["push"]
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}:${SHORT_SHA}
+      - --region=${_REGION}
+      - --platform=managed
+      - --service-account=${_RUNTIME_SA}
+      # IAM-gated: callers MUST have roles/run.invoker on this service.
+      # Public reach is denied at the Cloud Run boundary.
+      - --no-allow-unauthenticated
+      - --ingress=internal-and-cloud-load-balancing
+      - --memory=${_MEMORY}
+      - --cpu=${_CPU}
+      - --max-instances=${_MAX_INSTANCES}
+      - --timeout=600
+      - --port=8000
+      - --set-env-vars=ADA_REQUIRE_AUTH=1,ADA_REQUIRE_AUDIT=1,AI_IDENTITY_API_URL=https://api.ai-identity.co,AI_IDENTITY_GATEWAY_URL=https://gateway.ai-identity.co,GOOGLE_GENAI_USE_VERTEXAI=1,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_REGION},ADA_AGENT_ID=${_ADA_AGENT_ID}
+      # Secrets stay in Secret Manager. Cloud Run mounts at runtime via
+      # the workload identity SA — no JSON keys in the image, no JSON
+      # keys in env vars committed to git.
+      - --set-secrets=ADA_ADMIN_KEY=${_ADMIN_SECRET}:latest,AI_IDENTITY_API_KEY=${_RUNTIME_SECRET}:latest
+
+images:
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}:${SHORT_SHA}
+  - ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
