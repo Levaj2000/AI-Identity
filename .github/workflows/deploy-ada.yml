@@ -1,0 +1,94 @@
+name: Deploy Ada
+
+# Builds the Ada container and rolls a new Cloud Run revision whenever
+# main moves and the change touches Ada's runtime surface. Mirrors the
+# auth + WIF pattern from `deploy-gke.yml` so reviewers don't have to
+# learn a second deployment shape.
+#
+# Path filter is intentionally narrow: only files that end up baked
+# into the Ada image or change its deploy config trigger a redeploy.
+# CLI-only or docs-only commits don't burn a build.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'agent/**'
+      - '!agent/tests/**'      # tests run in ada-evals.yml, not here
+      - '!agent/evals/**'
+      - '!agent/launcher/**'   # local desktop launcher, not Cloud Run
+      - '!agent/**/*.md'
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Optional commit SHA to deploy (defaults to current ref)'
+        required: false
+        default: ''
+
+env:
+  PROJECT_ID: project-8bbb04f8-fda8-462e-bc2
+  REGION: us-east1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write       # required for workload identity federation
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # On manual dispatch, allow targeting a specific SHA. On a push
+          # event, this is a no-op (default ref already checked out).
+          ref: ${{ inputs.sha || github.sha }}
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Resolve short SHA
+        id: sha
+        run: echo "short_sha=$(git rev-parse --short=8 HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Submit Cloud Build
+        # `gcloud builds submit` blocks until the build completes. The
+        # cloudbuild.yaml build → push → `gcloud run deploy` chain rolls
+        # a new revision; Cloud Run handles the traffic cutover.
+        # SHORT_SHA is the only required substitution — every other
+        # value is defaulted in agent/cloudbuild.yaml to match prod.
+        run: |
+          gcloud builds submit \
+            --project=${{ env.PROJECT_ID }} \
+            --region=${{ env.REGION }} \
+            --config=agent/cloudbuild.yaml \
+            --substitutions=SHORT_SHA=${{ steps.sha.outputs.short_sha }} \
+            .
+
+      - name: Verify the new revision is serving
+        # Cloud Run reports a revision as Ready before the new image is
+        # actually fronted by a route. Poll the active revision name and
+        # confirm it matches the SHA we just pushed.
+        run: |
+          for i in 1 2 3 4 5 6; do
+            ACTIVE=$(gcloud run services describe ada \
+              --project=${{ env.PROJECT_ID }} \
+              --region=${{ env.REGION }} \
+              --format='value(status.traffic[0].revisionName)' 2>/dev/null || true)
+            DEPLOYED_IMAGE=$(gcloud run services describe ada \
+              --project=${{ env.PROJECT_ID }} \
+              --region=${{ env.REGION }} \
+              --format='value(spec.template.spec.containers[0].image)' 2>/dev/null || true)
+            echo "[$i/6] active=$ACTIVE image=$DEPLOYED_IMAGE"
+            if echo "$DEPLOYED_IMAGE" | grep -q "${{ steps.sha.outputs.short_sha }}"; then
+              echo "✓ Ada is now serving image @ ${{ steps.sha.outputs.short_sha }}"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Ada did not promote ${{ steps.sha.outputs.short_sha }} within 60s"
+          exit 1

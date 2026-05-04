@@ -2,20 +2,38 @@
 """aid — AI Identity audit review CLI.
 
 Minimal command-line tool for reviewing an agent's audit trail. Hits the
-AI Identity API with an admin key and prints a table of audit entries
-plus an optional chain-integrity check.
+AI Identity API and prints a table of audit entries plus an optional
+chain-integrity check.
 
 Sprint 12 carryover (#330). Pairs with the existing offline-verification
 tool in this directory (``ai_identity_verify.py``) — that one verifies a
 forensic export without any network access. This one reaches the live API
 for day-to-day "what did persona X do this week?" review.
 
+Authentication:
+
+    The dev-admin auth path today is the legacy email-as-key fallback —
+    set ``AI_IDENTITY_ADMIN_KEY`` to your AI Identity account email. This
+    is the same value the dashboard accepts in the ``X-API-Key`` header.
+    A first-class developer-key flow is on the roadmap; until then this
+    is the path that works.
+
 Usage:
 
-    export AI_IDENTITY_ADMIN_KEY=aid_admin_...
-    python cli/aid.py audit --agent cto --since 7d
+    export AI_IDENTITY_ADMIN_KEY="$YOUR_EMAIL"
+    python cli/aid.py agents                              # list agents
+    python cli/aid.py audit --agent cto --since 7d        # alias OK
+    python cli/aid.py audit --agent cto-agent --since 7d  # exact name OK
     python cli/aid.py audit --agent <UUID> --since 24h --verify-chain
     python cli/aid.py audit --agent cto --since 7d --limit 200
+
+Persona name aliases:
+
+    Skill-style names like ``cto``, ``pm``, ``marketing``, ``security``,
+    ``sales``, ``ceo`` resolve to the registered agents
+    ``cto-agent``, ``pm-agent``, etc. ``ada`` and ``webhook-receiver``
+    have no suffix and are used verbatim. Use ``aid agents`` to see the
+    canonical names.
 
 Note: webhook-driven briefings appear under the ``webhook-receiver`` agent
 by design — see Insight #71.
@@ -66,13 +84,37 @@ def _api_url() -> str:
 def _admin_key() -> str:
     key = os.environ.get("AI_IDENTITY_ADMIN_KEY", "")
     if not key:
-        print("ERROR: AI_IDENTITY_ADMIN_KEY env var is not set", file=sys.stderr)
+        print(
+            "ERROR: AI_IDENTITY_ADMIN_KEY is not set.\n"
+            "       Set it to your AI Identity account email — that's the legacy\n"
+            '       email-as-key auth the API accepts (e.g. export AI_IDENTITY_ADMIN_KEY="you@example.com").\n'
+            "       See cli/README.md for the bootstrap walkthrough.",
+            file=sys.stderr,
+        )
         raise SystemExit(2)
     return key
 
 
+# Skill-style names → canonical agent registry names. Lets `aid audit --agent cto`
+# resolve to the registered agent `cto-agent`. Single source of truth so
+# resolve_agent() and cmd_agents() stay in sync.
+PERSONA_ALIASES: dict[str, str] = {
+    "ceo": "ceo-agent",
+    "cto": "cto-agent",
+    "pm": "pm-agent",
+    "security": "security-agent",
+    "marketing": "marketing-agent",
+    "sales": "sales-agent",
+}
+
+
 def resolve_agent(client: httpx.Client, agent: str) -> tuple[str, str]:
-    """Return ``(agent_id, agent_name)``. Accepts a UUID or a persona name.
+    """Return ``(agent_id, agent_name)``. Accepts a UUID, a canonical name, or a persona alias.
+
+    Persona aliases (``cto`` → ``cto-agent``, etc.) are resolved against
+    :data:`PERSONA_ALIASES` so users can type the skill-style name they
+    already know. Falls back to a generic ``<name>-agent`` retry for
+    aliases not in the table.
 
     Raises :class:`SystemExit` (exit code 2) when ambiguous or not found,
     so callers don't need to wrap; the CLI surfaces a clear message.
@@ -88,26 +130,46 @@ def resolve_agent(client: httpx.Client, agent: str) -> tuple[str, str]:
         body = resp.json()
         return body["id"], body.get("name", "")
 
+    # Build the candidate list from the input itself, then known aliases,
+    # then a generic "-agent" fallback. First exact match wins. Order
+    # matters: prefer an exact name match over an alias of the same word.
+    candidates: list[str] = [agent]
+    if agent in PERSONA_ALIASES:
+        candidates.append(PERSONA_ALIASES[agent])
+    elif not agent.endswith("-agent"):
+        candidates.append(f"{agent}-agent")
+
     resp = client.get(
         f"{_api_url()}/api/v1/agents",
         headers=headers,
-        params={"name": agent, "limit": 50},
+        params={"limit": 100},
     )
     resp.raise_for_status()
     body = resp.json()
     items = body if isinstance(body, list) else body.get("items", body.get("agents", []))
-    matches = [a for a in items if a.get("name") == agent]
-    if not matches:
-        print(f"ERROR: no agent found with name {agent!r}", file=sys.stderr)
-        raise SystemExit(2)
-    if len(matches) > 1:
-        print(
-            f"ERROR: multiple agents named {agent!r} ({len(matches)} matches); "
-            "use the UUID instead",
-            file=sys.stderr,
-        )
-        raise SystemExit(2)
-    return matches[0]["id"], matches[0]["name"]
+
+    for candidate in candidates:
+        matches = [a for a in items if a.get("name") == candidate]
+        if len(matches) == 1:
+            if candidate != agent:
+                print(f"note: resolved {agent!r} → {candidate!r}", file=sys.stderr)
+            return matches[0]["id"], matches[0]["name"]
+        if len(matches) > 1:
+            print(
+                f"ERROR: multiple agents named {candidate!r} ({len(matches)} matches); "
+                "use the UUID instead",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+
+    # Nothing matched any candidate — emit a useful error with known names.
+    known = sorted({str(a.get("name", "")) for a in items if a.get("name")})
+    print(f"ERROR: no agent found with name {agent!r}", file=sys.stderr)
+    if known:
+        preview = ", ".join(known[:10])
+        suffix = f" (and {len(known) - 10} more — run `aid agents`)" if len(known) > 10 else ""
+        print(f"       known agents: {preview}{suffix}", file=sys.stderr)
+    raise SystemExit(2)
 
 
 def fetch_audit_entries(
@@ -116,11 +178,18 @@ def fetch_audit_entries(
     since: timedelta,
     limit: int,
 ) -> list[dict[str, Any]]:
-    """Fetch audit log entries for ``agent_id`` from now-``since`` through now."""
+    """Fetch audit log entries for ``agent_id`` from now-``since`` through now.
+
+    The path intentionally has NO trailing slash — the API is currently
+    deployed behind a proxy that doesn't forward X-Forwarded-Proto, so
+    FastAPI's auto-generated trailing-slash 307 redirect emits an
+    ``http://`` location and httpx (correctly) refuses to follow the
+    cross-protocol downgrade. Tracked as Sprint 13 #342.
+    """
     start = (datetime.now(timezone.utc) - since).isoformat()
     params = {"agent_id": agent_id, "start_date": start, "limit": min(limit, 500)}
     resp = client.get(
-        f"{_api_url()}/api/v1/audit/",
+        f"{_api_url()}/api/v1/audit",
         headers={"X-API-Key": _admin_key()},
         params=params,
     )
@@ -142,12 +211,15 @@ def verify_chain(client: httpx.Client, agent_id: str) -> dict[str, Any]:
     return resp.json()
 
 
-_TABLE_COLS: tuple[tuple[str, int], ...] = (
-    ("timestamp", 25),
-    ("decision", 9),
-    ("method", 6),
-    ("endpoint", 50),
-    ("correlation_id", 16),
+# Each column: (display_label, fallback lookup keys, width). Multiple keys
+# let the timestamp column accept either ``timestamp`` (legacy / test fixtures)
+# or ``created_at`` (what the live API actually returns).
+_TABLE_COLS: tuple[tuple[str, tuple[str, ...], int], ...] = (
+    ("TIMESTAMP", ("timestamp", "created_at"), 25),
+    ("DECISION", ("decision",), 9),
+    ("METHOD", ("method",), 6),
+    ("ENDPOINT", ("endpoint",), 50),
+    ("CORRELATION_ID", ("correlation_id",), 16),
 )
 
 
@@ -155,21 +227,57 @@ def render_table(entries: list[dict[str, Any]]) -> str:
     """Plain-text table — no color, no Unicode beyond `─`. Stays portable."""
     if not entries:
         return "No audit entries in the requested window."
-    header = "  ".join(name.upper().ljust(width) for name, width in _TABLE_COLS)
-    sep = "  ".join("-" * width for _, width in _TABLE_COLS)
+    header = "  ".join(label.ljust(width) for label, _, width in _TABLE_COLS)
+    sep = "  ".join("-" * width for _, _, width in _TABLE_COLS)
     lines = [header, sep]
     for entry in entries:
         row: list[str] = []
-        for name, width in _TABLE_COLS:
-            val = entry.get(name, "")
-            if val is None:
-                val = ""
+        for _, keys, width in _TABLE_COLS:
+            val: Any = ""
+            for key in keys:
+                candidate = entry.get(key)
+                if candidate not in (None, ""):
+                    val = candidate
+                    break
             text = str(val)
             if len(text) > width:
                 text = text[: width - 1] + "…"
             row.append(text.ljust(width))
         lines.append("  ".join(row))
     return "\n".join(lines)
+
+
+def list_agents(client: httpx.Client) -> list[dict[str, Any]]:
+    """Return all agents visible to the caller, sorted by name."""
+    resp = client.get(
+        f"{_api_url()}/api/v1/agents",
+        headers={"X-API-Key": _admin_key()},
+        params={"limit": 100},
+    )
+    resp.raise_for_status()
+    body = resp.json()
+    items = body if isinstance(body, list) else body.get("items", body.get("agents", []))
+    return sorted(items, key=lambda a: str(a.get("name", "")))
+
+
+def render_agents_table(items: list[dict[str, Any]]) -> str:
+    """Two-column table: NAME, AGENT_ID. Matches the `aid audit` look-and-feel."""
+    if not items:
+        return "No agents visible to this caller."
+    name_w = max(len("NAME"), max(len(str(a.get("name", ""))) for a in items))
+    lines = [f"{'NAME'.ljust(name_w)}  AGENT_ID"]
+    lines.append(f"{'-' * name_w}  {'-' * 36}")
+    for a in items:
+        lines.append(f"{str(a.get('name', '')).ljust(name_w)}  {a.get('id', '')}")
+    return "\n".join(lines)
+
+
+def cmd_agents(args: argparse.Namespace) -> int:  # noqa: ARG001 - argparse contract
+    """Implementation of ``aid agents`` — discover canonical agent names + UUIDs."""
+    with httpx.Client(timeout=HTTP_TIMEOUT_S) as client:
+        items = list_agents(client)
+        print(render_agents_table(items))
+    return 0
 
 
 def cmd_audit(args: argparse.Namespace) -> int:
@@ -236,6 +344,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Also call the chain-integrity verifier for this agent.",
     )
     audit.set_defaults(func=cmd_audit)
+
+    agents = sub.add_parser(
+        "agents",
+        description=(
+            "List agents visible to the caller (canonical name + UUID). "
+            "Use this to discover the exact name to pass to `aid audit --agent`."
+        ),
+    )
+    agents.set_defaults(func=cmd_agents)
 
     return parser
 
