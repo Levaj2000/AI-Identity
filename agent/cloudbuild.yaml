@@ -25,9 +25,12 @@ substitutions:
   _AR_REPO: ai-identity
   _SERVICE: ada
   _RUNTIME_SA: ada-runtime@${PROJECT_ID}.iam.gserviceaccount.com
-  _ADMIN_SECRET: ada-admin-key
-  _RUNTIME_SECRET: ada-runtime-key
-  _ADA_AGENT_ID: ""
+  # Defaults match the production Secret Manager entries + Ada agent UUID
+  # in this project. Override at `gcloud builds submit --substitutions=...`
+  # for any non-prod environment.
+  _ADMIN_SECRET: ai-identity-ADA_ADMIN_KEY
+  _RUNTIME_SECRET: ai-identity-ADA_RUNTIME_KEY
+  _ADA_AGENT_ID: 2e22d027-dd98-4096-a000-ddceb0e5d269
   _MEMORY: 2Gi
   _CPU: "1"
   _MAX_INSTANCES: "3"
