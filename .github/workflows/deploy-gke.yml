@@ -192,6 +192,20 @@ jobs:
 
       - name: Deploy to GKE
         run: |
+          # Apply the deployment manifests FIRST so any spec change in
+          # this commit (args, env, resources, probes, replicas, etc.)
+          # propagates to the cluster. Without this step, `kubectl set
+          # image` below only swaps the container image — args / env
+          # changes in the manifest sit in main and never roll out, which
+          # is how #342's `--forwarded-allow-ips='*'` flag silently sat
+          # in a merged PR for 30 minutes after deploy. The apply uses
+          # the manifest's pinned image as a temporary value; `kubectl
+          # set image` immediately below overrides it to the freshly
+          # built digest. Kubernetes debounces the two changes — the
+          # deployment controller observes the combined desired state
+          # and creates one new ReplicaSet, so this is a single rollout
+          # not two.
+          kubectl apply -f k8s/api-deployment.yaml -f k8s/gateway-deployment.yaml
           kubectl set image deployment/api \
             api=$REGISTRY/$PROJECT_ID/ai-identity/api@${{ steps.digests.outputs.api_digest }} \
             -n ai-identity
