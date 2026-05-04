@@ -1,3 +1,90 @@
+# AI Identity — Command-Line Tools
+
+Two CLIs live here, with overlapping audiences but different purposes:
+
+| Tool | Network | Purpose |
+|------|---------|---------|
+| `ai_identity_verify.py` | **Offline** | Auditors / customers verify a forensic export without trusting the AI Identity server |
+| `aid.py` | **Online** | Operators / founders review live audit activity for an agent — "what did persona X do this week?" |
+
+If you want to verify a forensics export you were handed, jump to [Offline Verification CLI](#ai-identity--offline-verification-cli).
+If you want to read live audit logs from the running platform, see [aid — Live Audit Review CLI](#aid--live-audit-review-cli).
+
+---
+
+## `aid` — Live Audit Review CLI
+
+`aid.py` queries the live AI Identity API and prints a per-agent audit table plus an optional chain-integrity check. Designed for the daily dogfood loop and for evaluators who want to see "yes, every action this agent took is signed and chained."
+
+### Bootstrap
+
+```bash
+# Auth: today the API still accepts the legacy "email-as-key" path on the
+# X-API-Key header. A first-class developer-key flow is on the roadmap; until
+# then the value to use is your account email.
+export AI_IDENTITY_ADMIN_KEY="you@example.com"
+
+# Optional: point at a non-prod API
+export AI_IDENTITY_API_URL=https://api.ai-identity.co   # default
+
+# httpx is the only runtime dependency
+pip install httpx
+```
+
+If `AI_IDENTITY_ADMIN_KEY` is unset the CLI exits with a hint that includes the bootstrap example, so a fresh operator can self-serve in one step.
+
+### Commands
+
+```bash
+# Discover the canonical agent names + UUIDs (good first call on any new env)
+python cli/aid.py agents
+
+# Read the last 7 days of audit entries for an agent (alias OK)
+python cli/aid.py audit --agent cto --since 7d
+python cli/aid.py audit --agent cto-agent --since 7d   # exact name OK
+python cli/aid.py audit --agent <UUID> --since 24h     # UUID also OK
+
+# Add an integrity check
+python cli/aid.py audit --agent ada --since 14d --verify-chain
+
+# Wider window
+python cli/aid.py audit --agent pm --since 30d --limit 200
+```
+
+### Persona name aliases
+
+Skill-style names map to the registered agent names automatically:
+
+| You type | Resolves to |
+|---|---|
+| `cto` | `cto-agent` |
+| `pm` | `pm-agent` |
+| `marketing` | `marketing-agent` |
+| `security` | `security-agent` |
+| `sales` | `sales-agent` |
+| `ceo` | `ceo-agent` |
+| `ada` | `ada` (no suffix) |
+| `webhook-receiver` | `webhook-receiver` (no suffix) |
+
+When an alias is applied the CLI prints `note: resolved 'cto' → 'cto-agent'` to stderr so you know what was matched. For agents without a known alias, `aid` will also try `<name>-agent` as a fallback before erroring.
+
+### Notes
+
+- Webhook-driven briefings (e.g. CEO Dashboard → AI Identity audit forwarder) appear under the `webhook-receiver` agent **by design**. See Insight #71.
+- `--since` accepts compact durations: `7d`, `24h`, `30m`, `90s`.
+- Exit codes: `0` success, `1` HTTP/network error, `2` usage / not-found / ambiguity.
+
+### Testing
+
+```bash
+cd cli
+python -m pytest test_aid.py -v
+```
+
+Tests are network-free — `httpx.Client` is mocked.
+
+---
+
 # AI Identity — Offline Verification CLI
 
 Standalone tool for auditors, incident responders, and customers to verify AI Identity forensic exports **completely offline** — no database, no API, no network access required.

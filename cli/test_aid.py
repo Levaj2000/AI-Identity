@@ -111,6 +111,71 @@ class TestResolveAgent:
             aid.resolve_agent(client, "cto")
         assert exc.value.code == 2
 
+    def test_persona_alias_resolves_to_canonical_name(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """``--agent cto`` should resolve to the registered agent ``cto-agent``."""
+        client = MagicMock(spec=httpx.Client)
+        client.get.return_value = _resp(
+            200,
+            [
+                {"id": "abc", "name": "cto-agent"},
+                {"id": "def", "name": "ada"},
+            ],
+        )
+        agent_id, name = aid.resolve_agent(client, "cto")
+        assert agent_id == "abc"
+        assert name == "cto-agent"
+        # Note printed to stderr so the alias is visible
+        err = capsys.readouterr().err
+        assert "'cto'" in err and "'cto-agent'" in err
+
+    def test_generic_hyphen_agent_fallback(self, admin_key: None) -> None:  # noqa: ARG002
+        """Non-aliased name ``foo`` should still try ``foo-agent`` before erroring."""
+        client = MagicMock(spec=httpx.Client)
+        client.get.return_value = _resp(
+            200,
+            [{"id": "xyz", "name": "foo-agent"}],
+        )
+        agent_id, name = aid.resolve_agent(client, "foo")
+        assert agent_id == "xyz"
+        assert name == "foo-agent"
+
+    def test_exact_match_preferred_over_alias(self, admin_key: None) -> None:  # noqa: ARG002
+        """If both ``cto`` and ``cto-agent`` exist, the exact match wins."""
+        client = MagicMock(spec=httpx.Client)
+        client.get.return_value = _resp(
+            200,
+            [
+                {"id": "exact", "name": "cto"},
+                {"id": "alias", "name": "cto-agent"},
+            ],
+        )
+        agent_id, _ = aid.resolve_agent(client, "cto")
+        assert agent_id == "exact"
+
+    def test_unknown_name_lists_known_agents_in_error(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        client = MagicMock(spec=httpx.Client)
+        client.get.return_value = _resp(
+            200,
+            [
+                {"id": "1", "name": "ada"},
+                {"id": "2", "name": "cto-agent"},
+            ],
+        )
+        with pytest.raises(SystemExit) as exc:
+            aid.resolve_agent(client, "nonexistent")
+        assert exc.value.code == 2
+        err = capsys.readouterr().err
+        assert "ada" in err
+        assert "cto-agent" in err
+
 
 class TestFetchAuditEntries:
     def test_returns_list_directly(self, admin_key: None) -> None:  # noqa: ARG002
@@ -259,6 +324,55 @@ class TestCmdAuditEndToEnd:
         assert exc.value.code == 2
         err = capsys.readouterr().err
         assert "AI_IDENTITY_ADMIN_KEY" in err
+        # Improved guidance — surfaces the email-as-key auth path explicitly
+        assert "email" in err.lower()
+
+
+class TestCmdAgents:
+    def test_lists_agents_sorted(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        client = MagicMock()
+        client.__enter__ = MagicMock(return_value=client)
+        client.__exit__ = MagicMock(return_value=False)
+        with patch.object(aid.httpx, "Client", return_value=client):
+            client.get.return_value = _resp(
+                200,
+                [
+                    {"id": "z-id", "name": "zebra-agent"},
+                    {"id": "a-id", "name": "ada"},
+                    {"id": "c-id", "name": "cto-agent"},
+                ],
+            )
+            exit_code = aid.main(["agents"])
+
+        assert exit_code == 0
+        out = capsys.readouterr().out
+        assert "NAME" in out and "AGENT_ID" in out
+        # Sorted: ada, cto-agent, zebra-agent
+        ada_pos = out.index("ada")
+        cto_pos = out.index("cto-agent")
+        zebra_pos = out.index("zebra-agent")
+        assert ada_pos < cto_pos < zebra_pos
+        assert "a-id" in out and "c-id" in out and "z-id" in out
+
+    def test_empty_agent_list(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        client = MagicMock()
+        client.__enter__ = MagicMock(return_value=client)
+        client.__exit__ = MagicMock(return_value=False)
+        with patch.object(aid.httpx, "Client", return_value=client):
+            client.get.return_value = _resp(200, [])
+            exit_code = aid.main(["agents"])
+
+        assert exit_code == 0
+        out = capsys.readouterr().out
+        assert "No agents" in out
 
 
 class TestArgparse:
