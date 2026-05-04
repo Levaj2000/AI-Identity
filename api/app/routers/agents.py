@@ -176,7 +176,7 @@ def create_agent(
         agent_id=agent.id,
         endpoint="/api/v1/agents",
         method="POST",
-        decision="allowed",
+        decision="allow",
         user_id=user.id,
         request_metadata={
             "action_type": "agent_created",
@@ -348,7 +348,7 @@ def update_agent(
         agent_id=agent.id,
         endpoint=f"/api/v1/agents/{agent.id}",
         method="PUT",
-        decision="allowed",
+        decision="allow",
         user_id=user.id,
         request_metadata=metadata,
     )
@@ -410,7 +410,7 @@ def delete_agent(
         agent_id=agent.id,
         endpoint=f"/api/v1/agents/{agent.id}",
         method="DELETE",
-        decision="allowed",
+        decision="allow",
         user_id=user.id,
         request_metadata={
             "action_type": "agent_revoked",

@@ -197,11 +197,17 @@ def before_tool_audit_callback(
         }
 
     if decision.decision == "deny":
+        logger.warning(
+            "ada.audit denied tool=%s status=%s nonce=%s — operator action: "
+            "update Ada's AI Identity policy to allow /ada/tools/* endpoints",
+            tool.name,
+            decision.status_code,
+            decision.nonce,
+        )
         return {
             "status": "error",
             "error_message": (
-                f"Ada audit denied tool '{tool.name}' (status={decision.status_code}). "
-                "Update Ada's AI Identity policy to allow /ada/tools/* endpoints."
+                f"This action is not permitted by Ada's current policy. (tool: {tool.name})"
             ),
         }
 
