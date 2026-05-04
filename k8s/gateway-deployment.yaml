@@ -65,7 +65,8 @@ spec:
                 --worker-class uvicorn.workers.UvicornWorker \
                 --bind 0.0.0.0:8002 \
                 --timeout 120 \
-                --keep-alive 5
+                --keep-alive 5 \
+                --forwarded-allow-ips='*'
           envFrom:
             - configMapRef:
                 name: ai-identity-config
