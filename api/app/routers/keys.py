@@ -119,7 +119,7 @@ def create_key(
         agent_id=agent.id,
         endpoint=f"/api/v1/agents/{agent.id}/keys",
         method="POST",
-        decision="allowed",
+        decision="allow",
         user_id=user.id,
         request_metadata={
             "action_type": "key_created",
@@ -267,7 +267,7 @@ def rotate_key(
         agent_id=agent.id,
         endpoint=f"/api/v1/agents/{agent.id}/keys/rotate",
         method="POST",
-        decision="allowed",
+        decision="allow",
         user_id=user.id,
         request_metadata={
             "action_type": "key_rotated",
@@ -332,7 +332,7 @@ def revoke_key(
         agent_id=agent.id,
         endpoint=f"/api/v1/agents/{agent.id}/keys/{key.id}",
         method="DELETE",
-        decision="allowed",
+        decision="allow",
         user_id=user.id,
         request_metadata={
             "action_type": "key_revoked",
