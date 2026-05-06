@@ -23,7 +23,7 @@ export default function About() {
             <span className="text-[rgb(166,218,255)] text-sm font-medium">About AI Identity</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
-            Identity &amp; Governance for{" "}
+            Identity & Governance for{" "}
             <span className="text-[rgb(166,218,255)]">AI Agents</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-[720px] mx-auto leading-relaxed">
@@ -180,21 +180,21 @@ export default function About() {
 
           <div className="grid md:grid-cols-3 gap-4 mb-8">
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-              <h3 className="text-base font-semibold text-white mb-2">Platform &amp; AI engineering teams</h3>
+              <h3 className="text-base font-semibold text-white mb-2">Platform & AI engineering teams</h3>
               <p className="text-sm text-gray-400 leading-relaxed">
                 Own the agent runtime. Need per-agent keys, quota control, and a drop-in gateway
-                that doesn&apos;t require rewriting every agent.
+                that doesn't require rewriting every agent.
               </p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-              <h3 className="text-base font-semibold text-white mb-2">Security &amp; IAM teams</h3>
+              <h3 className="text-base font-semibold text-white mb-2">Security & IAM teams</h3>
               <p className="text-sm text-gray-400 leading-relaxed">
                 Own authorization. Need deny-by-default enforcement, scoped credentials, rotation,
                 and anomaly detection for non-human identities.
               </p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-              <h3 className="text-base font-semibold text-white mb-2">Risk, compliance &amp; audit</h3>
+              <h3 className="text-base font-semibold text-white mb-2">Risk, compliance & audit</h3>
               <p className="text-sm text-gray-400 leading-relaxed">
                 Own the evidence. Need tamper-evident logs, signed attestations, and control
                 mapping to EU AI Act, SOC 2, NIST AI RMF, GDPR, and HIPAA.
@@ -210,9 +210,9 @@ export default function About() {
               {[
                 "Financial services",
                 "Healthcare",
-                "Legal &amp; professional services",
+                "Legal & professional services",
                 "SaaS platforms shipping agents",
-                "Public sector &amp; regulated research",
+                "Public sector & regulated research",
               ].map((ind) => (
                 <span
                   key={ind}
@@ -276,12 +276,12 @@ export default function About() {
             {/* Bio */}
             <div className="flex-1 min-w-0">
               <h3 className="text-xl font-semibold text-white">Jeff Leva</h3>
-              <p className="text-sm text-[rgb(166,218,255)] mb-1">Founder &amp; CEO</p>
+              <p className="text-sm text-[rgb(166,218,255)] mb-1">Founder & CEO</p>
               <p className="text-xs text-[rgba(213,219,230,0.5)] mb-4">Boulder, Colorado</p>
 
               <p className="text-sm text-gray-400 leading-relaxed mb-3">
                 Jeff has spent his career building and operating production systems in
-                environments where failure isn&apos;t an option — cloud banking infrastructure
+                environments where failure isn't an option — cloud banking infrastructure
                 handling $50B+ in client assets, enterprise platforms that teams run their
                 businesses on, and the security and compliance tooling those environments demand.
               </p>
@@ -325,20 +325,20 @@ export default function About() {
 
           {/* Team & Partners */}
           <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.02] p-5 md:p-6">
-            <h3 className="text-base font-semibold text-white mb-3">Team &amp; Partners</h3>
+            <h3 className="text-base font-semibold text-white mb-3">Team & Partners</h3>
             <p className="text-sm text-gray-400 leading-relaxed mb-3">
-              We&apos;re selectively building our founding team and advisory network. If
-              you&apos;ve scaled a developer platform, security product, or compliance tooling
-              and want to be close to what&apos;s being built at the AI identity layer —{" "}
+              We're selectively building our founding team and advisory network. If
+              you've scaled a developer platform, security product, or compliance tooling
+              and want to be close to what's being built at the AI identity layer —{" "}
               <Link href="/contact" className="text-[rgb(166,218,255)] hover:underline">
                 get in touch
               </Link>.
             </p>
             <p className="text-sm text-gray-400 leading-relaxed">
-              We&apos;re also in conversation with potential co-founders with deep go-to-market
-              or enterprise security backgrounds. If that&apos;s you,{" "}
+              We're also in conversation with potential co-founders with deep go-to-market
+              or enterprise security backgrounds. If that's you,{" "}
               <Link href="/contact" className="text-[rgb(166,218,255)] hover:underline">
-                let&apos;s talk
+                let's talk
               </Link>.
             </p>
           </div>
@@ -353,7 +353,7 @@ export default function About() {
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Current Stage</h2>
           <p className="text-sm text-gray-400 leading-relaxed mb-6 max-w-[760px]">
             AI Identity is in early launch. Core product is live and running in production on our
-            own infrastructure. We&apos;re selectively onboarding design partners and refining the
+            own infrastructure. We're selectively onboarding design partners and refining the
             product against their real workloads before broader GA.
           </p>
           <div className="grid md:grid-cols-2 gap-4">
@@ -463,9 +463,9 @@ export default function About() {
       <section className="pb-24 pt-8 px-6 md:px-12">
         <div className="max-w-[900px] mx-auto">
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
-            <h3 className="text-xl font-bold text-white mb-3">Let&apos;s talk</h3>
+            <h3 className="text-xl font-bold text-white mb-3">Let's talk</h3>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
-              Whether you&apos;re exploring agent governance or ready to deploy, we&apos;d love to
+              Whether you're exploring agent governance or ready to deploy, we'd love to
               hear from you. Design partner slots are open through Q2 2026.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
