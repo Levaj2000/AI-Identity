@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     q: "How do I report a bug or issue?",
-    a: "Use the contact form on this page with the subject set to &apos;Bug Report&apos;, or email us directly at jeff@ai-identity.co. Include steps to reproduce the issue and any error messages you see.",
+    a: "Use the contact form on this page with the subject set to 'Bug Report', or email us directly at jeff@ai-identity.co. Include steps to reproduce the issue and any error messages you see.",
   },
   {
     q: "What kind of support do you offer?",
@@ -50,7 +50,7 @@ export default function ContactContent() {
         <div className="max-w-[800px] mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 rounded-full mb-8">
             <span className="text-[rgb(166,218,255)] text-sm font-medium">
-              We&apos;d love to hear from you
+              We'd love to hear from you
             </span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
@@ -58,7 +58,7 @@ export default function ContactContent() {
           </h1>
           <p className="text-lg text-gray-400 max-w-[600px] mx-auto">
             Have a question, need support, or interested in a partnership?
-            Reach out and we&apos;ll get back to you within 24 hours.
+            Reach out and we'll get back to you within 24 hours.
           </p>
         </div>
       </section>

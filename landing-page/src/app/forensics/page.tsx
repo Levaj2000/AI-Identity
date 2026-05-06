@@ -129,7 +129,7 @@ export default function Forensics() {
             <span className="text-[rgb(166,218,255)]">Prove It.</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
-            AI Forensics reconstructs an agent&apos;s entire decision chain, commits to it with a KMS-signed DSSE attestation, and exports evidence any auditor can verify offline — without trusting our infrastructure.
+            AI Forensics reconstructs an agent's entire decision chain, commits to it with a KMS-signed DSSE attestation, and exports evidence any auditor can verify offline — without trusting our infrastructure.
           </p>
         </div>
       </section>
@@ -150,7 +150,7 @@ export default function Forensics() {
                 <h3 className="text-base font-semibold text-gray-400">Monitoring / Observability</h3>
               </div>
               <ul className="space-y-3 text-sm text-gray-500">
-                <li className="flex items-start gap-2"><span className="shrink-0 mt-0.5">•</span>What&apos;s happening now?</li>
+                <li className="flex items-start gap-2"><span className="shrink-0 mt-0.5">•</span>What's happening now?</li>
                 <li className="flex items-start gap-2"><span className="shrink-0 mt-0.5">•</span>Metrics, traces, APM dashboards</li>
                 <li className="flex items-start gap-2"><span className="shrink-0 mt-0.5">•</span>Application-level logs (mutable)</li>
                 <li className="flex items-start gap-2"><span className="shrink-0 mt-0.5">•</span>Alert when something goes wrong</li>
@@ -228,7 +228,7 @@ export default function Forensics() {
         <div className="max-w-[900px] mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 text-center">Forensics Meets Compliance</h2>
           <p className="text-sm text-gray-400 text-center mb-10 max-w-[560px] mx-auto">
-            AI Forensics isn&apos;t optional — it&apos;s what regulators are already requiring.
+            AI Forensics isn't optional — it's what regulators are already requiring.
           </p>
           <div className="space-y-4">
             {complianceMapping.map((c) => (
@@ -248,7 +248,7 @@ export default function Forensics() {
       <section className="pb-24 px-6 md:px-12">
         <div className="max-w-[800px] mx-auto">
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">If it didn&apos;t go through AI Identity, you can&apos;t prove what your agent did.</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">If it didn't go through AI Identity, you can't prove what your agent did.</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
               Start with the free tier — 5 agents, tamper-proof audit trails, and chain verification included.
             </p>

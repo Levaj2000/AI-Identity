@@ -604,7 +604,7 @@ export default function HomeContent() {
                     <circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
                   </svg>
                 </div>
-                <span className="text-[rgba(213,219,230,0.5)] font-medium font-['Instrument_Serif'] italic">DIY &amp; Legacy IAM</span>
+                <span className="text-[rgba(213,219,230,0.5)] font-medium font-['Instrument_Serif'] italic">DIY & Legacy IAM</span>
               </div>
               <ul className="space-y-4">
                 {[
@@ -868,7 +868,7 @@ export default function HomeContent() {
           </p>
           <div className="max-w-[640px] mx-auto mb-8 bg-[rgb(166,218,255)]/[0.04] border border-[rgb(166,218,255)]/15 rounded-xl px-6 py-5">
             <p className="text-sm text-gray-300 leading-relaxed text-center">
-              <span className="text-[rgb(166,218,255)]">&#10038;</span>&ensp;A portion of AI Identity&apos;s business sales will be directed to organizations working with people and communities in need. As the company grows, we want the business itself to be a small force for good.&ensp;<span className="text-[rgb(166,218,255)]">&#10038;</span>
+              <span className="text-[rgb(166,218,255)]">&#10038;</span>&ensp;A portion of AI Identity's business sales will be directed to organizations working with people and communities in need. As the company grows, we want the business itself to be a small force for good.&ensp;<span className="text-[rgb(166,218,255)]">&#10038;</span>
             </p>
           </div>
           <a
