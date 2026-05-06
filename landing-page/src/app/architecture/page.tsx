@@ -147,7 +147,7 @@ export default function Architecture() {
 
         <div className="mt-6 flex flex-wrap gap-6 justify-center text-xs text-gray-500">
           <span className="flex items-center gap-2"><span className="w-6 h-px bg-[rgb(166,218,255)]" /> Request flow</span>
-          <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[rgb(166,218,255)]/60" /> Encrypted at rest &amp; in transit</span>
+          <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[rgb(166,218,255)]/60" /> Encrypted at rest & in transit</span>
           <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-white/20" /> Immutable audit record</span>
         </div>
       </Section>
@@ -163,7 +163,7 @@ export default function Architecture() {
           <Card icon={icons.link} title="Tamper-Evident Audit Trail" description="Every audit record is cryptographically chained using HMAC-SHA256. If any record is altered, the chain breaks — making tampering detectable and provable." />
           <Card icon={icons.key} title="Zero-Trust Key Separation" description="Runtime keys used by agents are fully separated from administrative keys. Compromising one does not compromise the other." />
           <Card icon={icons.lock} title="Credential Vault" description="LLM provider API keys are stored in an encrypted vault. Agents never see or handle raw credentials — the gateway injects them at request time." />
-          <Card icon={icons.users} title="Tenant Isolation" description="Row-level security ensures each tenant&apos;s data is completely isolated. One customer&apos;s agents, policies, and audit logs can never leak into another&apos;s." />
+          <Card icon={icons.users} title="Tenant Isolation" description="Row-level security ensures each tenant's data is completely isolated. One customer's agents, policies, and audit logs can never leak into another's." />
           <Card icon={icons.zap} title="Real-Time Policy Enforcement" description="Policy decisions are evaluated inline with less than 50ms of added latency. No queued evaluation, no eventual consistency — enforcement happens before the request proceeds." />
         </div>
       </Section>
@@ -236,7 +236,7 @@ export default function Architecture() {
       <Section>
         <div className="text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Ready to see it in action?</h2>
-          <p className="text-sm text-gray-400 max-w-[480px] mx-auto mb-8">We&apos;d love to walk you through a live demo and discuss how AI Identity fits into your stack.</p>
+          <p className="text-sm text-gray-400 max-w-[480px] mx-auto mb-8">We'd love to walk you through a live demo and discuss how AI Identity fits into your stack.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="https://dashboard.ai-identity.co/demo" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
               Live Demo

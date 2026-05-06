@@ -19,23 +19,23 @@ export default function Careers() {
         </div>
 
         <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
-          We&apos;re in <span className="text-[rgb(166,218,255)]">Launch Mode</span>
+          We're in <span className="text-[rgb(166,218,255)]">Launch Mode</span>
         </h1>
 
         <p className="text-lg text-gray-400 max-w-[550px] mx-auto mb-8 leading-relaxed">
-          Right now, AI Identity is a small team moving fast — building the identity infrastructure that will power the autonomous agent economy. We&apos;re heads down, shipping code, and laying the foundation for something big.
+          Right now, AI Identity is a small team moving fast — building the identity infrastructure that will power the autonomous agent economy. We're heads down, shipping code, and laying the foundation for something big.
         </p>
 
         <div className="w-16 h-px bg-[rgb(166,218,255)]/30 mx-auto mb-8" />
 
         <p className="text-base text-gray-300 max-w-[500px] mx-auto mb-12 leading-relaxed">
-          As we grow, we&apos;ll be looking for engineers, designers, and builders who are excited about the intersection of AI, identity, and security. If that sounds like you, we&apos;d love to hear from you early.
+          As we grow, we'll be looking for engineers, designers, and builders who are excited about the intersection of AI, identity, and security. If that sounds like you, we'd love to hear from you early.
         </p>
 
         <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8 max-w-[480px] mx-auto">
           <h3 className="text-base font-semibold text-white mb-3">Want to be first in line?</h3>
           <p className="text-sm text-gray-400 mb-6">
-            Drop us a note and tell us what you&apos;re passionate about. We&apos;ll reach out when the time is right.
+            Drop us a note and tell us what you're passionate about. We'll reach out when the time is right.
           </p>
           <a
             href="mailto:jeff@ai-identity.co?subject=Career%20Interest%20—%20AI%20Identity"
@@ -57,12 +57,12 @@ export default function Careers() {
           <div className="p-6">
             <div className="text-2xl mb-3">&#x1F510;</div>
             <h4 className="text-sm font-semibold text-white mb-2">Security First</h4>
-            <p className="text-xs text-gray-500">We&apos;re building trust infrastructure. Security isn&apos;t a feature — it&apos;s the foundation.</p>
+            <p className="text-xs text-gray-500">We're building trust infrastructure. Security isn't a feature — it's the foundation.</p>
           </div>
           <div className="p-6">
             <div className="text-2xl mb-3">&#x1F30D;</div>
             <h4 className="text-sm font-semibold text-white mb-2">Think Big</h4>
-            <p className="text-xs text-gray-500">We&apos;re defining how AI agents operate across the entire internet. The opportunity is massive.</p>
+            <p className="text-xs text-gray-500">We're defining how AI agents operate across the entire internet. The opportunity is massive.</p>
           </div>
         </div>
       </div>

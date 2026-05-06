@@ -82,7 +82,7 @@ export default function Changelog() {
             <span className="text-[rgb(166,218,255)] text-sm font-medium">Changelog</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
-            What&apos;s New in{" "}
+            What's New in{" "}
             <span className="text-[rgb(166,218,255)]">AI Identity</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">

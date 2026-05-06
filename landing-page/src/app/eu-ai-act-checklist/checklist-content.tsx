@@ -29,7 +29,7 @@ const sections: ChecklistSection[] = [
     pillarColor: "#A6DAFF",
     items: [
       { id: "c1", question: "Do you know which of your AI agents qualify as high-risk under the EU AI Act?", helper: "The Act classifies agents by risk tier \u2014 high-risk agents face the strictest requirements." },
-      { id: "c2", question: "Have you documented each agent&apos;s purpose, scope, and operational boundaries?", helper: "Clear documentation of what each agent does and where it operates is foundational to compliance." },
+      { id: "c2", question: "Have you documented each agent's purpose, scope, and operational boundaries?", helper: "Clear documentation of what each agent does and where it operates is foundational to compliance." },
       { id: "c3", question: "Do you maintain a current inventory or registry of all production agents?", helper: "A living registry ensures no agent is deployed without oversight." },
       { id: "c4", question: "Is there a named human operator responsible for each agent?", helper: "The Act requires a natural or legal person accountable for each high-risk system." },
     ],
@@ -68,7 +68,7 @@ const sections: ChecklistSection[] = [
     pillarColor: "#10B981",
     items: [
       { id: "l1", question: "Are all agent decisions logged automatically without manual intervention?", helper: "Automatic logging ensures no decision goes unrecorded." },
-      { id: "l2", question: "Are your audit logs tamper-evident (using cryptographic hash chains or equivalent)?", helper: "Tamper-evident logs prove records haven&apos;t been altered after the fact." },
+      { id: "l2", question: "Are your audit logs tamper-evident (using cryptographic hash chains or equivalent)?", helper: "Tamper-evident logs prove records haven't been altered after the fact." },
       { id: "l3", question: "Is personally identifiable information (PII) automatically sanitized from audit records?", helper: "GDPR and the AI Act both require protecting personal data in logs." },
       { id: "l4", question: "Are logs retained for at least the minimum required period (typically 6\u201312 months)?", helper: "Retention periods vary by jurisdiction and risk classification." },
       { id: "l5", question: "Can you export audit evidence for regulators or auditors on demand?", helper: "Regulators may request evidence at any time \u2014 export should be fast and reliable." },
@@ -121,7 +121,7 @@ const scoreRanges = [
   { min: 0, max: 9, label: "Critical gaps", desc: "Immediate action needed.", color: "#EF4444" },
   { min: 10, max: 17, label: "Significant gaps", desc: "Prioritize remediation.", color: "#F97316" },
   { min: 18, max: 24, label: "Moderate gaps", desc: "Address before August 2026.", color: "#A6DAFF" },
-  { min: 25, max: 29, label: "Strong compliance posture", desc: "You&apos;re well prepared.", color: "#10B981" },
+  { min: 25, max: 29, label: "Strong compliance posture", desc: "You're well prepared.", color: "#10B981" },
 ];
 
 const pillarMapping = [
@@ -282,7 +282,7 @@ export default function EUAIActChecklistContent() {
 
             <p className="text-lg text-gray-400 max-w-[700px] mx-auto mb-6 leading-relaxed">
               Is your AI agent fleet ready for August 2026? Answer each question below
-              to assess your organization&apos;s readiness across identity controls, logging,
+              to assess your organization's readiness across identity controls, logging,
               human oversight, and incident response.
             </p>
 
@@ -410,7 +410,7 @@ export default function EUAIActChecklistContent() {
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-[#22C55E] mb-6">No gaps detected &mdash; you answered Yes to all {totalItems} questions.</p>
+                <p className="text-sm text-[#22C55E] mb-6">No gaps detected — you answered Yes to all {totalItems} questions.</p>
               )}
 
               <div className="border-t border-white/5 pt-6">
@@ -496,7 +496,7 @@ export default function EUAIActChecklistContent() {
               <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Start securing your agents today</h2>
               <p className="text-gray-400 text-sm mb-6 max-w-[500px] mx-auto">
                 AI Identity automates agent identity, policy enforcement, compliance logging,
-                and forensic capabilities &mdash; helping your team meet EU AI Act requirements
+                and forensic capabilities — helping your team meet EU AI Act requirements
                 with less manual effort.
               </p>
               <div className="flex items-center justify-center gap-4 flex-wrap">

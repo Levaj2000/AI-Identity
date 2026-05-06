@@ -21,7 +21,7 @@ const challenges = [
   },
   {
     title: "Zero Audit Trail",
-    description: "When a customer complains about AI behavior, you can&apos;t prove what the agent actually did. No logs, no accountability, no defense.",
+    description: "When a customer complains about AI behavior, you can't prove what the agent actually did. No logs, no accountability, no defense.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>,
   },
 ];
@@ -87,7 +87,7 @@ export default function UseCaseCustomerSupport() {
           </h1>
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
             AI-powered support agents handle sensitive customer data every day.
-            AI Identity ensures they stay within policy boundaries &mdash; with
+            AI Identity ensures they stay within policy boundaries — with
             cryptographic proof of every interaction.
           </p>
         </div>
@@ -98,7 +98,7 @@ export default function UseCaseCustomerSupport() {
         <div className="max-w-[1100px] mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 text-center">The Challenge</h2>
           <p className="text-sm text-gray-400 text-center mb-10 max-w-[560px] mx-auto">
-            Customer support agents are one of the most common AI deployments &mdash; and one of the most risky.
+            Customer support agents are one of the most common AI deployments — and one of the most risky.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {challenges.map((c) => (
@@ -159,7 +159,7 @@ export default function UseCaseCustomerSupport() {
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
             <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready to secure your support agents?</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
-              Get started with AI Identity for free &mdash; up to 3 agents with full policy enforcement and audit logging.
+              Get started with AI Identity for free — up to 3 agents with full policy enforcement and audit logging.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <Link href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
