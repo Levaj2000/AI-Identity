@@ -50,10 +50,10 @@ fi
 echo ""
 
 # Already running? Compare the running server's startup SHA to current HEAD;
-# if they match, just open a tab. If they differ (or /version is missing on an
-# old server), the running process holds stale code — kill it and restart.
+# if they match, just open a tab. If they differ (or /ada/version is missing
+# on an old server), the running process holds stale code — kill it and restart.
 if curl -fsS "${URL}/health" >/dev/null 2>&1; then
-  RUNNING_SHA="$(curl -fsS "${URL}/version" 2>/dev/null | sed -n 's/.*"sha":"\([^"]*\)".*/\1/p')"
+  RUNNING_SHA="$(curl -fsS "${URL}/ada/version" 2>/dev/null | sed -n 's/.*"sha":"\([^"]*\)".*/\1/p')"
   if [[ -n "${RUNNING_SHA}" && "${RUNNING_SHA}" == "${HEAD_SHA}" ]]; then
     echo "  ✓ Ada is already serving on ${URL} (sha ${RUNNING_SHA:0:8})"
     echo "  → opening browser…"
@@ -68,7 +68,7 @@ if curl -fsS "${URL}/health" >/dev/null 2>&1; then
   fi
 
   if [[ -z "${RUNNING_SHA}" ]]; then
-    echo "  ▸ Running server has no /version endpoint — pre-version-check build. Restarting…"
+    echo "  ▸ Running server has no /ada/version endpoint — pre-version-check build. Restarting…"
   else
     echo "  ▸ Running server is on ${RUNNING_SHA:0:8}, HEAD is ${HEAD_SHA:0:8} — restarting…"
   fi

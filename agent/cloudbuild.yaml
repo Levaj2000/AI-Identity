@@ -9,8 +9,11 @@
 #   _REGION         — Artifact Registry + Cloud Run region (default us-east1).
 #   _AR_REPO        — Artifact Registry repo name (default ai-identity).
 #   _SERVICE        — Cloud Run service name (default ada).
-#   _RUNTIME_SA     — Service account Cloud Run runs as. Needs roles/aiplatform.user
-#                     and roles/secretmanager.secretAccessor on the secrets below.
+#   _RUNTIME_SA     — Service account NAME (without the @<project>.iam... suffix)
+#                     that Cloud Run runs as. Needs roles/aiplatform.user and
+#                     roles/secretmanager.secretAccessor on the secrets below.
+#                     Default `ada-runtime` resolves to
+#                     ada-runtime@${PROJECT_ID}.iam.gserviceaccount.com at deploy time.
 #   _ADMIN_SECRET   — Secret Manager secret holding the AI Identity admin key
 #                     (mounted as ADA_ADMIN_KEY).
 #   _RUNTIME_SECRET — Secret holding Ada's runtime aid_sk_ key
@@ -24,7 +27,13 @@ substitutions:
   _REGION: us-east1
   _AR_REPO: ai-identity
   _SERVICE: ada
-  _RUNTIME_SA: ada-runtime@${PROJECT_ID}.iam.gserviceaccount.com
+  # _RUNTIME_SA is just the SA *name* — the @${PROJECT_ID}.iam... suffix
+  # is composed in the deploy step below. Cloud Build does NOT recursively
+  # expand ${PROJECT_ID} inside substitution defaults, so a default like
+  # `ada-runtime@${PROJECT_ID}.iam.gserviceaccount.com` ships the literal
+  # string `${PROJECT_ID}` to the deploy step and breaks the build. Built-
+  # in $PROJECT_ID DOES expand inside step args, which is where we use it.
+  _RUNTIME_SA: ada-runtime
   # Defaults match the production Secret Manager entries + Ada agent UUID
   # in this project. Override at `gcloud builds submit --substitutions=...`
   # for any non-prod environment.
@@ -67,7 +76,7 @@ steps:
       - --image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_AR_REPO}/${_SERVICE}:${SHORT_SHA}
       - --region=${_REGION}
       - --platform=managed
-      - --service-account=${_RUNTIME_SA}
+      - --service-account=${_RUNTIME_SA}@${PROJECT_ID}.iam.gserviceaccount.com
       # IAM-gated: callers MUST have roles/run.invoker on this service.
       # Public reach is denied at the Cloud Run boundary.
       - --no-allow-unauthenticated
