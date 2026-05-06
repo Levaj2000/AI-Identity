@@ -111,6 +111,90 @@ class TestResolveAgent:
             aid.resolve_agent(client, "cto")
         assert exc.value.code == 2
 
+    def test_name_collision_skips_revoked_when_one_active(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Two ceo-agents (one active, one revoked) → resolve to active one with stderr note."""
+        client = MagicMock(spec=httpx.Client)
+        client.get.return_value = _resp(
+            200,
+            [
+                {"id": "active-id", "name": "ceo-agent", "status": "active"},
+                {"id": "revoked-id", "name": "ceo-agent", "status": "revoked"},
+            ],
+        )
+        agent_id, name = aid.resolve_agent(client, "ceo-agent")
+        assert agent_id == "active-id"
+        assert name == "ceo-agent"
+        err = capsys.readouterr().err
+        assert "1 revoked" in err
+        assert "active-id" in err
+
+    def test_name_collision_via_alias_skips_revoked(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Alias resolution should also skip revoked siblings (`ceo` → `ceo-agent`)."""
+        client = MagicMock(spec=httpx.Client)
+        client.get.return_value = _resp(
+            200,
+            [
+                {"id": "active-id", "name": "ceo-agent", "status": "active"},
+                {"id": "revoked-id", "name": "ceo-agent", "status": "revoked"},
+            ],
+        )
+        agent_id, _ = aid.resolve_agent(client, "ceo")
+        assert agent_id == "active-id"
+        err = capsys.readouterr().err
+        # Both the alias note AND the revoked-skipped note should appear
+        assert "'ceo'" in err and "'ceo-agent'" in err
+        assert "1 revoked" in err
+
+    def test_name_collision_all_revoked_errors(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """If every name match is revoked, error with a clear message pointing to UUID."""
+        client = MagicMock(spec=httpx.Client)
+        client.get.return_value = _resp(
+            200,
+            [
+                {"id": "r1", "name": "ceo-agent", "status": "revoked"},
+                {"id": "r2", "name": "ceo-agent", "status": "revoked"},
+            ],
+        )
+        with pytest.raises(SystemExit) as exc:
+            aid.resolve_agent(client, "ceo-agent")
+        assert exc.value.code == 2
+        err = capsys.readouterr().err
+        assert "all 2 agents" in err and "revoked" in err
+
+    def test_name_collision_multiple_active_still_errors(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """If two active agents share a name, can't auto-pick — error and ask for UUID."""
+        client = MagicMock(spec=httpx.Client)
+        client.get.return_value = _resp(
+            200,
+            [
+                {"id": "a1", "name": "ceo-agent", "status": "active"},
+                {"id": "a2", "name": "ceo-agent", "status": "active"},
+                {"id": "r1", "name": "ceo-agent", "status": "revoked"},
+            ],
+        )
+        with pytest.raises(SystemExit) as exc:
+            aid.resolve_agent(client, "ceo-agent")
+        assert exc.value.code == 2
+        err = capsys.readouterr().err
+        assert "multiple active agents" in err
+        assert "(2 matches)" in err
+
     def test_persona_alias_resolves_to_canonical_name(
         self,
         admin_key: None,  # noqa: ARG002
@@ -373,6 +457,84 @@ class TestCmdAgents:
         assert exit_code == 0
         out = capsys.readouterr().out
         assert "No agents" in out
+
+    def test_default_hides_revoked_with_footer(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Default `aid agents` filters out non-active agents and prints a footer."""
+        client = MagicMock()
+        client.__enter__ = MagicMock(return_value=client)
+        client.__exit__ = MagicMock(return_value=False)
+        with patch.object(aid.httpx, "Client", return_value=client):
+            client.get.return_value = _resp(
+                200,
+                [
+                    {"id": "ada-id", "name": "ada", "status": "active"},
+                    {"id": "r1-id", "name": "demo-1", "status": "revoked"},
+                    {"id": "r2-id", "name": "demo-2", "status": "revoked"},
+                    {"id": "cto-id", "name": "cto-agent", "status": "active"},
+                ],
+            )
+            exit_code = aid.main(["agents"])
+
+        assert exit_code == 0
+        out = capsys.readouterr().out
+        assert "ada" in out and "cto-agent" in out
+        assert "demo-1" not in out
+        assert "demo-2" not in out
+        assert "2 non-active agent(s) hidden" in out
+        assert "--all" in out
+
+    def test_all_flag_shows_revoked_with_status_suffix(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """`aid agents --all` includes revoked agents annotated with `(revoked)`."""
+        client = MagicMock()
+        client.__enter__ = MagicMock(return_value=client)
+        client.__exit__ = MagicMock(return_value=False)
+        with patch.object(aid.httpx, "Client", return_value=client):
+            client.get.return_value = _resp(
+                200,
+                [
+                    {"id": "a1", "name": "ada", "status": "active"},
+                    {"id": "r1", "name": "demo-1", "status": "revoked"},
+                ],
+            )
+            exit_code = aid.main(["agents", "--all"])
+
+        assert exit_code == 0
+        out = capsys.readouterr().out
+        assert "ada" in out
+        assert "demo-1 (revoked)" in out
+        # Footer should NOT appear when --all is set
+        assert "hidden" not in out
+
+    def test_default_no_footer_when_no_hidden(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """No footer noise when every agent is active."""
+        client = MagicMock()
+        client.__enter__ = MagicMock(return_value=client)
+        client.__exit__ = MagicMock(return_value=False)
+        with patch.object(aid.httpx, "Client", return_value=client):
+            client.get.return_value = _resp(
+                200,
+                [
+                    {"id": "a1", "name": "ada", "status": "active"},
+                    {"id": "c1", "name": "cto-agent", "status": "active"},
+                ],
+            )
+            exit_code = aid.main(["agents"])
+
+        assert exit_code == 0
+        out = capsys.readouterr().out
+        assert "hidden" not in out
 
 
 class TestArgparse:
