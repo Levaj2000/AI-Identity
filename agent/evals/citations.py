@@ -10,6 +10,16 @@ Two checks per cited ``path:line``:
 2. **Grounded** — the path appeared in *some* tool response this turn.
    Catches the case where Ada cites a file she never read or searched.
 
+Plus one response-level check (added for #357):
+
+3. **Sibling-check on absence claims (Rule #2)** — when the response
+   makes an absence claim ("no tests exist", "not implemented", etc.),
+   require corroborating evidence: either a sibling test path was read
+   (path containing ``/tests``, ``test_*.py``, etc.) or the response
+   text mentions a ``find_files`` / ``list_repo_structure`` call. A
+   single search returning 0 is not sufficient — tools have bugs and
+   patterns get spelled differently than expected.
+
 Pure functions, no ADK dependency. Used by the static eval harness today
 and (planned) as an ADK ``after_model_callback`` to self-verify Ada's
 responses before they reach the user.
@@ -146,3 +156,78 @@ def verify_response(
     return [
         verify_citation(c, workspace_root, touched_paths) for c in extract_citations(response_text)
     ]
+
+
+# ── Rule #2: absence-claim sibling check ─────────────────────────────────
+# Added for Sprint 13 #357. The verifier flags any response that asserts
+# something doesn't exist without showing a corroborating second signal
+# (sibling-path read, find_files, or list_repo_structure).
+
+# Substrings that indicate an absence claim. Lowercased, matched as plain
+# substring in the response text. Conservative on purpose — false
+# positives are worse than false negatives here, since every flagged case
+# becomes a CI gate failure that has to be reasoned about.
+_ABSENCE_PHRASES: tuple[str, ...] = (
+    "no tests exist",
+    "no test exists",
+    "no tests for",
+    "no test for",
+    "no matching",
+    "no implementation",
+    "not implemented",
+    "isn't implemented",
+    "is not implemented",
+    "doesn't exist",
+    "does not exist",
+    "nothing handles",
+    "0 matches",
+    "0 results",
+    "no matches",
+    "no results",
+)
+
+# A "test path" is anything in a tests/ directory or a test_*.py file.
+# Reading any such path counts as the (a) sibling-read corroboration for
+# Rule #2. Listing a tests/ directory likewise counts.
+_TEST_PATH_RE = re.compile(r"(^|/)tests?($|/)|test_[A-Za-z0-9_]+\.py")
+
+# Tool-name mentions in the response text that constitute the (b)/(c)
+# corroboration: a structural search beyond a single search_code call.
+_CORROBORATING_TOOL_RE = re.compile(
+    r"\b(find_files|list_repo_structure)\b",
+)
+
+
+def has_absence_claim(text: str) -> bool:
+    """True if ``text`` contains a phrase that asserts absence of something."""
+    lower = text.lower()
+    return any(phrase in lower for phrase in _ABSENCE_PHRASES)
+
+
+def shows_corroborating_evidence(text: str, touched_paths: set[str]) -> bool:
+    """True if there's a sibling-path read OR a structural-tool mention.
+
+    Either signal satisfies Rule #2 — the founder review wants two
+    independent signals before an absence claim, but the verifier doesn't
+    need to enforce *which* second signal was used.
+    """
+    if any(_TEST_PATH_RE.search(p) for p in touched_paths):
+        return True
+    return bool(_CORROBORATING_TOOL_RE.search(text))
+
+
+def check_sibling_for_absence(text: str, touched_paths: set[str]) -> str | None:
+    """Return ``None`` if compliant, or a reason string if Rule #2 is violated.
+
+    A response is violation-free if either (a) it makes no absence claim,
+    or (b) it makes an absence claim AND shows corroborating evidence.
+    """
+    if not has_absence_claim(text):
+        return None
+    if shows_corroborating_evidence(text, touched_paths):
+        return None
+    return (
+        "absence claim made without corroborating evidence: no test/sibling path "
+        "in touched_paths and no find_files/list_repo_structure mention in "
+        "response (Rule #2)"
+    )
