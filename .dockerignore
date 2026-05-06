@@ -43,3 +43,18 @@ docs/
 .github/
 .claude/
 *.md
+
+# Ada-specific exclusions. Docker reads .dockerignore from the build
+# CONTEXT root, not from the Dockerfile's directory — so an
+# agent/.dockerignore is silently ignored by `docker build -f
+# agent/Dockerfile .` (the cloudbuild + GH Actions invocation pattern).
+# Keep these patterns here so tests/evals/launcher artifacts don't leak
+# into the Ada image and ADK's AgentLoader doesn't try to scan them.
+agent/tests/
+agent/evals/
+agent/dist/
+agent/.venv/
+agent/launcher/build_icon.py
+agent/*.icns
+agent/ada/.env
+agent/ada/.env.*

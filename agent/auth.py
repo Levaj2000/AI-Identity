@@ -39,9 +39,9 @@ VERIFY_TIMEOUT_S = float(os.getenv("AI_IDENTITY_VERIFY_TIMEOUT_S", "3.0"))
 PUBLIC_PATHS = frozenset(
     {
         "/",
-        "/version",
+        "/ada/version",  # our SHA endpoint (avoids ADK's /version shadowing)
+        "/ada/healthz",  # our liveness endpoint (avoids ADK's /health collision)
         "/health",  # ADK ships this; launcher polls it on startup
-        "/healthz",
         "/readyz",
         "/openapi.json",
         "/docs",

@@ -45,11 +45,11 @@ def _build_app() -> FastAPI:
     def root() -> dict[str, str]:
         return {"public": "yes"}
 
-    @app.get("/version")
+    @app.get("/ada/version")
     def version() -> dict[str, str]:
         return {"sha": "test"}
 
-    @app.get("/healthz")
+    @app.get("/ada/healthz")
     def healthz() -> dict[str, str]:
         return {"status": "ok"}
 
@@ -114,7 +114,16 @@ def auth_off(monkeypatch: pytest.MonkeyPatch) -> Callable[[], TestClient]:
 class TestNeedsAuth:
     @pytest.mark.parametrize(
         "path",
-        ["/", "/version", "/health", "/healthz", "/readyz", "/openapi.json", "/docs", "/redoc"],
+        [
+            "/",
+            "/ada/version",
+            "/ada/healthz",
+            "/health",
+            "/readyz",
+            "/openapi.json",
+            "/docs",
+            "/redoc",
+        ],
     )
     def test_public_paths_skip_auth(self, path: str) -> None:
         assert needs_auth(path) is False
@@ -144,7 +153,7 @@ class TestAuthDisabled:
 
     def test_public_route_open(self, auth_off: Callable[[], TestClient]) -> None:
         client = auth_off()
-        r = client.get("/version")
+        r = client.get("/ada/version")
         assert r.status_code == 200
 
 
@@ -173,7 +182,7 @@ class TestAuthRequired:
         self, auth_on: Callable[[], TestClient]
     ) -> None:
         client = auth_on()
-        for path in ("/", "/version", "/healthz"):
+        for path in ("/", "/ada/version", "/ada/healthz"):
             r = client.get(path)
             assert r.status_code == 200, f"{path} should be public"
 
