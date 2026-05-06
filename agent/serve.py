@@ -81,14 +81,21 @@ def build_app(*, host: str, port: int):
     async def _root():
         return RedirectResponse(url="/ui/")
 
-    @app.get("/version", include_in_schema=False)
+    # Use the /ada/* namespace (same convention as /ada/tools/*) to avoid
+    # collision with ADK's own /version (returns the ADK package version,
+    # not our deployed SHA) and /health (no z; ours never registered as
+    # /healthz did not exist on ADK's side either, but keeping consistent).
+    # ADK registers its routes via get_fast_api_app() before we get the
+    # app object, so the first-match-wins behavior of FastAPI silently
+    # shadowed our /version. /ada/version + /ada/healthz are unique.
+    @app.get("/ada/version", include_in_schema=False)
     async def _version():
         return {
             "sha": STARTUP_SHA,
             "short": STARTUP_SHA[:8] if STARTUP_SHA != "unknown" else "unknown",
         }
 
-    @app.get("/healthz", include_in_schema=False)
+    @app.get("/ada/healthz", include_in_schema=False)
     async def _healthz():
         return {"status": "ok"}
 
