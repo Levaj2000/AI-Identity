@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .citations import verify_response
+from .citations import check_sibling_for_absence, verify_response
 
 DEFAULT_GOLDEN_SET = Path(__file__).parent / "golden_set.jsonl"
 DEFAULT_WORKSPACE = Path(__file__).resolve().parents[2]  # repo root
@@ -45,14 +45,14 @@ class EvalCase:
     prompt: str
     response: str
     touched_paths: set[str]
-    expect: str  # "pass" | "fail_real" | "fail_grounded"
+    expect: str  # "pass" | "fail_real" | "fail_grounded" | "fail_sibling_check"
 
 
 @dataclass(frozen=True)
 class EvalResult:
     case_id: str
     expect: str
-    actual: str  # "pass" | "fail_real" | "fail_grounded"
+    actual: str  # "pass" | "fail_real" | "fail_grounded" | "fail_sibling_check"
     matched: bool
     detail: str
 
@@ -78,25 +78,41 @@ def load_cases(path: Path) -> list[EvalCase]:
 
 
 def run_case(case: EvalCase, workspace: Path) -> EvalResult:
+    """Run all checks on one case. Citation failures take precedence over
+    sibling-check failures so the most actionable reason surfaces first.
+    """
     results = verify_response(case.response, workspace, case.touched_paths)
 
-    if not results:
-        actual = "pass"
-        detail = "no citations found"
-    elif all(r.passed for r in results):
-        actual = "pass"
-        detail = f"{len(results)} citation(s) verified"
-    else:
+    # Citation failures first — these are the noisier, clearer signal.
+    if results and not all(r.passed for r in results):
         any_real_failure = any(not r.real for r in results)
         actual = "fail_real" if any_real_failure else "fail_grounded"
         first_bad = next(r for r in results if not r.passed)
-        detail = first_bad.reason or "citation failed verification"
+        return EvalResult(
+            case_id=case.case_id,
+            expect=case.expect,
+            actual=actual,
+            matched=actual == case.expect,
+            detail=first_bad.reason or "citation failed verification",
+        )
 
+    # Citations OK (or none). Now check Rule #2 sibling corroboration.
+    sibling_violation = check_sibling_for_absence(case.response, case.touched_paths)
+    if sibling_violation is not None:
+        return EvalResult(
+            case_id=case.case_id,
+            expect=case.expect,
+            actual="fail_sibling_check",
+            matched=case.expect == "fail_sibling_check",
+            detail=sibling_violation,
+        )
+
+    detail = "no citations found" if not results else f"{len(results)} citation(s) verified"
     return EvalResult(
         case_id=case.case_id,
         expect=case.expect,
-        actual=actual,
-        matched=actual == case.expect,
+        actual="pass",
+        matched=case.expect == "pass",
         detail=detail,
     )
 

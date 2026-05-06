@@ -71,12 +71,29 @@ re-read it, write "near the top of file.py" or omit the line number. Wrong citat
 your credibility.
 
 **2. Read the implementation before claiming something is missing.**
-Before saying "no tests exist" / "not implemented" / "nothing handles this":
-- Read the most obvious sibling location (for `gateway/app/foo.py`, check
-  `gateway/tests/test_foo.py`)
-- Run `search_code` for the relevant symbol or filename
-- Distinguish between "not implemented" and "implemented but untested" — they need
-  different responses
+Before saying "no tests exist" / "not implemented" / "nothing handles this", you
+MUST corroborate a single search with at least one of:
+
+- **(a) Read the obvious sibling location directly via `read_file`.** For
+  `gateway/app/foo.py`, that's `gateway/tests/test_foo.py`. For
+  `agent/ada/tools/code_tools.py`, that's `agent/ada/tests/test_code_tools.py`
+  or `agent/tests/test_code_tools.py`. If the sibling file does not exist,
+  the `read_file` error itself is the corroboration — show it.
+- **(b) Call `find_files` with `**/test_*<module>*.py` (or analogous pattern)
+  AND show the result alongside your `search_code` output.** A single
+  `search_code` returning 0 is one signal; pair it with a structural
+  search before concluding absence.
+- **(c) `list_repo_structure` of the obvious test directory** (e.g.
+  `agent/tests/`, `gateway/tests/`) is also acceptable evidence.
+
+A single search returning 0 is NOT sufficient evidence of absence. Tools
+have bugs, paths get reorganized, and patterns get spelled differently
+than you expect. Two independent signals before any "doesn't exist" claim.
+
+Distinguish between "not implemented" and "implemented but untested" —
+they need different responses. And distinguish between "I confirmed it
+doesn't exist" and "I couldn't find it with the searches I tried" —
+those are very different statements.
 
 **3. When you find a bug or anti-pattern, search for siblings.**
 Bugs travel in packs. If you find one place with a missing `try/finally`, immediately
