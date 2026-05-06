@@ -286,7 +286,8 @@ class TestRenderTable:
     def test_empty(self) -> None:
         assert "No audit entries" in aid.render_table([])
 
-    def test_includes_header_and_row(self) -> None:
+    def test_includes_header_and_row_normalizes_decision(self) -> None:
+        """Legacy `allowed` should display-normalize to `allow` (#351)."""
         out = aid.render_table(
             [
                 {
@@ -301,13 +302,156 @@ class TestRenderTable:
         assert "TIMESTAMP" in out
         assert "DECISION" in out
         assert "/api/v1/briefings" in out
-        assert "allowed" in out
+        # Normalized form, not the legacy past-tense
+        assert "allow " in out  # column-padded; "allow" alone could match "allowed"
+        assert "allowed" not in out
 
-    def test_long_endpoint_truncated_with_ellipsis(self) -> None:
+    def test_long_endpoint_truncated_with_ellipsis_default(self) -> None:
         long_endpoint = "/api/v1/" + ("x" * 100)
         out = aid.render_table([{"endpoint": long_endpoint, "decision": "allowed"}])
         assert "…" in out
         assert long_endpoint not in out
+
+    def test_wide_disables_truncation(self) -> None:
+        """`wide=True` should auto-size columns and show full endpoint paths (#352)."""
+        long_endpoint = "/api/v1/agents/" + "x" * 60
+        out = aid.render_table([{"endpoint": long_endpoint, "decision": "allow"}], wide=True)
+        assert "…" not in out
+        assert long_endpoint in out
+
+    def test_decision_normalization_denied_to_deny(self) -> None:
+        out = aid.render_table([{"decision": "denied", "endpoint": "/x"}])
+        assert "deny " in out
+        assert "denied" not in out
+
+    def test_unknown_decision_passes_through(self) -> None:
+        """Don't silently rewrite unknown decision strings."""
+        out = aid.render_table([{"decision": "throttled", "endpoint": "/x"}])
+        assert "throttled" in out
+
+
+class TestNormalizeDecision:
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("allowed", "allow"),
+            ("denied", "deny"),
+            ("allow", "allow"),
+            ("deny", "deny"),
+            ("throttled", "throttled"),
+            ("", ""),
+        ],
+    )
+    def test_mapping(self, raw: str, expected: str) -> None:
+        assert aid._normalize_decision(raw) == expected
+
+    def test_non_string_returns_empty(self) -> None:
+        assert aid._normalize_decision(None) == ""
+        assert aid._normalize_decision(123) == ""
+
+
+class TestFilterByDecision:
+    def test_filter_allow_matches_legacy_allowed(self) -> None:
+        entries = [
+            {"decision": "allow", "id": 1},
+            {"decision": "allowed", "id": 2},
+            {"decision": "deny", "id": 3},
+        ]
+        out = aid.filter_by_decision(entries, "allow")
+        assert [e["id"] for e in out] == [1, 2]
+
+    def test_filter_deny_matches_legacy_denied(self) -> None:
+        entries = [
+            {"decision": "deny", "id": 1},
+            {"decision": "denied", "id": 2},
+            {"decision": "allow", "id": 3},
+        ]
+        out = aid.filter_by_decision(entries, "deny")
+        assert [e["id"] for e in out] == [1, 2]
+
+    def test_filter_empty_input(self) -> None:
+        assert aid.filter_by_decision([], "allow") == []
+
+
+class TestSummarizeAndRender:
+    def test_summarize_counts_and_range(self) -> None:
+        entries = [
+            {"decision": "allow", "timestamp": "2026-05-04T10:00:00Z"},
+            {"decision": "allowed", "timestamp": "2026-05-05T10:00:00Z"},
+            {"decision": "deny", "timestamp": "2026-05-06T10:00:00Z"},
+            {"decision": "throttled", "timestamp": "2026-05-06T11:00:00Z"},
+        ]
+        s = aid.summarize_entries(entries)
+        assert s["total"] == 4
+        assert s["allow"] == 2
+        assert s["deny"] == 1
+        assert s["other"] == 1
+        assert s["earliest"] == "2026-05-04"
+        assert s["latest"] == "2026-05-06"
+
+    def test_summarize_empty(self) -> None:
+        s = aid.summarize_entries([])
+        assert s["total"] == 0 and s["allow"] == 0 and s["deny"] == 0
+        assert s["earliest"] is None and s["latest"] is None
+
+    def test_render_summary_line_range(self) -> None:
+        s = {
+            "total": 20,
+            "allow": 19,
+            "deny": 1,
+            "other": 0,
+            "earliest": "2026-04-25",
+            "latest": "2026-05-04",
+        }
+        line = aid.render_summary_line(s)
+        assert line == "20 entries: 19 allow, 1 deny | 2026-04-25..2026-05-04"
+
+    def test_render_summary_line_single_day(self) -> None:
+        s = {
+            "total": 5,
+            "allow": 5,
+            "deny": 0,
+            "other": 0,
+            "earliest": "2026-05-06",
+            "latest": "2026-05-06",
+        }
+        line = aid.render_summary_line(s)
+        assert line == "5 entries: 5 allow, 0 deny | 2026-05-06"
+
+    def test_render_summary_line_includes_other_count_when_nonzero(self) -> None:
+        s = {
+            "total": 3,
+            "allow": 1,
+            "deny": 1,
+            "other": 1,
+            "earliest": None,
+            "latest": None,
+        }
+        line = aid.render_summary_line(s)
+        assert "1 other" in line
+
+
+class TestRenderByDay:
+    def test_groups_by_date_sorted_newest_first(self) -> None:
+        entries = [
+            {"decision": "allow", "timestamp": "2026-05-04T10:00:00Z"},
+            {"decision": "allow", "timestamp": "2026-05-04T11:00:00Z"},
+            {"decision": "deny", "timestamp": "2026-05-04T12:00:00Z"},
+            {"decision": "allow", "timestamp": "2026-05-06T10:00:00Z"},
+        ]
+        out = aid.render_by_day(entries)
+        assert "DATE" in out and "TOTAL" in out and "ALLOW" in out and "DENY" in out
+        # Newest first
+        idx_06 = out.index("2026-05-06")
+        idx_04 = out.index("2026-05-04")
+        assert idx_06 < idx_04
+        # Day with 3 entries, 2 allow, 1 deny
+        line_04 = next(line for line in out.splitlines() if line.startswith("2026-05-04"))
+        cells = line_04.split()
+        assert cells[1] == "3" and cells[2] == "2" and cells[3] == "1"
+
+    def test_empty_input(self) -> None:
+        assert "No audit entries" in aid.render_by_day([])
 
 
 class TestCmdAuditEndToEnd:
@@ -537,6 +681,164 @@ class TestCmdAgents:
         assert "hidden" not in out
 
 
+class TestCmdAuditNewFlags:
+    """End-to-end tests for `aid audit` flags added in #351 + #352."""
+
+    @staticmethod
+    def _mock_client_with_entries(
+        entries: list[dict[str, Any]],
+    ) -> tuple[Any, Any]:
+        client = MagicMock()
+        client.__enter__ = MagicMock(return_value=client)
+        client.__exit__ = MagicMock(return_value=False)
+        client.get.side_effect = [
+            _resp(200, [{"id": "abc", "name": "cto"}]),
+            _resp(200, entries),
+        ]
+        patcher = patch.object(aid.httpx, "Client", return_value=client)
+        return client, patcher
+
+    def test_header_includes_summary_counts(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """Default audit output's header line carries the summary even without --summary."""
+        entries = [
+            {"decision": "allow", "timestamp": "2026-05-06T10:00:00Z"},
+            {"decision": "denied", "timestamp": "2026-05-06T11:00:00Z"},
+        ]
+        _, patcher = self._mock_client_with_entries(entries)
+        with patcher:
+            exit_code = aid.main(["audit", "--agent", "cto"])
+        assert exit_code == 0
+        out = capsys.readouterr().out
+        assert "2 entries:" in out
+        assert "1 allow" in out and "1 deny" in out
+
+    def test_decision_filter_keeps_only_matching(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        entries = [
+            {
+                "decision": "allow",
+                "timestamp": "2026-05-06T10:00:00Z",
+                "endpoint": "/keep",
+            },
+            {
+                "decision": "deny",
+                "timestamp": "2026-05-06T11:00:00Z",
+                "endpoint": "/drop",
+            },
+        ]
+        _, patcher = self._mock_client_with_entries(entries)
+        with patcher:
+            exit_code = aid.main(["audit", "--agent", "cto", "--decision", "allow"])
+        assert exit_code == 0
+        out = capsys.readouterr().out
+        assert "/keep" in out
+        assert "/drop" not in out
+        assert "filtered from 2 fetched" in out
+
+    def test_decision_filter_matches_legacy_form(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """`--decision allow` should also match historical `allowed` rows."""
+        entries = [
+            {
+                "decision": "allowed",
+                "timestamp": "2026-04-25T20:21:53Z",
+                "endpoint": "/api/v1/agents",
+            },
+            {
+                "decision": "deny",
+                "timestamp": "2026-05-06T11:00:00Z",
+                "endpoint": "/x",
+            },
+        ]
+        _, patcher = self._mock_client_with_entries(entries)
+        with patcher:
+            aid.main(["audit", "--agent", "cto", "--decision", "allow"])
+        out = capsys.readouterr().out
+        assert "/api/v1/agents" in out
+        assert "/x" not in out
+
+    def test_summary_flag_suppresses_detail_table(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        entries = [
+            {
+                "decision": "allow",
+                "timestamp": "2026-05-06T10:00:00Z",
+                "endpoint": "/x",
+            },
+        ]
+        _, patcher = self._mock_client_with_entries(entries)
+        with patcher:
+            aid.main(["audit", "--agent", "cto", "--summary"])
+        out = capsys.readouterr().out
+        assert "1 entries:" in out
+        assert "TIMESTAMP" not in out
+        assert "/x" not in out
+
+    def test_by_day_replaces_detail_table_with_rollup(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        entries = [
+            {
+                "decision": "allow",
+                "timestamp": "2026-05-04T10:00:00Z",
+                "endpoint": "/x",
+            },
+            {
+                "decision": "deny",
+                "timestamp": "2026-05-04T11:00:00Z",
+                "endpoint": "/y",
+            },
+            {
+                "decision": "allow",
+                "timestamp": "2026-05-06T10:00:00Z",
+                "endpoint": "/z",
+            },
+        ]
+        _, patcher = self._mock_client_with_entries(entries)
+        with patcher:
+            aid.main(["audit", "--agent", "cto", "--by-day"])
+        out = capsys.readouterr().out
+        assert "DATE" in out and "ALLOW" in out and "DENY" in out
+        assert "2026-05-04" in out and "2026-05-06" in out
+        # Detail rows suppressed
+        assert "/x" not in out and "/y" not in out and "/z" not in out
+
+    def test_wide_disables_truncation_in_audit_output(
+        self,
+        admin_key: None,  # noqa: ARG002
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        long_endpoint = "/api/v1/agents/" + "u" * 60
+        entries = [
+            {
+                "decision": "allow",
+                "timestamp": "2026-05-06T10:00:00Z",
+                "endpoint": long_endpoint,
+            },
+        ]
+        _, patcher = self._mock_client_with_entries(entries)
+        with patcher:
+            aid.main(["audit", "--agent", "cto", "--wide"])
+        out = capsys.readouterr().out
+        assert long_endpoint in out
+        assert "…" not in out
+
+
 class TestArgparse:
     def test_audit_requires_agent(self) -> None:
         parser = aid.build_parser()
@@ -549,6 +851,15 @@ class TestArgparse:
         assert args.since == "7d"
         assert args.limit == 50
         assert args.verify_chain is False
+        assert args.decision is None
+        assert args.wide is False
+        assert args.summary is False
+        assert args.by_day is False
+
+    def test_audit_decision_flag_validated(self) -> None:
+        parser = aid.build_parser()
+        with pytest.raises(SystemExit):
+            parser.parse_args(["audit", "--agent", "cto", "--decision", "maybe"])
 
     def test_no_subcommand_errors(self) -> None:
         parser = aid.build_parser()

@@ -245,27 +245,160 @@ _TABLE_COLS: tuple[tuple[str, tuple[str, ...], int], ...] = (
 )
 
 
-def render_table(entries: list[dict[str, Any]]) -> str:
-    """Plain-text table — no color, no Unicode beyond `─`. Stays portable."""
+# Decision form normalization. Server-side normalization landed in PR #235
+# but historical entries written before that still carry the legacy past-
+# tense form. We display-normalize so the founder/auditor sees one
+# consistent vocabulary regardless of when the row was written.
+_DECISION_ALIASES: dict[str, str] = {"allowed": "allow", "denied": "deny"}
+
+
+def _normalize_decision(value: Any) -> str:
+    """Map legacy past-tense decision values onto the canonical form.
+
+    ``"allowed"`` → ``"allow"``, ``"denied"`` → ``"deny"``. Other values
+    pass through unchanged. Non-string input returns ``""``.
+    """
+    if not isinstance(value, str):
+        return ""
+    return _DECISION_ALIASES.get(value, value)
+
+
+def _entry_field(entry: dict[str, Any], keys: tuple[str, ...]) -> Any:
+    """Return the first non-empty value for any of ``keys`` on ``entry``."""
+    for key in keys:
+        candidate = entry.get(key)
+        if candidate not in (None, ""):
+            return candidate
+    return ""
+
+
+def render_table(entries: list[dict[str, Any]], *, wide: bool = False) -> str:
+    """Plain-text table — no color, no Unicode beyond `─`. Stays portable.
+
+    When ``wide`` is True, columns auto-size to the widest content instead
+    of truncating with an ellipsis. Useful when an endpoint path includes
+    a UUID and the default 50-char column would hide it.
+    """
     if not entries:
         return "No audit entries in the requested window."
-    header = "  ".join(label.ljust(width) for label, _, width in _TABLE_COLS)
-    sep = "  ".join("-" * width for _, _, width in _TABLE_COLS)
-    lines = [header, sep]
+
+    # Resolve display value once per (entry, column) so width calc and
+    # row render agree. Decision column gets normalized for display.
+    rows_text: list[list[str]] = []
     for entry in entries:
         row: list[str] = []
-        for _, keys, width in _TABLE_COLS:
-            val: Any = ""
-            for key in keys:
-                candidate = entry.get(key)
-                if candidate not in (None, ""):
-                    val = candidate
-                    break
-            text = str(val)
-            if len(text) > width:
+        for label, keys, _w in _TABLE_COLS:
+            val = _entry_field(entry, keys)
+            if label == "DECISION":
+                val = _normalize_decision(val)
+            row.append(str(val))
+        rows_text.append(row)
+
+    if wide:
+        widths = [
+            max(len(label), max(len(r[i]) for r in rows_text))
+            for i, (label, _, _) in enumerate(_TABLE_COLS)
+        ]
+    else:
+        widths = [w for _, _, w in _TABLE_COLS]
+
+    header = "  ".join(_TABLE_COLS[i][0].ljust(widths[i]) for i in range(len(_TABLE_COLS)))
+    sep = "  ".join("-" * widths[i] for i in range(len(_TABLE_COLS)))
+    lines = [header, sep]
+    for row in rows_text:
+        cells: list[str] = []
+        for i, text in enumerate(row):
+            width = widths[i]
+            if not wide and len(text) > width:
                 text = text[: width - 1] + "…"
-            row.append(text.ljust(width))
-        lines.append("  ".join(row))
+            cells.append(text.ljust(width))
+        lines.append("  ".join(cells))
+    return "\n".join(lines)
+
+
+def filter_by_decision(entries: list[dict[str, Any]], decision: str) -> list[dict[str, Any]]:
+    """Keep only entries whose normalized decision equals ``decision``.
+
+    Pre-applies :func:`_normalize_decision` so callers can pass ``"allow"``
+    and still match the legacy ``"allowed"`` form.
+    """
+    target = _normalize_decision(decision)
+    return [e for e in entries if _normalize_decision(e.get("decision")) == target]
+
+
+def summarize_entries(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compute counts + timestamp range for ``entries``. Empty input → zeros."""
+    counts: dict[str, int] = {"allow": 0, "deny": 0, "other": 0}
+    timestamps: list[str] = []
+    for e in entries:
+        d = _normalize_decision(e.get("decision"))
+        if d == "allow":
+            counts["allow"] += 1
+        elif d == "deny":
+            counts["deny"] += 1
+        else:
+            counts["other"] += 1
+        ts = _entry_field(e, ("timestamp", "created_at"))
+        if ts:
+            timestamps.append(str(ts))
+    timestamps.sort()
+    return {
+        "total": len(entries),
+        "allow": counts["allow"],
+        "deny": counts["deny"],
+        "other": counts["other"],
+        "earliest": timestamps[0][:10] if timestamps else None,
+        "latest": timestamps[-1][:10] if timestamps else None,
+    }
+
+
+def render_summary_line(summary: dict[str, Any]) -> str:
+    """One-line rollup, e.g. ``20 entries: 19 allow, 1 deny | 2026-04-25..2026-05-04``."""
+    parts = [f"{summary['allow']} allow", f"{summary['deny']} deny"]
+    if summary.get("other"):
+        parts.append(f"{summary['other']} other")
+    counts_str = ", ".join(parts)
+    line = f"{summary['total']} entries: {counts_str}"
+    if summary.get("earliest") and summary.get("latest"):
+        if summary["earliest"] == summary["latest"]:
+            line += f" | {summary['earliest']}"
+        else:
+            line += f" | {summary['earliest']}..{summary['latest']}"
+    return line
+
+
+def render_by_day(entries: list[dict[str, Any]]) -> str:
+    """Daily rollup table: ``DATE | total | allow | deny`` sorted newest-first."""
+    if not entries:
+        return "No audit entries in the requested window."
+    by_date: dict[str, dict[str, int]] = {}
+    for e in entries:
+        ts = _entry_field(e, ("timestamp", "created_at"))
+        if not ts:
+            continue
+        date = str(ts)[:10]
+        bucket = by_date.setdefault(date, {"total": 0, "allow": 0, "deny": 0})
+        bucket["total"] += 1
+        d = _normalize_decision(e.get("decision"))
+        if d in ("allow", "deny"):
+            bucket[d] += 1
+    if not by_date:
+        return "No audit entries with timestamps in the requested window."
+    cols = ("DATE", "TOTAL", "ALLOW", "DENY")
+    rows = [
+        (
+            date,
+            str(by_date[date]["total"]),
+            str(by_date[date]["allow"]),
+            str(by_date[date]["deny"]),
+        )
+        for date in sorted(by_date.keys(), reverse=True)
+    ]
+    widths = [max(len(cols[i]), max(len(r[i]) for r in rows)) for i in range(4)]
+    lines = ["  ".join(cols[i].ljust(widths[i]) for i in range(4))]
+    lines.append("  ".join("-" * widths[i] for i in range(4)))
+    for r in rows:
+        lines.append("  ".join(r[i].ljust(widths[i]) for i in range(4)))
     return "\n".join(lines)
 
 
@@ -348,11 +481,27 @@ def cmd_audit(args: argparse.Namespace) -> int:
                 print(f"      first break: {reason}")
 
         entries = fetch_audit_entries(client, agent_id, since, args.limit)
-        print(f"Agent: {agent_name} ({agent_id})")
-        print(f"Since: {args.since} ago, {len(entries)} entries returned")
-        print()
-        print(render_table(entries))
 
+    decision_filter = getattr(args, "decision", None)
+    fetched = len(entries)
+    if decision_filter:
+        entries = filter_by_decision(entries, decision_filter)
+
+    summary = summarize_entries(entries)
+    print(f"Agent: {agent_name} ({agent_id})")
+    header = f"Since: {args.since} ago, {render_summary_line(summary)}"
+    if decision_filter and fetched != len(entries):
+        header += f" (filtered from {fetched} fetched, decision={decision_filter})"
+    print(header)
+    print()
+
+    if getattr(args, "summary", False):
+        # Header already carries the summary; nothing more to print.
+        return 0
+    if getattr(args, "by_day", False):
+        print(render_by_day(entries))
+        return 0
+    print(render_table(entries, wide=getattr(args, "wide", False)))
     return 0
 
 
@@ -389,6 +538,32 @@ def build_parser() -> argparse.ArgumentParser:
         "--verify-chain",
         action="store_true",
         help="Also call the chain-integrity verifier for this agent.",
+    )
+    audit.add_argument(
+        "--decision",
+        choices=("allow", "deny"),
+        default=None,
+        help=(
+            "Only show entries with this decision. Matches both the canonical "
+            "form (allow|deny) and legacy past-tense form (allowed|denied)."
+        ),
+    )
+    audit.add_argument(
+        "--wide",
+        action="store_true",
+        help="Auto-size columns to widest content (no truncation). Useful when "
+        "an endpoint path includes a UUID.",
+    )
+    audit.add_argument(
+        "--summary",
+        action="store_true",
+        help="Print only the header summary line; suppress the detail table.",
+    )
+    audit.add_argument(
+        "--by-day",
+        dest="by_day",
+        action="store_true",
+        help="Show a daily rollup (DATE TOTAL ALLOW DENY) instead of the per-entry detail table.",
     )
     audit.set_defaults(func=cmd_audit)
 
