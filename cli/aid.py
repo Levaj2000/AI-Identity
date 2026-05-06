@@ -155,9 +155,31 @@ def resolve_agent(client: httpx.Client, agent: str) -> tuple[str, str]:
                 print(f"note: resolved {agent!r} → {candidate!r}", file=sys.stderr)
             return matches[0]["id"], matches[0]["name"]
         if len(matches) > 1:
+            # Name collision. Prefer agents with status == "active" (or no
+            # status field, for backward compat / test fixtures). If exactly
+            # one active agent remains after filtering revoked siblings,
+            # use it and tell the user what was skipped.
+            active = [m for m in matches if m.get("status", "active") == "active"]
+            if len(active) == 1:
+                if candidate != agent:
+                    print(f"note: resolved {agent!r} → {candidate!r}", file=sys.stderr)
+                skipped = len(matches) - 1
+                print(
+                    f"note: {skipped} revoked agent(s) named {candidate!r} "
+                    f"skipped; using active one ({active[0]['id']})",
+                    file=sys.stderr,
+                )
+                return active[0]["id"], active[0]["name"]
+            if not active:
+                print(
+                    f"ERROR: all {len(matches)} agents named {candidate!r} are "
+                    "revoked. Use the UUID of the specific agent you want to query.",
+                    file=sys.stderr,
+                )
+                raise SystemExit(2)
             print(
-                f"ERROR: multiple agents named {candidate!r} ({len(matches)} matches); "
-                "use the UUID instead",
+                f"ERROR: multiple active agents named {candidate!r} "
+                f"({len(active)} matches); use the UUID instead",
                 file=sys.stderr,
             )
             raise SystemExit(2)
@@ -260,23 +282,48 @@ def list_agents(client: httpx.Client) -> list[dict[str, Any]]:
     return sorted(items, key=lambda a: str(a.get("name", "")))
 
 
-def render_agents_table(items: list[dict[str, Any]]) -> str:
-    """Two-column table: NAME, AGENT_ID. Matches the `aid audit` look-and-feel."""
+def render_agents_table(items: list[dict[str, Any]], *, show_status: bool = False) -> str:
+    """Two-column table: NAME, AGENT_ID. Matches the `aid audit` look-and-feel.
+
+    When ``show_status`` is True, non-active agents get a `` (<status>)``
+    suffix on the NAME column so revoked/disabled agents are visually
+    distinguishable.
+    """
     if not items:
         return "No agents visible to this caller."
-    name_w = max(len("NAME"), max(len(str(a.get("name", ""))) for a in items))
+
+    def display_name(a: dict[str, Any]) -> str:
+        n = str(a.get("name", ""))
+        s = a.get("status")
+        if show_status and s and s != "active":
+            return f"{n} ({s})"
+        return n
+
+    name_w = max(len("NAME"), max(len(display_name(a)) for a in items))
     lines = [f"{'NAME'.ljust(name_w)}  AGENT_ID"]
     lines.append(f"{'-' * name_w}  {'-' * 36}")
     for a in items:
-        lines.append(f"{str(a.get('name', '')).ljust(name_w)}  {a.get('id', '')}")
+        lines.append(f"{display_name(a).ljust(name_w)}  {a.get('id', '')}")
     return "\n".join(lines)
 
 
-def cmd_agents(args: argparse.Namespace) -> int:  # noqa: ARG001 - argparse contract
-    """Implementation of ``aid agents`` — discover canonical agent names + UUIDs."""
+def cmd_agents(args: argparse.Namespace) -> int:
+    """Implementation of ``aid agents`` — discover canonical agent names + UUIDs.
+
+    By default lists only active agents (filters out ``status != "active"``).
+    Pass ``--all`` to include revoked/disabled agents with a status suffix.
+    """
+    show_all = bool(getattr(args, "all", False))
     with httpx.Client(timeout=HTTP_TIMEOUT_S) as client:
         items = list_agents(client)
-        print(render_agents_table(items))
+    if show_all:
+        print(render_agents_table(items, show_status=True))
+    else:
+        active = [a for a in items if a.get("status", "active") == "active"]
+        hidden = len(items) - len(active)
+        print(render_agents_table(active))
+        if hidden > 0:
+            print(f"\n({hidden} non-active agent(s) hidden — pass --all to show)")
     return 0
 
 
@@ -349,8 +396,14 @@ def build_parser() -> argparse.ArgumentParser:
         "agents",
         description=(
             "List agents visible to the caller (canonical name + UUID). "
-            "Use this to discover the exact name to pass to `aid audit --agent`."
+            "Use this to discover the exact name to pass to `aid audit --agent`. "
+            "By default only active agents are shown."
         ),
+    )
+    agents.add_argument(
+        "--all",
+        action="store_true",
+        help="Include revoked/disabled agents (annotated with their status).",
     )
     agents.set_defaults(func=cmd_agents)
 
