@@ -11,17 +11,17 @@ export const metadata: Metadata = generatePageMetadata({
 const challenges = [
   {
     title: "Regulatory Mandates",
-    description: "SEC, FINRA, MiFID II, and the EU AI Act require documented oversight of automated decision-making. Manual processes can&apos;t keep up.",
+    description: "SEC, FINRA, MiFID II, and the EU AI Act require documented oversight of automated decision-making. Manual processes can't keep up.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>,
   },
   {
     title: "Tamper Risk",
-    description: "Standard logging can be modified after the fact. Regulators need proof that records haven&apos;t been altered &mdash; not just a promise.",
+    description: "Standard logging can be modified after the fact. Regulators need proof that records haven't been altered — not just a promise.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
   },
   {
     title: "Compliance Gaps",
-    description: "Your AI agents make thousands of decisions daily. You need to prove each one followed policy &mdash; retroactively, on demand, under audit.",
+    description: "Your AI agents make thousands of decisions daily. You need to prove each one followed policy — retroactively, on demand, under audit.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>,
   },
 ];
@@ -29,7 +29,7 @@ const challenges = [
 const solutions = [
   {
     title: "HMAC-Chained Audit Logs",
-    description: "Every agent action is cryptographically chained. Any tampering breaks the chain and is immediately detectable &mdash; provable in court.",
+    description: "Every agent action is cryptographically chained. Any tampering breaks the chain and is immediately detectable — provable in court.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>,
   },
   {
@@ -39,7 +39,7 @@ const solutions = [
   },
   {
     title: "Forensic Export",
-    description: "One-click evidence packages for regulators. Timeline reconstruction, policy verification, and integrity proofs &mdash; audit-ready.",
+    description: "One-click evidence packages for regulators. Timeline reconstruction, policy verification, and integrity proofs — audit-ready.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>,
   },
   {
@@ -87,7 +87,7 @@ export default function UseCaseFinancialAgent() {
           </h1>
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
             Financial regulators demand auditability. AI Identity delivers
-            tamper-proof evidence for every agent decision &mdash; HMAC-chained logs,
+            tamper-proof evidence for every agent decision — HMAC-chained logs,
             automated compliance checks, and one-click forensic exports.
           </p>
         </div>
@@ -98,7 +98,7 @@ export default function UseCaseFinancialAgent() {
         <div className="max-w-[1100px] mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 text-center">The Challenge</h2>
           <p className="text-sm text-gray-400 text-center mb-10 max-w-[560px] mx-auto">
-            In finance, what you can&apos;t prove didn&apos;t happen. Regulators demand receipts.
+            In finance, what you can't prove didn't happen. Regulators demand receipts.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {challenges.map((c) => (
@@ -159,7 +159,7 @@ export default function UseCaseFinancialAgent() {
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
             <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready for audit-proof AI agents?</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
-              Start with AI Identity for free &mdash; tamper-proof audit logs and compliance assessments from day one.
+              Start with AI Identity for free — tamper-proof audit logs and compliance assessments from day one.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <Link href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">

@@ -375,7 +375,7 @@ export default function ProductPage() {
             Walkthrough
           </h2>
           <p className="text-sm text-gray-400 text-center max-w-[640px] mx-auto mb-12">
-            Here&apos;s what happens from the moment an agent is registered to the moment an
+            Here's what happens from the moment an agent is registered to the moment an
             auditor verifies a year of activity.
           </p>
 
@@ -434,7 +434,7 @@ export default function ProductPage() {
             Feature overview
           </h2>
           <p className="text-sm text-gray-400 text-center max-w-[640px] mx-auto mb-10">
-            What&apos;s in the box today across identity, policy, forensics, compliance, and
+            What's in the box today across identity, policy, forensics, compliance, and
             deployment.
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -480,7 +480,7 @@ export default function ProductPage() {
           </h2>
           <p className="text-sm text-gray-400 text-center max-w-[640px] mx-auto mb-10">
             AI Identity is in early launch. The core product is live and running in production on
-            our own infrastructure. We&apos;re selectively onboarding design partners.
+            our own infrastructure. We're selectively onboarding design partners.
           </p>
           <div className="grid md:grid-cols-3 gap-4">
             {[

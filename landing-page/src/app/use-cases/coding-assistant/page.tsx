@@ -34,7 +34,7 @@ const solutions = [
   },
   {
     title: "Model Access Policies",
-    description: "Control which agents can access which models. Restrict sensitive repos to approved models only &mdash; block experimental or preview models.",
+    description: "Control which agents can access which models. Restrict sensitive repos to approved models only — block experimental or preview models.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
   },
   {
@@ -92,7 +92,7 @@ export default function UseCaseCodingAssistant() {
           </h1>
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
             AI coding agents see your source code. AI Identity controls what
-            goes where &mdash; with per-repo identities, model restrictions, and
+            goes where — with per-repo identities, model restrictions, and
             a tamper-proof audit trail of every interaction.
           </p>
         </div>
@@ -164,7 +164,7 @@ export default function UseCaseCodingAssistant() {
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
             <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready to protect your source code?</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
-              Start with AI Identity for free &mdash; per-repo agent identities, model policies, and full audit logging.
+              Start with AI Identity for free — per-repo agent identities, model policies, and full audit logging.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <Link href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
