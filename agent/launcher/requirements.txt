@@ -1,0 +1,6 @@
+# Launcher-only dependencies — do NOT add to agent/requirements.txt.
+# Install into the shared venv before building the .app:
+#   agent/.venv/bin/pip install -r agent/launcher/requirements.txt
+# build_launcher.sh does this automatically when --menubar is active.
+rumps>=0.4.0
+Pillow>=10.0.0
