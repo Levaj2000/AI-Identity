@@ -9,6 +9,7 @@ data:
   CORS_ORIGINS: "https://ai-identity.co,https://www.ai-identity.co,https://dashboard.ai-identity.co,http://localhost:5173"
   CORS_ORIGIN_REGEX: "https://dashboard-.*-jeff-levas-projects\\.vercel\\.app"
   GATEWAY_URL: "http://gateway-service.ai-identity.svc.cluster.local:8002"
+  MANDATE_URL: "http://mandate-service.ai-identity.svc.cluster.local:8003"
   API_KEY_PREFIX: "aid_sk_"
   ADMIN_KEY_PREFIX: "aid_admin_"
   APP_VERSION: "0.2.0"

@@ -128,7 +128,7 @@ metadata:
 spec:
   podSelector:
     matchExpressions:
-      - { key: app, operator: In, values: [api, gateway] }
+      - { key: app, operator: In, values: [api, gateway, mandate] }
   policyTypes:
     - Egress
   egress:
@@ -159,7 +159,7 @@ spec:
       # duration of the migration and nothing else — but it's as
       # legitimate a Neon client as api/gateway, so it belongs in the
       # same allow-list rather than getting a bespoke policy.
-      - { key: app, operator: In, values: [api, gateway, alembic-migrate] }
+      - { key: app, operator: In, values: [api, gateway, mandate, alembic-migrate] }
   policyTypes:
     - Egress
   egress:
@@ -257,7 +257,7 @@ metadata:
 spec:
   podSelector:
     matchExpressions:
-      - { key: app, operator: In, values: [api, gateway] }
+      - { key: app, operator: In, values: [api, gateway, mandate] }
   policyTypes:
     - Ingress
   ingress:
@@ -292,7 +292,7 @@ metadata:
 spec:
   podSelector:
     matchExpressions:
-      - { key: app, operator: In, values: [api, gateway] }
+      - { key: app, operator: In, values: [api, gateway, mandate] }
   policyTypes:
     - Egress
   egress:
@@ -301,3 +301,60 @@ spec:
             cidr: 169.254.169.254/32
       ports:
         - { protocol: TCP, port: 80 }
+
+---
+# Egress: mandate → MongoDB Atlas via VPC peering.
+#
+# The Atlas cluster lives in a separate GCP VPC peered into our `default` VPC.
+# Atlas auto-suggests its own CIDR at peering setup time — typically a /21
+# inside 192.168.0.0/16. This rule must permit egress to that specific CIDR
+# on TCP 27017 (mongo wire protocol).
+#
+# IMPORTANT: After running scripts/setup-mongodb-vpc-peering.sh, update the
+# `cidr:` below to match the Atlas-side CIDR shown on the peering page.
+# The placeholder 192.168.248.0/21 is Atlas's most common default — verify
+# before applying to prod.
+#
+# allow-egress-https deliberately excludes 192.168.0.0/16, so this dedicated
+# rule is the ONLY path that lets mandate pods talk to Atlas.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-mongodb-atlas
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchLabels:
+      app: mandate
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 192.168.0.0/16   # Atlas peering CIDR (assigned 2026-05-08)
+      ports:
+        - { protocol: TCP, port: 27017 }
+
+---
+# Ingress: api + gateway → mandate:8003 (in-cluster service-to-service calls).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-to-mandate
+  namespace: ai-identity
+spec:
+  podSelector:
+    matchLabels:
+      app: mandate
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api
+        - podSelector:
+            matchLabels:
+              app: gateway
+      ports:
+        - { protocol: TCP, port: 8003 }
