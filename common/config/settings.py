@@ -34,9 +34,14 @@ class Settings(BaseSettings):
     # Generate with: python -c "import secrets; print(secrets.token_urlsafe(64))"
     internal_service_key: str = ""
 
+    # MongoDB — Mandate Service (MongoDB Atlas, H2)
+    # Atlas connection string: mongodb+srv://user:pass@cluster.mongodb.net/
+    mongodb_uri: str = ""
+
     # Services
     api_port: int = 8001
     gateway_port: int = 8002
+    mandate_port: int = 8003
 
     # Gateway — fail-closed enforcement
     policy_eval_timeout_ms: int = 500
@@ -115,6 +120,9 @@ class Settings(BaseSettings):
 
     # Gateway URL (for QA runner — API needs to reach gateway)
     gateway_url: str = "http://localhost:8002"
+
+    # Mandate Service URL (H2 — internal calls from API/Gateway)
+    mandate_url: str = "http://localhost:8003"
 
     # Perplexity AI — "What happened here?" audit summaries (leave empty to disable)
     perplexity_api_key: str = ""

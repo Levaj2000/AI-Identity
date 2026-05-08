@@ -6,6 +6,7 @@ on:
     paths:
       - 'api/**'
       - 'gateway/**'
+      - 'mandate/**'
       - 'common/**'
       - 'alembic/**'
       - 'Dockerfile.*'
@@ -63,6 +64,13 @@ jobs:
             -t $REGISTRY/$PROJECT_ID/ai-identity/gateway:latest .
           docker push --all-tags $REGISTRY/$PROJECT_ID/ai-identity/gateway
 
+      - name: Build and push Mandate image
+        run: |
+          docker build -f Dockerfile.mandate \
+            -t $REGISTRY/$PROJECT_ID/ai-identity/mandate:${{ github.sha }} \
+            -t $REGISTRY/$PROJECT_ID/ai-identity/mandate:latest .
+          docker push --all-tags $REGISTRY/$PROJECT_ID/ai-identity/mandate
+
       # Route kubectl via Connect Gateway (us-east1-connectgateway.googleapis.com)
       # instead of the cluster's public control-plane endpoint. Lets us enable
       # Master Authorized Networks without whitelisting GitHub runner IP ranges.
@@ -94,14 +102,19 @@ jobs:
           GATEWAY_DIGEST=$(gcloud artifacts docker images describe \
             $REGISTRY/$PROJECT_ID/ai-identity/gateway:${{ github.sha }} \
             --format='value(image_summary.digest)')
-          if [[ -z "$API_DIGEST" || -z "$GATEWAY_DIGEST" ]]; then
+          MANDATE_DIGEST=$(gcloud artifacts docker images describe \
+            $REGISTRY/$PROJECT_ID/ai-identity/mandate:${{ github.sha }} \
+            --format='value(image_summary.digest)')
+          if [[ -z "$API_DIGEST" || -z "$GATEWAY_DIGEST" || -z "$MANDATE_DIGEST" ]]; then
             echo "::error::failed to resolve image digest(s)"
             exit 1
           fi
           echo "api_digest=$API_DIGEST"     >> $GITHUB_OUTPUT
           echo "gateway_digest=$GATEWAY_DIGEST" >> $GITHUB_OUTPUT
+          echo "mandate_digest=$MANDATE_DIGEST" >> $GITHUB_OUTPUT
           echo "api     → $API_DIGEST"
           echo "gateway → $GATEWAY_DIGEST"
+          echo "mandate → $MANDATE_DIGEST"
 
       # Binary Authorization: sign each image's digest with our KMS key and
       # create an attestation Occurrence so the cluster admission controller
@@ -115,7 +128,7 @@ jobs:
       - name: Sign images with Binary Authorization
         run: |
           set -o pipefail  # propagate the gcloud exit code past the pipe
-          for spec in "api:${{ steps.digests.outputs.api_digest }}" "gateway:${{ steps.digests.outputs.gateway_digest }}"; do
+          for spec in "api:${{ steps.digests.outputs.api_digest }}" "gateway:${{ steps.digests.outputs.gateway_digest }}" "mandate:${{ steps.digests.outputs.mandate_digest }}"; do
             IMAGE="${spec%%:*}"
             DIGEST="${spec#*:}"
             URL="$REGISTRY/$PROJECT_ID/ai-identity/$IMAGE@$DIGEST"
@@ -205,12 +218,23 @@ jobs:
           # deployment controller observes the combined desired state
           # and creates one new ReplicaSet, so this is a single rollout
           # not two.
-          kubectl apply -f k8s/api-deployment.yaml -f k8s/gateway-deployment.yaml
+          # Apply secret + service manifests first so the mandate Deployment
+          # can mount /mnt/secrets and the ClusterIP service exists for any
+          # api/gateway pod that resolves mandate-service.ai-identity.svc.
+          kubectl apply -f k8s/secretproviderclass.yaml \
+                        -f k8s/mandate-service.yaml
+          kubectl apply -f k8s/api-deployment.yaml \
+                        -f k8s/gateway-deployment.yaml \
+                        -f k8s/mandate-deployment.yaml
           kubectl set image deployment/api \
             api=$REGISTRY/$PROJECT_ID/ai-identity/api@${{ steps.digests.outputs.api_digest }} \
             -n ai-identity
           kubectl set image deployment/gateway \
             gateway=$REGISTRY/$PROJECT_ID/ai-identity/gateway@${{ steps.digests.outputs.gateway_digest }} \
             -n ai-identity
+          kubectl set image deployment/mandate \
+            mandate=$REGISTRY/$PROJECT_ID/ai-identity/mandate@${{ steps.digests.outputs.mandate_digest }} \
+            -n ai-identity
           kubectl rollout status deployment/api -n ai-identity --timeout=120s
           kubectl rollout status deployment/gateway -n ai-identity --timeout=120s
+          kubectl rollout status deployment/mandate -n ai-identity --timeout=180s
