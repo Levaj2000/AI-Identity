@@ -27,9 +27,8 @@ PyJWT==2.10.1
 sentry-sdk[fastapi]==2.22.0
 prometheus-client==0.25.0
 
-# Dev / testing
+# Dev / testing — pytest-asyncio + mongomock-motor live in
+# requirements-dev.txt (root) since they pin pytest<9 and we run pytest 9.
 pytest==9.0.2
 httpx==0.28.1
-pytest-asyncio==0.26.0
-mongomock-motor==0.0.34
 testcontainers[postgres]==4.7.2
