@@ -1,0 +1,66 @@
+name: CEO Dashboard Sync
+
+on:
+  # Daily 13:00 UTC (≈ 06:00 MT) — calendar sync runs every day.
+  # Mondays 14:00 UTC (≈ 07:00 MT) — pipeline snapshot once a week,
+  # captured before the Monday All-Hands so the briefing is fresh.
+  schedule:
+    - cron: '0 13 * * *'   # daily — calendar
+    - cron: '0 14 * * 1'   # weekly Mondays — pipeline
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Which sync to run
+        type: choice
+        options: [calendar, pipeline, both]
+        default: both
+
+jobs:
+  calendar:
+    # Daily run + on-demand. Pipeline-only schedule skips this job.
+    if: |
+      github.event_name == 'schedule' && github.event.schedule == '0 13 * * *'
+      || github.event_name == 'workflow_dispatch'
+        && (github.event.inputs.task == 'calendar' || github.event.inputs.task == 'both')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Sync calendar
+        env:
+          CEO_API_KEY: ${{ secrets.CEO_API_KEY }}
+          CEO_API_URL: ${{ secrets.CEO_DASHBOARD_API }}
+        run: python scripts/sync_calendar_from_dashboard.py
+
+  pipeline:
+    # Weekly Monday run + on-demand. Daily-calendar schedule skips this job.
+    if: |
+      github.event_name == 'schedule' && github.event.schedule == '0 14 * * 1'
+      || github.event_name == 'workflow_dispatch'
+        && (github.event.inputs.task == 'pipeline' || github.event.inputs.task == 'both')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # commit the weekly CSV snapshot back to the repo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Export pipeline snapshot
+        env:
+          CEO_API_KEY: ${{ secrets.CEO_API_KEY }}
+          CEO_API_URL: ${{ secrets.CEO_DASHBOARD_API }}
+        run: python scripts/export_pipeline_snapshot.py
+      - name: Commit weekly CSV
+        run: |
+          if [[ -n "$(git status --porcelain marketing/sales/pipeline-snapshots/)" ]]; then
+            git config user.name  'github-actions[bot]'
+            git config user.email 'github-actions[bot]@users.noreply.github.com'
+            git add marketing/sales/pipeline-snapshots/
+            git commit -m "chore(sales): weekly pipeline snapshot $(date -u +%Y-%m-%d)"
+            git push
+          else
+            echo "No new snapshot to commit."
+          fi
