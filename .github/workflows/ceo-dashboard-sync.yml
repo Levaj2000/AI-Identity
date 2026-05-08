@@ -1,19 +1,21 @@
 name: CEO Dashboard Sync
 
 on:
-  # Daily 13:00 UTC (≈ 06:00 MT) — calendar sync runs every day.
+  # Daily 13:00 UTC (≈ 06:00 MT) — calendar sync + stale decisions sweep.
+  # Both run daily and are cheap; sweeping decisions catches missed reviews
+  # the day they go stale rather than waiting for Monday.
   # Mondays 14:00 UTC (≈ 07:00 MT) — pipeline snapshot once a week,
   # captured before the Monday All-Hands so the briefing is fresh.
   schedule:
-    - cron: '0 13 * * *'   # daily — calendar
+    - cron: '0 13 * * *'   # daily — calendar + stale-decisions sweep
     - cron: '0 14 * * 1'   # weekly Mondays — pipeline
   workflow_dispatch:
     inputs:
       task:
         description: Which sync to run
         type: choice
-        options: [calendar, pipeline, both]
-        default: both
+        options: [calendar, pipeline, stale-decisions, all]
+        default: all
 
 jobs:
   calendar:
@@ -21,7 +23,7 @@ jobs:
     if: |
       github.event_name == 'schedule' && github.event.schedule == '0 13 * * *'
       || github.event_name == 'workflow_dispatch'
-        && (github.event.inputs.task == 'calendar' || github.event.inputs.task == 'both')
+        && (github.event.inputs.task == 'calendar' || github.event.inputs.task == 'all')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +41,7 @@ jobs:
     if: |
       github.event_name == 'schedule' && github.event.schedule == '0 14 * * 1'
       || github.event_name == 'workflow_dispatch'
-        && (github.event.inputs.task == 'pipeline' || github.event.inputs.task == 'both')
+        && (github.event.inputs.task == 'pipeline' || github.event.inputs.task == 'all')
     runs-on: ubuntu-latest
     permissions:
       contents: write   # commit the weekly CSV snapshot back to the repo
@@ -64,3 +66,23 @@ jobs:
           else
             echo "No new snapshot to commit."
           fi
+
+  stale-decisions:
+    # Daily run + on-demand. Pipeline-only Monday schedule skips this job.
+    # Sweeps active decisions whose review_date has passed; posts ONE briefing
+    # per day if there are any (silent otherwise).
+    if: |
+      github.event_name == 'schedule' && github.event.schedule == '0 13 * * *'
+      || github.event_name == 'workflow_dispatch'
+        && (github.event.inputs.task == 'stale-decisions' || github.event.inputs.task == 'all')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Sweep stale decisions
+        env:
+          CEO_API_KEY: ${{ secrets.CEO_API_KEY }}
+          CEO_API_URL: ${{ secrets.CEO_DASHBOARD_API }}
+        run: python scripts/sweep_stale_decisions.py
