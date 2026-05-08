@@ -268,7 +268,7 @@
   <header class="banner">
     <h1>AI Identity — Three-Horizon Product Roadmap</h1>
     <div class="sub">Trust Root for the Agent Economy</div>
-    <div class="date">As of 25 April 2026 • 18-month outlook through September 2027</div>
+    <div class="date">As of 08 May 2026 • 18-month outlook through September 2027</div>
   </header>
 
   <section class="horizons" aria-label="Strategic horizons">
@@ -311,11 +311,11 @@
     <div class="item"><span class="swatch dashed"></span> Gated or design-only phase</div>
     <div class="item"><span class="diamond"></span> Milestone</div>
     <div class="item"><span class="swatch amber-bar"></span> Hard gate / decision point</div>
-    <div class="item"><span class="swatch today"></span> Today (25 Apr 2026)</div>
+    <div class="item"><span class="swatch today"></span> Today (08 May 2026)</div>
   </div>
 
   <footer>
-    Last updated 2026-04-25 · Source: CEO Dashboard decisions #31–#33, milestones #36–#41
+    Last updated 2026-05-08 · Source: CEO Dashboard decisions #31–#33 + Mandate Service decision (2026-05-08), milestones #36–#41
   </footer>
 
 </div>
@@ -559,18 +559,23 @@
     { fill: "var(--ice)", label: "Path to GA", title: "P2 · Path to GA",
       desc: "Hardening, pricing, packaging. GA target Jun 2027." });
 
-  // -- P3: light standards engagement -> issuance alpha -> verification + pilot -> beta --
+  // -- P3: issuance infrastructure in prod (2026-05-08) -> standards engagement -> verification + pilot -> beta --
+  // Original plan had the Issuance API alpha as Oct-Dec 2026. Atlas startup
+  // credits opened a window to land the issuance infrastructure earlier; the
+  // service is running in prod (internal-only, no customer ingress/UI yet)
+  // and the bar below spans from that point through a design-partner soak.
+  drawBar("P3",
+    new Date(2026, 4, 8),
+    new Date(2026, 10, 30),
+    { fill: "var(--ice-deep)", lightLabel: true, label: "Issuance infra in prod · design-partner soak",
+      title: "P3 · Issuance infrastructure in prod",
+      desc: "Mandate Service running in prod on MongoDB Atlas (peered VPC). ECDSA-P256 signing live; ML-DSA-87 PQC slot reserved in the signature schema. No external ingress or customer UI yet — design-partner search runs through Nov 2026 before any external positioning." });
   drawBar("P3",
     new Date(2026, 6, 1),
     new Date(2026, 8, 30),
     { fill: "var(--ice-soft)", dashed: true, label: "Standards engagement (light)",
       title: "P3 · Standards Engagement",
       desc: "Light, parallel to P2 alpha. Position in mandate / agent-credential standards bodies." });
-  drawBar("P3",
-    new Date(2026, 9, 1),
-    new Date(2026, 11, 31),
-    { fill: "var(--ice-soft)", label: "Issuance API alpha", title: "P3 · Issuance API Alpha",
-      desc: "Mandate Service v1 — issuance side. Issuer = same buyer as P1." });
   drawBar("P3",
     new Date(2027, 0, 1),
     new Date(2027, 2, 31),
@@ -603,7 +608,7 @@
     { id: "#36", title: "P2 Discovery Sprint Complete", date: new Date(2026, 5, 6),  lane: "P2", desc: "Discovery findings synthesized; alpha build scoped." },
     { id: "#37", title: "P1: 3 Paid Design Partners (HARD GATE)", date: new Date(2026, 5, 30), lane: "P1", hard: true, desc: "Hard gate: must clear before P2 build cycles >30%." },
     { id: "#38", title: "P2 Alpha Shipped", date: new Date(2026, 8, 30), lane: "P2", desc: "Alpha shipped to first cohort." },
-    { id: "#39", title: "P3 Mandate Service v1 (Issuance)", date: new Date(2026, 11, 31), lane: "P3", desc: "Cryptographic mandate substrate v1, issuance side." },
+    { id: "#39", title: "P3 Issuance v1 in prod (internal)", date: new Date(2026, 4, 8), lane: "P3", desc: "Mandate Service running in prod on MongoDB Atlas. Internal-only — no external ingress or customer UI yet." },
     { id: "#40", title: "P3 Verification API + First Partner Pilot", date: new Date(2027, 2, 31), lane: "P3", desc: "Verification API live. First merchant/rail pilot started." },
     { id: "#41a", title: "P2 GA + P3 Beta + P4 Design", date: new Date(2027, 5, 30), lane: "P2", spanLane: "P3", desc: "Triple convergence: P2 hits GA, P3 enters beta, P4 design complete." },
   ];
@@ -638,7 +643,7 @@
   }
 
   // ===== Today line =====
-  const TODAY = new Date(2026, 3, 25);
+  const TODAY = new Date(2026, 4, 8);
   const todayX = dateToX(TODAY);
   const todayG = el("g", { id: "today" }, svg);
   el("line", { x1: todayX, y1: HEADER_H - 8, x2: todayX, y2: TOTAL_H - 6, class: "today-line" }, todayG);
@@ -695,6 +700,7 @@
         "Pillars":     "Identity + Policy + Forensics",
         "Buyer":       "Same as P1 (issuers) → expands to merchants / rails (verifiers)",
         "Demarcation": "Cryptographic mandate substrate. Not a payment rail. Not a fraud engine.",
+        "Status":      "Issuance infra in prod (internal-only) since 2026-05-08. No external ingress, customer UI, or marketing yet — design-partner search runs through Nov 2026 before public positioning.",
       }
     },
     P4: {
