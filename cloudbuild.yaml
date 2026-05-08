@@ -23,9 +23,22 @@ steps:
       - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/gateway:latest'
       - '.'
 
+  # Build Mandate image (H2 — MongoDB-backed mandate service)
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-f'
+      - 'Dockerfile.mandate'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/mandate:$SHORT_SHA'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/mandate:latest'
+      - '.'
+
 images:
   - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/api:latest'
   - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/gateway:latest'
+  - 'us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/mandate:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY

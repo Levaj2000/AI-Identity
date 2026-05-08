@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mandate
+  namespace: ai-identity
+  labels:
+    app: mandate
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: mandate
+  template:
+    metadata:
+      labels:
+        app: mandate
+    spec:
+      serviceAccountName: ai-identity-forensic-signer
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mandate
+          image: us-east1-docker.pkg.dev/project-8bbb04f8-fda8-462e-bc2/ai-identity/mandate:latest
+          ports:
+            - containerPort: 8003
+          # Shell wrapper: reads /mnt/secrets/<KEY> files and exports as env vars,
+          # then execs gunicorn. Same pattern as api-deployment.yaml.
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              for f in /mnt/secrets/*; do
+                [ -f "$f" ] || continue
+                name=$(basename "$f")
+                value=$(cat "$f")
+                export "$name=$value"
+              done
+              exec gunicorn mandate.app.main:app \
+                --workers 2 \
+                --worker-class uvicorn.workers.UvicornWorker \
+                --bind 0.0.0.0:8003 \
+                --timeout 120 \
+                --keep-alive 5 \
+                --forwarded-allow-ips='*'
+          envFrom:
+            - configMapRef:
+                name: ai-identity-config
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            failureThreshold: 30
+            periodSeconds: 2
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: secrets-store
+              mountPath: /mnt/secrets
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: secrets-store
+          csi:
+            driver: secrets-store-gke.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: ai-identity-mandate-secrets
