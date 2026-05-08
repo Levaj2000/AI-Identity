@@ -1,0 +1,34 @@
+# AI Identity — Mandate Service
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+# psycopg2-binary needs libpq; motor is pure Python
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 1000 appuser
+
+COPY common/ common/
+RUN pip install --no-cache-dir -e common/
+
+COPY mandate/requirements.txt mandate/requirements.txt
+RUN pip install --no-cache-dir -r mandate/requirements.txt
+
+COPY mandate/ mandate/
+
+USER appuser
+
+EXPOSE 8003
+
+CMD ["gunicorn", "mandate.app.main:app", \
+     "--workers", "2", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--bind", "0.0.0.0:8003", \
+     "--timeout", "120", \
+     "--keep-alive", "5", \
+     "--forwarded-allow-ips=*"]
