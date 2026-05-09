@@ -58,7 +58,7 @@ def _request(method: str, path: str, body: dict | None = None):
         url,
         data=data,
         method=method,
-        headers={"X-API-Key": _api_key(), "Content-Type": "application/json"},
+        headers={"Authorization": f"Bearer {_api_key()}", "Content-Type": "application/json"},
     )
     try:
         with ureq.urlopen(req, timeout=20) as r:
