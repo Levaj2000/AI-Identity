@@ -5,6 +5,7 @@ import Link from "next/link";
 import BadgeFramerComponent from "@/framer/elements/badge";
 import MainButtonFramerComponent from "@/framer/main-button";
 import { GoogleForStartupsStrip } from "@/components/GoogleForStartupsBadge";
+import { MongoDBForStartupsStrip } from "@/components/MongoDBForStartupsBadge";
 import { pillars, PILLARS_HEADING, PILLARS_SUBHEADING } from "@/data/pillars";
 
 const steps = [
@@ -225,6 +226,9 @@ export default function HomeContent() {
 
       {/* ── Backed by — Google for Startups Cloud Program ── */}
       <GoogleForStartupsStrip />
+
+      {/* ── Backed by — MongoDB for Startups (powers the Mandate Service) ── */}
+      <MongoDBForStartupsStrip />
 
       {/* ── Works Across Agent Runtimes ── */}
       <section className="w-full py-14 px-6 border-b border-[rgba(216,231,242,0.05)]">

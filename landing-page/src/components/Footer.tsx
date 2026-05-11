@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { GoogleForStartupsCompact } from "./GoogleForStartupsBadge";
+import { MongoDBForStartupsCompact } from "./MongoDBForStartupsBadge";
 
 const productLinks = [
   { label: "Product Walkthrough", path: "/product" },
@@ -184,7 +185,10 @@ export default function Footer() {
         {/* Bottom bar */}
         <div className="mt-16 pt-8 border-t border-[rgba(216,231,242,0.07)] flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-[rgba(213,219,230,0.55)]">&copy; {new Date().getFullYear()} AI Identity. All rights reserved.</p>
-          <GoogleForStartupsCompact />
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+            <GoogleForStartupsCompact />
+            <MongoDBForStartupsCompact />
+          </div>
           <div className="flex gap-6">
             <Link href="/privacy" className="text-xs text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">Privacy</Link>
             <Link href="/terms" className="text-xs text-[rgba(213,219,230,0.55)] hover:text-white transition-colors">Terms</Link>
