@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 /**
@@ -5,26 +6,27 @@ import Link from "next/link";
  *
  * Mirrors the GoogleForStartupsBadge shape — three variants:
  *
- * - `Strip`   — wide horizontal bar. Use below hero or between sections.
- * - `Compact` — single-line link. Footer / pricing CTA.
+ * - `Strip`   — wide horizontal bar with official MongoDB logo (Spring Green
+ *               variant, brand-approved for dark backgrounds). Below hero
+ *               or between sections.
+ * - `Compact` — single-line text link. Footer / pricing CTA.
  * - `Inline`  — bare-text mention with link. Body copy on About / Architecture.
  *
- * Text-only by default: MongoDB has brand-asset guidelines and we don't
- * want a takedown over an unofficial reproduction of their leaf mark.
- * The official badge artwork lives in the MongoDB for Startups portal —
- * drop the supplied SVG at `public/images/mongodb-for-startups-badge.svg`
- * and swap any of these variants for an `<Image>` tag pointing at it.
+ * Compact + Inline stay text-only because they appear in sentence-fragment
+ * contexts where a logo would feel out of place. The Strip carries the
+ * visual weight.
  */
 
 const PROGRAM_URL = "https://www.mongodb.com/startups";
+const LOGO_PATH = "/images/partners/mongodb-logo-spring-green.png";
 
 export function MongoDBForStartupsStrip({ className = "" }: { className?: string }) {
   return (
     <section
-      className={`w-full py-8 px-6 border-y border-[rgba(216,231,242,0.05)] bg-[rgba(166,218,255,0.02)] ${className}`}
+      className={`w-full py-10 px-6 border-y border-[rgba(216,231,242,0.05)] bg-[rgba(166,218,255,0.02)] ${className}`}
       aria-label="Part of the MongoDB for Startups program"
     >
-      <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
+      <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8">
         <p className="text-xs uppercase tracking-[0.2em] text-[rgba(213,219,230,0.55)]">
           Part of
         </p>
@@ -32,9 +34,20 @@ export function MongoDBForStartupsStrip({ className = "" }: { className?: string
           href={PROGRAM_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-base sm:text-lg font-medium text-[rgba(213,219,230,0.9)] hover:text-white transition-colors"
+          className="inline-flex items-center transition-opacity hover:opacity-80"
+          aria-label="MongoDB for Startups"
         >
-          MongoDB for Startups
+          <Image
+            src={LOGO_PATH}
+            alt="MongoDB"
+            width={180}
+            height={45}
+            className="h-9 w-auto"
+            priority={false}
+          />
+          <span className="ml-3 text-sm text-[rgba(213,219,230,0.7)]">
+            for Startups
+          </span>
         </Link>
       </div>
     </section>
