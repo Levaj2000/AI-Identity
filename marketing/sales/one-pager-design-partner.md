@@ -26,16 +26,33 @@ The identity, policy, and audit primitives we built for humans and services over
 
 ---
 
-## Three things a security leader should know
+## Four things a security leader should know
 
 **1. Not in the hot path.**
 Agents verify attestations offline. AI Identity signs once; your runtime verifies locally. Zero added latency on agent decisions. Scale your agents to a million calls/sec — we don't care.
 
-**2. Audit evidence that holds up.**
-Every decision is cryptographically linked to the one before it. An auditor can replay the chain a year later and prove it hasn't been tampered with. SOC 2, EU AI Act, and NIST AI RMF export profiles built in.
+**2. Hash-chained at the source, normalized at render — your audit log is immutable, your UI is consistent.**
+Every decision is cryptographically linked to the one before it at write time, then rendered through a canonical view layer. The chain holds even when the dashboard layout changes. An auditor can replay the chain a year later and prove it hasn't been tampered with. SOC 2, EU AI Act, and NIST AI RMF export profiles built in.
 
 **3. Least-privilege by default, proven.**
 Per-agent, per-decision policy — not per-service-account. The audit trail is the proof you enforced it.
+
+**4. Crypto-agile by design.**
+ECDSA-P256 today, ML-DSA-87 slot ready. Your mandates won't need a re-signing event when NIST clocks tick over — the signature envelope already carries an algorithm identifier and a second-signature slot, so hybrid post-quantum signing rolls in without invalidating anything we issued today.
+
+---
+
+## Platform-enforced hardening
+
+*You configure once; we enforce every call.*
+
+The infrastructure controls below are not customer responsibilities to wire up. They are platform guarantees that ship by default to every tenant.
+
+- **Cluster.** Binary Authorization in ENFORCE mode (only attested, digest-pinned images run). Pod Security Admission at restricted. Default-deny NetworkPolicies with explicit allow-lists. Non-root containers with read-only root filesystems.
+- **Ingress.** Cloud Armor WAF in ENFORCE with adaptive DDoS protection and per-IP throttling. HTTPS everywhere. No public kubectl endpoint — control plane reached only through Connect Gateway with Master Authorized Networks on.
+- **Secrets.** Google Secret Manager via CSI driver — no secrets in manifests. Signing keys held in Cloud KMS HSM, never leave the HSM boundary. Upstream LLM credentials encrypted with Fernet at rest.
+- **Database.** PostgreSQL with Row-Level Security in FORCE mode and `sslmode=verify-full`. Application-layer scoping is layered on top of database-layer RLS, so a compromised service cannot read another tenant's data.
+- **Application.** ABAC on agent metadata. Offline attestation verification CLI. Real-time SIEM push via signed webhook. Compliance export API mapped to SOC 2 CC6/CC7, ISO 27001 A.12/A.13, and CIS Kubernetes Benchmark.
 
 ---
 
@@ -77,6 +94,9 @@ AI Identity is my answer to that gap: cryptographic agent identity, immutable au
 ---
 
 **Contact**
-Jeff Leva
+
+Jeff Leva — Founder & CEO
+
 jeff@ai-identity.co
-[ai-identity.co](https://ai-identity.co)
+
+[ai-identity.co](https://www.ai-identity.co)

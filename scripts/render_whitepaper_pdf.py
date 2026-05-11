@@ -384,12 +384,25 @@ def make_page_chrome(doc_title: str):
 # ── Main ─────────────────────────────────────────────────────────────────
 
 
+def _doc_title_from_blocks(blocks: list[tuple[str, object]]) -> str:
+    """Use the first H1 as the document title; fall back to a generic label."""
+    for kind, payload in blocks:
+        if kind == "h1" and isinstance(payload, str):
+            return payload.strip()
+    return "AI Identity Document"
+
+
 def render_pdf(md_path: Path, pdf_path: Path | None = None) -> Path:
     md = md_path.read_text(encoding="utf-8")
     md = strip_internal(md)
     styles = make_styles()
     blocks = parse_blocks(md)
     flow = render(blocks, styles)
+
+    title = _doc_title_from_blocks(blocks)
+    footer_label = (
+        f"AI Identity · {title}" if not title.lower().startswith("ai identity") else title
+    )
 
     pdf_path = pdf_path or md_path.with_suffix(".pdf")
     doc = SimpleDocTemplate(
@@ -399,10 +412,10 @@ def render_pdf(md_path: Path, pdf_path: Path | None = None) -> Path:
         rightMargin=0.85 * inch,
         topMargin=0.85 * inch,
         bottomMargin=0.85 * inch,
-        title="AI Identity — Post-Quantum Readiness",
+        title=title,
         author="AI Identity",
     )
-    chrome = make_page_chrome("AI Identity · Post-Quantum Readiness")
+    chrome = make_page_chrome(footer_label)
     doc.build(flow, onFirstPage=chrome, onLaterPages=chrome)
     return pdf_path
 
