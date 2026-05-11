@@ -8,6 +8,7 @@ import { MongoDBForStartupsCompact } from "./MongoDBForStartupsBadge";
 const productLinks = [
   { label: "Product Walkthrough", path: "/product" },
   { label: "How It Works", path: "/how-it-works" },
+  { label: "AI Forensics", path: "/ai-forensics" },
   { label: "Security", path: "/security" },
   { label: "Integrations", path: "/integrations" },
   { label: "Pricing", path: "/contact" },
@@ -21,6 +22,7 @@ const solutionLinks = [
   { label: "Customer Support Agents", path: "/use-cases/customer-support" },
   { label: "Coding Assistants", path: "/use-cases/coding-assistant" },
   { label: "Financial Compliance", path: "/use-cases/financial-compliance" },
+  { label: "Finance Compliance Pack", path: "/industries/finance/compliance-pack" },
 ];
 
 const compareLinks = [
