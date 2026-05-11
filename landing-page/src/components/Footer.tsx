@@ -51,17 +51,20 @@ export default function Footer() {
     e.preventDefault();
     if (!email) return;
     setLoading(true);
+    const source =
+      typeof document !== "undefined" ? document.referrer || "direct" : "direct";
     try {
-      await fetch("https://buttondown.com/api/emails/embed-subscribe/ai-identity", {
+      await fetch("/api/probe-signup", {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `email=${encodeURIComponent(email)}`,
-        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, probe: "newsletter", source }),
       });
       setSubscribed(true);
       setEmail("");
     } catch {
-      // no-cors always appears to succeed
+      // Transport error — show success anyway so the user isn't blocked.
+      // The Resend route is fail-soft on its end, so this branch only
+      // hits for actual network failures (offline, blocked, etc).
       setSubscribed(true);
       setEmail("");
     } finally {

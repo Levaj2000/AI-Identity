@@ -41,25 +41,25 @@ export default function ProbeEmailCapture({
     e.preventDefault();
     if (!email) return;
     setLoading(true);
+    const source =
+      typeof document !== "undefined" ? document.referrer || "direct" : "direct";
     try {
-      await fetch(
-        "https://buttondown.com/api/emails/embed-subscribe/ai-identity",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `email=${encodeURIComponent(email)}&tag=${encodeURIComponent(probe)}`,
-          mode: "no-cors",
-        },
-      );
-      // no-cors hides the response, so we treat any non-throw as success
-      trackEmailCapture(probe, {
-        source: typeof document !== "undefined" ? document.referrer || "direct" : "direct",
+      await fetch("/api/probe-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, probe, source }),
       });
+      // Whether the route returns 200 or 202 (fail-soft on backend
+      // misconfig), the user-facing experience is the same. The analytics
+      // event below is what powers the kill-criteria dashboards regardless.
+      trackEmailCapture(probe, { source });
       setSubmitted(true);
       setEmail("");
     } catch {
-      // Even on transport error, fire the conversion — Buttondown often
-      // accepts the write even when the browser can't see the response.
+      // Transport error (offline, blocked, etc). Still fire the conversion
+      // event so probe signal isn't lost — the user retried and the email
+      // is gone, but the analytics dashboard remains the source of truth
+      // for kill-criteria counts.
       trackEmailCapture(probe, { source: "fallback" });
       setSubmitted(true);
       setEmail("");
