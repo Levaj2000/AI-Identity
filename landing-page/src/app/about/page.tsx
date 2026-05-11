@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { generatePageMetadata } from "@/lib/metadata";
 import { GoogleForStartupsInline } from "@/components/GoogleForStartupsBadge";
+import { MongoDBForStartupsInline } from "@/components/MongoDBForStartupsBadge";
 
 export const metadata: Metadata = generatePageMetadata({
   title: "About AI Identity — Company, Team, Mission & Stage",
@@ -32,7 +33,8 @@ export default function About() {
             teams can deploy agents with accountability built in.
           </p>
           <p className="mt-6 text-sm text-[rgba(213,219,230,0.7)]">
-            <GoogleForStartupsInline />
+            <GoogleForStartupsInline />{" "}
+            <MongoDBForStartupsInline />
           </p>
         </div>
       </section>
