@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { getProbeDb } from "@/lib/mongodb";
 
 /**
  * Probe-page email-capture API route.
@@ -86,6 +87,30 @@ export async function POST(req: Request) {
 
   const resend = new Resend(apiKey);
   const userAgent = req.headers.get("user-agent") ?? "unknown";
+  const now = new Date();
+
+  // Best-effort persistence for the daily summary cron. Never blocks the
+  // user-facing path on Mongo state — if MONGODB_URI is unset or the write
+  // fails, we log and proceed. The Resend email is still sent and Vercel
+  // Analytics has already fired the conversion event.
+  try {
+    const db = await getProbeDb();
+    if (db) {
+      await db.collection("signups").insertOne({
+        email,
+        probe,
+        source,
+        ip_prefix: ip.split(".").slice(0, 2).join(".") || ip.slice(0, 12),
+        user_agent: userAgent.slice(0, 300),
+        created_at: now,
+      });
+    }
+  } catch (err) {
+    console.error("Mongo insert failed (continuing)", {
+      probe,
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   try {
     await resend.emails.send({
@@ -100,7 +125,7 @@ export async function POST(req: Request) {
         `Source:     ${source}`,
         `IP (raw):   ${ip}`,
         `User-Agent: ${userAgent}`,
-        `Timestamp:  ${new Date().toISOString()}`,
+        `Timestamp:  ${now.toISOString()}`,
         "",
         "Reply directly to this email to reach the prospect.",
         "",
