@@ -9,6 +9,8 @@
     "framer": "unframer 5d5a53b2b7b03258 --outDir src/framer"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "framer-motion": "^12.4.0",
     "lucide-react": "^0.487.0",
     "next": "^15.3.0",
