@@ -23,7 +23,7 @@ ignore = [
 quote-style = "double"
 
 [tool.pytest.ini_options]
-testpaths = ["api/tests", "gateway/tests", "common/tests"]
+testpaths = ["api/tests", "gateway/tests", "common/tests", "mandate/tests"]
 pythonpath = ["."]
 markers = [
     "postgres: marks tests that require a Postgres database (deselect with '-m \"not postgres\"')",
