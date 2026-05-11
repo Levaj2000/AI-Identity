@@ -1,0 +1,26 @@
+name: Probe Signup Daily Summary
+
+on:
+  # Daily 14:00 UTC (≈ 07:00 MT) — runs after the CEO Dashboard sweep so
+  # the founder has both views at the start of the workday. Reads probe
+  # signups from MongoDB, formats per-probe + kill-criteria progress,
+  # emails the founder via Resend.
+  schedule:
+    - cron: '0 14 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  summary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install pymongo
+      - name: Send daily summary
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: python scripts/probe_signup_daily_summary.py
