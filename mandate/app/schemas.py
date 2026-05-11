@@ -12,13 +12,13 @@ is produced; the ml-dsa-87 slot is reserved for H2 PQC launch.
 
 from __future__ import annotations
 
+# datetime is imported at runtime (not TYPE_CHECKING) so Pydantic can
+# resolve forward references without an explicit model_rebuild() call.
+from datetime import datetime  # noqa: TC003
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 # ── Enums ─────────────────────────────────────────────────────────────────
 

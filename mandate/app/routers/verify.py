@@ -55,14 +55,27 @@ async def verify_mandate(
     errors: list[str] = []
 
     # 1. Signature check
+    #
+    # verify_signature returns True / False / None where None means
+    # "algorithm not verifiable by this version" (e.g. the ml-dsa-87 slot).
+    # We require: at least one signature must be verifiable AND every
+    # verifiable signature must pass. This keeps hybrid mandates working
+    # (classical + future-algo slot) while closing the spoofing path of
+    # submitting a mandate with only unknown-algorithm signatures.
     if not mandate.signatures:
         checks["signatures_valid"] = False
         errors.append("No signatures present")
     else:
-        sig_results = [verify_signature(mandate, sig) for sig in mandate.signatures]
-        checks["signatures_valid"] = all(sig_results)
-        if not checks["signatures_valid"]:
+        sig_results = [await verify_signature(mandate, sig) for sig in mandate.signatures]
+        verifiable = [r for r in sig_results if r is not None]
+        if not verifiable:
+            checks["signatures_valid"] = False
+            errors.append("No verifiable signature algorithms on this mandate")
+        elif not all(verifiable):
+            checks["signatures_valid"] = False
             errors.append("One or more signatures are invalid")
+        else:
+            checks["signatures_valid"] = True
 
     # 2. Status check
     checks["status_active"] = mandate.status == MandateStatus.active
