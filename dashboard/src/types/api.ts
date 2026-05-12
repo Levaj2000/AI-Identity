@@ -363,9 +363,27 @@ export interface ObservedFact {
   value: string
 }
 
+/**
+ * Deterministic numeric facts computed server-side from the same query
+ * that backs the KPI bar. The AI Summary panel MUST render numeric fields
+ * from this object directly — they are never produced by the LLM.
+ */
+export interface SummaryFacts {
+  time_window_start: string | null
+  time_window_end: string | null
+  total_requests: number | null
+  requests_allowed: number | null
+  requests_denied: number | null
+  errors: number | null
+  /** "filter" | "event_neighborhood" | "unavailable" */
+  aggregate_window_source: string
+}
+
 export interface AuditSummaryResponse {
   title: string
   executive_summary: string
+  /** Authoritative numeric facts — render directly, never via the LLM prose. */
+  facts: SummaryFacts
   observed_facts: ObservedFact[]
   assessment: string
   recommended_follow_ups: string[]
