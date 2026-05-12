@@ -89,6 +89,8 @@ Tests are network-free — `httpx.Client` is mocked.
 
 Standalone tool for auditors, incident responders, and customers to verify AI Identity forensic exports **completely offline** — no database, no API, no network access required.
 
+> For per-subcommand flag tables, exit codes, and example pass/fail output, see [`REFERENCE.md`](REFERENCE.md).
+
 ## Why This Matters
 
 AI Identity maintains a cryptographic chain of custody over every API request an AI agent makes. When you export a forensics report, it includes an HMAC-SHA256 signature that proves the report has not been tampered with since it was generated. The audit log entries are individually chained — each entry's hash incorporates the previous entry's hash, so any insertion, deletion, or modification of a single entry is detectable.
