@@ -1,110 +1,48 @@
 #!/usr/bin/env bash
 # ──────────────────────────────────────────────────────────────────────
-# mandate-smoke.sh — Self-contained smoke test for the Mandate Service.
+# mandate-smoke.sh — Run the Mandate Service smoke test inside the pod.
 #
-# Exercises behaviour that the k8s liveness probe cannot:
-#   1. /health responds 200
-#   2. /api/v1/mandates/verify rejects an obviously-invalid mandate
-#   3. /api/v1/mandates/verify rejects an ml-dsa-87-only mandate
-#      (regression guard for the unknown-algorithm spoofing path closed
-#      in the Ship-A hardening pass)
+# Why this wrapper exists:
+#   The `ai-identity` namespace enforces PodSecurity `restricted:latest`
+#   and the `allow-internal-to-mandate` NetworkPolicy only lets api/gateway
+#   pods reach `mandate-service:8003`. That means a bare
+#       kubectl run mandate-smoke --image=curlimages/curl ...
+#   is rejected by PodSecurity *and* blocked by NetworkPolicy. The least
+#   awful workaround is to exec into the existing mandate pod and talk to
+#   localhost:8003 from there — no extra image, no policy edits.
 #
-# All checks use the unauthenticated /verify endpoint — no API key needed.
-# Default target is the in-cluster service; pass MANDATE_URL to override.
+#   The actual checks live in scripts/mandate_smoke.py; this script just
+#   pipes that file into `python3 -` inside the mandate pod.
 #
 # Usage:
-#   # From inside the cluster (the typical case until Ship B exposes ingress):
-#   kubectl run mandate-smoke --rm -it --restart=Never \
-#       --image=curlimages/curl --command -- sh -c "$(cat scripts/mandate-smoke.sh)"
+#   ./scripts/mandate-smoke.sh
+#   NAMESPACE=ai-identity DEPLOYMENT=mandate ./scripts/mandate-smoke.sh
 #
-#   # From a developer machine with port-forward:
-#   kubectl port-forward svc/mandate-service 8003:8003 &
-#   MANDATE_URL=http://localhost:8003 ./scripts/mandate-smoke.sh
+# Requires: gcloud / kubectl context pointing at the GKE cluster with
+# read+exec on deployments in $NAMESPACE.
 #
-# Exit codes: 0 on full pass, non-zero on first failure.
+# The deployment is named `mandate` (no -deployment suffix).
+# Exits non-zero on the first failing check.
 # ──────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
-MANDATE_URL="${MANDATE_URL:-http://mandate-service:8003}"
-TIMEOUT=15
+NAMESPACE="${NAMESPACE:-ai-identity}"
+DEPLOYMENT="${DEPLOYMENT:-mandate}"
 
-red()   { printf '\033[31m%s\033[0m\n' "$*"; }
-green() { printf '\033[32m%s\033[0m\n' "$*"; }
-info()  { printf '   %s\n' "$*"; }
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PY_SCRIPT="${SCRIPT_DIR}/mandate_smoke.py"
 
-fail() {
-    red "❌ $1"
+if [[ ! -f "$PY_SCRIPT" ]]; then
+    echo "❌ missing $PY_SCRIPT" >&2
     exit 1
-}
+fi
 
-# ── 1. Health ─────────────────────────────────────────────────────────
-echo "▶ /health"
-http_code=$(curl -s -o /tmp/mandate-smoke-health.json -w "%{http_code}" \
-    --max-time "$TIMEOUT" "$MANDATE_URL/health")
-[[ "$http_code" == "200" ]] || fail "/health returned $http_code"
-green "✅ /health 200"
+if ! command -v kubectl >/dev/null 2>&1; then
+    echo "❌ kubectl not on PATH" >&2
+    exit 1
+fi
 
-# ── 2. Verify rejects an obvious garbage mandate ──────────────────────
-echo "▶ /verify rejects garbage"
-garbage_payload='{
-  "mandate": {
-    "mandate_id": "mnd_smoke01",
-    "schema_version": "1.0",
-    "status": "active",
-    "issuer": {"org_id": "smoke", "user_id": "smoke"},
-    "subject": {"agent_id": "smoke", "org_id": "smoke"},
-    "scope": ["read:smoke"],
-    "conditions": {},
-    "policy_hash": null,
-    "valid_from": "2026-01-01T00:00:00Z",
-    "valid_until": "2030-01-01T00:00:00Z",
-    "signatures": [
-      {"algorithm": "ecdsa-p256-sha256", "key_id": "local:deadbeefdeadbeef", "signature": "AAAA"}
-    ],
-    "revocation": null,
-    "metadata": {},
-    "created_at": "2026-01-01T00:00:00Z",
-    "updated_at": "2026-01-01T00:00:00Z"
-  }
-}'
-response=$(curl -s --max-time "$TIMEOUT" \
-    -H "Content-Type: application/json" \
-    -d "$garbage_payload" \
-    "$MANDATE_URL/api/v1/mandates/verify")
-echo "$response" | grep -q '"valid":false' \
-    || fail "verifier accepted a garbage mandate: $response"
-green "✅ /verify rejects garbage"
+echo "▶ exec deploy/${DEPLOYMENT} in ns/${NAMESPACE} → python3 - < scripts/mandate_smoke.py"
 
-# ── 3. Verify rejects ml-dsa-87-only mandate ──────────────────────────
-echo "▶ /verify rejects ml-dsa-87-only"
-pqc_only_payload='{
-  "mandate": {
-    "mandate_id": "mnd_smoke02",
-    "schema_version": "1.0",
-    "status": "active",
-    "issuer": {"org_id": "smoke", "user_id": "smoke"},
-    "subject": {"agent_id": "smoke", "org_id": "smoke"},
-    "scope": ["read:smoke"],
-    "conditions": {},
-    "policy_hash": null,
-    "valid_from": "2026-01-01T00:00:00Z",
-    "valid_until": "2030-01-01T00:00:00Z",
-    "signatures": [
-      {"algorithm": "ml-dsa-87", "key_id": "kms:pqc-placeholder", "signature": "AAAA"}
-    ],
-    "revocation": null,
-    "metadata": {},
-    "created_at": "2026-01-01T00:00:00Z",
-    "updated_at": "2026-01-01T00:00:00Z"
-  }
-}'
-response=$(curl -s --max-time "$TIMEOUT" \
-    -H "Content-Type: application/json" \
-    -d "$pqc_only_payload" \
-    "$MANDATE_URL/api/v1/mandates/verify")
-echo "$response" | grep -q '"valid":false' \
-    || fail "verifier accepted an ml-dsa-87-only mandate (regression!): $response"
-green "✅ /verify rejects ml-dsa-87-only"
-
-green "🎉 Mandate Service smoke passed"
+exec kubectl exec -n "$NAMESPACE" -i "deploy/${DEPLOYMENT}" -- python3 - < "$PY_SCRIPT"
