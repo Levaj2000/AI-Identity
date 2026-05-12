@@ -423,20 +423,22 @@ async def purge_revoked_agents(
 
     agent_names = []
 
-    # Temporarily disable immutability trigger for audit_log denormalization
+    # Temporarily disable immutability trigger for audit_log denormalization.
+    # try/finally guarantees the trigger is re-enabled even if the loop body
+    # raises — leaving it disabled silently compromises a SOC 2 control.
     db.execute(text("ALTER TABLE audit_log DISABLE TRIGGER audit_log_no_update"))
+    try:
+        for agent in eligible:
+            # Denormalize agent_name into audit_log rows before deletion
+            db.query(AuditLog).filter(
+                AuditLog.agent_id == agent.id,
+                AuditLog.agent_name.is_(None),
+            ).update({"agent_name": agent.name}, synchronize_session="fetch")
 
-    for agent in eligible:
-        # Denormalize agent_name into audit_log rows before deletion
-        db.query(AuditLog).filter(
-            AuditLog.agent_id == agent.id,
-            AuditLog.agent_name.is_(None),
-        ).update({"agent_name": agent.name}, synchronize_session="fetch")
-
-        agent_names.append(agent.name)
-
-    # Re-enable trigger after denormalization
-    db.execute(text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update"))
+            agent_names.append(agent.name)
+    finally:
+        # Re-enable trigger after denormalization
+        db.execute(text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update"))
 
     # Hard-delete via raw SQL to avoid ORM cascade nullifying audit_log.agent_id
     agent_ids = [str(a.id) for a in eligible]
@@ -489,15 +491,19 @@ async def purge_single_agent(
     agent_name = agent.name
     agent_id_val = str(agent.id)
 
-    # Denormalize agent_name into audit_log rows before deletion
+    # Denormalize agent_name into audit_log rows before deletion.
+    # try/finally guarantees the trigger is re-enabled even if the UPDATE
+    # raises — leaving it disabled silently compromises a SOC 2 control.
     db.execute(text("ALTER TABLE audit_log DISABLE TRIGGER audit_log_no_update"))
-    db.execute(
-        text(
-            "UPDATE audit_log SET agent_name = :name WHERE agent_id = :aid AND agent_name IS NULL"
-        ),
-        {"name": agent_name, "aid": agent_id_val},
-    )
-    db.execute(text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update"))
+    try:
+        db.execute(
+            text(
+                "UPDATE audit_log SET agent_name = :name WHERE agent_id = :aid AND agent_name IS NULL"
+            ),
+            {"name": agent_name, "aid": agent_id_val},
+        )
+    finally:
+        db.execute(text("ALTER TABLE audit_log ENABLE TRIGGER audit_log_no_update"))
 
     # Hard-delete via raw SQL to avoid ORM cascade nullifying audit_log.agent_id
     # (audit_log has no FK constraint — rows are preserved with original agent_id)
