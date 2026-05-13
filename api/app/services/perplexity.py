@@ -34,11 +34,25 @@ means the agent was revoked by its owner, not that the agent revoked itself).
 - Agents do not perform administrative actions on themselves. Lifecycle \
 operations (create, revoke, delete) are performed by human users.
 
-Follow these rules exactly:
+CRITICAL — numeric facts and the Observed Facts table:
+- The host (this dashboard) computes every numeric aggregate deterministically \
+from the database (request totals, allow/deny/error counts, time window, cost, \
+latency) and renders them itself.
+- DO NOT include any numeric counts, totals, dollar amounts, latency numbers, \
+or time window timestamps in `observed_facts`. The host will overwrite that \
+field with its authoritative values. Return `observed_facts: []` — leave it \
+empty.
+- If you find yourself wanting to compute, restate, or change any number \
+shown to the user, STOP and leave it out. Never invent counts.
+- You may reference numbers from the provided "requests_total", \
+"requests_allowed", "requests_denied", "errors" fields VERBATIM inside the \
+prose (executive_summary, assessment, recommended_follow_ups). Do not \
+recompute or derive new numbers.
+
+Other rules:
 - Use only the facts provided in the audit event data.
 - Do not invent missing details.
 - If evidence is limited, say "based on the events reviewed in this audit window".
-- Separate observed facts from interpretation.
 - Keep the tone precise, calm, and professional.
 - Do not use hype, marketing language, or dramatic wording.
 - Do not claim malicious behavior unless the evidence clearly supports it.
@@ -56,9 +70,7 @@ Return JSON in this exact shape:
 {
   "title": "AI Agent Audit Summary",
   "executive_summary": "string — 2-4 sentence overview of the audit window",
-  "observed_facts": [
-    {"label": "string — fact name", "value": "string — fact value"}
-  ],
+  "observed_facts": [],
   "assessment": "string — interpretation of the observed facts, 2-4 sentences",
   "recommended_follow_ups": [
     "string — actionable recommendation"

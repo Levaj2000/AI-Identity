@@ -4,9 +4,13 @@
  * Renders a Perplexity-powered structured report with dedicated sections:
  * executive summary, observed facts, assessment, recommendations,
  * risk/confidence badges, and citation sources.
+ *
+ * Numeric facts (total/allowed/denied/errors/time window) are rendered
+ * directly from the deterministic `facts` field — never from the LLM
+ * prose. This guarantees the AI panel cannot disagree with the KPI bar.
  */
 
-import type { AuditSummaryResponse } from '../../types/api'
+import type { AuditSummaryResponse, ObservedFact, SummaryFacts } from '../../types/api'
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -21,6 +25,28 @@ const confidenceBadgeStyles: Record<string, string> = {
   low: 'text-zinc-500',
   medium: 'text-zinc-400',
   high: 'text-zinc-300',
+}
+
+/**
+ * Build the Observed Facts rows from the deterministic `facts` field.
+ * This is the *only* source of truth for the numeric rows in the panel —
+ * any rows the LLM may have produced in `observed_facts` are ignored.
+ */
+function buildDeterministicFacts(facts: SummaryFacts | null | undefined): ObservedFact[] {
+  if (!facts) return []
+  const fmtCount = (n: number | null): string => (n == null ? 'not available' : String(n))
+  const fmtWindow = (start: string | null, end: string | null): string => {
+    if (start == null && end == null) return 'not available'
+    if (start != null && end != null && start === end) return start
+    return `${start ?? 'unbounded'} → ${end ?? 'unbounded'}`
+  }
+  return [
+    { label: 'Time window', value: fmtWindow(facts.time_window_start, facts.time_window_end) },
+    { label: 'Total requests', value: fmtCount(facts.total_requests) },
+    { label: 'Requests allowed', value: fmtCount(facts.requests_allowed) },
+    { label: 'Requests denied', value: fmtCount(facts.requests_denied) },
+    { label: 'Errors', value: fmtCount(facts.errors) },
+  ]
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -137,27 +163,43 @@ export function AISummaryPanel({ data, loading, error, scopeLabel, onClose, onRe
                 <p className="text-sm text-zinc-300 leading-relaxed">{data.executive_summary}</p>
               </section>
 
-              {/* Observed Facts */}
-              {data.observed_facts.length > 0 && (
-                <section>
-                  <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-                    Observed Facts
-                  </h3>
-                  <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg overflow-hidden">
-                    {data.observed_facts.map((fact, i) => (
-                      <div
-                        key={i}
-                        className="flex items-start gap-3 px-4 py-2.5 border-b border-zinc-700/50 last:border-b-0"
-                      >
-                        <span className="text-xs font-medium text-zinc-500 shrink-0 w-28 pt-0.5">
-                          {fact.label}
-                        </span>
-                        <span className="text-xs text-zinc-300 break-words">{fact.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
+              {/* Observed Facts — rendered from deterministic `facts` only.
+                   The LLM has no input here, so these numbers always match
+                   the KPI bar. */}
+              {(() => {
+                const factRows = buildDeterministicFacts(data.facts)
+                if (factRows.length === 0) return null
+                return (
+                  <section>
+                    <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+                      Observed Facts
+                    </h3>
+                    <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg overflow-hidden">
+                      {factRows.map((fact, i) => (
+                        <div
+                          key={i}
+                          className="flex items-start gap-3 px-4 py-2.5 border-b border-zinc-700/50 last:border-b-0"
+                        >
+                          <span className="text-xs font-medium text-zinc-500 shrink-0 w-28 pt-0.5">
+                            {fact.label}
+                          </span>
+                          <span className="text-xs text-zinc-300 break-words">{fact.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {data.facts?.aggregate_window_source === 'event_neighborhood' && (
+                      <p className="text-xs text-zinc-500 mt-2 italic">
+                        Counts are taken from a ±24h window around the selected event.
+                      </p>
+                    )}
+                    {data.facts?.aggregate_window_source === 'unavailable' && (
+                      <p className="text-xs text-zinc-500 mt-2 italic">
+                        No aggregate window applies to this scope, so totals are unavailable.
+                      </p>
+                    )}
+                  </section>
+                )
+              })()}
 
               {/* Assessment */}
               <section>
