@@ -118,7 +118,7 @@ def build_nist_ai_rmf_bundle(
         audit_period_start=audit_period_start,
         audit_period_end=audit_period_end,
     )
-    chain_result = _write_measure_chain_integrity(bundle, db, built_at=built_at)
+    chain_result = _write_measure_chain_integrity(bundle, db, org_id=org_id, built_at=built_at)
     control_result_count = _write_control_results(
         bundle,
         db,
@@ -467,13 +467,15 @@ def _write_measure_chain_integrity(
     bundle: ComplianceExportBundle,
     db: Session,
     *,
+    org_id: uuid.UUID,
     built_at: datetime.datetime,
 ) -> dict:
-    """verify_chain() at export time. MS-2.5."""
-    result = verify_chain(db)
+    """verify_chain() at export time. MS-2.5. Scoped to the exporting org."""
+    result = verify_chain(db, org_id=org_id)
     payload = {
         "verified_at": _rfc3339(built_at),
-        "scope": "global",
+        "scope": "org",
+        "org_id": str(org_id),
         "valid": bool(result.valid),
         "total_entries": int(result.total_entries),
         "entries_verified": int(result.entries_verified),
