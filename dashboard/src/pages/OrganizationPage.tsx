@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import type { Organization, OrgMember } from '../types/api'
 import {
   getMyOrg,
@@ -300,6 +301,114 @@ function InlineEditName({
 
 // ─── Forensics Key Section ────────────────────────────────────────
 
+const VERIFY_SCRIPT_URL =
+  'https://raw.githubusercontent.com/Levaj2000/AI-Identity/main/cli/ai_identity_verify.py'
+const VERIFY_SCRIPT_FILENAME = 'ai-identity-verify.py'
+const SAMPLE_CHAIN_FILENAME = 'ai-identity-sample-chain.json'
+
+function maskedKey(k: string) {
+  // Show an 8-char prefix followed by an ellipsis so a literal copy never
+  // pastes fake hex characters (the old `••••` masking did, breaking the CLI).
+  return `${k.slice(0, 8)}…`
+}
+
+function shellEscapeSingle(value: string): string {
+  // POSIX-safe single-quoted string. Embedded apostrophes are escaped as '\''
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+function downloadBlob(content: string | Blob, filename: string, mimeType: string) {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+// HMAC-SHA256 of `message` (UTF-8) with `keyStr` (UTF-8 bytes — matches the
+// Python verifier which does `key.encode("utf-8")` on the hex string).
+async function hmacSha256Hex(keyStr: string, message: string): Promise<string> {
+  const enc = new TextEncoder()
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(keyStr),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  )
+  const sig = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(message))
+  return Array.from(new Uint8Array(sig))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+// Build the canonical JSON for a sample audit entry.  Field order, separators,
+// and value coercion must match `common.audit.writer._canonical_payload`
+// (mirrored by `cli/ai_identity_verify.py::_canonical_entry_payload`).
+function canonicalEntryPayload(entry: {
+  agent_id: string
+  cost_estimate_usd: string | null
+  created_at: string
+  decision: string
+  endpoint: string
+  latency_ms: number | null
+  method: string
+  prev_hash: string
+}): string {
+  return (
+    '{' +
+    `"agent_id":${JSON.stringify(entry.agent_id)},` +
+    `"cost_estimate_usd":${entry.cost_estimate_usd === null ? 'null' : JSON.stringify(entry.cost_estimate_usd)},` +
+    `"created_at":${JSON.stringify(entry.created_at)},` +
+    `"decision":${JSON.stringify(entry.decision)},` +
+    `"endpoint":${JSON.stringify(entry.endpoint)},` +
+    `"latency_ms":${entry.latency_ms === null ? 'null' : String(entry.latency_ms)},` +
+    `"method":${JSON.stringify(entry.method)},` +
+    `"prev_hash":${JSON.stringify(entry.prev_hash)},` +
+    `"request_metadata":{"sample":true}` +
+    '}'
+  )
+}
+
+async function buildSampleChainJson(hmacKey: string): Promise<string> {
+  const baseAgentId = '00000000-0000-0000-0000-000000000001'
+  const entries: Array<Record<string, unknown>> = []
+
+  let prevHash = 'GENESIS'
+  const timestamps = ['2026-05-12T10:00:00+00:00', '2026-05-12T10:00:01+00:00']
+  const latencies = [42, 38]
+
+  for (let i = 0; i < timestamps.length; i++) {
+    const entryBody = {
+      agent_id: baseAgentId,
+      cost_estimate_usd: null,
+      created_at: timestamps[i],
+      decision: 'allow',
+      endpoint: '/api/v1/sample/echo',
+      latency_ms: latencies[i],
+      method: 'POST',
+      prev_hash: prevHash,
+    }
+    const canonical = canonicalEntryPayload(entryBody)
+    const entryHash = await hmacSha256Hex(hmacKey, canonical)
+
+    entries.push({
+      id: i + 1,
+      ...entryBody,
+      request_metadata: { sample: true },
+      entry_hash: entryHash,
+    })
+
+    prevHash = entryHash
+  }
+
+  return JSON.stringify(entries, null, 2)
+}
+
 function ForensicsKeySection({
   onToast,
 }: {
@@ -308,27 +417,73 @@ function ForensicsKeySection({
   const [key, setKey] = useState<string | null>(null)
   const [revealed, setRevealed] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [noAccess, setNoAccess] = useState(false)
   const [regenerateModal, setRegenerateModal] = useState(false)
   const [regenerateLoading, setRegenerateLoading] = useState(false)
+  const [downloadingScript, setDownloadingScript] = useState(false)
+  const [downloadingSample, setDownloadingSample] = useState(false)
 
   useEffect(() => {
     getForensicVerifyKey()
       .then((data) => setKey(data.forensic_verify_key))
-      .catch(() => onToast('Failed to load forensic verify key', 'error'))
+      .catch((err) => {
+        if (isApiError(err) && (err.status === 403 || err.status === 401)) {
+          setNoAccess(true)
+        } else {
+          onToast('Failed to load forensic verify key', 'error')
+        }
+      })
       .finally(() => setLoading(false))
   }, [onToast])
 
-  function maskedKey(k: string) {
-    return k.slice(0, 8) + '••••••••••••••••••••••••'
-  }
-
-  async function handleCopy() {
+  async function handleCopyKey() {
     if (!key) return
     try {
       await navigator.clipboard.writeText(key)
       onToast('Key copied to clipboard', 'success')
     } catch {
       onToast('Failed to copy key', 'error')
+    }
+  }
+
+  async function handleCopyCommand() {
+    if (!key) return
+    const command = `AI_IDENTITY_HMAC_KEY=${shellEscapeSingle(key)} python3 ${VERIFY_SCRIPT_FILENAME} chain ./${SAMPLE_CHAIN_FILENAME}`
+    try {
+      await navigator.clipboard.writeText(command)
+      onToast('CLI command copied — paste in a terminal', 'success')
+    } catch {
+      onToast('Failed to copy command', 'error')
+    }
+  }
+
+  async function handleDownloadScript() {
+    setDownloadingScript(true)
+    try {
+      const response = await fetch(VERIFY_SCRIPT_URL)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const text = await response.text()
+      downloadBlob(text, VERIFY_SCRIPT_FILENAME, 'text/x-python')
+      onToast(`Downloaded ${VERIFY_SCRIPT_FILENAME}`, 'success')
+    } catch {
+      // Fallback: open the raw URL so the user can save it manually.
+      window.open(VERIFY_SCRIPT_URL, '_blank')
+    } finally {
+      setDownloadingScript(false)
+    }
+  }
+
+  async function handleDownloadSample() {
+    if (!key) return
+    setDownloadingSample(true)
+    try {
+      const json = await buildSampleChainJson(key)
+      downloadBlob(json, SAMPLE_CHAIN_FILENAME, 'application/json')
+      onToast(`Downloaded ${SAMPLE_CHAIN_FILENAME}`, 'success')
+    } catch {
+      onToast('Failed to build sample chain', 'error')
+    } finally {
+      setDownloadingSample(false)
     }
   }
 
@@ -346,6 +501,9 @@ function ForensicsKeySection({
       setRegenerateLoading(false)
     }
   }
+
+  const displayKey = key ? (revealed ? key : maskedKey(key)) : '—'
+  const snippetKey = key ? (revealed ? key : maskedKey(key)) : '<your-key>'
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#10131C]">
@@ -370,18 +528,34 @@ function ForensicsKeySection({
 
       {loading ? (
         <div className="mt-4 h-10 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-[#1a1a1d]" />
+      ) : noAccess ? (
+        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-[#1a1a1d] dark:bg-[#04070D]">
+          <div className="flex items-center gap-2">
+            <code className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-sm text-gray-400 dark:border-[#1a1a1d] dark:bg-[#10131C] dark:text-[#52525b]">
+              ••••••••…
+            </code>
+          </div>
+          <p className="mt-3 text-xs text-gray-500 dark:text-[#a1a1aa]">
+            Contact your organization admin or owner to retrieve the audit-log HMAC key for CLI
+            verification.
+          </p>
+        </div>
       ) : (
         <>
           {/* Key display */}
           <div className="mt-4 flex items-center gap-2">
-            <code className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-sm text-gray-900 dark:border-[#1a1a1d] dark:bg-[#04070D] dark:text-[#e4e4e7]">
-              {key ? (revealed ? key : maskedKey(key)) : '—'}
+            <code
+              data-testid="forensic-key-display"
+              className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-sm text-gray-900 dark:border-[#1a1a1d] dark:bg-[#04070D] dark:text-[#e4e4e7]"
+            >
+              {displayKey}
             </code>
 
             {/* Reveal toggle */}
             <button
               onClick={() => setRevealed((v) => !v)}
               title={revealed ? 'Hide key' : 'Reveal key'}
+              aria-label={revealed ? 'Hide key' : 'Reveal key'}
               className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:border-[#1a1a1d] dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d]"
             >
               {revealed ? (
@@ -415,10 +589,11 @@ function ForensicsKeySection({
               )}
             </button>
 
-            {/* Copy button */}
+            {/* Copy button — always copies the real unmasked key */}
             <button
-              onClick={handleCopy}
+              onClick={handleCopyKey}
               title="Copy key"
+              aria-label="Copy key"
               className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:border-[#1a1a1d] dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d]"
             >
               <svg
@@ -441,15 +616,108 @@ function ForensicsKeySection({
             </button>
           </div>
 
-          {/* CLI usage snippet */}
+          {/* CLI usage snippet (manual env-var flow) */}
           <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-[#1a1a1d] dark:bg-[#04070D]">
             <p className="mb-2 text-xs font-medium text-gray-500 dark:text-[#a1a1aa]">
-              CLI verification
+              CLI verification (manual)
             </p>
             <pre className="overflow-x-auto text-xs text-gray-700 dark:text-[#a1a1aa]">
-              {`export AI_IDENTITY_HMAC_KEY='${key ? (revealed ? key : maskedKey(key)) : '<your-key>'}'
-python3 ai_identity_verify.py chain export.json`}
+              {`export AI_IDENTITY_HMAC_KEY='${snippetKey}'
+python3 ${VERIFY_SCRIPT_FILENAME} chain export.json`}
             </pre>
+          </div>
+
+          {/* CLI Quickstart panel */}
+          <div className="mt-4 rounded-lg border border-[#A6DAFF]/40 bg-[#A6DAFF]/5 p-4 dark:border-[#A6DAFF]/20 dark:bg-[#A6DAFF]/5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-[#e4e4e7]">
+                  Verify CLI — 60 second quickstart
+                </p>
+                <p className="mt-0.5 text-xs text-gray-600 dark:text-[#a1a1aa]">
+                  Download the script and a tiny sample chain, then paste one command to see a full
+                  round-trip verify.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                onClick={handleDownloadScript}
+                disabled={downloadingScript}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#1a1a1d] dark:bg-[#10131C] dark:text-[#e4e4e7] dark:hover:bg-[#1a1a1d]"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-3.5 w-3.5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 3a.75.75 0 01.75.75v8.69l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V3.75A.75.75 0 0110 3zM3.75 15.75a.75.75 0 01.75-.75h11a.75.75 0 010 1.5h-11a.75.75 0 01-.75-.75z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                {downloadingScript ? 'Downloading…' : `Download ${VERIFY_SCRIPT_FILENAME}`}
+              </button>
+
+              <button
+                onClick={handleDownloadSample}
+                disabled={downloadingSample || !key}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#1a1a1d] dark:bg-[#10131C] dark:text-[#e4e4e7] dark:hover:bg-[#1a1a1d]"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-3.5 w-3.5"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 3a.75.75 0 01.75.75v8.69l2.22-2.22a.75.75 0 111.06 1.06l-3.5 3.5a.75.75 0 01-1.06 0l-3.5-3.5a.75.75 0 111.06-1.06l2.22 2.22V3.75A.75.75 0 0110 3zM3.75 15.75a.75.75 0 01.75-.75h11a.75.75 0 010 1.5h-11a.75.75 0 01-.75-.75z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                {downloadingSample ? 'Building…' : `Download sample chain`}
+              </button>
+
+              <button
+                onClick={handleCopyCommand}
+                disabled={!key}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#A6DAFF] px-3 py-1.5 text-xs font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-3.5 w-3.5"
+                >
+                  <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                  <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                </svg>
+                Copy CLI command
+              </button>
+            </div>
+
+            <p className="mt-3 text-xs text-gray-600 dark:text-[#a1a1aa]">
+              <span className="font-medium text-gray-900 dark:text-[#e4e4e7]">VERIFIED ✓</span>{' '}
+              means every entry's HMAC and chain linkage matches;{' '}
+              <span className="font-medium text-gray-900 dark:text-[#e4e4e7]">TAMPERED ✗</span>{' '}
+              means an entry was altered or the wrong key was used.
+            </p>
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+              <span className="font-semibold">Internal use only.</span> This HMAC key is your
+              organization's shared secret — never share it with external auditors or customers. For
+              external verification, use the{' '}
+              <Link
+                to="/dashboard/compliance/exports"
+                className="font-medium underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-300"
+              >
+                DSSE attestation flow
+              </Link>{' '}
+              (ECDSA public-key path) instead.
+            </p>
           </div>
         </>
       )}
