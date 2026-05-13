@@ -611,7 +611,11 @@ class TestChainIntegrity:
         bundle = _build_bundle(tmp_path, db_session, org_a)
         with zipfile.ZipFile(bundle.archive_path) as zf:
             payload = json.loads(zf.read("chain_integrity.json"))
-        assert payload["scope"] == "global"
+        # Phase 3 of the per-org chain migration: compliance bundles are now
+        # scoped to the exporting org rather than the global chain, so a
+        # customer's evidence proves *their* chain, not other tenants'.
+        assert payload["scope"] == "org"
+        assert payload["org_id"] == str(org_a["org"].id)
         assert payload["valid"] is True
         assert payload["total_entries"] >= 4
         assert payload["entries_verified"] == payload["total_entries"]
