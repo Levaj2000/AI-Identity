@@ -478,12 +478,67 @@ class ObservedFact(BaseModel):
     value: str
 
 
+class SummaryFacts(BaseModel):
+    """Deterministic numeric facts computed server-side from the audit DB.
+
+    These are the authoritative source for any number shown in the AI summary
+    panel. They are produced by the same query that backs the KPI bar, so the
+    two views can never disagree. The LLM is explicitly forbidden from
+    populating these fields; it only writes prose around them.
+    """
+
+    time_window_start: datetime | None = Field(
+        None,
+        description=(
+            "Start of the aggregate window used to compute counts. None when "
+            "no defined window applies (e.g. single-event analysis with no "
+            "available neighborhood)."
+        ),
+    )
+    time_window_end: datetime | None = Field(
+        None, description="End of the aggregate window used to compute counts."
+    )
+    total_requests: int | None = Field(
+        None,
+        description=(
+            "Total audit events in the aggregate window. None when no "
+            "window applies — frontend renders 'not available'."
+        ),
+    )
+    requests_allowed: int | None = Field(None, description="Allowed-decision count.")
+    requests_denied: int | None = Field(None, description="Denied-decision count.")
+    errors: int | None = Field(None, description="Error-decision count.")
+    aggregate_window_source: str = Field(
+        description=(
+            "How the aggregate window was derived. One of: "
+            "'filter' (the user's filter scope), "
+            "'event_neighborhood' (±24h around a single event when no filter window was set), "
+            "'unavailable' (no aggregate computable — counts will be None)."
+        )
+    )
+
+
 class AuditSummaryResponse(BaseModel):
-    """Structured AI-generated audit summary (v2)."""
+    """Structured AI-generated audit summary (v2).
+
+    `facts` carries deterministic numeric counts computed server-side from
+    the same query as the KPI bar. The frontend MUST render numeric fields
+    from `facts` directly — `observed_facts` and the LLM-generated prose
+    fields are not permitted to contradict them.
+    """
 
     title: str = Field(description="Report title")
     executive_summary: str = Field(description="2-4 sentence overview")
-    observed_facts: list[ObservedFact] = Field(description="Key-value fact rows")
+    facts: SummaryFacts = Field(
+        description="Deterministic numeric facts (same query as the KPI bar)"
+    )
+    observed_facts: list[ObservedFact] = Field(
+        description=(
+            "Key-value fact rows. The first rows are populated by the server "
+            "from `facts` and are guaranteed to match the KPI bar. Any rows "
+            "the LLM tries to add are dropped."
+        )
+    )
     assessment: str = Field(description="Interpretation of observed facts")
     recommended_follow_ups: list[str] = Field(description="Actionable recommendations")
     risk_level: str = Field(description="informational|low|medium|high")

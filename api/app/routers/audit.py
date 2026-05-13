@@ -12,7 +12,7 @@ import logging
 import pathlib
 import uuid
 import zipfile
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response, StreamingResponse
@@ -31,7 +31,9 @@ from common.schemas.agent import (
     AuditSummaryRequest,
     AuditSummaryResponse,
     ForensicsReportResponse,
+    ObservedFact,
     PolicyResponse,
+    SummaryFacts,
     TopEndpoint,
 )
 
@@ -454,15 +456,84 @@ def audit_summarize(
         rows = db.query(Agent.id, Agent.name).filter(Agent.id.in_(agent_ids_in_results)).all()
         agent_names = {row[0]: row[1] for row in rows}
 
-    # ── Compute stats ────────────────────────────────────────────────
-    stats = _compute_stats(
-        db,
-        user_agents,
-        agent_id=body.agent_id,
-        start_date=body.start_date,
-        end_date=body.end_date,
-        user_id=user.id,
-    )
+    # ── Resolve the deterministic aggregate window ──────────────────
+    #
+    # The stats counts MUST come from the same query that backs the KPI bar
+    # so the AI panel and the KPI bar never disagree. We derive the window
+    # using these rules:
+    #
+    # 1. If the request carries an explicit filter window (start_date/end_date)
+    #    → use it directly. Source = "filter".
+    # 2. Otherwise, if the request targets specific event_ids (single-event
+    #    drilldown) → use a ±24h neighborhood around the matched events.
+    #    Source = "event_neighborhood". This is the documented choice for
+    #    "single deny request analysis" — when the user clicks a single row,
+    #    we contextualize it against the surrounding day.
+    # 3. Otherwise → no defined window. Source = "unavailable" — counts are
+    #    None and the frontend renders "not available" rather than letting
+    #    the LLM hallucinate digits.
+    aggregate_window_source: str
+    stats_start: datetime | None
+    stats_end: datetime | None
+    if body.start_date or body.end_date:
+        aggregate_window_source = "filter"
+        stats_start = body.start_date
+        stats_end = body.end_date
+    elif body.event_ids:
+        event_timestamps = [e.created_at for e in entries]
+        anchor_min = min(event_timestamps)
+        anchor_max = max(event_timestamps)
+        # Normalize naive datetimes (SQLite test fixtures) to UTC for the math
+        if anchor_min.tzinfo is None:
+            anchor_min = anchor_min.replace(tzinfo=UTC)
+        if anchor_max.tzinfo is None:
+            anchor_max = anchor_max.replace(tzinfo=UTC)
+        aggregate_window_source = "event_neighborhood"
+        stats_start = anchor_min - timedelta(hours=24)
+        stats_end = anchor_max + timedelta(hours=24)
+    else:
+        aggregate_window_source = "unavailable"
+        stats_start = None
+        stats_end = None
+
+    # ── Compute stats deterministically (same query as the KPI bar) ──
+    if aggregate_window_source == "unavailable":
+        # No defined aggregate window — counts are not available.
+        facts = SummaryFacts(
+            time_window_start=None,
+            time_window_end=None,
+            total_requests=None,
+            requests_allowed=None,
+            requests_denied=None,
+            errors=None,
+            aggregate_window_source=aggregate_window_source,
+        )
+        stats = _compute_stats(
+            db,
+            user_agents,
+            agent_id=body.agent_id,
+            start_date=None,
+            end_date=None,
+            user_id=user.id,
+        )
+    else:
+        stats = _compute_stats(
+            db,
+            user_agents,
+            agent_id=body.agent_id,
+            start_date=stats_start,
+            end_date=stats_end,
+            user_id=user.id,
+        )
+        facts = SummaryFacts(
+            time_window_start=stats_start,
+            time_window_end=stats_end,
+            total_requests=stats.total_events,
+            requests_allowed=stats.allowed_count,
+            requests_denied=stats.denied_count,
+            errors=stats.error_count,
+            aggregate_window_source=aggregate_window_source,
+        )
 
     # ── Build normalized event data for structured prompt ──────────
     # Per-event details (compact for prompt context)
@@ -490,30 +561,42 @@ def audit_summarize(
             }
         )
 
-    # Determine time window
-    window_start = (
-        body.start_date.isoformat() if body.start_date else entries[0].created_at.isoformat()
-    )
-    window_end = body.end_date.isoformat() if body.end_date else entries[-1].created_at.isoformat()
-
-    # Build notes for context
+    # Build notes for context (still useful prose context for the LLM)
     notes_parts = []
     if len(entries) == 1:
         notes_parts.append("Single event in selected time window")
-    if stats.denied_count > 0:
-        notes_parts.append(f"{stats.denied_count} denied requests require review")
-    if stats.error_count > 0:
-        notes_parts.append(f"{stats.error_count} errors detected")
+    if facts.requests_denied and facts.requests_denied > 0:
+        notes_parts.append(f"{facts.requests_denied} denied requests require review")
+    if facts.errors and facts.errors > 0:
+        notes_parts.append(f"{facts.errors} errors detected")
+    if aggregate_window_source == "event_neighborhood":
+        notes_parts.append(
+            "Aggregate counts are taken from a ±24h window around the supporting event"
+        )
+    elif aggregate_window_source == "unavailable":
+        notes_parts.append(
+            "No aggregate window available for this scope — do not state any total/allowed/denied/error counts"
+        )
 
     event_data = {
-        "time_window_start": window_start,
-        "time_window_end": window_end,
-        "requests_total": stats.total_events,
-        "requests_allowed": stats.allowed_count,
-        "requests_denied": stats.denied_count,
-        "errors": stats.error_count,
-        "cost_usd": float(stats.total_cost_usd),
-        "avg_latency_ms": stats.avg_latency_ms,
+        # The LLM receives these numbers ONLY so it can quote them verbatim
+        # in prose. The system prompt forbids it from re-computing or putting
+        # them in observed_facts.
+        "time_window_start": (
+            facts.time_window_start.isoformat() if facts.time_window_start else None
+        ),
+        "time_window_end": (facts.time_window_end.isoformat() if facts.time_window_end else None),
+        "requests_total": facts.total_requests,
+        "requests_allowed": facts.requests_allowed,
+        "requests_denied": facts.requests_denied,
+        "errors": facts.errors,
+        "aggregate_window_source": aggregate_window_source,
+        "cost_usd": float(stats.total_cost_usd)
+        if aggregate_window_source != "unavailable"
+        else None,
+        "avg_latency_ms": (
+            stats.avg_latency_ms if aggregate_window_source != "unavailable" else None
+        ),
         "supporting_events_count": len(entries),
         "events": event_details,
         "notes": "; ".join(notes_parts) if notes_parts else "No additional notes",
@@ -538,19 +621,41 @@ def audit_summarize(
 
     # Elevate risk if denials or errors present
     risk_level = report.get("risk_level", "informational")
-    if stats.denied_count > 0 and risk_level == "informational":
+    denied_for_risk = facts.requests_denied or 0
+    errors_for_risk = facts.errors or 0
+    if denied_for_risk > 0 and risk_level == "informational":
         risk_level = "low"
-    if stats.error_count > 0 and risk_level in ("informational", "low"):
+    if errors_for_risk > 0 and risk_level in ("informational", "low"):
         risk_level = "medium"
+
+    # ── Build deterministic Observed Facts ─────────────────────────
+    # These rows render *directly* from `facts` — the LLM cannot influence
+    # them. Any rows the LLM tries to emit are dropped on the floor.
+    def _fmt_count(n: int | None) -> str:
+        return "not available" if n is None else str(n)
+
+    def _fmt_window(start: datetime | None, end: datetime | None) -> str:
+        if start is None and end is None:
+            return "not available"
+        if start is not None and end is not None and start == end:
+            return start.isoformat()
+        return f"{start.isoformat() if start else 'unbounded'} → {end.isoformat() if end else 'unbounded'}"
+
+    deterministic_facts: list[ObservedFact] = [
+        ObservedFact(
+            label="Time window", value=_fmt_window(facts.time_window_start, facts.time_window_end)
+        ),
+        ObservedFact(label="Total requests", value=_fmt_count(facts.total_requests)),
+        ObservedFact(label="Requests allowed", value=_fmt_count(facts.requests_allowed)),
+        ObservedFact(label="Requests denied", value=_fmt_count(facts.requests_denied)),
+        ObservedFact(label="Errors", value=_fmt_count(facts.errors)),
+    ]
 
     return AuditSummaryResponse(
         title=report.get("title", "AI Agent Audit Summary"),
         executive_summary=report.get("executive_summary", ""),
-        observed_facts=[
-            {"label": f["label"], "value": f["value"]}
-            for f in report.get("observed_facts", [])
-            if isinstance(f, dict) and "label" in f and "value" in f
-        ],
+        facts=facts,
+        observed_facts=deterministic_facts,
         assessment=report.get("assessment", ""),
         recommended_follow_ups=report.get("recommended_follow_ups", []),
         risk_level=risk_level,
