@@ -3,7 +3,16 @@
 import datetime
 import uuid
 
-from sqlalchemy import DateTime, Index, Integer, Numeric, String, func
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -83,6 +92,25 @@ class AuditLog(Base):
         comment="entry_hash of the preceding row; GENESIS for the first entry",
     )
 
+    # Per-org HMAC chain (Phase 1 of per-org chain migration).
+    # Nullable while dual-write rolls out and legacy rows are backfilled.
+    # See docs/audit-chain-per-org-migration.md.
+    prev_hash_org: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        comment="entry_hash_org of preceding row in this org; GENESIS for org's first row",
+    )
+    entry_hash_org: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        comment="HMAC-SHA256 of canonical data + prev_hash_org",
+    )
+    org_chain_seq: Mapped[int | None] = mapped_column(
+        BigInteger,
+        nullable=True,
+        comment="1-based monotonic sequence within org_id; completeness guard",
+    )
+
     # Timestamp — server_default kept as fallback; writer sets explicitly for hash
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -100,4 +128,8 @@ class AuditLog(Base):
         Index("ix_audit_log_user_created", "user_id", "created_at"),
         # Primary enterprise query pattern: "all events in this org, newest first"
         Index("ix_audit_log_org_created", "org_id", "created_at"),
+        # Per-org chain completeness guard. NULLs are distinct in both PG
+        # and SQLite by default, so legacy unbackfilled rows don't collide;
+        # populated rows enforce one-row-per-sequence per org.
+        UniqueConstraint("org_id", "org_chain_seq", name="uq_audit_log_org_chain_seq"),
     )
