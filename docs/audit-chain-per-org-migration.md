@@ -146,3 +146,50 @@ New tests to add:
 ## Remaining Open Items
 
 None blocking. Greenlight pending sign-off.
+
+---
+
+## Lessons Learned (post-mortem)
+
+### Don't bundle data-dependent migrations with the script that prepares the data
+
+**What happened during Phase 2 rollout (2026-05-13):** Phase 2a (#269) shipped the backfill script. The backfill had to actually *run on prod* before Phase 2b's NOT NULL migration would pass its pre-flight gate. Instead of opening Phase 2b as a separate PR after backfill completed, the dry-run fix (#270) and the NOT NULL migration (#271) were both opened and merged before backfill was verifiably complete on prod data. Merging #271 auto-triggered the GKE deploy; the migration tripped its NULL gate; the alembic-migrate Job hit `BackoffLimitExceeded`; a retry attempt then exposed a separate Binauthz signing-step idempotency bug (#273), which had to be fixed before the migration could land. ~30 minutes of unnecessary retry work.
+
+The gates *worked* — the NOT NULL migration correctly refused to apply against a database with NULL rows — but we paid a tax we didn't need to.
+
+### The convention going forward
+
+**A migration whose `upgrade()` depends on data state (not just schema state) must:**
+
+1. **Ship in its own PR**, never bundled with the data-prep script.
+2. **Be opened only after the prep has been executed and verified on the target environment.**
+3. **Carry a guard comment at the top of the migration file** stating the prerequisite. Example:
+
+   ```python
+   """Flip per-org audit chain columns to NOT NULL.
+
+   ┌─ Operator pre-flight ─────────────────────────────────────────┐
+   │ This migration's upgrade() refuses to apply if any row has    │
+   │ NULL per-org chain columns. Before opening / merging this PR: │
+   │   1. python scripts/backfill_per_org_chain.py                 │
+   │   2. python scripts/verify_per_org_chain.py    # must exit 0  │
+   │ Re-run is safe; the migration is idempotent on a fully-       │
+   │ backfilled DB and aborts loudly otherwise.                    │
+   └───────────────────────────────────────────────────────────────┘
+   """
+   ```
+
+4. **Match the guard with an executable pre-flight check inside `upgrade()`** — a `SELECT COUNT(*) ... WHERE <prereq> IS NULL` followed by a `raise RuntimeError(...)` if non-zero. The comment teaches humans; the code defends against humans who didn't read the comment.
+
+### What this catches
+
+The CI's `Migration Dry-Run / Alembic upgrade against prod-schema clone` job runs the migration against a clone of prod data on every PR. A migration with a real pre-flight gate will fail that job until the prep has actually been run on prod — making the dependency loud at PR-review time instead of at deploy time. This is the cleanest signal we have to enforce step 2 above.
+
+### Applies to (non-exhaustive)
+
+- `NOT NULL` flips on columns that need backfilling
+- Foreign-key tightening (NOT VALID → VALIDATE only after data fix)
+- Renaming columns mid-flight when application code is split across multiple deploys
+- Any migration whose body reads a non-schema table and would fail if that table's contents are wrong
+
+Schema-only DDL (add column, add index, add table) is exempt — those have no data dependency.
