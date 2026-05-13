@@ -643,7 +643,138 @@ class TestChainVerification(unittest.TestCase):
             os.unlink(path)
 
 
-# ── Test: Partial chain verification ──────────────────────────────────
+# ── Test: Per-org chain verification ──────────────────────────────────
+
+
+def _build_org_chain(
+    count: int = 3, start_seq: int = 1, start_prev: str = "GENESIS"
+) -> list[dict[str, Any]]:
+    """Build a valid per-org chain (uses prev_hash_org/entry_hash_org/org_chain_seq).
+
+    Mirrors what the forensics bundle exports after Phase 1 of the per-org
+    migration. start_seq=1 + start_prev=GENESIS means the export covers
+    the org's first row; otherwise simulates a time-windowed slice.
+    """
+    entries = []
+    prev_hash_org = start_prev
+    for i in range(count):
+        seq = start_seq + i
+        created_at = f"2026-04-08T10:{i:02d}:00+00:00"
+        cost = 0.001 * (i + 1) if i % 2 == 0 else None
+        latency = 50 + i * 10
+        metadata = {"status_code": 200, "model": "gpt-4"}
+
+        # entry_hash_org uses the same canonical-form math as entry_hash,
+        # just with prev_hash_org substituted into the prev_hash slot.
+        entry_hash_org = _make_entry_hash(
+            agent_id=TEST_AGENT_ID,
+            endpoint="/v1/chat/completions",
+            method="POST",
+            decision="allow",
+            cost_estimate_usd=cost,
+            latency_ms=latency,
+            request_metadata=metadata,
+            created_at=created_at,
+            prev_hash=prev_hash_org,
+        )
+        entries.append(
+            {
+                "id": i + 1,
+                "agent_id": TEST_AGENT_ID,
+                "endpoint": "/v1/chat/completions",
+                "method": "POST",
+                "decision": "allow",
+                "cost_estimate_usd": cost,
+                "latency_ms": latency,
+                "request_metadata": metadata,
+                "created_at": created_at,
+                # Per-org chain fields — CLI prefers these when present
+                "prev_hash_org": prev_hash_org,
+                "entry_hash_org": entry_hash_org,
+                "org_chain_seq": seq,
+                # Global chain fields kept so legacy --global path still works
+                "entry_hash": entry_hash_org,
+                "prev_hash": prev_hash_org,
+            }
+        )
+        prev_hash_org = entry_hash_org
+    return entries
+
+
+class TestPerOrgChainVerification(unittest.TestCase):
+    """Per-org chain verification — sequence-gap detection + linkage."""
+
+    def test_valid_per_org_chain(self):
+        entries = _build_org_chain(5)
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 0)
+            self.assertIn("CHAIN INTACT", out)
+            self.assertIn("Per-org", out)
+        finally:
+            os.unlink(path)
+
+    def test_per_org_used_by_default_when_fields_present(self):
+        """Exports with per-org fields should auto-route to per-org verify."""
+        entries = _build_org_chain(3)
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--json", "chain", path])
+            self.assertEqual(code, 0)
+            result = json.loads(out)
+            self.assertEqual(result["details"]["mode"], "per-org")
+        finally:
+            os.unlink(path)
+
+    def test_sequence_gap_detected(self):
+        """Deleting a middle entry shows up as a sequence gap — the per-org
+        completeness proof the global chain couldn't deliver."""
+        entries = _build_org_chain(5)
+        del entries[2]  # seq=3 disappears
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 1)
+            self.assertIn("CHAIN BROKEN", out)
+            self.assertIn("sequence gap", out)
+        finally:
+            os.unlink(path)
+
+    def test_tampered_entry_hash_org_detected(self):
+        entries = _build_org_chain(4)
+        entries[2]["entry_hash_org"] = "0" * 64
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 1)
+            self.assertIn("CHAIN BROKEN", out)
+        finally:
+            os.unlink(path)
+
+    def test_partial_window_starts_at_arbitrary_seq(self):
+        """Time-windowed exports start at seq=N, not 1. Linkage anchors at
+        the first entry's prev_hash_org."""
+        entries = _build_org_chain(3, start_seq=42, start_prev="a" * 64)
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 0)
+            self.assertIn("42 → 44", out)
+        finally:
+            os.unlink(path)
+
+    def test_global_flag_forces_legacy_verify(self):
+        """--global skips per-org and uses the legacy global chain path."""
+        entries = _build_org_chain(3)
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", "--global", path])
+            self.assertEqual(code, 0)
+            # Legacy "Full" mode label, not per-org
+            self.assertNotIn("Per-org", out)
+        finally:
+            os.unlink(path)
 
 
 class TestPartialChainVerification(unittest.TestCase):

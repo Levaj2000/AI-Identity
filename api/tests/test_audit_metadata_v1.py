@@ -18,6 +18,7 @@ from common.audit.correlation import (
     set_current_correlation_id,
 )
 from common.models import Agent, User
+from common.models.organization import SYSTEM_ORG_ID
 from common.schemas.audit_metadata import (
     Actor,
     AuditMetadataV1,
@@ -234,6 +235,7 @@ class TestHmacChainIntact:
             finally:
                 reset_current_correlation_id(token)
 
-        result = verify_chain(db_session)
+        # Unregistered AGENT_ID → entries route to SYSTEM_ORG by writer fallback
+        result = verify_chain(db_session, org_id=SYSTEM_ORG_ID)
         assert result.valid is True
         assert result.entries_verified == 4

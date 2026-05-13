@@ -358,6 +358,30 @@ class AuditLogResponse(BaseModel):
     request_metadata: dict
     entry_hash: str = Field(description="HMAC-SHA256 of this entry's canonical data")
     prev_hash: str = Field(description="entry_hash of the preceding entry (GENESIS for first)")
+    prev_hash_org: str | None = Field(
+        default=None,
+        description=(
+            "entry_hash_org of the preceding row in this org's chain "
+            "(GENESIS for the org's first row). Nullable on rows written "
+            "before the per-org chain migration; NOT NULL after Phase 2b."
+        ),
+    )
+    entry_hash_org: str | None = Field(
+        default=None,
+        description=(
+            "HMAC-SHA256 of canonical data + prev_hash_org. The per-org "
+            "chain field the offline CLI verifier walks to prove tenant-"
+            "scoped integrity without depending on other tenants' rows."
+        ),
+    )
+    org_chain_seq: int | None = Field(
+        default=None,
+        description=(
+            "1-based monotonic sequence within org_id. Lets the verifier "
+            "prove no rows were deleted from this org's history — a gap "
+            "in the sequence is a completeness violation."
+        ),
+    )
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -16,7 +16,12 @@ import uuid
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from common.audit import compute_entry_hash_org, create_audit_entry, verify_chain
+from common.audit import (
+    compute_entry_hash_org,
+    create_audit_entry,
+    verify_chain,
+    verify_global_chain,
+)
 from common.audit.writer import GENESIS, _ensure_utc
 from common.config.settings import settings
 from common.models import Agent, Organization, User
@@ -304,9 +309,12 @@ class TestGlobalChainUnaffected:
                 request_metadata={},
             )
 
-        result = verify_chain(db_session)
+        # Global chain spans both orgs, per-org chains stay isolated
+        result = verify_global_chain(db_session)
         assert result.valid is True
         assert result.entries_verified == 4
+        assert verify_chain(db_session, org_id=ORG_A).entries_verified == 2
+        assert verify_chain(db_session, org_id=ORG_B).entries_verified == 2
 
 
 class TestSequenceUniqueness:

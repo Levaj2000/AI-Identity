@@ -12,7 +12,7 @@ Covers:
 
 import uuid
 
-from common.audit import create_audit_entry, verify_chain
+from common.audit import create_audit_entry, verify_chain, verify_global_chain
 from common.models import Agent, Organization, OrgMembership, User
 from common.models.organization import SYSTEM_ORG_ID
 
@@ -116,7 +116,8 @@ class TestWriterPopulatesOrgId:
         assert sys_org is not None
 
     def test_hmac_chain_intact_with_org_id(self, db_session):
-        """org_id is access-control metadata, NOT in the hash. Chain must verify."""
+        """org_id is access-control metadata, NOT in the hash. Both per-org
+        and global chains must verify after writes interleaved across orgs."""
         _, _, _, _, _, agent_a, agent_b = _seed_two_orgs(db_session)
 
         for agent in (agent_a, agent_b, agent_a):
@@ -129,9 +130,18 @@ class TestWriterPopulatesOrgId:
                 request_metadata={},
             )
 
-        result = verify_chain(db_session)
-        assert result.valid is True
-        assert result.entries_verified == 3
+        # Per-org verify: each org sees only its own rows
+        result_a = verify_chain(db_session, org_id=ORG_A_ID)
+        assert result_a.valid is True
+        assert result_a.entries_verified == 2
+        result_b = verify_chain(db_session, org_id=ORG_B_ID)
+        assert result_b.valid is True
+        assert result_b.entries_verified == 1
+
+        # Global chain unaffected
+        result_global = verify_global_chain(db_session)
+        assert result_global.valid is True
+        assert result_global.entries_verified == 3
 
 
 # ── /admin endpoint: access control ──────────────────────────────────

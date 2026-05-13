@@ -7,10 +7,13 @@ tamper-evident, append-only storage for SOC 2 compliance.
 import uuid
 from datetime import UTC
 
-from common.audit import compute_entry_hash, create_audit_entry, verify_chain
+from common.audit import compute_entry_hash, create_audit_entry, verify_chain, verify_global_chain
 from common.models import AuditLog
+from common.models.organization import SYSTEM_ORG_ID
 
-# Fixed UUIDs for deterministic tests
+# Fixed UUIDs for deterministic tests. Unregistered agents fall through
+# to SYSTEM_ORG_ID in the writer, so per-org verify works in these tests
+# without seeding an Agent/Org fixture.
 AGENT_ID_1 = uuid.UUID("00000000-0000-0000-0000-000000000010")
 AGENT_ID_2 = uuid.UUID("00000000-0000-0000-0000-000000000020")
 
@@ -87,22 +90,22 @@ class TestCreateAuditEntry:
 
 
 class TestVerifyChain:
-    """Verify the integrity chain catches tampering and deletions."""
+    """Per-org integrity chain — the customer-facing verify."""
 
-    def test_verify_empty_table(self, db_session):
-        """Verifying an empty table returns valid=True, total_entries=0."""
-        result = verify_chain(db_session)
+    def test_verify_empty_org(self, db_session):
+        """Verifying an org with no entries returns valid=True, total=0."""
+        result = verify_chain(db_session, org_id=SYSTEM_ORG_ID)
 
         assert result.valid is True
         assert result.total_entries == 0
         assert result.entries_verified == 0
 
     def test_verify_intact_chain(self, db_session):
-        """Chain with 5 entries verifies successfully."""
+        """Chain with 5 entries in an org verifies successfully."""
         for i in range(5):
             _create_test_entry(db_session, endpoint=f"/v1/endpoint-{i}")
 
-        result = verify_chain(db_session)
+        result = verify_chain(db_session, org_id=SYSTEM_ORG_ID)
 
         assert result.valid is True
         assert result.total_entries == 5
@@ -110,51 +113,82 @@ class TestVerifyChain:
         assert result.message == "Chain integrity verified"
 
     def test_verify_detects_tampered_hash(self, db_session):
-        """Tampering with an entry_hash is detected."""
+        """Tampering with an entry_hash_org is detected."""
         _create_test_entry(db_session)
         entry2 = _create_test_entry(db_session, endpoint="/v1/tampered")
         _create_test_entry(db_session, endpoint="/v1/after-tamper")
 
-        # Tamper with entry2's hash directly in DB (SQLite allows this)
         db_session.execute(
             AuditLog.__table__.update()
             .where(AuditLog.id == entry2.id)
-            .values(entry_hash="deadbeef" * 8)
+            .values(entry_hash_org="deadbeef" * 8)
         )
         db_session.commit()
 
-        result = verify_chain(db_session)
+        result = verify_chain(db_session, org_id=SYSTEM_ORG_ID)
 
         assert result.valid is False
         assert result.first_broken_id == entry2.id
         assert "Hash mismatch" in result.message
 
-    def test_verify_detects_broken_chain(self, db_session):
-        """Deleting an entry from the middle breaks the chain."""
+    def test_verify_detects_seq_gap(self, db_session):
+        """Deleting a middle entry surfaces as a sequence gap.
+
+        This is the per-tenant completeness proof the global chain
+        couldn't deliver: customer can prove no rows were deleted from
+        *their* history without trusting other tenants.
+        """
         _create_test_entry(db_session)
         entry2 = _create_test_entry(db_session, endpoint="/v1/middle")
         _create_test_entry(db_session, endpoint="/v1/after-delete")
 
-        # Delete middle entry directly (SQLite allows this)
         db_session.execute(AuditLog.__table__.delete().where(AuditLog.id == entry2.id))
         db_session.commit()
 
-        result = verify_chain(db_session)
+        result = verify_chain(db_session, org_id=SYSTEM_ORG_ID)
 
         assert result.valid is False
-        assert "Chain broken" in result.message
+        assert "Sequence gap" in result.message
 
     def test_verify_per_agent_filter(self, db_session):
-        """Per-agent verification checks only that agent's hashes."""
-        # Interleave entries from two agents
+        """Agent-filtered per-org verify checks hashes but skips linkage."""
         _create_test_entry(db_session, agent_id=AGENT_ID_1, endpoint="/v1/a1-1")
         _create_test_entry(db_session, agent_id=AGENT_ID_2, endpoint="/v1/a2-1")
         _create_test_entry(db_session, agent_id=AGENT_ID_1, endpoint="/v1/a1-2")
 
-        result = verify_chain(db_session, agent_id=AGENT_ID_1)
+        result = verify_chain(db_session, org_id=SYSTEM_ORG_ID, agent_id=AGENT_ID_1)
 
         assert result.valid is True
         assert result.entries_verified == 2  # Only agent_1's entries
+
+
+class TestVerifyGlobalChain:
+    """Platform-wide chain — internal forensic tool, admin-only at the API level."""
+
+    def test_verify_empty_table(self, db_session):
+        result = verify_global_chain(db_session)
+        assert result.valid is True
+        assert result.total_entries == 0
+
+    def test_verify_intact_global_chain(self, db_session):
+        for i in range(3):
+            _create_test_entry(db_session, endpoint=f"/v1/g-{i}")
+        result = verify_global_chain(db_session)
+        assert result.valid is True
+        assert result.entries_verified == 3
+
+    def test_verify_global_detects_deletion(self, db_session):
+        """Deleting any row breaks the global chain (cross-tenant entanglement
+        is the whole reason we moved to per-org for tenant-facing verify)."""
+        _create_test_entry(db_session)
+        entry2 = _create_test_entry(db_session)
+        _create_test_entry(db_session)
+        db_session.execute(AuditLog.__table__.delete().where(AuditLog.id == entry2.id))
+        db_session.commit()
+
+        result = verify_global_chain(db_session)
+        assert result.valid is False
+        assert "Chain broken" in result.message
 
 
 # ── Audit Endpoints ──────────────────────────────────────────────────────

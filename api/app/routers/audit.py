@@ -20,7 +20,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
-from common.audit import generate_report_signature, verify_chain
+from common.audit import generate_report_signature, verify_chain, verify_global_chain
 from common.models import Agent, AuditLog, OrgMembership, Policy, User, get_db
 from common.schemas.agent import (
     AuditChainVerifyResponse,
@@ -704,8 +704,10 @@ def audit_reconstruct(
         .all()
     )
 
-    # Chain verification for this agent
-    chain_result = verify_chain(db, agent_id=agent_id)
+    # Chain verification for this agent (scoped to the agent's org so
+    # the per-row hash recompute uses the same per-org chain the writer
+    # built; sequence/linkage checks are skipped under agent_id filter).
+    chain_result = verify_chain(db, org_id=agent.org_id, agent_id=agent_id)
 
     # Active policy
     active_policy = (
@@ -776,8 +778,8 @@ def audit_report(
         .all()
     )
 
-    # Chain verification
-    chain_result = verify_chain(db, agent_id=agent_id)
+    # Chain verification (scoped to agent's org)
+    chain_result = verify_chain(db, org_id=agent.org_id, agent_id=agent_id)
 
     # Active policy
     active_policy = (
@@ -970,7 +972,7 @@ def audit_report_bundle(
         .all()
     )
 
-    chain_result = verify_chain(db, agent_id=agent_id)
+    chain_result = verify_chain(db, org_id=agent.org_id, agent_id=agent_id)
 
     active_policy = (
         db.query(Policy)
@@ -1068,26 +1070,110 @@ def verify_audit_chain(
         None,
         description="Verify hash integrity for a specific agent only (no chain linkage)",
     ),
+    org_id: uuid.UUID | None = Query(
+        None,
+        description=(
+            "Verify the chain for a specific org. Defaults to the caller's org. "
+            "Platform admins may pass any org_id; non-admins requesting a "
+            "foreign org_id get 403."
+        ),
+    ),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Verify the HMAC integrity chain of the audit log.
+    """Verify the per-org HMAC integrity chain for the caller's tenant.
 
-    Walks all entries in order, recomputes each HMAC, and checks
-    that prev_hash links are consistent. Reports the first break found.
+    Default behavior is org-scoped: the chain is filtered to the caller's
+    org, walked in ``org_chain_seq`` order, and checked for sequence
+    completeness (no gaps), prev_hash_org linkage, and per-row HMAC
+    integrity. This is the customer-facing "prove no rows were deleted
+    from my history" guarantee.
 
-    Without agent_id: verifies the full global chain.
-    With agent_id: verifies hash integrity for that agent's entries only.
+    With ``agent_id``: scoped to that agent inside the resolved org;
+    sequence/linkage checks are skipped (an agent-filtered view is a
+    sparse subset of the org chain by definition) but per-row hashes
+    still recompute.
+
+    With ``org_id`` (platform admin only): scopes to another tenant.
+    Non-admins passing a foreign ``org_id`` get 403.
+
+    Note: this endpoint no longer exposes the platform-wide global chain.
+    Use ``/api/v1/audit/verify/global`` (admin-only) for that.
     """
+    # Resolve target org. Default = caller's org. Platform admins may
+    # override; non-admins requesting a foreign org get 403 — not 404,
+    # because the org's existence is not a secret and 404 would invite
+    # probing by UUID guessing.
+    target_org = org_id if org_id is not None else user.org_id
+    if target_org is None:
+        raise HTTPException(
+            status_code=400,
+            detail="No org context: caller has no org_id and none was specified",
+        )
+    if org_id is not None and org_id != user.org_id and user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Only platform admins may verify another organization's chain",
+        )
+
+    # Agent ownership check (when scoped). The agent must belong to the
+    # resolved org — guards against cross-tenant agent_id probing too.
     if agent_id:
-        agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == user.id).first()
+        agent = db.query(Agent).filter(Agent.id == agent_id, Agent.org_id == target_org).first()
         if not agent:
             raise HTTPException(status_code=404, detail="Agent not found")
+        # Non-admins additionally must own the agent (legacy contract).
+        if user.role != "admin" and agent.user_id != user.id:
+            raise HTTPException(status_code=404, detail="Agent not found")
 
-    result = verify_chain(db, agent_id=agent_id)
+    result = verify_chain(db, org_id=target_org, agent_id=agent_id)
 
     logger.info(
-        "Chain verification: valid=%s, entries=%s, verified=%s",
+        "Chain verification: org=%s agent=%s valid=%s entries=%s verified=%s",
+        target_org,
+        agent_id,
+        result.valid,
+        result.total_entries,
+        result.entries_verified,
+    )
+
+    return AuditChainVerifyResponse(
+        valid=result.valid,
+        total_entries=result.total_entries,
+        entries_verified=result.entries_verified,
+        first_broken_id=result.first_broken_id,
+        message=result.message,
+    )
+
+
+@router.get(
+    "/verify/global",
+    response_model=AuditChainVerifyResponse,
+    summary="[Platform Admin] Verify the platform-wide audit chain",
+    response_description="Global chain verification result",
+)
+def verify_global_audit_chain(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Verify the platform-wide global HMAC chain (internal forensic tool).
+
+    Walks every row across all tenants in insertion order, checking the
+    global ``prev_hash`` linkage. Retained as an internal forensic view
+    per CEO decision in docs/audit-chain-per-org-migration.md; not
+    exposed to tenants because the row count alone leaks cross-tenant
+    cardinality.
+    """
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Platform admin role required",
+        )
+
+    result = verify_global_chain(db)
+
+    logger.info(
+        "Global chain verification: valid=%s entries=%s verified=%s",
         result.valid,
         result.total_entries,
         result.entries_verified,
