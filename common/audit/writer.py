@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from common.audit.correlation import (
@@ -111,6 +111,38 @@ def compute_entry_hash(
     return hmac.new(key, message, hashlib.sha256).hexdigest()
 
 
+def compute_entry_hash_org(
+    agent_id: uuid.UUID,
+    endpoint: str,
+    method: str,
+    decision: str,
+    cost_estimate_usd: float | None,
+    latency_ms: int | None,
+    request_metadata: dict,
+    created_at: datetime,
+    prev_hash_org: str,
+    hmac_key: str | None = None,
+) -> str:
+    """Compute HMAC-SHA256 for the per-org chain.
+
+    Identical to ``compute_entry_hash`` but uses ``prev_hash_org`` as the
+    chain field, so per-org chains are independent of the global chain.
+    Delegates to the same canonical-form / HMAC primitives to avoid drift.
+    """
+    return compute_entry_hash(
+        agent_id=agent_id,
+        endpoint=endpoint,
+        method=method,
+        decision=decision,
+        cost_estimate_usd=cost_estimate_usd,
+        latency_ms=latency_ms,
+        request_metadata=request_metadata,
+        created_at=created_at,
+        prev_hash=prev_hash_org,
+        hmac_key=hmac_key,
+    )
+
+
 # ── Audit Entry Writer ───────────────────────────────────────────────────
 
 
@@ -129,6 +161,52 @@ def _get_last_hash(db: Session) -> str:
 
     result = db.execute(stmt).scalar_one_or_none()
     return result if result is not None else GENESIS
+
+
+def _get_last_org_chain_state(db: Session, org_id: uuid.UUID) -> tuple[str, int]:
+    """Get (prev_hash_org, next_seq) for the next row in this org's chain.
+
+    On PostgreSQL, takes a per-org advisory lock so concurrent writers in
+    different orgs don't serialize against each other. The lock is held
+    until commit/rollback (transaction-scoped). Falls back to a row-level
+    FOR UPDATE on the latest org row for non-PostgreSQL dialects (SQLite
+    test runs).
+
+    Returns (GENESIS, 1) when the org has no prior rows with a populated
+    org chain — covers both first-ever write and legacy rows that haven't
+    been backfilled yet.
+    """
+    dialect = db.bind.dialect.name if db.bind else "unknown"
+
+    if dialect == "postgresql":
+        # Per-org advisory lock keyed on the org UUID. hashtext gives a
+        # stable 32-bit hash; the static prefix ('audit_chain:') keeps
+        # this lock space disjoint from any other advisory locks the app
+        # might take in the future. Collisions are theoretically possible
+        # in a 32-bit space but harmless — collided orgs would serialize
+        # against each other, no correctness impact.
+        db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext('audit_chain:' || :org_id))"),
+            {"org_id": str(org_id)},
+        )
+
+    stmt = (
+        select(AuditLog.entry_hash_org, AuditLog.org_chain_seq)
+        .where(AuditLog.org_id == org_id)
+        .where(AuditLog.org_chain_seq.isnot(None))
+        .order_by(AuditLog.org_chain_seq.desc())
+        .limit(1)
+    )
+
+    if dialect != "postgresql":
+        # Non-PG (SQLite tests): fall back to row-level locking. PG
+        # already serializes via the advisory lock above.
+        stmt = stmt.with_for_update()
+
+    row = db.execute(stmt).first()
+    if row is None or row[0] is None or row[1] is None:
+        return (GENESIS, 1)
+    return (row[0], row[1] + 1)
 
 
 def _ensure_system_org(db: Session) -> uuid.UUID:
@@ -309,6 +387,29 @@ def create_audit_entry(
         hmac_key=org_hmac_key,
     )
 
+    # Per-org chain dual-write (Phase 1 of per-org migration). When the
+    # flag is off, leave the new columns NULL — the global chain still
+    # works and Phase 2 backfill will populate legacy rows. The advisory
+    # lock inside _get_last_org_chain_state is per-org, so this does not
+    # serialize cross-org writers.
+    prev_hash_org: str | None = None
+    entry_hash_org: str | None = None
+    org_chain_seq: int | None = None
+    if settings.audit_dual_write_enabled:
+        prev_hash_org, org_chain_seq = _get_last_org_chain_state(db, org_id)
+        entry_hash_org = compute_entry_hash_org(
+            agent_id=agent_id,
+            endpoint=endpoint,
+            method=method,
+            decision=decision,
+            cost_estimate_usd=cost_estimate_usd,
+            latency_ms=latency_ms,
+            request_metadata=metadata,
+            created_at=now,
+            prev_hash_org=prev_hash_org,
+            hmac_key=org_hmac_key,
+        )
+
     entry = AuditLog(
         agent_id=agent_id,
         user_id=user_id,
@@ -324,6 +425,9 @@ def create_audit_entry(
         created_at=now,
         entry_hash=entry_hash,
         prev_hash=prev_hash,
+        prev_hash_org=prev_hash_org,
+        entry_hash_org=entry_hash_org,
+        org_chain_seq=org_chain_seq,
     )
     db.add(entry)
     db.flush()  # assign entry.id before enqueuing outbox rows
