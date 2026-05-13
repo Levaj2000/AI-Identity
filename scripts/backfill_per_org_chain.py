@@ -108,16 +108,46 @@ def backfill_org(
     # cheap and gives the test suite a meaningful "changed=0" signal.
     already_correct = all(seq == (i + 1) for i, (_, seq) in enumerate(pre_state))
     if already_correct:
-        if dry_run:
-            db.rollback()
-        else:
-            db.commit()
+        db.rollback()  # release advisory lock either way
         return processed, 0
 
-    # Clear any existing chain state so the rewrite can't collide on
-    # UNIQUE(org_id, org_chain_seq) when reassigning seqs from
-    # dual-written Phase 1 rows. UPDATEs in SQLAlchemy are not deferred,
-    # so two rows briefly holding the same seq would violate the index.
+    # Dry-run: compute what would change in memory; don't touch the
+    # session. The audit_log_no_update trigger fires on UPDATE attempts
+    # before any rollback, so even a "rolled-back" write trips the
+    # immutability guard. Read-only computation sidesteps that entirely.
+    if dry_run:
+        prev_hash_org = GENESIS
+        changed = 0
+        for i, row in enumerate(all_rows, start=1):
+            new_hash = compute_entry_hash_org(
+                agent_id=row.agent_id,
+                endpoint=row.endpoint,
+                method=row.method,
+                decision=row.decision,
+                cost_estimate_usd=(
+                    float(row.cost_estimate_usd) if row.cost_estimate_usd is not None else None
+                ),
+                latency_ms=row.latency_ms,
+                request_metadata=row.request_metadata,
+                created_at=_ensure_utc(row.created_at),
+                prev_hash_org=prev_hash_org,
+                hmac_key=hmac_key,
+            )
+            if (
+                row.prev_hash_org != prev_hash_org
+                or row.entry_hash_org != new_hash
+                or row.org_chain_seq != i
+            ):
+                changed += 1
+            prev_hash_org = new_hash
+        db.rollback()  # release advisory lock
+        return processed, changed
+
+    # Write path: clear any existing chain state so the rewrite can't
+    # collide on UNIQUE(org_id, org_chain_seq) when reassigning seqs
+    # from dual-written Phase 1 rows. UPDATEs in SQLAlchemy are not
+    # deferred, so two rows briefly holding the same seq would violate
+    # the index.
     db.execute(
         update(AuditLog)
         .where(AuditLog.org_id == org_id)
@@ -151,11 +181,7 @@ def backfill_org(
     # dual-written wrong-seq → correct-seq.
     changed = sum(1 for i, (_, seq) in enumerate(pre_state) if seq != (i + 1))
 
-    if dry_run:
-        db.rollback()
-    else:
-        db.commit()
-
+    db.commit()
     return processed, changed
 
 
