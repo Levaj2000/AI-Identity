@@ -1,0 +1,41 @@
+name: Audit Trigger Health Check
+
+# Defense in depth for the audit_log_no_update trigger, the SOC 2
+# load-bearing control that enforces audit_log row immutability. PR #263
+# wrapped the two legitimate disable sites in try/finally; this cron is
+# the belt-and-suspenders follow-up flagged in issue #218.
+#
+# Runs hourly so a regression surfaces within ~1 hour. The job FAILS if
+# the trigger is disabled or missing — that triggers GitHub's default
+# failure-notification email AND the script posts a briefing to the
+# CEO Dashboard tagged `auto:audit-trigger-health:<date>` (idempotent
+# per-day). Silent on success.
+#
+# Required secrets:
+#   DATABASE_URL_RO  — prod DSN, read-only role. SELECT on pg_trigger
+#                      and pg_class is enough; no app-table access needed.
+#   CEO_API_KEY      — used to post the alert briefing on failure.
+#   CEO_DASHBOARD_API (optional) — overrides default API base URL.
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # hourly
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install psycopg2
+        run: pip install --quiet psycopg2-binary==2.9.11
+      - name: Check audit_log_no_update trigger state
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_RO }}
+          CEO_API_KEY: ${{ secrets.CEO_API_KEY }}
+          CEO_API_URL: ${{ secrets.CEO_DASHBOARD_API }}
+        run: python scripts/check_audit_trigger.py
