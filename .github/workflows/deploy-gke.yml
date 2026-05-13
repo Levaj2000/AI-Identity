@@ -132,11 +132,25 @@ jobs:
             IMAGE="${spec%%:*}"
             DIGEST="${spec#*:}"
             URL="$REGISTRY/$PROJECT_ID/ai-identity/$IMAGE@$DIGEST"
+            # Skip if this digest already has an attestation. The Binauthz
+            # policy only needs one valid signature per image, so re-signing
+            # on retry is unnecessary — and despite the prior comment
+            # claiming idempotency, `sign-and-create` actually returns 409
+            # CONFLICT on the second attempt. This list-then-sign pattern
+            # lets re-runs after a downstream-step failure (e.g. a migration
+            # gate trip) succeed instead of looping on duplicate-sign errors.
+            if gcloud beta container binauthz attestations list \
+                 --attestor=ai-identity-attestor \
+                 --attestor-project="$PROJECT_ID" \
+                 --artifact-url="$URL" \
+                 --format="value(name)" 2>/dev/null | grep -q .; then
+              echo "→ $URL already signed, skipping"
+              continue
+            fi
             echo "→ signing $URL"
             # `sign-and-create` is in the `beta` track — it prints a one-time
             # "Do you want to continue (Y/n)?" prompt which deadlocks in CI
-            # without --quiet. Idempotent — signing the same digest twice
-            # returns the existing Occurrence rather than erroring.
+            # without --quiet.
             gcloud beta container binauthz attestations sign-and-create \
               --quiet \
               --artifact-url="$URL" \
