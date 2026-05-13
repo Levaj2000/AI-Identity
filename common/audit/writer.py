@@ -552,33 +552,179 @@ class ChainVerificationResult:
     message: str = ""
 
 
+def _resolve_org_hmac_key(db: Session, org_id: uuid.UUID) -> str | None:
+    """Return the org's forensic_verify_key, or None to fall back to the global key.
+
+    Cached lookup helper for verify routines that iterate many rows
+    within a single org.
+    """
+    from common.models.organization import Organization
+
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if org and org.forensic_verify_key:
+        return org.forensic_verify_key
+    return None
+
+
 def verify_chain(
     db: Session,
     *,
-    hmac_key: str | None = None,
+    org_id: uuid.UUID,
     agent_id: uuid.UUID | None = None,
+    hmac_key: str | None = None,
     batch_size: int = 1000,
 ) -> ChainVerificationResult:
-    """Walk the audit log and verify the HMAC chain.
+    """Verify the per-org HMAC chain for one tenant.
 
-    For each entry (ordered by id ASC):
-    1. Checks prev_hash matches the previous entry's entry_hash
-       (or GENESIS for the first entry)
-    2. Recomputes the HMAC and checks it matches entry_hash
+    Walks the org's rows ordered by ``org_chain_seq ASC`` and checks:
+
+    1. The sequence is ``1..N`` monotonic with no gaps — proves no rows
+       were deleted from the org's history (the completeness guarantee
+       that single-tenant verify could not provide).
+    2. ``prev_hash_org`` of each row equals the previous row's
+       ``entry_hash_org`` (linkage).
+    3. ``entry_hash_org`` recomputes to the stored value (per-row
+       tamper-evidence).
+
+    When ``agent_id`` is provided, the function filters to that agent
+    within the org and skips the sequence + linkage checks (an
+    agent-filtered view is not contiguous in the org chain by
+    definition). Per-row hash recomputation still runs — that's the
+    per-agent integrity guarantee.
 
     Args:
         db: Database session.
+        org_id: Required. Tenant scope. The whole point of this function.
+        agent_id: Optional. Additional filter within the org.
         hmac_key: Override HMAC key (for testing).
-        agent_id: If provided, verify hash integrity for this agent's
-            entries only (no chain linkage — chain is global).
         batch_size: Entries per query for memory efficiency.
 
     Returns:
-        ChainVerificationResult with valid=True if chain is intact.
+        ChainVerificationResult with valid=True if the chain is intact.
     """
-    query = db.query(AuditLog).order_by(AuditLog.id.asc())
+    # Skip rows that haven't been backfilled yet (legacy NULLs). After
+    # Phase 2b lands NOT NULL, this filter is a no-op.
+    query = (
+        db.query(AuditLog)
+        .filter(AuditLog.org_id == org_id)
+        .filter(AuditLog.org_chain_seq.isnot(None))
+        .order_by(AuditLog.org_chain_seq.asc())
+    )
     if agent_id:
         query = query.filter(AuditLog.agent_id == agent_id)
+
+    total = query.count()
+    if total == 0:
+        return ChainVerificationResult(
+            valid=True,
+            total_entries=0,
+            entries_verified=0,
+            message="No entries to verify",
+        )
+
+    org_hmac_key = hmac_key if hmac_key is not None else _resolve_org_hmac_key(db, org_id)
+
+    expected_prev_hash = GENESIS
+    expected_seq = 1
+    verified = 0
+    offset = 0
+
+    while offset < total:
+        entries = query.offset(offset).limit(batch_size).all()
+        if not entries:
+            break
+
+        for entry in entries:
+            # Sequence + linkage checks only when verifying the whole
+            # org chain. An agent-filtered view is a sparse subset; its
+            # seq values jump around legitimately.
+            if not agent_id:
+                if entry.org_chain_seq != expected_seq:
+                    return ChainVerificationResult(
+                        valid=False,
+                        total_entries=total,
+                        entries_verified=verified,
+                        first_broken_id=entry.id,
+                        message=(
+                            f"Sequence gap at entry {entry.id}: "
+                            f"expected org_chain_seq={expected_seq}, "
+                            f"got {entry.org_chain_seq}"
+                        ),
+                    )
+                if entry.prev_hash_org != expected_prev_hash:
+                    return ChainVerificationResult(
+                        valid=False,
+                        total_entries=total,
+                        entries_verified=verified,
+                        first_broken_id=entry.id,
+                        message=(
+                            f"Chain broken at entry {entry.id} "
+                            f"(seq={entry.org_chain_seq}): "
+                            f"expected prev_hash_org={expected_prev_hash!r}, "
+                            f"got {entry.prev_hash_org!r}"
+                        ),
+                    )
+
+            recomputed = compute_entry_hash_org(
+                agent_id=entry.agent_id,
+                endpoint=entry.endpoint,
+                method=entry.method,
+                decision=entry.decision,
+                cost_estimate_usd=(
+                    float(entry.cost_estimate_usd) if entry.cost_estimate_usd is not None else None
+                ),
+                latency_ms=entry.latency_ms,
+                request_metadata=entry.request_metadata,
+                created_at=_ensure_utc(entry.created_at),
+                prev_hash_org=entry.prev_hash_org,
+                hmac_key=org_hmac_key,
+            )
+
+            if recomputed != entry.entry_hash_org:
+                return ChainVerificationResult(
+                    valid=False,
+                    total_entries=total,
+                    entries_verified=verified,
+                    first_broken_id=entry.id,
+                    message=(
+                        f"Hash mismatch at entry {entry.id} "
+                        f"(seq={entry.org_chain_seq}): "
+                        f"recomputed={recomputed!r}, "
+                        f"stored={entry.entry_hash_org!r}"
+                    ),
+                )
+
+            expected_prev_hash = entry.entry_hash_org
+            expected_seq += 1
+            verified += 1
+
+        offset += batch_size
+
+    return ChainVerificationResult(
+        valid=True,
+        total_entries=total,
+        entries_verified=verified,
+        message="Chain integrity verified",
+    )
+
+
+def verify_global_chain(
+    db: Session,
+    *,
+    hmac_key: str | None = None,
+    batch_size: int = 1000,
+) -> ChainVerificationResult:
+    """Verify the platform-wide HMAC chain (internal forensic tool only).
+
+    Walks every row in ``id ASC`` order and checks ``prev_hash``/``entry_hash``
+    linkage across all tenants. Retained as an internal forensic view —
+    no customer-facing endpoint exposes its result (per the CEO decision
+    in docs/audit-chain-per-org-migration.md). Useful when investigating
+    platform-wide questions that cross tenant boundaries.
+
+    For tenant-facing verification use ``verify_chain()`` instead.
+    """
+    query = db.query(AuditLog).order_by(AuditLog.id.asc())
 
     total = query.count()
     if total == 0:
@@ -621,8 +767,7 @@ def verify_chain(
             break
 
         for entry in entries:
-            # Check prev_hash linkage (global chain only, not per-agent filter)
-            if not agent_id and entry.prev_hash != expected_prev_hash:
+            if entry.prev_hash != expected_prev_hash:
                 return ChainVerificationResult(
                     valid=False,
                     total_entries=total,
@@ -635,7 +780,6 @@ def verify_chain(
                     ),
                 )
 
-            # Recompute the HMAC (normalize timezone for SQLite compat)
             hash_kwargs = dict(
                 agent_id=entry.agent_id,
                 endpoint=entry.endpoint,
@@ -654,7 +798,7 @@ def verify_chain(
             recomputed = compute_entry_hash(**hash_kwargs, hmac_key=entry_hmac_key)
 
             # Entries created before the per-org key was configured were
-            # signed with the global key.  If the org key doesn't match,
+            # signed with the global key. If the org key doesn't match,
             # retry with the global key (hmac_key=None) before failing.
             if recomputed != entry.entry_hash and entry_hmac_key is not None:
                 recomputed = compute_entry_hash(**hash_kwargs, hmac_key=None)

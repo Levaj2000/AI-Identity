@@ -20,6 +20,7 @@ from common.models import (
     ComplianceResult,
     Policy,
     UpstreamCredential,
+    User,
 )
 
 logger = logging.getLogger("ai_identity.compliance")
@@ -195,36 +196,49 @@ def _check_no_wildcard_only_policies(
 def _check_audit_chain_integrity(
     db: Session, user_id: uuid.UUID, agent_id: uuid.UUID | None
 ) -> dict:
-    """The HMAC audit chain should be intact."""
-    try:
-        result = verify_chain(db, agent_id=agent_id)
-        if result["valid"]:
-            return {
-                "status": "pass",
-                "evidence": {
-                    "entries_verified": result["entries_verified"],
-                    "chain_intact": True,
-                },
-                "remediation": None,
-            }
-        else:
-            return {
-                "status": "fail",
-                "evidence": {
-                    "first_broken_id": result.get("first_broken_id"),
-                    "message": result.get("message"),
-                },
-                "remediation": "Investigate broken audit chain — possible tampering or data corruption.",
-            }
-    except Exception as e:
-        # No audit entries is not a failure, just not applicable
-        if "no entries" in str(e).lower() or "empty" in str(e).lower():
-            return {
-                "status": "warning",
-                "evidence": {"reason": "No audit entries found"},
-                "remediation": "Generate traffic through the gateway to create audit entries.",
-            }
-        raise
+    """The HMAC audit chain should be intact (per-org scope)."""
+    # Resolve org context: agent's org if scoped to an agent, else user's
+    # org. Without org context the check isn't applicable — surface that
+    # rather than erroring.
+    if agent_id:
+        agent = db.query(Agent).filter(Agent.id == agent_id).first()
+        org_id = agent.org_id if agent else None
+    else:
+        user = db.query(User).filter(User.id == user_id).first()
+        org_id = user.org_id if user else None
+
+    if org_id is None:
+        return {
+            "status": "not_applicable",
+            "evidence": {"reason": "No org context for audit chain verification"},
+            "remediation": None,
+        }
+
+    result = verify_chain(db, org_id=org_id, agent_id=agent_id)
+
+    if result.total_entries == 0:
+        return {
+            "status": "warning",
+            "evidence": {"reason": "No audit entries found"},
+            "remediation": "Generate traffic through the gateway to create audit entries.",
+        }
+    if result.valid:
+        return {
+            "status": "pass",
+            "evidence": {
+                "entries_verified": result.entries_verified,
+                "chain_intact": True,
+            },
+            "remediation": None,
+        }
+    return {
+        "status": "fail",
+        "evidence": {
+            "first_broken_id": result.first_broken_id,
+            "message": result.message,
+        },
+        "remediation": "Investigate broken audit chain — possible tampering or data corruption.",
+    }
 
 
 def _check_credentials_encrypted(

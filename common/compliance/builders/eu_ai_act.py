@@ -97,7 +97,7 @@ def build_eu_ai_act_bundle(
         audit_period_start=audit_period_start,
         audit_period_end=audit_period_end,
     )
-    chain_result = _write_chain_integrity(bundle, db, built_at=built_at)
+    chain_result = _write_chain_integrity(bundle, db, org_id=org_id, built_at=built_at)
     oversight_count = _write_human_oversight_log(
         bundle,
         db,
@@ -315,13 +315,15 @@ def _write_chain_integrity(
     bundle: ComplianceExportBundle,
     db: Session,
     *,
+    org_id: uuid.UUID,
     built_at: datetime.datetime,
 ) -> dict:
-    """verify_chain() result — Article 12(4) tamper-evidence."""
-    result = verify_chain(db)
+    """verify_chain() result — Article 12(4) tamper-evidence. Per-org scope."""
+    result = verify_chain(db, org_id=org_id)
     payload = {
         "verified_at": _rfc3339(built_at),
-        "scope": "global",
+        "scope": "org",
+        "org_id": str(org_id),
         "valid": bool(result.valid),
         "total_entries": int(result.total_entries),
         "entries_verified": int(result.entries_verified),

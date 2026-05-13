@@ -153,7 +153,7 @@ def _canonical_entry_payload(entry: dict[str, Any], prev_hash: str) -> bytes:
       - created_at as ISO-8601 string
       - decision, endpoint, method as-is
       - latency_ms as int (or null)
-      - prev_hash from chain
+      - prev_hash from chain (per-org chain uses prev_hash_org)
       - request_metadata as dict
     """
     cost = entry.get("cost_estimate_usd")
@@ -175,6 +175,22 @@ def _compute_entry_hash(key: bytes, entry: dict[str, Any], prev_hash: str) -> st
     """Compute HMAC-SHA256 hex digest for an audit chain entry."""
     message = _canonical_entry_payload(entry, prev_hash)
     return hmac.new(key, message, hashlib.sha256).hexdigest()
+
+
+def _entries_have_org_chain(entries: list[dict[str, Any]]) -> bool:
+    """True if every entry carries the per-org chain fields.
+
+    A forensics report exported after Phase 1 of the per-org chain
+    migration carries ``prev_hash_org``/``entry_hash_org``/``org_chain_seq``
+    on every event. Older reports won't have them — fall through to
+    global-chain verify for those.
+    """
+    if not entries:
+        return False
+    for entry in entries:
+        if entry.get("entry_hash_org") is None or entry.get("org_chain_seq") is None:
+            return False
+    return True
 
 
 # ── File loading ────────────────────────────────────────────────────────
@@ -628,8 +644,121 @@ def _cmd_chain_partial(
     return 0 if passed else 1
 
 
+def _cmd_chain_org(
+    args: argparse.Namespace, key: bytes, entries: list[dict[str, Any]], total: int
+) -> int:
+    """Verify the per-org HMAC chain from an exported report.
+
+    The export is a time-windowed slice of one org's chain, so the
+    starting ``org_chain_seq`` may not be 1 — but within the slice the
+    sequence must be contiguous (no gaps = no deletions) and the chain
+    linkage must hold via ``prev_hash_org``/``entry_hash_org``.
+
+    Sorts by ``org_chain_seq`` defensively in case the export ordering
+    differs.
+    """
+    entries = sorted(entries, key=lambda e: e["org_chain_seq"])
+    verified = 0
+    break_info: dict[str, Any] | None = None
+    expected_seq: int | None = None
+    expected_prev_hash: str | None = None
+
+    for i, entry in enumerate(entries):
+        seq = entry["org_chain_seq"]
+        stored_hash = entry.get("entry_hash_org", "")
+        entry_prev = entry.get("prev_hash_org", "")
+
+        # First entry anchors the window — accept its seq and prev_hash_org
+        if expected_seq is None:
+            expected_seq = seq
+            expected_prev_hash = entry_prev
+        else:
+            if seq != expected_seq:
+                break_info = {
+                    "index": i,
+                    "entry_id": entry.get("id", "?"),
+                    "reason": "sequence gap (rows deleted from this org's history)",
+                    "expected_seq": expected_seq,
+                    "got_seq": seq,
+                }
+                break
+            if entry_prev != expected_prev_hash:
+                break_info = {
+                    "index": i,
+                    "entry_id": entry.get("id", "?"),
+                    "reason": "prev_hash_org mismatch",
+                    "expected_prev": expected_prev_hash,
+                    "got_prev": entry_prev,
+                }
+                break
+
+        # Recompute entry_hash_org and compare. _compute_entry_hash uses
+        # the same canonical payload — we just pass prev_hash_org as the
+        # chain field.
+        recomputed = _compute_entry_hash(key, entry, entry_prev)
+        if not hmac.compare_digest(recomputed, stored_hash):
+            break_info = {
+                "index": i,
+                "entry_id": entry.get("id", "?"),
+                "reason": "hash mismatch",
+                "expected_hash": recomputed,
+                "got_hash": stored_hash,
+            }
+            break
+
+        expected_prev_hash = stored_hash
+        expected_seq = seq + 1
+        verified += 1
+
+    intact = break_info is None
+
+    if args.json:
+        details: dict[str, Any] = {
+            "file": os.path.basename(args.file),
+            "total_entries": total,
+            "entries_verified": verified,
+            "chain_intact": intact,
+            "mode": "per-org",
+            "seq_range": (
+                [entries[0]["org_chain_seq"], entries[-1]["org_chain_seq"]] if entries else None
+            ),
+        }
+        if break_info:
+            details["break_at"] = break_info
+        result = {
+            "tool": TOOL_NAME,
+            "version": __version__,
+            "command": "chain",
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "result": "valid" if intact else "broken",
+            "details": details,
+        }
+        print(json.dumps(result, indent=2))
+    else:
+        chain_title = _bold("AI Identity — Per-Org Audit Chain Verification")
+        print(f"\n{chain_title}")
+        print("═" * 47)
+        print(f"  File:         {os.path.basename(args.file)}")
+        print(f"  Entries:      {total}")
+        if entries:
+            print(f"  Seq range:    {entries[0]['org_chain_seq']} → {entries[-1]['org_chain_seq']}")
+        print("  Mode:         Per-org (tenant-scoped completeness proof)")
+        print()
+        if intact:
+            print(f"  Result:       {_green('CHAIN INTACT ✓')}")
+            print(f"  Verified:     {verified}/{total} entries")
+        else:
+            assert break_info is not None
+            print(f"  Result:       {_red('CHAIN BROKEN ✗')}")
+            print(f"  Verified:     {verified}/{total} entries")
+            print(f"  Break at:     Entry #{break_info['index'] + 1}")
+            print(f"    Reason:     {break_info['reason']}")
+        print()
+    return 0 if intact else 1
+
+
 def cmd_chain(args: argparse.Namespace) -> int:
-    """Verify the HMAC audit chain (full or partial)."""
+    """Verify the HMAC audit chain (per-org, full, or partial)."""
     key = _get_hmac_key()
     entries = _load_chain_entries(args.file)
     total = len(entries)
@@ -663,13 +792,18 @@ def cmd_chain(args: argparse.Namespace) -> int:
             print()
         return 0
 
-    # Detect partial chain: first entry's prev_hash is not GENESIS
-    is_partial = entries[0].get("prev_hash", "") != GENESIS
+    # Prefer the per-org chain when the export carries it — that's the
+    # tenant-scoped completeness proof. Older exports without the
+    # org-chain fields fall through to the legacy global path.
+    if not getattr(args, "global_chain", False) and _entries_have_org_chain(entries):
+        return _cmd_chain_org(args, key, entries, total)
 
+    # Legacy / fallback: global chain. Detect partial export (first
+    # entry's prev_hash is not GENESIS) → use partial verify.
+    is_partial = entries[0].get("prev_hash", "") != GENESIS
     if is_partial:
         return _cmd_chain_partial(args, key, entries, total)
-    else:
-        return _cmd_chain_full(args, key, entries, total)
+    return _cmd_chain_full(args, key, entries, total)
 
 
 # ── Attestation verification (DSSE + ECDSA P-256) ──────────────────────
@@ -1105,6 +1239,19 @@ def build_parser() -> argparse.ArgumentParser:
             "Anchors the export to a known position in the full chain, "
             "proving no entries were prepended or the start-point was not altered. "
             "Obtain this value from the entry immediately before your export window."
+        ),
+    )
+    chain_parser.add_argument(
+        "--global",
+        dest="global_chain",
+        action="store_true",
+        help=(
+            "Force verification against the legacy platform-wide chain "
+            "(prev_hash/entry_hash) instead of the per-org chain. By default, "
+            "exports that carry per-org chain fields are verified per-org, "
+            "which gives a tenant-scoped completeness proof (no gaps in "
+            "this org's sequence). Use --global to verify older reports "
+            "exported before the per-org chain migration."
         ),
     )
 
