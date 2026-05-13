@@ -19,6 +19,7 @@ from common.audit.sanitizer import (
 from common.audit.writer import (
     ChainVerificationResult,
     compute_entry_hash,
+    compute_entry_hash_org,
     create_audit_entry,
     generate_report_signature,
     verify_chain,
@@ -31,6 +32,7 @@ __all__ = [
     "PII_FIELD_BLOCKLIST",
     "cleanup_expired_debug_logs",
     "compute_entry_hash",
+    "compute_entry_hash_org",
     "create_audit_entry",
     "generate_report_signature",
     "is_pii_field",

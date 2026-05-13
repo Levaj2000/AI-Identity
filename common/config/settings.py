@@ -64,6 +64,15 @@ class Settings(BaseSettings):
     audit_debug_ttl_hours: int = 24
     audit_debug_log_dir: str = "/tmp/ai-identity/audit-debug"
 
+    # Per-org audit chain dual-write (Phase 1 of per-org chain migration).
+    # When True, the writer populates prev_hash_org / entry_hash_org /
+    # org_chain_seq on every new row in addition to the global chain.
+    # Safe to keep on by default — the columns are additive and the
+    # uniqueness constraint is a partial index that ignores NULLs.
+    # Flip off to short-circuit dual-write in an emergency rollback.
+    # See docs/audit-chain-per-org-migration.md.
+    audit_dual_write_enabled: bool = True
+
     # Compliance export builder — where ZIP archives live on disk.
     # GCS + signed URLs land in the storage-backend refactor; for now
     # we serve downloads directly via an authenticated endpoint.
