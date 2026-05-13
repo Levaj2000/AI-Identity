@@ -157,6 +157,7 @@ def build_soc2_bundle(
     chain_result = _write_chain_integrity(
         bundle,
         db,
+        org_id=org_id,
         built_at=built_at,
     )
     control_result_count = _write_control_results(
@@ -587,20 +588,21 @@ def _write_chain_integrity(
     bundle: ComplianceExportBundle,
     db: Session,
     *,
+    org_id: uuid.UUID,
     built_at: datetime.datetime,
 ) -> dict:
-    """Verify the global audit chain at export time, write result.
+    """Verify this org's audit chain at export time, write result.
 
-    CC7.2 operating-effectiveness evidence. Note the verification is
-    system-wide, not per-org — the HMAC chain is a global linkage per
-    the writer's design. That gives a stronger statement than per-org
-    verification would: "the whole audit log was tamper-free at
-    export time," not just "this org's rows hashed correctly."
+    CC7.2 operating-effectiveness evidence. Scoped to the exporting org
+    — a customer's compliance bundle proves their own chain (with
+    sequence-gap detection for completeness), not other tenants'.
+    Cross-tenant entanglement was removed in the per-org chain migration.
     """
-    result = verify_chain(db)
+    result = verify_chain(db, org_id=org_id)
     payload = {
         "verified_at": _rfc3339(built_at),
-        "scope": "global",
+        "scope": "org",
+        "org_id": str(org_id),
         "valid": bool(result.valid),
         "total_entries": int(result.total_entries),
         "entries_verified": int(result.entries_verified),
