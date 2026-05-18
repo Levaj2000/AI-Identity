@@ -108,20 +108,21 @@ gcloud iam service-accounts describe "$GCP_SA_EMAIL" \
        --project="$PROJECT_ID" >/dev/null
 echo "✓ GCP SA: $GCP_SA_EMAIL"
 
-# ── 4. Key-level IAM: signerVerifier + publicKeyViewer, on this key only ───
+# ── 4. Key-level IAM: signerVerifier + viewer, on this key only ────────────
 # Scoped to the specific key (not project-wide or keyring-wide) so that a
 # future key added to the same keyring isn't silently signable by this SA.
 #
 # Two roles:
 #   - signerVerifier: useToSign / useToVerify / viewPublicKey — covers the
 #     AsymmetricSign call path (session-close attestation #263, compliance
-#     export bundle signing #275).
-#   - publicKeyViewer: cryptoKeyVersions.list + viewPublicKey — needed by
-#     the JWKS endpoint (api/app/routers/forensic_keys.py → build_jwks),
-#     which must enumerate every non-destroyed version so verifiers can
-#     resolve historical `kid`s. signerVerifier does NOT include `list`,
-#     so without this the JWKS endpoint 500s with PermissionDenied on
-#     cloudkms.cryptoKeyVersions.list.
+#     export bundle signing #275) AND get_public_key inside the JWKS loop.
+#   - viewer: cryptoKeyVersions.list — needed by the JWKS endpoint
+#     (api/app/routers/forensic_keys.py → build_jwks) to enumerate every
+#     non-destroyed version so verifiers can resolve historical `kid`s.
+#     Note: the more obviously-named roles/cloudkms.publicKeyViewer does
+#     NOT include `list` — only viewPublicKey, locations.{get,list},
+#     projects.get. cloudkms.viewer is the smallest predefined role that
+#     actually contains cryptoKeyVersions.list.
 echo "• granting roles/cloudkms.signerVerifier on the key"
 gcloud kms keys add-iam-policy-binding "$KEY" \
   --keyring="$KEYRING" --location="$REGION" --project="$PROJECT_ID" \
@@ -130,13 +131,13 @@ gcloud kms keys add-iam-policy-binding "$KEY" \
   --condition=None >/dev/null
 echo "✓ roles/cloudkms.signerVerifier bound on $KEY"
 
-echo "• granting roles/cloudkms.publicKeyViewer on the key (JWKS list)"
+echo "• granting roles/cloudkms.viewer on the key (JWKS list)"
 gcloud kms keys add-iam-policy-binding "$KEY" \
   --keyring="$KEYRING" --location="$REGION" --project="$PROJECT_ID" \
   --member="serviceAccount:$GCP_SA_EMAIL" \
-  --role="roles/cloudkms.publicKeyViewer" \
+  --role="roles/cloudkms.viewer" \
   --condition=None >/dev/null
-echo "✓ roles/cloudkms.publicKeyViewer bound on $KEY"
+echo "✓ roles/cloudkms.viewer bound on $KEY"
 
 # ── 5. Workload Identity: K8s SA → GCP SA ──────────────────────────────────
 # Binds the `ai-identity/ai-identity-forensic-signer` K8s SA to the GCP SA
