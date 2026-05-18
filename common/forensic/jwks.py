@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import re
 from typing import Any
 
@@ -46,6 +47,8 @@ _KEY_VERSION_RE = re.compile(
 )
 
 _LOCAL_KEY_ID_PREFIX = "local:"
+
+_logger = logging.getLogger("ai_identity.api.forensic_jwks")
 
 
 def build_jwks(settings_obj: Settings | None = None) -> dict[str, Any]:
@@ -106,7 +109,24 @@ def _kms_jwks(key_version_id: str) -> list[dict[str, Any]]:
     client = kms_v1.KeyManagementServiceClient()
 
     entries: list[dict[str, Any]] = []
-    for version in client.list_crypto_key_versions(request={"parent": parent}):
+    try:
+        versions = list(client.list_crypto_key_versions(request={"parent": parent}))
+    except Exception:
+        # Most often PermissionDenied (the SA lacks
+        # cloudkms.cryptoKeyVersions.list) or transient KMS unavailability.
+        # Per the module docstring the endpoint must stay resolvable —
+        # return empty rather than 500. Operators are alerted via the
+        # WARNING log + the rotation runbook's "missing versions" check
+        # (docs/forensics/key-rotation.md, Post-rotation verification).
+        _logger.warning(
+            "JWKS list_crypto_key_versions failed for parent=%s; "
+            "returning empty key set",
+            parent,
+            exc_info=True,
+        )
+        return []
+
+    for version in versions:
         state_name = _kms_state_name(version.state)
         if state_name == "destroyed":
             continue
@@ -116,6 +136,11 @@ def _kms_jwks(key_version_id: str) -> list[dict[str, Any]]:
         except Exception:  # pragma: no cover — transient KMS errors
             # Skip this version rather than fail the whole JWKS —
             # other versions may still be reachable.
+            _logger.warning(
+                "JWKS get_public_key failed for version=%s; skipping",
+                version.name,
+                exc_info=True,
+            )
             continue
 
         jwk = _pem_to_jwk(public_key.pem.encode("utf-8"), kid=version.name)

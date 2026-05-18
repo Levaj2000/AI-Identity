@@ -215,3 +215,35 @@ class TestKMSBackend:
         stub_kms_client([])  # should never be called
         out = build_jwks(_settings(forensic_signing_key_id="not-a-kms-path"))
         assert out == {"keys": []}
+
+    def test_list_failure_returns_empty(self, monkeypatch, caplog):
+        """KMS list failure → empty JWKS + WARNING log, not a 500.
+
+        Guards against the failure mode we hit in production when the
+        signing SA was missing `cloudkms.cryptoKeyVersions.list`: the
+        list call raised PermissionDenied, which previously bubbled out
+        of the endpoint as a 500. The module docstring promises the
+        endpoint stays resolvable in pre-rollout / misconfigured states.
+        """
+
+        class _RaisingClient:
+            def list_crypto_key_versions(self, *, request):
+                raise PermissionError("denied on cloudkms.cryptoKeyVersions.list")
+
+        class _ImportStub:
+            KeyManagementServiceClient = lambda self_stub: _RaisingClient()  # noqa: E731
+
+        class _ModuleStub:
+            kms_v1 = _ImportStub()
+
+        monkeypatch.setitem(__import__("sys").modules, "google.cloud", _ModuleStub())
+
+        parent = "projects/p/locations/l/keyRings/r/cryptoKeys/k"
+        key_version_id = f"{parent}/cryptoKeyVersions/1"
+        with caplog.at_level("WARNING", logger="ai_identity.api.forensic_jwks"):
+            out = build_jwks(_settings(forensic_signing_key_id=key_version_id))
+
+        assert out == {"keys": []}
+        assert any(
+            "list_crypto_key_versions failed" in r.message for r in caplog.records
+        )
