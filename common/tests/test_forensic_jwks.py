@@ -244,6 +244,4 @@ class TestKMSBackend:
             out = build_jwks(_settings(forensic_signing_key_id=key_version_id))
 
         assert out == {"keys": []}
-        assert any(
-            "list_crypto_key_versions failed" in r.message for r in caplog.records
-        )
+        assert any("list_crypto_key_versions failed" in r.message for r in caplog.records)

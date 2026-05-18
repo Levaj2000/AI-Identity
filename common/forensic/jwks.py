@@ -119,8 +119,7 @@ def _kms_jwks(key_version_id: str) -> list[dict[str, Any]]:
         # WARNING log + the rotation runbook's "missing versions" check
         # (docs/forensics/key-rotation.md, Post-rotation verification).
         _logger.warning(
-            "JWKS list_crypto_key_versions failed for parent=%s; "
-            "returning empty key set",
+            "JWKS list_crypto_key_versions failed for parent=%s; returning empty key set",
             parent,
             exc_info=True,
         )
