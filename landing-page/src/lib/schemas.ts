@@ -6,8 +6,9 @@ export const organizationSchema = {
   name: "AI Identity",
   url: BASE_URL,
   logo: `${BASE_URL}/images/logo.png`,
+  slogan: "The standard for AI Forensics",
   description:
-    "AI Identity is an identity infrastructure platform for autonomous AI agents. It provides per-agent API keys, scoped permissions, policy-as-code enforcement, and tamper-proof cryptographic audit trails.",
+    "AI Identity is the AI Forensics platform for autonomous AI agents. Tamper-evident HMAC-chained audit trails, DSSE + ECDSA-P256 signed session attestations, offline verification, per-agent identity, and policy enforcement — replay any incident, prove every action.",
   sameAs: [
     "https://x.com/AiIdentity",
     "https://www.linkedin.com/in/jeff-leva-a7373958",
@@ -27,7 +28,7 @@ export const softwareApplicationSchema = {
   applicationCategory: "SecurityApplication",
   operatingSystem: "Web",
   description:
-    "Identity infrastructure for AI agents. Per-agent API keys, scoped permissions, tamper-proof audit trails, and compliance dashboards for SOC 2, EU AI Act, NIST AI RMF, and GDPR.",
+    "AI Forensics platform for autonomous AI agents. Tamper-evident audit trails, signed session attestations, offline verification, and compliance mapping for SOC 2, EU AI Act, NIST AI RMF, and GDPR.",
   url: BASE_URL,
   offers: [
     {
