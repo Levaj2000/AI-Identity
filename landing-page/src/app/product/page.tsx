@@ -5,9 +5,9 @@ import { generatePageMetadata } from "@/lib/metadata";
 import { pillars, PILLARS_HEADING, PILLARS_SUBHEADING } from "@/data/pillars";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "Product Walkthrough — AI Identity Dashboard, Gateway & Forensics",
+  title: "Product Walkthrough — AI Agent Forensics in Action",
   description:
-    "See AI Identity in action: per-agent API keys, the policy-enforcing gateway, the compliance dashboard, and the forensic audit trail. Screenshots, features, and a live interactive demo.",
+    "See AI Identity in action: the forensic audit trail, the policy-enforcing gateway, per-agent identity, and the compliance mapping. Screenshots, features, and a live interactive demo.",
   path: "/product",
 });
 
@@ -268,35 +268,35 @@ export default function ProductPage() {
             <span className="text-[rgba(213,219,230,0.7)] text-sm">Live · Design-partner stage</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
-            The AI Identity Platform —{" "}
+            The AI Agent Forensics Platform —{" "}
             <span className="text-[rgb(166,218,255)]">in action</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-[760px] mx-auto leading-relaxed">
-            A walkthrough of what the product actually does: register agents, route traffic through
-            the policy-enforcing gateway, capture tamper-evident forensic evidence, and map every
-            action back to the compliance framework your auditor cares about.
+            A walkthrough of what the product actually does: capture every agent action as tamper-evident, cryptographically-signed evidence — and prove what happened on demand. The gateway, identity, and policy engine all feed the forensic audit trail.
           </p>
           <div className="mt-8 flex flex-wrap gap-3 justify-center">
+            <Link
+              href="/contact?intent=design-partner"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[rgb(166,218,255)] text-[rgb(4,7,13)] text-sm font-semibold hover:bg-[rgb(166,218,255)]/80 transition-colors"
+            >
+              Request Design Partner Access
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+            </Link>
+            <Link
+              href="/#replay-demo"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 bg-white/[0.03] text-white text-sm font-medium hover:bg-white/[0.06] transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+              View Incident Replay Demo
+            </Link>
             <a
               href={DEMO_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[rgb(166,218,255)] text-[rgb(4,7,13)] text-sm font-semibold hover:bg-[rgb(166,218,255)]/80 transition-colors"
-            >
-              Try the interactive demo →
-            </a>
-            <a
-              href={DASHBOARD_URL}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 bg-white/[0.03] text-white text-sm font-medium hover:bg-white/[0.06] transition-colors"
             >
-              Open dashboard
+              Try the live API demo →
             </a>
-            <Link
-              href={DOCS_URL}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 bg-white/[0.03] text-white text-sm font-medium hover:bg-white/[0.06] transition-colors"
-            >
-              Read the docs
-            </Link>
           </div>
         </div>
       </section>
@@ -372,11 +372,10 @@ export default function ProductPage() {
       <section className="pb-20 px-6 md:px-12">
         <div className="max-w-[1100px] mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-2 text-center">
-            Walkthrough
+            How agent activity becomes forensic evidence
           </h2>
           <p className="text-sm text-gray-400 text-center max-w-[640px] mx-auto mb-12">
-            Here's what happens from the moment an agent is registered to the moment an
-            auditor verifies a year of activity.
+            The destination is step 3 — every action sealed in a tamper-evident, cryptographically-signed audit chain. Steps 1, 2, and 4 are how we get there and prove it.
           </p>
 
           <div className="space-y-16">
@@ -553,35 +552,38 @@ export default function ProductPage() {
         <div className="max-w-[1000px] mx-auto">
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
             <h2 className="text-xl md:text-2xl font-bold text-white mb-3">
-              See it running in your own account
+              Close your accountability gap
             </h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[560px] mx-auto">
-              The interactive demo executes real API calls against the live AI Identity backend —
-              no mock data, no video. Or sign in and register your first agent in a couple of
-              minutes.
+              We&apos;re onboarding a small cohort of design partners to validate AI Forensics in production. Get hands-on with the platform, shape the v1.0 spec, and lock in preferred pricing.
             </p>
             <div className="flex items-center justify-center gap-3 flex-wrap">
+              <Link
+                href="/contact?intent=design-partner"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors"
+              >
+                Request Design Partner Access
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+              </Link>
+              <Link
+                href="/#replay-demo"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                View Incident Replay Demo
+              </Link>
               <a
                 href={DEMO_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors"
-              >
-                Try the live demo
-              </a>
-              <a
-                href={DASHBOARD_URL}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors"
               >
-                Sign up free
+                Try the live API demo
               </a>
-              <Link
-                href="/contact"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors"
-              >
-                Become a design partner
-              </Link>
             </div>
+            <p className="mt-5 text-xs text-gray-500">
+              Building today? <a href={DASHBOARD_URL} className="text-gray-300 hover:text-[rgb(166,218,255)] underline underline-offset-2">Spin up a free dev sandbox →</a>
+            </p>
           </div>
         </div>
       </section>

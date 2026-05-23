@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import BadgeFramerComponent from "@/framer/elements/badge";
-import MainButtonFramerComponent from "@/framer/main-button";
 import { GoogleForStartupsStrip } from "@/components/GoogleForStartupsBadge";
 import { MongoDBForStartupsStrip } from "@/components/MongoDBForStartupsBadge";
 import { pillars, PILLARS_HEADING, PILLARS_SUBHEADING } from "@/data/pillars";
@@ -361,11 +360,15 @@ export default function HomeContent() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <MainButtonFramerComponent.Responsive
-                title="Request Design Partner Access"
-                link="/contact?intent=design-partner"
-                newTab={false}
-              />
+              <Link
+                href="/contact?intent=design-partner"
+                className="group relative inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-[rgb(166,218,255)] text-[rgb(4,7,13)] text-sm font-semibold hover:bg-[rgb(166,218,255)]/90 transition-all shadow-[0_0_30px_rgba(166,218,255,0.25)] hover:shadow-[0_0_45px_rgba(166,218,255,0.4)]"
+              >
+                Request Design Partner Access
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-0.5">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </Link>
               <a
                 href="#replay-demo"
                 className="px-6 py-3 rounded-lg border border-[rgba(216,231,242,0.12)] text-sm text-[rgba(230,235,245,0.8)] hover:text-white hover:border-[rgba(216,231,242,0.25)] transition-colors inline-flex items-center gap-2"
