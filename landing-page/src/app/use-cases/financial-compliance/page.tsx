@@ -3,8 +3,8 @@ import { generatePageMetadata } from "@/lib/metadata";
 import Link from "next/link";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "AI Agent Identity for Financial Compliance",
-  description: "Govern AI agents in financial services. SOC 2 and EU AI Act compliant audit trails, per-agent credentials, and policy enforcement for regulated environments.",
+  title: "AI Forensics for Financial Compliance",
+  description: "Forensic-grade audit trails for AI agents in regulated finance. HMAC-chained logs + DSSE-signed attestations satisfy SEC, FINRA, MiFID II, and EU AI Act auditors — verifiable offline.",
   path: "/use-cases/financial-compliance",
 });
 
@@ -81,14 +81,11 @@ export default function UseCaseFinancialAgent() {
             <span className="text-[rgb(166,218,255)] text-sm font-medium">Use Case</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
-            Meet Regulatory Requirements for{" "}
-            <span className="text-[rgb(166,218,255)]">Financial</span>{" "}
-            AI Agents
+            Forensic Evidence for{" "}
+            <span className="text-[rgb(166,218,255)]">Financial AI Agents</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
-            Financial regulators demand auditability. AI Identity delivers
-            tamper-proof evidence for every agent decision — HMAC-chained logs,
-            automated compliance checks, and one-click forensic exports.
+            SEC, FINRA, MiFID II, EU AI Act — regulators arrived with teeth. AI Identity gives every agent decision a cryptographic, tamper-evident audit trail that your examiner can verify offline with an open-source CLI. No vendor trust required.
           </p>
         </div>
       </section>
@@ -157,17 +154,18 @@ export default function UseCaseFinancialAgent() {
       <section className="pb-24 px-6 md:px-12">
         <div className="max-w-[800px] mx-auto">
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready for audit-proof AI agents?</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready for examiner-proof AI agents?</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
-              Start with AI Identity for free — tamper-proof audit logs and compliance assessments from day one.
+              We&apos;re onboarding design partners in regulated finance. Get hands-on with the forensic audit chain, shape the v1.0 spec, lock in preferred pricing.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
-              <Link href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
-                Get Started Free
+              <Link href="/contact?intent=design-partner" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
+                Request Design Partner Access
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
               </Link>
-              <Link href="/docs" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
-                Read the Docs
+              <Link href="/#replay-demo" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                View Incident Replay Demo
               </Link>
             </div>
           </div>
