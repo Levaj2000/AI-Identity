@@ -11,6 +11,12 @@ const nextConfig: NextConfig = {
 
   async redirects() {
     return [
+      // /ai-forensics consolidated into /forensics (canonical deep-dive page)
+      {
+        source: "/ai-forensics",
+        destination: "/forensics",
+        permanent: true,
+      },
       // non-www → www
       {
         source: "/:path*",
