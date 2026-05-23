@@ -1,0 +1,78 @@
+BEEHIIV ISSUE 01 — METADATA CHEAT SHEET
+========================================
+Copy each field directly into the matching beehiiv input.
+
+
+TITLE (post title — also the email subject line by default)
+-----
+DeepSeek as Exhibit A: Why AI Needs Identity and Forensics
+
+
+SUBTITLE / DECK
+---------------
+Why every powerful model now needs an identity, a policy, and a paper trail.
+
+
+PREVIEW TEXT (the inbox preview line — keep under 90 chars)
+------------
+Privacy is the headline. Forensics is the story.
+
+
+EMAIL SUBJECT LINE (override the title if you want more curiosity)
+-------------------
+Option A:  DeepSeek is the warning shot. Here's what it's warning about.
+Option B:  Your AI agents are acting anonymously. That's the problem.
+Option C:  Welcome to Exhibit A.   ← recommended for issue 01 only
+
+
+SLUG / URL
+----------
+exhibit-a-01-deepseek    →  exhibit-a.ai-identity.co/p/exhibit-a-01-deepseek
+
+
+COVER IMAGE
+-----------
+File: /Users/jeffleva/Dev/AI-Identity/marketing/blog/deepseek-exhibit-a/DeepSeek_Exhibit_A_cover.png
+(1200×627, LinkedIn-safe composition, already built)
+
+
+TAGS / CATEGORIES (pick 3–4)
+-----------------
+AI Identity
+AI Security
+AI Governance
+Forensics
+DeepSeek
+
+
+AUTHOR
+------
+Jeff Leva — Founder, AI Identity
+
+
+SOCIAL SHARE CARD (optional — uses cover image by default)
+-----------------
+Title:        DeepSeek as Exhibit A
+Description:  Why every powerful model now needs an identity, a policy, and a paper trail.
+
+
+===============================================================
+HOW TO PASTE THE BODY CLEANLY INTO BEEHIIV
+===============================================================
+1. Open  issue_01_for_paste.html  in your browser (double-click it).
+2. In the browser: Cmd+A to select all, Cmd+C to copy.
+3. In beehiiv, click into the post body and Cmd+V.
+   Headings, bold, italic, blockquote, and links carry over.
+4. After paste: replace the placeholder horizontal rules
+   with beehiiv's "divider" block if you want a fancier look.
+
+
+SUBSCRIBE CTA TO REUSE EVERY ISSUE (footer block)
+===============================================================
+If a friend forwarded this, subscribe at exhibit-a.ai-identity.co
+so the next exhibit lands in your inbox.
+
+Reply with the messiest agent-trust problem in your stack —
+I read everything and the best ones become future issues.
+
+— Jeff
