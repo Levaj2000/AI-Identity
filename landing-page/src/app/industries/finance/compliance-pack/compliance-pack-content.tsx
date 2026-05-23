@@ -165,6 +165,13 @@ export default function ComplianceContent() {
           <p className="text-xs text-[rgba(213,219,230,0.45)] mt-6">
             Looking for the broader picture?{" "}
             <Link
+              href="/forensics"
+              className="text-[rgb(166,218,255)] hover:underline"
+            >
+              AI Forensics deep-dive
+            </Link>
+            {" · "}
+            <Link
               href="/industries/finance"
               className="text-[rgb(166,218,255)] hover:underline"
             >
