@@ -11,8 +11,10 @@ Usage:
 
 from __future__ import annotations
 
+import io
 from pathlib import Path
 
+import cairosvg
 from PIL import Image, ImageDraw, ImageFont
 
 W, H = 1200, 630
@@ -22,6 +24,7 @@ TEXT = (213, 219, 230)
 MUTED = (140, 152, 170)
 
 OUT = Path(__file__).resolve().parents[1] / "public" / "images" / "og-image.png"
+LOGO_MARK_SVG = Path(__file__).resolve().parents[2] / "assets" / "brand" / "logo-mark.svg"
 
 HELVETICA_BOLD = "/System/Library/Fonts/HelveticaNeue.ttc"
 GEORGIA_ITALIC = "/System/Library/Fonts/Supplemental/Georgia Italic.ttf"
@@ -50,14 +53,25 @@ def main() -> None:
     img2 = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(img2, "RGBA")
 
-    # Top-left accent dot (echo of homepage pulse)
-    cx, cy = 80, 88
-    draw.ellipse((cx - 18, cy - 18, cx + 18, cy + 18), fill=(166, 218, 255, 28))
-    draw.ellipse((cx - 7, cy - 7, cx + 7, cy + 7), fill=ACCENT)
+    # Top-left brand lockup: shield mark + wordmark
+    logo_height = 64
+    logo_png_bytes = cairosvg.svg2png(
+        url=str(LOGO_MARK_SVG),
+        output_height=logo_height,
+        background_color=None,
+    )
+    logo_img = Image.open(io.BytesIO(logo_png_bytes)).convert("RGBA")
+    logo_x, logo_y = 70, 60
+    img2.paste(logo_img, (logo_x, logo_y), logo_img)
 
-    # Wordmark
-    wm_font = load(HELVETICA_BOLD, 30, index=10)  # Medium
-    draw.text((cx + 28, cy - 18), "AI Identity", font=wm_font, fill=TEXT)
+    # Wordmark next to the shield
+    wm_font = load(HELVETICA_BOLD, 32, index=10)  # Medium
+    draw.text(
+        (logo_x + logo_img.width + 16, logo_y + 16),
+        "AI Identity",
+        font=wm_font,
+        fill=TEXT,
+    )
 
     # Badge — "AI AGENT FORENSICS"
     badge_font = load(HELVETICA_BOLD, 22, index=1)  # Bold
