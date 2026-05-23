@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Exhibit A — Issue 01</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Exhibit A — Issue 01</h1>
+</header>
+<h2 id="welcome-to-exhibit-a.">Welcome to Exhibit A.</h2>
+<p>This is Issue 01.</p>
+<p>Every week, I take one story — a model, a breach, a governance gap, a
+policy fight — and treat it as evidence. Evidence for the same argument:
+AI agents need identity, policy, and a paper trail. We’re shipping
+powerful AI into real workflows faster than we’re shipping the trust
+infrastructure around it, and every week another exhibit lands on the
+pile.</p>
+<p>I’m Jeff Leva, founder of AI Identity. We build the durable identity
+and tamper-evident forensics layer for AI agents, so when something goes
+wrong you don’t have to trust a vendor’s logs — you have your own.</p>
+<p>Let’s start with the story everyone’s already arguing about.</p>
+<hr />
+<h1
+id="deepseek-as-exhibit-a-why-ai-needs-identity-and-forensics">DeepSeek
+as Exhibit A: Why AI Needs Identity and Forensics</h1>
+<p>DeepSeek is a useful narrative hook for a larger point: advanced AI
+systems are being adopted faster than trust, security, and evidence
+frameworks are being built around them. The strongest conclusion is not
+that one product looks risky — it is that the current AI market still
+treats many powerful models like ordinary software components even when
+they can access sensitive data, execute workflows, and influence
+real-world decisions.</p>
+<h2 id="why-deepseek-raised-alarms">Why DeepSeek raised alarms</h2>
+<p>DeepSeek drew scrutiny because multiple analyses described a
+combination of privacy, security, and governance concerns — not one
+isolated flaw. Reported concerns include extensive data collection,
+storage of user data on servers in China, legal access risks tied to
+Chinese law, and technical weaknesses in mobile app security
+controls.</p>
+<p>Several reviews also noted that DeepSeek’s apps appeared to gather
+broad categories of information — chat content, device details, usage
+patterns. In practical terms, users cannot treat prompts as disposable
+when those prompts may contain business ideas, internal code, customer
+data, or operational context.</p>
+<h2 id="the-real-issue-is-not-only-privacy">The real issue is not only
+privacy</h2>
+<p>Privacy is the most visible concern, but the bigger issue is trust
+across the full lifecycle of an AI interaction. Once a model is
+integrated into real work, organizations need to know <strong>which
+model acted, what data it saw, what tools it invoked, what policy should
+have applied, and what evidence remains after the fact.</strong></p>
+<p>That is where many AI deployments break down. Traditional SaaS
+security assumes a user, an application, and a log trail. Agentic AI
+introduces probabilistic behavior, dynamic tool use, prompt-injection
+exposure, and third-party model dependencies that blur accountability. A
+breach or misuse event is harder to reconstruct when the system lacks
+strong identity, policy enforcement, and tamper-evident records.</p>
+<blockquote>
+<p><strong>Why this matters:</strong> Logs are not evidence. If your
+incident response depends on trusting a vendor’s own records, you do not
+have a forensic posture — you have a relationship.</p>
+</blockquote>
+<h2 id="why-identity-matters">Why identity matters</h2>
+<p>Identity answers a basic but underappreciated question: <em>who,
+exactly, performed an action.</em> In human systems, that question is
+handled through accounts, roles, credentials, and access controls. In
+agentic systems, those same primitives are often incomplete or
+missing.</p>
+<p>Without durable agent identity, every model call starts to look
+anonymous after the fact. That makes it difficult to separate an
+authorized workflow from a hijacked one, a policy-approved action from a
+prompt-injected action, or a legitimate orchestration step from an
+unsafe escalation.</p>
+<h2 id="why-forensics-matters">Why forensics matters</h2>
+<p>Forensics is what turns activity into evidence. Logging alone is not
+enough when an organization needs to investigate a sensitive event,
+brief leadership, support legal review, or demonstrate compliance to an
+auditor.</p>
+<p>A credible AI forensics layer should preserve a verifiable chain of
+events: which identity initiated the task, what context was present,
+what policy was evaluated, what outputs were produced, and whether the
+record can be independently validated later. When that chain does not
+exist, incident response depends too heavily on trust in the vendor’s
+own records and explanations.</p>
+<h2 id="what-deepseek-illustrates-for-the-market">What DeepSeek
+illustrates for the market</h2>
+<p>DeepSeek is best understood as a warning sign for the broader AI
+ecosystem. The lesson is not that one vendor is imperfect; it is that
+organizations are rushing powerful AI capabilities into workflows before
+they have established model governance, data-handling boundaries,
+approved deployment patterns, and reliable forensic evidence.</p>
+<p>The pattern will repeat with other models, open-weight systems,
+wrappers, and agent frameworks unless buyers demand stronger control
+planes around identity, policy, and auditability. The industry does not
+only need safer models — it needs infrastructure that makes AI actions
+<strong>attributable, governable, and investigable.</strong></p>
+<h2 id="practical-guidance">Practical guidance</h2>
+<p><strong>For individuals.</strong> Assume that any prompt sent to an
+untrusted AI service may be retained, analyzed, or exposed beyond the
+original interaction. Sensitive work, proprietary code, credentials,
+financial records, legal material, and regulated data should stay out of
+services with unresolved privacy or security concerns.</p>
+<p><strong>For organizations.</strong> Treat external AI models as
+untrusted execution components unless they are wrapped in enterprise
+controls: clear model approval standards, prompt and output handling
+rules, strong identity, policy enforcement, monitoring, and
+tamper-evident audit trails.</p>
+<h2 id="the-bottom-line">The bottom line</h2>
+<p><em>DeepSeek didn’t break AI security. It revealed what was already
+broken: every powerful model deployed without identity, policy, or
+evidence is one incident away from looking just as risky.</em></p>
+<p><em>The industry doesn’t only need safer models. It needs
+infrastructure that makes AI actions <strong>attributable, governable,
+and investigable.</strong></em></p>
+<hr />
+<h2 id="one-question-to-take-into-your-week">One question to take into
+your week</h2>
+<p>Pick the AI tool your team uses most. Now answer four questions about
+its last sensitive action:</p>
+<ol type="1">
+<li><strong>Who</strong> — which identity initiated it?</li>
+<li><strong>What</strong> — what data and tools were touched?</li>
+<li><strong>Policy</strong> — what rule was evaluated?</li>
+<li><strong>Proof</strong> — is the record tamper-evident?</li>
+</ol>
+<p>If you can’t answer all four, you have a DeepSeek-shaped gap. The
+model is irrelevant.</p>
+<hr />
+<h3 id="see-you-next-week">See you next week</h3>
+<p>If a friend forwarded this, <a
+href="https://exhibit-a.ai-identity.co">subscribe here</a> so you don’t
+miss the next exhibit.</p>
+<p>If you’re a security leader, founder, or operator wrestling with
+these problems in production — hit reply. I read everything.</p>
+<p><strong>— Jeff</strong></p>
+<p><em>Jeff Leva is the founder of <a href="https://ai-identity.co">AI
+Identity</a>, building durable identity and tamper-evident forensics for
+AI agents.</em></p>
+</body>
+</html>
