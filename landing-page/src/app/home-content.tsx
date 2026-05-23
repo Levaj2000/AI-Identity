@@ -171,7 +171,7 @@ function IncidentReplayDemo() {
                 <button
                   key={ev.t}
                   onClick={() => { setPlaying(false); setStep(i); }}
-                  className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                  className={`w-full text-left flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2.5 rounded-lg transition-all min-w-0 ${
                     isActive
                       ? "bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/30"
                       : isPast
@@ -179,11 +179,11 @@ function IncidentReplayDemo() {
                         : "border border-transparent opacity-35 hover:opacity-70"
                   }`}
                 >
-                  <span className="text-[10px] font-mono text-[rgba(213,219,230,0.4)] w-16 shrink-0">{ev.t}</span>
+                  <span className="text-[10px] font-mono text-[rgba(213,219,230,0.4)] w-12 md:w-16 shrink-0">{ev.t}</span>
                   <div className={`w-2 h-2 rounded-full shrink-0 ${
                     ev.status === "blocked" ? "bg-red-400" : "bg-green-400/80"
                   }`} />
-                  <span className={`text-sm font-mono shrink-0 ${
+                  <span className={`text-xs md:text-sm font-mono truncate min-w-0 ${
                     isActive ? "text-[rgb(166,218,255)]" : "text-[rgba(213,219,230,0.7)]"
                   }`}>{ev.label}</span>
                   <span className="text-xs text-[rgba(213,219,230,0.35)] truncate ml-auto hidden md:inline">
@@ -555,10 +555,10 @@ export default function HomeContent() {
               {/* Human-review flat dashed line */}
               <line x1="40" y1="160" x2="580" y2="158" stroke="rgba(213,219,230,0.55)" strokeWidth="1.5" strokeDasharray="4 4" />
 
-              {/* Gap callout */}
+              {/* Gap callout — anchor labels to right edge so they don't clip on narrow widths */}
               <line x1="500" y1="55" x2="500" y2="158" stroke="rgba(255,170,140,0.5)" strokeWidth="1" strokeDasharray="2 2" />
-              <text x="510" y="100" fill="rgb(255,170,140)" fontSize="11" fontWeight="600">THE GAP</text>
-              <text x="510" y="115" fill="rgba(213,219,230,0.55)" fontSize="9">unaudited agent actions</text>
+              <text x="495" y="100" textAnchor="end" fill="rgb(255,170,140)" fontSize="11" fontWeight="600">THE GAP</text>
+              <text x="495" y="115" textAnchor="end" fill="rgba(213,219,230,0.55)" fontSize="9">unaudited agent actions</text>
             </svg>
             <p className="text-xs text-[rgba(213,219,230,0.5)] text-center mt-4">
               You can&apos;t hire your way out of this. You need an evidence layer that scales with the agents — not the auditors.
