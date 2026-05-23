@@ -97,8 +97,9 @@ export default function Nav() {
           <span className="text-white font-semibold text-lg tracking-tight">AI Identity</span>
         </Link>
 
-        {/* Desktop Links */}
-        <div className="hidden md:flex items-center gap-8">
+        {/* Desktop Links — show at lg+ (1024px). At md (768px) the 10+ items
+            don't fit alongside the wordmark + CTA, so we use the mobile menu. */}
+        <div className="hidden lg:flex items-center gap-8">
           {navLinks.map((link) => (
             <Link
               key={link.path}
@@ -182,13 +183,13 @@ export default function Nav() {
         <div className="flex items-center gap-4">
           <Link
             href="/contact?intent=design-partner"
-            className="hidden md:inline-flex px-4 py-2 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 text-[rgb(166,218,255)] text-sm font-medium hover:bg-[rgb(166,218,255)]/20 transition-colors"
+            className="hidden lg:inline-flex px-4 py-2 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 text-[rgb(166,218,255)] text-sm font-medium hover:bg-[rgb(166,218,255)]/20 transition-colors"
           >
             Design Partner
           </Link>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden text-white p-2"
+            className="lg:hidden text-white p-2"
             aria-label="Toggle menu"
             aria-expanded={mobileOpen}
             aria-controls="mobile-nav"
@@ -211,9 +212,9 @@ export default function Nav() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile / tablet menu — shown below lg breakpoint */}
       {mobileOpen && (
-        <div id="mobile-nav" className="md:hidden bg-[rgb(4,7,13)] border-t border-white/5 px-6 py-4 space-y-3">
+        <div id="mobile-nav" className="lg:hidden bg-[rgb(4,7,13)] border-t border-white/5 px-6 py-4 space-y-3">
           {navLinks.map((link) => (
             <Link
               key={link.path}
