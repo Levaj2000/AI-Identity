@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 
 const navLinks = [
   { label: "Forensics", path: "/forensics" },
+  { label: "Spec", path: "/spec" },
   { label: "Product", path: "/product" },
   { label: "How It Works", path: "/how-it-works" },
   { label: "Security", path: "/security" },
@@ -98,8 +99,10 @@ export default function Nav() {
         </Link>
 
         {/* Desktop Links — show at lg+ (1024px). At md (768px) the 10+ items
-            don't fit alongside the wordmark + CTA, so we use the mobile menu. */}
-        <div className="hidden lg:flex items-center gap-8">
+            don't fit alongside the wordmark + CTA, so we use the mobile menu.
+            ml-6 keeps a guaranteed gap between the wordmark and the first link
+            at narrow lg widths (1024-1280) where the nav is otherwise edge-to-edge. */}
+        <div className="hidden lg:flex items-center gap-6 xl:gap-8 ml-6">
           {navLinks.map((link) => (
             <Link
               key={link.path}
