@@ -3,8 +3,8 @@ import { generatePageMetadata } from "@/lib/metadata";
 import Link from "next/link";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "AI Agent Identity for Coding Assistants",
-  description: "Govern AI coding assistants with per-agent identity. Scoped permissions, human-in-the-loop gates, and tamper-proof audit trails for code generation agents.",
+  title: "AI Forensics for Coding Assistants",
+  description: "Forensic-grade audit trails for AI coding agents. Prove what code left your environment, when, and which model saw it — verifiable offline by your security team.",
   path: "/use-cases/coding-assistant",
 });
 
@@ -28,23 +28,23 @@ const challenges = [
 
 const solutions = [
   {
+    title: "Forensic Trail of Every Code Snippet",
+    description: "Every code interaction is HMAC-chained and DSSE-signed. When an IP-leak claim hits inbox, scrub through the exact sequence — which snippet, which model, which agent, what came back — and hand security a signed evidence bundle.",
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>,
+  },
+  {
     title: "Per-Repository Identities",
-    description: "Each coding agent gets its own identity scoped to a specific repo or team. Isolate blast radius and revoke access per-project.",
+    description: "Each coding agent gets its own identity scoped to a specific repo or team. Audit trail attributes every action back to a specific repo + agent — no shared service-account guesswork.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>,
   },
   {
     title: "Model Access Policies",
-    description: "Control which agents can access which models. Restrict sensitive repos to approved models only — block experimental or preview models.",
+    description: "Restrict sensitive repos to approved models only — block experimental or preview models. Every block writes to the audit chain so security can prove the controls were active.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
   },
   {
-    title: "Full Code Audit Trail",
-    description: "Every code snippet sent to an LLM is logged with HMAC integrity. Know exactly what left your environment and when.",
-    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
-  },
-  {
     title: "Anomaly Detection",
-    description: "Spot unusual patterns: bulk code submissions, off-hours access, unauthorized model switching. Get alerts before damage is done.",
+    description: "Bulk submissions, off-hours access, unauthorized model switching — flagged in real time. Anomalies become first-class events in the forensic chain, not after-the-fact log analysis.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>,
   },
 ];
@@ -86,14 +86,12 @@ export default function UseCaseCodingAssistant() {
             <span className="text-[rgb(166,218,255)] text-sm font-medium">Use Case</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
-            Lock Down Your{" "}
-            <span className="text-[rgb(166,218,255)]">Coding</span>{" "}
-            Assistants
+            Prove What Your{" "}
+            <span className="text-[rgb(166,218,255)]">Coding Agents</span>{" "}
+            Saw
           </h1>
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
-            AI coding agents see your source code. AI Identity controls what
-            goes where — with per-repo identities, model restrictions, and
-            a tamper-proof audit trail of every interaction.
+            AI coding agents see your source code. When security or legal asks what left the building — which snippet, which model, when — you need a forensic answer, not a guess. AI Identity gives every interaction a cryptographically-signed audit trail that verifies offline.
           </p>
         </div>
       </section>
@@ -162,17 +160,18 @@ export default function UseCaseCodingAssistant() {
       <section className="pb-24 px-6 md:px-12">
         <div className="max-w-[800px] mx-auto">
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready to protect your source code?</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready to put forensics on your coding agents?</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
-              Start with AI Identity for free — per-repo agent identities, model policies, and full audit logging.
+              We&apos;re onboarding design partners running production coding assistants. Get hands-on access, shape the v1.0 spec, lock in preferred pricing.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
-              <Link href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
-                Get Started Free
+              <Link href="/contact?intent=design-partner" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
+                Request Design Partner Access
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
               </Link>
-              <Link href="/docs" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
-                Read the Docs
+              <Link href="/#replay-demo" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                View Incident Replay Demo
               </Link>
             </div>
           </div>
