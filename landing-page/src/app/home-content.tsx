@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import BadgeFramerComponent from "@/framer/elements/badge";
 import MainButtonFramerComponent from "@/framer/main-button";
@@ -100,6 +100,181 @@ function HowItWorksSteps() {
   );
 }
 
+type ReplayEvent = {
+  t: string;
+  type: "auth" | "policy" | "tool" | "block" | "sign";
+  label: string;
+  detail: string;
+  status: "ok" | "blocked";
+  hash: string;
+};
+
+const REPLAY_EVENTS: ReplayEvent[] = [
+  { t: "00:00.000", type: "auth", label: "auth.verify", detail: "agent_id=support-bot-7 · key=aid_sk_7f3x...m9k2", status: "ok", hash: "9c4f...8a1e" },
+  { t: "00:00.012", type: "policy", label: "policy.evaluate", detail: "scope=customer.read, tools=[search, summarize]", status: "ok", hash: "b2d9...4e7c" },
+  { t: "00:00.087", type: "tool", label: "tool.call → search_kb", detail: "query='refund policy 90-day'", status: "ok", hash: "31fa...c0d2" },
+  { t: "00:00.142", type: "tool", label: "tool.call → llm.generate", detail: "model=claude-opus-4-7 · tokens=1,847", status: "ok", hash: "5e88...91b3" },
+  { t: "00:00.203", type: "tool", label: "tool.call → send_email", detail: "to=customer@acme.co · template=refund_approval", status: "blocked", hash: "a743...d10f" },
+  { t: "00:00.204", type: "block", label: "policy.deny", detail: "reason=human_approval_required · risk=financial", status: "blocked", hash: "f9c2...7b48" },
+  { t: "00:00.210", type: "sign", label: "session.attest", detail: "DSSE + ECDSA-P256 · key=kms-prod-2 · chain_root verified", status: "ok", hash: "0d4b...3eaa" },
+];
+
+function IncidentReplayDemo() {
+  const [step, setStep] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const timerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!playing) return;
+    timerRef.current = window.setTimeout(() => {
+      setStep((s) => {
+        if (s >= REPLAY_EVENTS.length - 1) {
+          setPlaying(false);
+          return s;
+        }
+        return s + 1;
+      });
+    }, 750);
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
+  }, [playing, step]);
+
+  const current = REPLAY_EVENTS[step];
+  const progress = ((step + 1) / REPLAY_EVENTS.length) * 100;
+
+  return (
+    <div className="rounded-2xl border border-[rgba(216,231,242,0.08)] bg-[rgb(16,19,28)]/60 overflow-hidden max-w-5xl mx-auto">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-[rgba(216,231,242,0.07)] bg-[rgb(8,11,18)]">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+            <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+          </div>
+          <span className="text-xs text-[rgba(213,219,230,0.5)] font-mono">incident #1847 · session sx_8f2a</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-[rgba(213,219,230,0.4)] font-mono hidden sm:inline">{current.t}</span>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-red-500/15 text-red-400/80 font-medium uppercase tracking-wider">Blocked</span>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-[1fr_320px]">
+        {/* Timeline */}
+        <div className="p-5 md:p-6 border-b md:border-b-0 md:border-r border-[rgba(216,231,242,0.07)]">
+          <div className="space-y-2">
+            {REPLAY_EVENTS.map((ev, i) => {
+              const isActive = i === step;
+              const isPast = i < step;
+              return (
+                <button
+                  key={ev.t}
+                  onClick={() => { setPlaying(false); setStep(i); }}
+                  className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                    isActive
+                      ? "bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/30"
+                      : isPast
+                        ? "border border-transparent opacity-70 hover:opacity-100"
+                        : "border border-transparent opacity-35 hover:opacity-70"
+                  }`}
+                >
+                  <span className="text-[10px] font-mono text-[rgba(213,219,230,0.4)] w-16 shrink-0">{ev.t}</span>
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${
+                    ev.status === "blocked" ? "bg-red-400" : "bg-green-400/80"
+                  }`} />
+                  <span className={`text-sm font-mono shrink-0 ${
+                    isActive ? "text-[rgb(166,218,255)]" : "text-[rgba(213,219,230,0.7)]"
+                  }`}>{ev.label}</span>
+                  <span className="text-xs text-[rgba(213,219,230,0.35)] truncate ml-auto hidden md:inline">
+                    {ev.hash}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Scrubber */}
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              onClick={() => setPlaying((p) => !p)}
+              className="w-9 h-9 rounded-full bg-[rgb(166,218,255)] text-[rgb(4,7,13)] flex items-center justify-center hover:bg-[rgb(166,218,255)]/85 transition-colors shrink-0"
+              aria-label={playing ? "Pause replay" : "Play replay"}
+            >
+              {playing ? (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+              )}
+            </button>
+            <button
+              onClick={() => { setPlaying(false); setStep(0); }}
+              className="text-xs text-[rgba(213,219,230,0.5)] hover:text-white transition-colors"
+              aria-label="Restart replay"
+            >
+              ⟲ Restart
+            </button>
+            <div className="flex-1 h-1.5 rounded-full bg-[rgba(216,231,242,0.08)] overflow-hidden">
+              <div
+                className="h-full bg-[rgb(166,218,255)]/70 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <span className="text-xs font-mono text-[rgba(213,219,230,0.5)] tabular-nums shrink-0">
+              {step + 1} / {REPLAY_EVENTS.length}
+            </span>
+          </div>
+        </div>
+
+        {/* Detail pane */}
+        <div className="p-5 md:p-6 bg-[rgb(8,11,18)]/60 text-xs font-mono space-y-3">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-[rgba(213,219,230,0.4)] mb-1">Event</div>
+            <div className="text-[rgb(166,218,255)]">{current.label}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-[rgba(213,219,230,0.4)] mb-1">Timestamp</div>
+            <div className="text-[rgba(213,219,230,0.75)]">{current.t}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-[rgba(213,219,230,0.4)] mb-1">Detail</div>
+            <div className="text-[rgba(213,219,230,0.75)] break-words">{current.detail}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-[rgba(213,219,230,0.4)] mb-1">Chain hash</div>
+            <div className="text-[rgba(213,219,230,0.75)]">{current.hash}</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-[rgba(213,219,230,0.4)] mb-1">Verified</div>
+            <div className="text-green-400/80 flex items-center gap-1.5">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13.3 4.3L6 11.6 2.7 8.3" /></svg>
+              HMAC chain · offline
+            </div>
+          </div>
+          <div className="pt-2 border-t border-[rgba(216,231,242,0.07)]">
+            <div className="text-[10px] uppercase tracking-wider text-[rgba(213,219,230,0.4)] mb-1.5">Export</div>
+            <div className="text-[rgba(213,219,230,0.55)] leading-relaxed">
+              <span className="text-[rgba(213,219,230,0.4)]">$</span> ai-identity verify \<br />
+              <span className="ml-3">--bundle sx_8f2a.dsse</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer caption */}
+      <div className="px-5 py-3 border-t border-[rgba(216,231,242,0.07)] bg-[rgb(8,11,18)]/50 flex items-center justify-between flex-wrap gap-2">
+        <p className="text-xs text-[rgba(213,219,230,0.5)]">
+          Hash-chained · DSSE signed · verifies without contacting our servers
+        </p>
+        <a href="/forensics" className="text-xs text-[rgb(166,218,255)] hover:underline">
+          How verification works →
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default function HomeContent() {
   return (
     <div className="flex flex-col items-center">
@@ -150,7 +325,7 @@ export default function HomeContent() {
             </div>
 
             <div className="flex justify-center mb-8">
-              <BadgeFramerComponent.Responsive content="IDENTITY FOR AI AGENTS" />
+              <BadgeFramerComponent.Responsive content="AI AGENT FORENSICS" />
             </div>
 
             <h1
@@ -163,9 +338,9 @@ export default function HomeContent() {
                 color: "transparent",
                 letterSpacing: "-1.6px",
               }}
-              aria-label="Every AI Agent Deserves an Identity"
+              aria-label="Every AI Agent Leaves a Trace"
             >
-              Every AI Agent Deserves an{" "}
+              Every AI Agent Leaves a{" "}
               <span
                 className="font-['Instrument_Serif'] italic"
                 style={{
@@ -174,7 +349,7 @@ export default function HomeContent() {
                   filter: "drop-shadow(0 0 20px rgba(166,218,255,0.3))",
                 }}
               >
-                Identity
+                Trace
               </span>
             </h1>
 
@@ -182,29 +357,46 @@ export default function HomeContent() {
               className="text-lg md:text-xl max-w-2xl mx-auto mb-10"
               style={{ color: "rgba(213,219,230,0.7)", letterSpacing: "-0.32px" }}
             >
-              Secure identity, context-aware policy, and cryptographically-signed forensic evidence for every AI agent — verifiable offline, no vendor trust required.
+              Forensic-grade audit trails for autonomous AI. Replay any incident, prove every action, and hand auditors evidence that verifies offline — no vendor trust required.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <MainButtonFramerComponent.Responsive
-                title="Start Free Trial"
-                link="https://dashboard.ai-identity.co"
-                newTab={true}
+                title="Request Design Partner Access"
+                link="/contact?intent=design-partner"
+                newTab={false}
               />
               <a
-                href="/how-it-works"
-                className="px-6 py-3 rounded-lg border border-[rgba(216,231,242,0.12)] text-sm text-[rgba(230,235,245,0.8)] hover:text-white hover:border-[rgba(216,231,242,0.25)] transition-colors"
+                href="#replay-demo"
+                className="px-6 py-3 rounded-lg border border-[rgba(216,231,242,0.12)] text-sm text-[rgba(230,235,245,0.8)] hover:text-white hover:border-[rgba(216,231,242,0.25)] transition-colors inline-flex items-center gap-2"
               >
-                See How It Works
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                View Incident Replay Demo
               </a>
             </div>
 
+            {/* Honesty note + spec pointer */}
+            <p className="mt-6 text-xs text-[rgba(213,219,230,0.45)] max-w-xl mx-auto">
+              Available today: per-agent identity, HMAC-SHA256 hash-chained audit trail, DSSE + ECDSA-P256 signed session attestations, offline-verifiable evidence bundles.{" "}
+              <a href="/spec" className="text-[rgb(166,218,255)] hover:underline">Building toward full forensic replay — read the v1.0 reference spec →</a>
+            </p>
+
+            {/* Dev self-serve secondary link */}
+            <p className="mt-3 text-xs text-[rgba(213,219,230,0.35)]">
+              Building today?{" "}
+              <a href="https://dashboard.ai-identity.co" className="text-[rgba(213,219,230,0.6)] hover:text-[rgb(166,218,255)] underline underline-offset-2">
+                Start a free dev sandbox →
+              </a>
+            </p>
+
             {/* Design partner callout + compliance badges */}
-            <div className="mt-16 rounded-xl border border-[rgba(216,231,242,0.07)] bg-white/[0.02] px-6 py-4 max-w-xl mx-auto">
+            <div className="mt-12 rounded-xl border border-[rgba(216,231,242,0.07)] bg-white/[0.02] px-6 py-4 max-w-xl mx-auto">
               <p className="text-sm text-[rgba(213,219,230,0.55)] text-center">
                 AI Identity is in early launch and{" "}
-                <a href="/contact" className="text-[rgb(166,218,255)] hover:underline">actively seeking design partners</a>.
-                Get early access, shape the roadmap, and lock in preferred pricing.
+                <a href="/contact?intent=design-partner" className="text-[rgb(166,218,255)] hover:underline">actively seeking design partners</a>.
+                Get early access, shape the v1.0 spec, and lock in preferred pricing.
               </p>
             </div>
             <div className="mt-6 flex flex-wrap justify-center gap-6 text-xs uppercase tracking-wider font-medium">
@@ -229,6 +421,180 @@ export default function HomeContent() {
 
       {/* ── Backed by — MongoDB for Startups (powers the Mandate Service) ── */}
       <MongoDBForStartupsStrip />
+
+      {/* ── The Accountability Gap ── */}
+      <section className="w-full py-20 px-6 border-b border-[rgba(216,231,242,0.05)] bg-[rgb(8,11,18)]">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-12">
+            <div className="flex justify-center mb-4">
+              <span className="inline-block px-3 py-1 text-xs font-semibold text-[rgb(255,170,140)] bg-[rgb(255,170,140)]/10 border border-[rgb(255,170,140)]/25 rounded-full uppercase tracking-wider">
+                The Accountability Gap
+              </span>
+            </div>
+            <h2 className="text-3xl md:text-[44px] font-medium text-white mb-4 leading-[1.2]">
+              AI Systems Create an{" "}
+              <span className="font-['Instrument_Serif'] italic text-[rgb(255,170,140)]">
+                Accountability Gap
+              </span>
+            </h2>
+            <p className="text-[rgba(213,219,230,0.65)] max-w-2xl mx-auto">
+              Agents now act on behalf of your business — making decisions, calling tools, moving data, spending money. The audit layer wasn&apos;t built for this.
+            </p>
+          </div>
+
+          {/* 4 tension cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+            {[
+              {
+                icon: (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(255,170,140)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                  </svg>
+                ),
+                title: "Autonomous Actions",
+                desc: "Agents act in milliseconds. Humans review in days. The decision boundary has moved — your audit boundary hasn't.",
+              },
+              {
+                icon: (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(255,170,140)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                  </svg>
+                ),
+                title: "Weak Attribution",
+                desc: "Shared API keys. Service accounts. \"The chatbot did it.\" When something breaks, you can't prove which agent, which prompt, which decision.",
+              },
+              {
+                icon: (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(255,170,140)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="9" y1="15" x2="15" y2="15" />
+                  </svg>
+                ),
+                title: "Unverifiable Logs",
+                desc: "Mutable application logs. Vendor-controlled audit trails. \"Trust us — we logged it.\" An auditor can't verify what they can't independently check.",
+              },
+              {
+                icon: (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(255,170,140)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                ),
+                title: "Audit Exposure",
+                desc: "EU AI Act. SOC 2. NIST AI RMF. ISO 42001. They're arriving with teeth — and you have no evidence layer to satisfy them.",
+              },
+            ].map((card) => (
+              <div
+                key={card.title}
+                className="rounded-2xl border border-[rgba(255,170,140,0.12)] bg-[rgb(16,12,10)]/40 p-6 hover:border-[rgba(255,170,140,0.3)] hover:shadow-[0_0_30px_rgba(255,170,140,0.05)] transition-all duration-300"
+              >
+                <div className="w-10 h-10 rounded-lg bg-[rgb(255,170,140)]/10 border border-[rgb(255,170,140)]/15 flex items-center justify-center mb-4">
+                  {card.icon}
+                </div>
+                <h3 className="text-base font-medium text-white mb-2">{card.title}</h3>
+                <p className="text-sm text-[rgba(213,219,230,0.6)] leading-relaxed">{card.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* The Gap graph */}
+          <div className="rounded-2xl border border-[rgba(216,231,242,0.07)] bg-[rgb(16,19,28)]/50 p-6 md:p-8 max-w-4xl mx-auto">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div>
+                <h4 className="text-sm font-medium text-white">The widening gap</h4>
+                <p className="text-xs text-[rgba(213,219,230,0.5)]">Autonomous agent actions vs. traditional audit coverage</p>
+              </div>
+              <div className="flex items-center gap-4 text-xs">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-0.5 bg-[rgb(255,170,140)]" />
+                  <span className="text-[rgba(213,219,230,0.65)]">Agent actions / month</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-0.5 bg-[rgba(213,219,230,0.4)] border-dashed" style={{ borderTop: "1px dashed rgba(213,219,230,0.4)", background: "transparent" }} />
+                  <span className="text-[rgba(213,219,230,0.5)]">Human-reviewable</span>
+                </span>
+              </div>
+            </div>
+            <svg viewBox="0 0 600 220" className="w-full h-auto" role="img" aria-label="Chart showing exponential growth in agent actions outpacing flat human audit coverage">
+              {/* axes */}
+              <line x1="40" y1="180" x2="580" y2="180" stroke="rgba(213,219,230,0.15)" strokeWidth="1" />
+              <line x1="40" y1="20" x2="40" y2="180" stroke="rgba(213,219,230,0.15)" strokeWidth="1" />
+              {/* gridlines */}
+              {[40, 80, 120, 160].map((y) => (
+                <line key={y} x1="40" y1={y} x2="580" y2={y} stroke="rgba(213,219,230,0.05)" strokeWidth="1" />
+              ))}
+              {/* x labels (quarters) */}
+              {["Q1", "Q2", "Q3", "Q4", "Q1 '26", "Q2 '26"].map((q, i) => (
+                <text key={`xq-${i}`} x={40 + i * 108} y={200} fill="rgba(213,219,230,0.4)" fontSize="10" textAnchor="middle">{q}</text>
+              ))}
+              {/* y label */}
+              <text x="20" y="100" fill="rgba(213,219,230,0.4)" fontSize="10" textAnchor="middle" transform="rotate(-90 20 100)">Actions</text>
+
+              {/* The Gap shaded area */}
+              <path
+                d="M40,160 Q140,150 250,120 T580,30 L580,160 Z"
+                fill="url(#gapGradient)"
+                opacity="0.18"
+              />
+              <defs>
+                <linearGradient id="gapGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="rgb(255,170,140)" />
+                  <stop offset="100%" stopColor="rgb(255,170,140)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+
+              {/* Agent actions exponential curve */}
+              <path
+                d="M40,160 Q140,150 250,120 T580,30"
+                stroke="rgb(255,170,140)"
+                strokeWidth="2.5"
+                fill="none"
+              />
+
+              {/* Human-review flat dashed line */}
+              <line x1="40" y1="160" x2="580" y2="158" stroke="rgba(213,219,230,0.55)" strokeWidth="1.5" strokeDasharray="4 4" />
+
+              {/* Gap callout */}
+              <line x1="500" y1="55" x2="500" y2="158" stroke="rgba(255,170,140,0.5)" strokeWidth="1" strokeDasharray="2 2" />
+              <text x="510" y="100" fill="rgb(255,170,140)" fontSize="11" fontWeight="600">THE GAP</text>
+              <text x="510" y="115" fill="rgba(213,219,230,0.55)" fontSize="9">unaudited agent actions</text>
+            </svg>
+            <p className="text-xs text-[rgba(213,219,230,0.5)] text-center mt-4">
+              You can&apos;t hire your way out of this. You need an evidence layer that scales with the agents — not the auditors.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Inline Incident Replay Demo (scrubbable) ── */}
+      <section id="replay-demo" className="w-full py-20 px-6 border-b border-[rgba(216,231,242,0.05)]">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-10">
+            <div className="flex justify-center mb-4">
+              <BadgeFramerComponent.Responsive content="INCIDENT REPLAY" />
+            </div>
+            <h2 className="text-3xl md:text-[44px] font-medium text-white mb-4 leading-[1.2]">
+              Replay Any{" "}
+              <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
+                Agent Incident
+              </span>
+            </h2>
+            <p className="text-[rgba(213,219,230,0.65)] max-w-2xl mx-auto">
+              When something goes wrong, you don&apos;t need to guess. Scrub through the exact sequence — auth, policy, tool calls, blocks — and produce signed evidence regulators can verify offline.
+            </p>
+          </div>
+
+          <IncidentReplayDemo />
+
+          <div className="text-center mt-8">
+            <Link
+              href="/forensics"
+              className="inline-flex items-center gap-2 text-sm text-[rgb(166,218,255)] hover:underline"
+            >
+              Read the technical deep-dive on forensic audit trails
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* ── Works Across Agent Runtimes ── */}
       <section className="w-full py-14 px-6 border-b border-[rgba(216,231,242,0.05)]">
@@ -687,32 +1053,25 @@ export default function HomeContent() {
               </p>
             </div>
 
-            {/* Action Replay */}
+            {/* Offline Verification (replaces redundant Action Replay — the live demo above covers that) */}
             <div className="group rounded-2xl border border-[rgba(216,231,242,0.07)] bg-[rgb(16,19,28)]/50 p-6 hover:border-[rgba(166,218,255,0.2)] transition-all duration-300 hover:shadow-[0_0_30px_rgba(166,218,255,0.05)]">
-              <div className="rounded-lg bg-[rgb(4,7,13)] border border-[rgba(216,231,242,0.07)] p-4 mb-6 text-xs overflow-hidden">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[rgba(213,219,230,0.4)] font-medium">Session Replay</span>
-                  <span className="text-[rgb(166,218,255)] font-mono">▶ 4/7 steps</span>
+              <div className="rounded-lg bg-[rgb(4,7,13)] border border-[rgba(216,231,242,0.07)] p-4 mb-6 text-xs font-mono overflow-hidden">
+                <div className="flex items-center gap-2 mb-3">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgb(166,218,255)" strokeWidth="1.5"><path d="M9 12l2 2 4-4" /><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" /></svg>
+                  <span className="text-[rgba(213,219,230,0.4)]">verify CLI</span>
                 </div>
-                {/* Timeline */}
-                <div className="relative ml-3 border-l border-[rgba(216,231,242,0.1)] space-y-3 pl-4">
-                  {[
-                    { action: "auth.verify", time: "0ms", status: "ok" },
-                    { action: "policy.check", time: "12ms", status: "ok" },
-                    { action: "tool.call → search_api", time: "145ms", status: "ok" },
-                    { action: "tool.call → send_email", time: "203ms", status: "blocked" },
-                  ].map((ev) => (
-                    <div key={ev.action} className="relative flex items-center gap-2">
-                      <div className={`absolute -left-[21px] w-2.5 h-2.5 rounded-full border-2 border-[rgb(4,7,13)] ${ev.status === "ok" ? "bg-green-400/70" : "bg-red-400/70"}`} />
-                      <span className="text-[rgba(213,219,230,0.5)]">{ev.action}</span>
-                      <span className="text-[rgba(213,219,230,0.25)] ml-auto font-mono">{ev.time}</span>
-                    </div>
-                  ))}
+                <div className="space-y-1.5">
+                  <div><span className="text-[rgba(213,219,230,0.4)]">$</span> <span className="text-[rgb(166,218,255)]">ai-identity</span> <span className="text-[rgba(213,219,230,0.7)]">verify --bundle sx_8f2a.dsse</span></div>
+                  <div className="text-[rgba(213,219,230,0.5)]">Fetching JWKS from issuer...</div>
+                  <div className="text-green-400/80">✓ DSSE envelope: 1 signature, ECDSA-P256</div>
+                  <div className="text-green-400/80">✓ HMAC chain: 7/7 events linked</div>
+                  <div className="text-green-400/80">✓ Chain root matches attestation</div>
+                  <div className="text-white mt-1">VERIFIED — no vendor trust required</div>
                 </div>
               </div>
-              <h3 className="text-lg font-medium text-white mb-2">Action Replay</h3>
+              <h3 className="text-lg font-medium text-white mb-2">Offline Verification</h3>
               <p className="text-sm text-[rgba(213,219,230,0.55)] leading-relaxed">
-                Step through any agent session in order. See the exact sequence of auth, policy checks, tool calls, and where it was blocked.
+                Auditors verify evidence with an open-source CLI. No API key. No network call to us. The math is the trust.
               </p>
             </div>
 
@@ -891,30 +1250,39 @@ export default function HomeContent() {
       <section className="w-full py-24 px-6">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl md:text-[44px] font-medium text-white leading-[1.2] mb-4">
-            Ready to Secure Your{" "}
+            Close Your{" "}
             <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
-              AI Agents
+              Accountability Gap
             </span>
-            ?
           </h2>
           <p className="text-[rgba(213,219,230,0.6)] max-w-xl mx-auto mb-8">
-            Start free with 5 agents. No credit card required. Go from zero to governed AI in under 15 minutes.
+            We&apos;re bringing on a small cohort of design partners to validate AI Forensics in production. Get hands-on with the platform, help shape the v1.0 spec, and lock in preferred pricing.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-6">
             <a
-              href="https://dashboard.ai-identity.co"
+              href="/contact?intent=design-partner"
               className="px-8 py-3.5 rounded-lg bg-[rgb(166,218,255)] text-[rgb(4,7,13)] text-sm font-semibold hover:bg-[rgb(166,218,255)]/80 transition-colors"
             >
-              Start Free Trial
+              Request Design Partner Access
             </a>
             <a
-              href="/contact"
-              className="px-8 py-3.5 rounded-lg border border-[rgba(216,231,242,0.12)] text-sm text-[rgba(213,219,230,0.8)] hover:text-white hover:border-[rgb(166,218,255)]/30 transition-colors"
+              href="#replay-demo"
+              className="px-8 py-3.5 rounded-lg border border-[rgba(216,231,242,0.12)] text-sm text-[rgba(213,219,230,0.8)] hover:text-white hover:border-[rgb(166,218,255)]/30 transition-colors inline-flex items-center gap-2"
             >
-              Contact Sales
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              View Incident Replay Demo
             </a>
           </div>
+
+          <p className="text-xs text-[rgba(213,219,230,0.4)] mb-12">
+            Building today?{" "}
+            <a href="https://dashboard.ai-identity.co" className="text-[rgba(213,219,230,0.6)] hover:text-[rgb(166,218,255)] underline underline-offset-2">
+              Spin up a free dev sandbox →
+            </a>
+          </p>
 
           {/* Social + Contact */}
           <div className="flex items-center justify-center gap-6 mb-6">

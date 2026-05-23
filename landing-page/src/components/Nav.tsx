@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 
 const navLinks = [
-  { label: "Home", path: "/" },
+  { label: "Forensics", path: "/forensics" },
   { label: "Product", path: "/product" },
   { label: "How It Works", path: "/how-it-works" },
   { label: "Security", path: "/security" },
@@ -148,12 +148,12 @@ export default function Nav() {
 
         {/* CTA + Mobile Toggle */}
         <div className="flex items-center gap-4">
-          <a
-            href="https://dashboard.ai-identity.co"
+          <Link
+            href="/contact?intent=design-partner"
             className="hidden md:inline-flex px-4 py-2 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 text-[rgb(166,218,255)] text-sm font-medium hover:bg-[rgb(166,218,255)]/20 transition-colors"
           >
-            Get Started
-          </a>
+            Design Partner
+          </Link>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="md:hidden text-white p-2"
@@ -223,12 +223,12 @@ export default function Nav() {
           >
             Dashboard
           </a>
-          <a
-            href="https://dashboard.ai-identity.co"
+          <Link
+            href="/contact?intent=design-partner"
             className="block w-full text-center px-4 py-2 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 text-[rgb(166,218,255)] text-sm font-medium mt-2"
           >
-            Get Started
-          </a>
+            Design Partner
+          </Link>
         </div>
       )}
     </nav>
