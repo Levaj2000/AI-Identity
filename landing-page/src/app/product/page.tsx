@@ -13,7 +13,6 @@ export const metadata: Metadata = generatePageMetadata({
 
 const DEMO_URL = "https://dashboard.ai-identity.co/demo";
 const DASHBOARD_URL = "https://dashboard.ai-identity.co";
-const DOCS_URL = "/docs";
 
 type Step = {
   n: string;
