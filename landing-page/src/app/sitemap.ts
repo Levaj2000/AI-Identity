@@ -27,8 +27,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/industries/finance`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/industries/finance/compliance-pack`, lastModified: now, changeFrequency: "monthly", priority: 0.85 },
     { url: `${BASE_URL}/industries/healthcare`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
-    // Products / probes
-    { url: `${BASE_URL}/ai-forensics`, lastModified: now, changeFrequency: "monthly", priority: 0.85 },
     // Comparisons
     { url: `${BASE_URL}/vs/opal`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/vs/valence`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },

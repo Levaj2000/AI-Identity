@@ -3,17 +3,39 @@ import Link from "next/link";
 import { generatePageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "Zero-Trust Security for AI Agents",
+  title: "Security for AI Agents — the Forensic Evidence Layer",
   description:
-    "Enterprise-grade security for autonomous AI agents. Fail-closed enforcement, AES-256 encrypted credential vault, tamper-evident audit trails, and tenant isolation.",
+    "You can't secure what you can't audit. AI Identity is the cryptographic evidence layer for autonomous AI — tamper-evident audit chains, signed attestations, offline verification, and tenant isolation.",
   path: "/security",
 });
 
 const securityFeatures = [
   {
+    title: "Tamper-Evident Audit Chain",
+    description:
+      "Every agent action is cryptographically chained using HMAC-SHA256. Each entry includes the hash of the previous entry, creating an unbroken chain. Alter one record and the chain breaks — making tampering detectable and provable.",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+    ),
+  },
+  {
+    title: "Signed Session Attestations",
+    description:
+      "Each session is sealed with a DSSE envelope signed by ECDSA P-256 keys held in cloud KMS — the private key never leaves the HSM. Auditors fetch the public JWKS and verify offline. No vendor trust required.",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 12l2 2 4-4" />
+        <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+      </svg>
+    ),
+  },
+  {
     title: "Zero-Trust Architecture",
     description:
-      "Every request is authenticated and authorized before processing. No implicit trust, no shortcuts. The gateway validates agent identity, checks policy, and logs the result before any request reaches an LLM provider.",
+      "Every request is authenticated and authorized before processing. No implicit trust, no shortcuts. The gateway validates agent identity, checks policy, and writes the audit record before any request reaches an LLM provider.",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -42,38 +64,15 @@ const securityFeatures = [
     ),
   },
   {
-    title: "Tamper-Evident Audit Trail",
-    description:
-      "Every audit record is cryptographically chained using HMAC-SHA256. Each entry includes the hash of the previous entry, creating an unbroken chain. Alter one record and the chain breaks — making tampering detectable and provable.",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-      </svg>
-    ),
-  },
-  {
     title: "Tenant Isolation",
     description:
-      "Row-level security at the database layer ensures complete data isolation between tenants. One customer's agents, policies, keys, and audit logs can never leak into another's — even in the event of an application-level vulnerability.",
+      "PostgreSQL Row-Level Security (FORCE) ensures complete data isolation between organizations. One customer's agents, policies, keys, and audit logs can never leak into another's — even with an application-level vulnerability.",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
         <circle cx="9" cy="7" r="4" />
         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-      </svg>
-    ),
-  },
-  {
-    title: "Key Separation",
-    description:
-      "Organization keys (for management) and agent keys (for LLM requests) are fully separated. Compromising an agent's runtime key does not grant access to management operations or other agents.",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="12 2 2 7 12 12 22 7 12 2" />
-        <polyline points="2 17 12 22 22 17" />
-        <polyline points="2 12 12 17 22 12" />
       </svg>
     ),
   },
@@ -107,11 +106,43 @@ export default function Security() {
             <span className="text-[rgb(166,218,255)] text-sm font-medium">Security</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
-            Enterprise-Grade <span className="text-[rgb(166,218,255)]">Security</span> for AI Agents
+            You Can&apos;t Secure What You Can&apos;t{" "}
+            <span className="text-[rgb(166,218,255)]">Audit</span>
           </h1>
-          <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
-            AI Identity is built with security as the foundation, not an afterthought. Zero-trust architecture, encrypted credential management, and tamper-evident audit trails — designed for regulated industries.
+          <p className="text-lg text-gray-400 max-w-[680px] mx-auto leading-relaxed">
+            Runtime security tells you an agent <em>can</em> do something. Forensic evidence tells you what it actually <em>did</em> — and proves it cryptographically. AI Identity is the evidence layer for AI security: tamper-evident audit chains, signed attestations, offline verification.
           </p>
+        </div>
+      </section>
+
+      {/* Where AI Identity fits */}
+      <section className="pb-12 px-6 md:px-12">
+        <div className="max-w-[900px] mx-auto">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 md:p-8">
+            <h2 className="text-base font-semibold text-white mb-4 text-center">
+              Where AI Identity fits in your security stack
+            </h2>
+            <div className="grid sm:grid-cols-3 gap-4 text-sm">
+              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">Runtime security</div>
+                <p className="text-gray-300 font-medium mb-1">Prevention layer</p>
+                <p className="text-xs text-gray-500 leading-relaxed">CASB, DLP, prompt injection guards, jailbreak detection. Stops bad actions before they happen.</p>
+              </div>
+              <div className="rounded-xl border border-[rgb(166,218,255)]/30 bg-[rgb(166,218,255)]/[0.05] p-4">
+                <div className="text-xs uppercase tracking-wider text-[rgb(166,218,255)] mb-2">AI Identity</div>
+                <p className="text-white font-medium mb-1">Evidence layer</p>
+                <p className="text-xs text-gray-300 leading-relaxed">Cryptographic audit chain + signed attestations. Proves what every agent did, offline-verifiable.</p>
+              </div>
+              <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+                <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">SIEM / SOC</div>
+                <p className="text-gray-300 font-medium mb-1">Response layer</p>
+                <p className="text-xs text-gray-500 leading-relaxed">Splunk, Datadog, Chronicle. Correlates events, alerts on incidents, drives investigation workflows.</p>
+              </div>
+            </div>
+            <p className="text-xs text-center text-gray-500 mt-5">
+              We don&apos;t replace your runtime controls or your SIEM. We give them an unforgeable source of truth to act on.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -155,17 +186,21 @@ export default function Security() {
       <section className="pb-24 px-6 md:px-12">
         <div className="max-w-[800px] mx-auto">
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Want the full security deep-dive?</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">See the evidence layer in action</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
-              Read our architecture documentation or schedule a call with our team to discuss how AI Identity fits your security requirements.
+              Walk through a live incident replay, read the architecture, or talk to us about the design partner cohort.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
-              <Link href="/architecture" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
-                View Architecture
+              <Link href="/contact?intent=design-partner" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
+                Request Design Partner Access
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
               </Link>
-              <Link href="/contact" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
-                Schedule a Call
+              <Link href="/#replay-demo" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                View Incident Replay Demo
+              </Link>
+              <Link href="/architecture" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
+                View Architecture
               </Link>
             </div>
           </div>

@@ -8,7 +8,7 @@ import { MongoDBForStartupsCompact } from "./MongoDBForStartupsBadge";
 const productLinks = [
   { label: "Product Walkthrough", path: "/product" },
   { label: "How It Works", path: "/how-it-works" },
-  { label: "AI Forensics", path: "/ai-forensics" },
+  { label: "AI Forensics", path: "/forensics" },
   { label: "Security", path: "/security" },
   { label: "Integrations", path: "/integrations" },
   { label: "Pricing", path: "/contact" },
