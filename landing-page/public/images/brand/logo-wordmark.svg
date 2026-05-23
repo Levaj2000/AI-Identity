@@ -12,6 +12,11 @@
       <stop offset="0.6" stop-color="#1E5694"/>
       <stop offset="1" stop-color="#10325F"/>
     </linearGradient>
+    <linearGradient id="aiid-letter-bright-wm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A8D4F2"/>
+      <stop offset="0.6" stop-color="#5BA0DC"/>
+      <stop offset="1" stop-color="#3A86C8"/>
+    </linearGradient>
   </defs>
 
   <!-- Shield mark (scaled inline) -->
@@ -36,26 +41,25 @@
     />
     <path
       d="M62 156
-         L90 60
-         L110 60
-         L138 156
-         L122 156
-         L115 130
-         L85 130
-         L78 156 Z
-         M89 116
-         L111 116
-         L100 78 Z"
+         L88 60
+         L106 60
+         L132 156
+         L117 156
+         L110 130
+         L84 130
+         L77 156 Z
+         M87 116
+         L107 116
+         L97 78 Z"
       fill="url(#aiid-letter-wm)"
       fill-rule="evenodd"
     />
-    <rect x="146" y="92" width="12" height="64" rx="1.5" fill="url(#aiid-letter-wm)"/>
-    <circle cx="152" cy="80" r="6.5" fill="url(#aiid-letter-wm)"/>
+    <rect x="141" y="92" width="11" height="64" rx="1.5" fill="url(#aiid-letter-bright-wm)"/>
+    <circle cx="146.5" cy="80" r="6.5" fill="url(#aiid-letter-bright-wm)"/>
   </g>
 
   <!-- Wordmark: "AI IDENTITY" + tagline. Uses currentColor so it inherits from parent. -->
   <g fill="currentColor" style="color: #1B2D4E;">
-    <!-- AI IDENTITY: tall, slightly condensed sans-serif tracking -->
     <text x="200" y="125" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
           font-weight="700" font-size="74" letter-spacing="1">AI IDENTITY</text>
     <text x="200" y="170" font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
