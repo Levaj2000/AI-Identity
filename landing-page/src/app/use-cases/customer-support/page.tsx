@@ -3,8 +3,8 @@ import { generatePageMetadata } from "@/lib/metadata";
 import Link from "next/link";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "AI Agent Identity for Customer Support",
-  description: "Secure and govern AI agents in customer support. Per-agent credentials, scoped permissions, and audit trails for support automation.",
+  title: "AI Forensics for Customer Support Agents",
+  description: "Forensic-grade audit trails for AI support agents. Replay any customer interaction, prove what the agent did, satisfy CCPA/GDPR auditors offline.",
   path: "/use-cases/customer-support",
 });
 
@@ -28,23 +28,23 @@ const challenges = [
 
 const solutions = [
   {
+    title: "Forensic Replay of Every Conversation",
+    description: "HMAC-chained logs + DSSE-signed session attestations capture every agent action. When a customer disputes a chat, scrub through the exact sequence and produce signed evidence regulators verify offline.",
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>,
+  },
+  {
     title: "Per-Agent Identity",
-    description: "Every support agent gets its own cryptographic identity and scoped API key. Revoke one without affecting others.",
+    description: "Every support agent gets its own cryptographic identity and scoped API key. When something goes wrong the audit trail attributes back to the responsible agent, not a shared service account.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>,
   },
   {
-    title: "Policy Enforcement",
-    description: "Define rules that restrict PII-containing endpoints. The gateway blocks violations before they reach the model provider.",
+    title: "Policy Enforcement at the Edge",
+    description: "Restrict PII-containing endpoints, tool calls, and topics. The gateway blocks violations before they reach the model provider — and writes the block to the audit chain.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
   },
   {
-    title: "Tamper-Proof Audit Logs",
-    description: "HMAC-chained logs capture every agent action. Prove exactly what happened in any customer dispute.",
-    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>,
-  },
-  {
-    title: "Compliance Reports",
-    description: "Automated assessments against SOC 2, NIST, and EU AI Act. Export evidence for auditors in one click.",
+    title: "Compliance Evidence Bundles",
+    description: "One-click export of audit chain + signed attestations + offline verify CLI. CCPA, GDPR Art. 30, SOC 2 CC7 — your auditor verifies the math without contacting our servers.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>,
   },
 ];
@@ -81,14 +81,11 @@ export default function UseCaseCustomerSupport() {
             <span className="text-[rgb(166,218,255)] text-sm font-medium">Use Case</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
-            Secure Your Customer{" "}
-            <span className="text-[rgb(166,218,255)]">Support</span>{" "}
-            Agents
+            Replay Any{" "}
+            <span className="text-[rgb(166,218,255)]">Support Conversation</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
-            AI-powered support agents handle sensitive customer data every day.
-            AI Identity ensures they stay within policy boundaries — with
-            cryptographic proof of every interaction.
+            AI support agents handle sensitive customer data every day. When something goes wrong, you need to prove what the agent actually did — not guess. AI Identity gives every interaction a tamper-evident, cryptographically-signed audit trail.
           </p>
         </div>
       </section>
@@ -157,17 +154,18 @@ export default function UseCaseCustomerSupport() {
       <section className="pb-24 px-6 md:px-12">
         <div className="max-w-[800px] mx-auto">
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready to secure your support agents?</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready to put forensics on your support stack?</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
-              Get started with AI Identity for free — up to 3 agents with full policy enforcement and audit logging.
+              We&apos;re onboarding design partners in support automation. Get hands-on access, shape the v1.0 spec, and lock in preferred pricing.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
-              <Link href="/pricing" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
-                Get Started Free
+              <Link href="/contact?intent=design-partner" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
+                Request Design Partner Access
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
               </Link>
-              <Link href="/docs" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
-                Read the Docs
+              <Link href="/#replay-demo" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                View Incident Replay Demo
               </Link>
             </div>
           </div>

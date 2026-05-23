@@ -3,8 +3,8 @@ import { generatePageMetadata } from "@/lib/metadata";
 import Link from "next/link";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "AI Agent Governance for Financial Services",
-  description: "Govern AI agents in financial services with per-agent identity, tamper-proof audit trails, and policy enforcement. Pre-mapped to EU AI Act, SOC 2, PCI-DSS, NYDFS, and SEC requirements.",
+  title: "AI Forensics for Financial Services",
+  description: "Forensic-grade audit trails for AI agents in finance. HMAC-chained logs + DSSE-signed attestations satisfy EU AI Act, SOC 2, PCI-DSS, NYDFS, and SEC examiners — verifiable offline.",
   path: "/industries/finance",
 });
 
@@ -85,13 +85,11 @@ export default function IndustryFinance() {
             <span className="text-[rgb(166,218,255)] text-sm font-medium">Financial Services</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight">
-            AI Agent Governance for{" "}
-            <span className="text-[rgb(166,218,255)]">Financial Services</span>
+            Forensic Evidence for{" "}
+            <span className="text-[rgb(166,218,255)]">Financial AI</span>
           </h1>
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
-            Financial regulators demand proof of oversight for every AI-driven decision.
-            AI Identity delivers per-agent identity, tamper-proof audit trails, and
-            policy enforcement built for the most regulated industry on earth.
+            Financial regulators want proof of oversight for every AI-driven decision — not a promise. AI Identity gives every trading, lending, and compliance agent a cryptographic, tamper-evident audit trail your examiner can verify offline. Built for the most regulated industry on earth.
           </p>
         </div>
       </section>
@@ -190,22 +188,21 @@ export default function IndustryFinance() {
       <section className="pb-24 px-6 md:px-12">
         <div className="max-w-[800px] mx-auto">
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready to govern your financial AI agents?</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready for examiner-proof financial AI?</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
-              Start with AI Identity for free. Per-agent credentials, tamper-proof audit trails, and compliance dashboards pre-mapped to financial frameworks.
+              We&apos;re onboarding design partners in regulated finance. Get hands-on access to the forensic audit chain, shape the v1.0 spec, lock in preferred pricing.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
-              <a
-                href="https://dashboard.ai-identity.co"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/contact?intent=design-partner"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors"
               >
-                Get Started Free
+                Request Design Partner Access
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-              </a>
-              <Link href="/contact" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
-                Talk to Sales
+              </Link>
+              <Link href="/#replay-demo" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                View Incident Replay Demo
               </Link>
             </div>
           </div>
