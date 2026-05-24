@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { GoogleForStartupsCompact } from "@/components/GoogleForStartupsBadge";
 
 // ── Tier Data ───────────────────────────────────────────────────────
@@ -17,7 +17,7 @@ const tiers = [
       "2,000 requests/mo",
       "1 team member",
       "Community support",
-      "Audit logs (30-day retention)",
+      "Forensic audit chain (30-day retention)",
       "1 upstream credential",
     ],
     cta: "Get Started Free",
@@ -34,7 +34,8 @@ const tiers = [
       "75,000 requests/mo",
       "Up to 5 team members",
       "Email support",
-      "Full audit logs (90-day retention)",
+      "Forensic audit chain (90-day retention)",
+      "Signed session attestations (DSSE + ECDSA P-256)",
       "10 upstream credentials",
       "Key rotation with grace periods",
       "Gateway policy enforcement",
@@ -54,7 +55,8 @@ const tiers = [
       "500,000 requests/mo",
       "Up to 25 team members",
       "Priority support",
-      "1-year audit retention",
+      "Forensic audit chain (1-year retention)",
+      "Signed session attestations + offline chain verification CLI",
       "50 upstream credentials",
       "Custom policies",
       "SAML / SCIM",
@@ -75,13 +77,14 @@ const tiers = [
       "1,500,000 requests/mo",
       "Up to 50 team members",
       "Priority support + dedicated hours",
-      "2-year audit retention",
+      "Forensic audit chain (2-year retention)",
+      "Signed session attestations + offline chain verification CLI",
+      "Forensic anomaly detection (latency, cost, deny clusters)",
       "100 upstream credentials",
       "Custom policies",
       "SAML / SCIM",
       "Team roles & permissions",
       "Agent-level role assignments",
-      "Anomaly detection",
       "99.5% uptime SLA",
     ],
     cta: "Start Business+ Trial",
@@ -98,10 +101,11 @@ const tiers = [
       "Unlimited requests",
       "Unlimited team members",
       "Dedicated support + SLA",
-      "Unlimited audit retention",
+      "Forensic audit chain (unlimited retention)",
+      "Forensic evidence export with chain-of-custody certificates",
+      "Forensic anomaly + shadow agent detection",
       "Unlimited credentials",
       "Full SSO & SAML",
-      "Compliance evidence export",
       "Team roles & agent assignments",
       "Human-in-the-loop review",
       "On-premise / VPC deployment",
@@ -123,30 +127,66 @@ interface ComparisonRow {
   enterprise: string | boolean;
 }
 
-const comparisonRows: ComparisonRow[] = [
-  { feature: "Agents", free: "5", pro: "50", business: "200", businessPlus: "500", enterprise: "Unlimited" },
-  { feature: "Requests / month", free: "2,000", pro: "75,000", business: "500,000", businessPlus: "1,500,000", enterprise: "Unlimited" },
-  { feature: "Upstream credentials", free: "1", pro: "10", business: "50", businessPlus: "100", enterprise: "Unlimited" },
-  { feature: "Audit log retention", free: "30 days", pro: "90 days", business: "1 year", businessPlus: "2 years", enterprise: "Unlimited" },
-  { feature: "Tamper-proof audit chain", free: true, pro: true, business: true, businessPlus: true, enterprise: true },
-  { feature: "Key rotation (zero-downtime)", free: false, pro: true, business: true, businessPlus: true, enterprise: true },
-  { feature: "Gateway policy enforcement", free: false, pro: true, business: true, businessPlus: true, enterprise: true },
-  { feature: "Custom policies", free: false, pro: false, business: true, businessPlus: true, enterprise: true },
-  { feature: "Team members", free: "1", pro: "5", business: "25", businessPlus: "50", enterprise: "Unlimited" },
-  { feature: "Team roles & permissions", free: false, pro: false, business: true, businessPlus: true, enterprise: true },
-  { feature: "Agent-level assignments", free: false, pro: false, business: true, businessPlus: true, enterprise: true },
-  { feature: "SSO", free: false, pro: "Basic", business: "SAML / SCIM", businessPlus: "SAML / SCIM", enterprise: "Full" },
-  { feature: "Priority support", free: false, pro: false, business: true, businessPlus: "Dedicated hours", enterprise: true },
-  { feature: "Anomaly detection", free: false, pro: false, business: false, businessPlus: true, enterprise: true },
-  { feature: "SLA guarantee", free: false, pro: false, business: false, businessPlus: "99.5%", enterprise: "Custom" },
-  { feature: "Compliance evidence export", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
-  { feature: "Human-in-the-loop review", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
-  { feature: "On-premise / VPC", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
+interface ComparisonGroup {
+  category: string;
+  rows: ComparisonRow[];
+}
+
+const comparisonGroups: ComparisonGroup[] = [
+  {
+    category: "Capacity",
+    rows: [
+      { feature: "Agents", free: "5", pro: "50", business: "200", businessPlus: "500", enterprise: "Unlimited" },
+      { feature: "Requests / month", free: "2,000", pro: "75,000", business: "500,000", businessPlus: "1,500,000", enterprise: "Unlimited" },
+      { feature: "Upstream credentials", free: "1", pro: "10", business: "50", businessPlus: "100", enterprise: "Unlimited" },
+    ],
+  },
+  {
+    category: "AI Forensics & Audit",
+    rows: [
+      { feature: "Hash-chained audit trail (HMAC-SHA256)", free: true, pro: true, business: true, businessPlus: true, enterprise: true },
+      { feature: "Audit retention", free: "30 days", pro: "90 days", business: "1 year", businessPlus: "2 years", enterprise: "Unlimited" },
+      { feature: "Signed session attestations (DSSE + ECDSA P-256)", free: false, pro: true, business: true, businessPlus: true, enterprise: true },
+      { feature: "Offline chain verification CLI", free: false, pro: false, business: true, businessPlus: true, enterprise: true },
+      { feature: "Forensic anomaly detection", free: false, pro: false, business: false, businessPlus: true, enterprise: true },
+      { feature: "Shadow agent detection", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
+      { feature: "Forensic evidence export + chain-of-custody", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
+    ],
+  },
+  {
+    category: "Identity & Policy Enforcement",
+    rows: [
+      { feature: "Key rotation (zero-downtime)", free: false, pro: true, business: true, businessPlus: true, enterprise: true },
+      { feature: "Gateway policy enforcement", free: false, pro: true, business: true, businessPlus: true, enterprise: true },
+      { feature: "Custom policies", free: false, pro: false, business: true, businessPlus: true, enterprise: true },
+      { feature: "Human-in-the-loop review", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
+    ],
+  },
+  {
+    category: "Team & Support",
+    rows: [
+      { feature: "Team members", free: "1", pro: "5", business: "25", businessPlus: "50", enterprise: "Unlimited" },
+      { feature: "Team roles & permissions", free: false, pro: false, business: true, businessPlus: true, enterprise: true },
+      { feature: "Agent-level assignments", free: false, pro: false, business: true, businessPlus: true, enterprise: true },
+      { feature: "SSO", free: false, pro: "Basic", business: "SAML / SCIM", businessPlus: "SAML / SCIM", enterprise: "Full" },
+      { feature: "Priority support", free: false, pro: false, business: true, businessPlus: "Dedicated hours", enterprise: true },
+      { feature: "SLA guarantee", free: false, pro: false, business: false, businessPlus: "99.5%", enterprise: "Custom" },
+      { feature: "On-premise / VPC", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
+    ],
+  },
 ];
 
 // ── FAQ Data ────────────────────────────────────────────────────────
 
 const faqs = [
+  {
+    q: "Is the forensic audit chain available on every tier?",
+    a: "Yes. Every plan from Free up ships the HMAC-SHA256 hash-chained audit trail \u2014 alter one record and the chain breaks. Tiers differ on retention window, signed session attestations (Pro+), offline chain verification CLI (Business+), and forensic evidence export with chain-of-custody (Enterprise). Full breakdown in the comparison grid above.",
+  },
+  {
+    q: "How do auditors verify the chain offline?",
+    a: "Each session closes with a DSSE envelope signed by an ECDSA P-256 key held in KMS hardware. Auditors fetch the envelope, fetch our public JWKS, and run the verification CLI \u2014 no calls back to our servers, no vendor trust required. Available on Business and above.",
+  },
   {
     q: "What counts as a request?",
     a: "Every call through the AI Identity gateway counts as one request \u2014 whether it's a policy check, credential retrieval, or proxied API call. Internal dashboard actions (listing agents, viewing audit logs) don't count.",
@@ -345,15 +385,20 @@ export default function PricingContent() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl md:text-[44px] font-medium text-white leading-[1.2]">
-            Simple,{" "}
+            AI Forensics Pricing —{" "}
             <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
               Transparent
             </span>{" "}
-            Pricing
+            at Every Tier
           </h2>
           <p className="mt-4 text-lg text-[rgba(213,219,230,0.6)] max-w-2xl mx-auto">
-            Start free. Scale securely as your agents go into production. Every
-            plan includes the tamper-proof audit chain and deny-by-default gateway.
+            Every plan ships the forensic audit chain — HMAC-SHA256 hash-chained,
+            DSSE + ECDSA P-256 signed session attestations, offline-verifiable by
+            auditors. Built on our open{" "}
+            <a href="/spec" className="text-[rgb(166,218,255)] hover:underline">
+              AI Forensics Audit Trail Spec (v1.0)
+            </a>
+            . Start free, scale as your agents go to production.
           </p>
 
           {/* Billing toggle */}
@@ -482,15 +527,24 @@ export default function PricingContent() {
                 </tr>
               </thead>
               <tbody>
-                {comparisonRows.map((row, i) => (
-                  <tr key={row.feature} className={`border-b border-[rgba(216,231,242,0.04)] ${i % 2 === 0 ? "bg-white/[0.02]" : ""}`}>
-                    <td className="py-3 px-4 text-sm text-[rgba(213,219,230,0.7)]">{row.feature}</td>
-                    <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.free} /></span></td>
-                    <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.pro} /></span></td>
-                    <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.business} /></span></td>
-                    <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.businessPlus} /></span></td>
-                    <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.enterprise} /></span></td>
-                  </tr>
+                {comparisonGroups.map((group) => (
+                  <Fragment key={group.category}>
+                    <tr className="border-b border-[rgba(216,231,242,0.07)]">
+                      <td colSpan={6} className="pt-6 pb-2 px-4 text-xs font-semibold uppercase tracking-wider text-[rgb(166,218,255)]">
+                        {group.category}
+                      </td>
+                    </tr>
+                    {group.rows.map((row, i) => (
+                      <tr key={row.feature} className={`border-b border-[rgba(216,231,242,0.04)] ${i % 2 === 0 ? "bg-white/[0.02]" : ""}`}>
+                        <td className="py-3 px-4 text-sm text-[rgba(213,219,230,0.7)]">{row.feature}</td>
+                        <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.free} /></span></td>
+                        <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.pro} /></span></td>
+                        <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.business} /></span></td>
+                        <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.businessPlus} /></span></td>
+                        <td className="py-3 px-4 text-center"><span className="inline-flex justify-center"><CellValue value={row.enterprise} /></span></td>
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -532,6 +586,23 @@ export default function PricingContent() {
               </div>
             ))}
           </div>
+        </motion.div>
+
+        {/* Spec attribution footer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mt-16 text-center"
+        >
+          <p className="text-xs text-[rgba(213,219,230,0.4)] max-w-2xl mx-auto leading-relaxed">
+            Every tier implements our open{" "}
+            <a href="/spec" className="text-[rgb(166,218,255)] hover:underline">
+              AI Forensics Audit Trail Specification (v1.0)
+            </a>
+            . Reference implementation is open source — review the spec on GitHub.
+          </p>
         </motion.div>
       </div>
     </div>
