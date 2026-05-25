@@ -102,6 +102,11 @@ const openQuestions = [
     title: "Cross-organization federation",
     body: "Agent identity assertions across trust domains depends on IETF AIP draft maturity. v1.0 assumes single-org trust domain; federation profile deferred to v1.2.",
   },
+  {
+    n: "9.4",
+    title: "Vendor-hosted agent attestation",
+    body: "Agents running entirely inside vendor-hosted runtimes (Perplexity hosted agents, OpenAI Custom GPTs, Anthropic Claude Projects, Manus, Devin) cannot be intercepted by the gateway-proxy pattern — calls originate inside vendor infrastructure with no operator-controlled injection point. v1.0 supports operator-assertion only (declarative registration, manual artifact logging). v1.1 will introduce Level 0 declarative conformance + a browser-side intercept profile; v1.2 tracks vendor-API attestation hooks. The most strategically important unanswered piece of v1.0.",
+  },
 ];
 
 export default function SpecContent() {
