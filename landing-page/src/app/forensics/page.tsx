@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { generatePageMetadata } from "@/lib/metadata";
 import { pillars, PILLARS_HEADING, PILLARS_SUBHEADING } from "@/data/pillars";
+import { ForensicsAgent } from "@/components/forensics-agent/ForensicsAgent";
 
 export const metadata: Metadata = generatePageMetadata({
   title: "AI Agent Forensics — Cryptographically Signed Evidence, Verified Offline",
@@ -267,6 +268,8 @@ export default function Forensics() {
           </div>
         </div>
       </section>
+
+      <ForensicsAgent />
     </>
   );
 }
