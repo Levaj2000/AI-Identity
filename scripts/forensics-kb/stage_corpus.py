@@ -19,7 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO_ROOT / "scripts" / "forensics-kb" / "out"
 DOCS_DIR = OUT_DIR / "docs"
 MARKETING_BASE = "https://www.ai-identity.co"
-GITHUB_BASE = "https://github.com/ai-identity/ai-identity/blob/main"
+GITHUB_BASE = "https://github.com/Levaj2000/AI-Identity/blob/main"
 
 
 def slugify(text: str) -> str:
