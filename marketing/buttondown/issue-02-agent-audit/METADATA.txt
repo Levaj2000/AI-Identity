@@ -1,0 +1,86 @@
+BUTTONDOWN ISSUE 02 — METADATA CHEAT SHEET
+============================================
+Copy each field directly into the matching Buttondown input.
+
+Note: "Exhibit A" is the newsletter brand. Individual issues use their
+own headlines and do NOT prefix with "Exhibit B/C/..." to avoid
+collision with the masthead.
+
+
+SUBJECT LINE (the email subject)
+-------------
+Option A:  We built an AI agent. Then we tried to audit it.   ← recommended
+Option B:  We deployed an agent. It can't tell you what it said yesterday.
+Option C:  Four questions every AI agent should answer. Ours only answers two.
+
+
+TITLE (web title — defaults to subject)
+-----
+We Built an Agent. Then We Tried to Audit It.
+
+
+DESCRIPTION / PREVIEW TEXT (inbox preview — keep under 90 chars)
+---------------------------
+Four questions every AI agent should answer. Ours only answers two.
+
+
+SLUG / URL
+----------
+exhibit-b-02-forensics-widget   →   exhibit-a.ai-identity.co/p/exhibit-b-02-forensics-widget
+
+
+COVER / FEATURED IMAGE
+----------------------
+Reuse the Exhibit A cover concept or generate a new one. If reusing:
+  /Users/jeffleva/Dev/AI-Identity/marketing/blog/deepseek-exhibit-a/DeepSeek_Exhibit_A_cover.png
+
+If creating a new one for Issue 02, target the same 1200×627 LinkedIn-safe
+composition with "Exhibit B" as the headline element.
+
+
+TAGS (pick 3-4)
+----
+AI Identity
+AI Governance
+Agent Forensics
+Trust Root
+Live Demo
+
+
+AUTHOR
+------
+Jeff Leva — Founder, AI Identity
+
+
+SOCIAL SHARE CARD
+-----------------
+Title:        Exhibit B: We Built an Agent. Then We Tried to Audit It.
+Description:  Four questions every AI agent should answer. Ours only answers two.
+
+
+===============================================================
+HOW TO PUBLISH IN BUTTONDOWN
+===============================================================
+Buttondown accepts Markdown natively. You do not need an HTML paste file.
+
+1. New email → paste issue_02.md body into the Markdown editor.
+2. Set the Subject from the recommended option above.
+3. Set Description (preview text).
+4. Add tags.
+5. Attach cover image.
+6. Preview in browser AND in an email client (send a test to yourself).
+7. Schedule or send.
+
+Pre-send checklist:
+- [ ] All three external links resolve (ai-identity.co/forensics, exhibit-a.ai-identity.co, ai-identity.co)
+- [ ] No typos in the four-question section (the punchline)
+- [ ] Cover image attached
+- [ ] Test send rendered correctly (block quotes, italics, headings)
+
+
+SUBSCRIBE CTA FOR THE FOOTER (already embedded in issue body)
+===============================================================
+If a friend forwarded this, subscribe at exhibit-a.ai-identity.co
+so the next exhibit lands in your inbox.
+
+— Jeff
