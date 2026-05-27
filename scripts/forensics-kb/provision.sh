@@ -12,7 +12,7 @@
 set -euo pipefail
 
 PROJECT_ID="${PROJECT_ID:-project-8bbb04f8-fda8-462e-bc2}"
-REGION="${REGION:-us}"                       # Vertex AI Search uses "us" or "global"
+REGION="${REGION:-global}"                   # Vertex AI Search: "global" uses discoveryengine.googleapis.com; "us"/"eu" need a region-prefixed endpoint
 GCS_REGION="${GCS_REGION:-us-east1}"
 BUCKET_NAME="${BUCKET_NAME:-${PROJECT_ID}-forensics-kb}"
 DATASTORE_ID="${DATASTORE_ID:-forensics-kb}"
@@ -62,7 +62,11 @@ gcloud storage cp "$OUT_DIR/metadata.rendered.jsonl" \
 echo "==> [5/5] Provisioning Vertex AI Search datastore + engine"
 
 ACCESS_TOKEN="$(gcloud auth print-access-token)"
-BASE_URL="https://discoveryengine.googleapis.com/v1"
+if [ "$REGION" = "global" ]; then
+  BASE_URL="https://discoveryengine.googleapis.com/v1"
+else
+  BASE_URL="https://${REGION}-discoveryengine.googleapis.com/v1"
+fi
 COLLECTION="projects/$PROJECT_ID/locations/$REGION/collections/default_collection"
 
 create_datastore() {
@@ -117,15 +121,12 @@ else
     -H "X-Goog-User-Project: $PROJECT_ID" \
     -d "{
       \"displayName\": \"Forensics Agent\",
-      \"solutionType\": \"SOLUTION_TYPE_CHAT\",
+      \"solutionType\": \"SOLUTION_TYPE_SEARCH\",
       \"industryVertical\": \"GENERIC\",
       \"dataStoreIds\": [\"$DATASTORE_ID\"],
-      \"chatEngineConfig\": {
-        \"agentCreationConfig\": {
-          \"business\": \"AI Identity\",
-          \"defaultLanguageCode\": \"en\",
-          \"timeZone\": \"America/Denver\"
-        }
+      \"searchEngineConfig\": {
+        \"searchTier\": \"SEARCH_TIER_STANDARD\",
+        \"searchAddOns\": [\"SEARCH_ADD_ON_LLM\"]
       }
     }" | tee /tmp/forensics-engine.json
   echo

@@ -5,6 +5,7 @@ tsconfig.tsbuildinfo
 .DS_Store
 .env
 .env.*
+!.env.local.example
 .stackblitzrc
 npm-debug.log*
 yarn-debug.log*

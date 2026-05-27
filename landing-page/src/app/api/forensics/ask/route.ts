@@ -21,15 +21,16 @@ let cachedAuth: GoogleAuth | null = null;
 
 function getAuth(): GoogleAuth {
   if (cachedAuth) return cachedAuth;
+  const scopes = ["https://www.googleapis.com/auth/cloud-platform"];
   const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!credentialsJson) {
-    throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON env var is not set");
+  if (credentialsJson) {
+    cachedAuth = new GoogleAuth({
+      credentials: JSON.parse(credentialsJson),
+      scopes,
+    });
+  } else {
+    cachedAuth = new GoogleAuth({ scopes });
   }
-  const credentials = JSON.parse(credentialsJson);
-  cachedAuth = new GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-  });
   return cachedAuth;
 }
 
