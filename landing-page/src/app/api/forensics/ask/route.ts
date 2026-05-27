@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleAuth } from "google-auth-library";
+import {
+  GoogleAuth,
+  IdentityPoolClient,
+  type AuthClient,
+} from "google-auth-library";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,27 +20,57 @@ Never invent product features, pricing, customers, or company facts.
 Be concise: 1-3 short paragraphs. Cite every claim.`;
 
 const MAX_QUERY_LENGTH = 500;
+const SCOPES = ["https://www.googleapis.com/auth/cloud-platform"];
 
-let cachedAuth: GoogleAuth | null = null;
+let cachedClient: AuthClient | null = null;
 
-function getAuth(): GoogleAuth {
-  if (cachedAuth) return cachedAuth;
-  const scopes = ["https://www.googleapis.com/auth/cloud-platform"];
+function buildClient(): AuthClient {
+  // Production on Vercel: Workload Identity Federation via VERCEL_OIDC_TOKEN.
+  const vercelToken = process.env.VERCEL_OIDC_TOKEN;
+  const wifAudience = process.env.GCP_WIF_AUDIENCE;
+  const saEmail = process.env.GCP_SA_EMAIL;
+  if (vercelToken && wifAudience && saEmail) {
+    return new IdentityPoolClient({
+      audience: wifAudience,
+      subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
+      token_url: "https://sts.googleapis.com/v1/token",
+      service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${saEmail}:generateAccessToken`,
+      subject_token_supplier: {
+        getSubjectToken: async () => process.env.VERCEL_OIDC_TOKEN ?? "",
+      },
+    });
+  }
+
+  // Alt prod path: inline service-account JSON (only usable if the
+  // disableServiceAccountKeyCreation org policy is loosened).
   const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
   if (credentialsJson) {
-    cachedAuth = new GoogleAuth({
+    return new GoogleAuth({
       credentials: JSON.parse(credentialsJson),
-      scopes,
-    });
-  } else {
-    cachedAuth = new GoogleAuth({ scopes });
+      scopes: SCOPES,
+    }).fromJSON(JSON.parse(credentialsJson));
   }
-  return cachedAuth;
+
+  // Local dev: Application Default Credentials.
+  // GoogleAuth resolves a concrete client lazily; we wrap it in a thin
+  // adapter so the caller sees the same AuthClient shape.
+  const auth = new GoogleAuth({ scopes: SCOPES });
+  return {
+    getAccessToken: async () => {
+      const client = await auth.getClient();
+      const t = await client.getAccessToken();
+      return typeof t === "string" ? { token: t } : t;
+    },
+  } as unknown as AuthClient;
+}
+
+function getClient(): AuthClient {
+  if (!cachedClient) cachedClient = buildClient();
+  return cachedClient;
 }
 
 async function getAccessToken(): Promise<string> {
-  const auth = getAuth();
-  const client = await auth.getClient();
+  const client = getClient();
   const tokenResponse = await client.getAccessToken();
   const token =
     typeof tokenResponse === "string" ? tokenResponse : tokenResponse?.token;
