@@ -22,30 +22,20 @@ Be concise: 1-3 short paragraphs. Cite every claim.`;
 const MAX_QUERY_LENGTH = 500;
 const SCOPES = ["https://www.googleapis.com/auth/cloud-platform"];
 
-function buildClient(): AuthClient {
-  // Production on Vercel: Workload Identity Federation via VERCEL_OIDC_TOKEN.
-  const vercelToken = process.env.VERCEL_OIDC_TOKEN;
+function buildClient(vercelOidcToken: string | null): AuthClient {
+  // Production on Vercel: Workload Identity Federation. The OIDC token is
+  // in the x-vercel-oidc-token request header (not process.env at runtime),
+  // so the caller passes it in.
   const wifAudience = process.env.GCP_WIF_AUDIENCE;
   const saEmail = process.env.GCP_SA_EMAIL;
-  console.log(
-    "[forensics] auth env:",
-    JSON.stringify({
-      vercel_oidc_token: !!vercelToken,
-      vercel_oidc_token_len: vercelToken?.length ?? 0,
-      gcp_wif_audience: !!wifAudience,
-      gcp_sa_email: !!saEmail,
-      google_sa_json: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
-      vercel_env: process.env.VERCEL_ENV ?? null,
-    }),
-  );
-  if (vercelToken && wifAudience && saEmail) {
+  if (vercelOidcToken && wifAudience && saEmail) {
     return new IdentityPoolClient({
       audience: wifAudience,
       subject_token_type: "urn:ietf:params:oauth:token-type:jwt",
       token_url: "https://sts.googleapis.com/v1/token",
       service_account_impersonation_url: `https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/${saEmail}:generateAccessToken`,
       subject_token_supplier: {
-        getSubjectToken: async () => process.env.VERCEL_OIDC_TOKEN ?? "",
+        getSubjectToken: async () => vercelOidcToken,
       },
     });
   }
@@ -73,8 +63,8 @@ function buildClient(): AuthClient {
   } as unknown as AuthClient;
 }
 
-async function getAccessToken(): Promise<string> {
-  const client = buildClient();
+async function getAccessToken(vercelOidcToken: string | null): Promise<string> {
+  const client = buildClient(vercelOidcToken);
   const tokenResponse = await client.getAccessToken();
   const token =
     typeof tokenResponse === "string" ? tokenResponse : tokenResponse?.token;
@@ -128,9 +118,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // On Vercel Functions the OIDC token comes from a per-request header;
+  // process.env.VERCEL_OIDC_TOKEN is only populated in builds and local dev.
+  const vercelOidcToken =
+    req.headers.get("x-vercel-oidc-token") ??
+    process.env.VERCEL_OIDC_TOKEN ??
+    null;
+
   let accessToken: string;
   try {
-    accessToken = await getAccessToken();
+    accessToken = await getAccessToken(vercelOidcToken);
   } catch (err) {
     console.error("Auth error:", err);
     return NextResponse.json(
