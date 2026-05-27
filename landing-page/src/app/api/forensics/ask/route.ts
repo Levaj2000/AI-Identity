@@ -22,13 +22,22 @@ Be concise: 1-3 short paragraphs. Cite every claim.`;
 const MAX_QUERY_LENGTH = 500;
 const SCOPES = ["https://www.googleapis.com/auth/cloud-platform"];
 
-let cachedClient: AuthClient | null = null;
-
 function buildClient(): AuthClient {
   // Production on Vercel: Workload Identity Federation via VERCEL_OIDC_TOKEN.
   const vercelToken = process.env.VERCEL_OIDC_TOKEN;
   const wifAudience = process.env.GCP_WIF_AUDIENCE;
   const saEmail = process.env.GCP_SA_EMAIL;
+  console.log(
+    "[forensics] auth env:",
+    JSON.stringify({
+      vercel_oidc_token: !!vercelToken,
+      vercel_oidc_token_len: vercelToken?.length ?? 0,
+      gcp_wif_audience: !!wifAudience,
+      gcp_sa_email: !!saEmail,
+      google_sa_json: !!process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+      vercel_env: process.env.VERCEL_ENV ?? null,
+    }),
+  );
   if (vercelToken && wifAudience && saEmail) {
     return new IdentityPoolClient({
       audience: wifAudience,
@@ -64,13 +73,8 @@ function buildClient(): AuthClient {
   } as unknown as AuthClient;
 }
 
-function getClient(): AuthClient {
-  if (!cachedClient) cachedClient = buildClient();
-  return cachedClient;
-}
-
 async function getAccessToken(): Promise<string> {
-  const client = getClient();
+  const client = buildClient();
   const tokenResponse = await client.getAccessToken();
   const token =
     typeof tokenResponse === "string" ? tokenResponse : tokenResponse?.token;
