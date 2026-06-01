@@ -18,8 +18,17 @@ with #228 (secret-file denylist), #229 (X-Agent-Key auth + CORS lockdown),
   GKE-deployed API + gateway services per
   [`cloudbuild.yaml`](../cloudbuild.yaml) at the repo root).
 - **Image**: `us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/ada:$SHORT_SHA`.
-- **Ingress**: `internal-and-cloud-load-balancing` (no public reach). Callers
-  must have `roles/run.invoker` on the service.
+- **Ingress**: `internal` — VPC-internal only, no public network reach.
+  Callers must also have `roles/run.invoker` (IAM-gated; defense-in-depth).
+  Note: this is **not** `internal-and-cloud-load-balancing` — no external
+  HTTPS LB / serverless NEG fronts Ada (none was built), so that mode left
+  Ada unreachable and caused recurring manual flips to `ingress=all`. Ada is
+  an auth-gated internal API (day-to-day Ada runs locally via the launcher),
+  so it needs no public endpoint. External token-based verification (the
+  `curl $URL/...` checks below) must run from inside the VPC; CI's deploy
+  verification uses `gcloud run services describe` (control plane) and is
+  unaffected. To add a branded demo endpoint later, build the LB first, then
+  switch `--ingress` back to `internal-and-cloud-load-balancing`.
 - **Auth**: every protected route requires a valid `X-Agent-Key`
   ([`agent/auth.py`](../agent/auth.py)) verified against AI Identity's
   `/api/v1/keys/verify`. Admin credential lives in Secret Manager.
