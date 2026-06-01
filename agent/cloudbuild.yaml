@@ -80,7 +80,15 @@ steps:
       # IAM-gated: callers MUST have roles/run.invoker on this service.
       # Public reach is denied at the Cloud Run boundary.
       - --no-allow-unauthenticated
-      - --ingress=internal-and-cloud-load-balancing
+      # Ingress: VPC-internal only. We intentionally do NOT use
+      # internal-and-cloud-load-balancing — there is no external HTTPS LB /
+      # serverless NEG fronting Ada (none was ever built), so that mode made
+      # Ada unreachable and forced recurring manual flips back to ingress=all.
+      # Ada is an auth-gated internal API (day-to-day Ada runs locally via the
+      # launcher); it needs no public endpoint. If a branded demo endpoint is
+      # ever wanted, build the LB first, then switch this to
+      # internal-and-cloud-load-balancing. See docs/ada-deployment.md.
+      - --ingress=internal
       - --memory=${_MEMORY}
       - --cpu=${_CPU}
       - --max-instances=${_MAX_INSTANCES}
