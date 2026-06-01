@@ -351,14 +351,14 @@ export default function SpecContent() {
             </Link>
           </div>
           <p className="mt-8 text-xs text-[rgba(213,219,230,0.45)]">
-            OCSF discussion issue:{" "}
+            OCSF contribution:{" "}
             <a
-              href="https://github.com/ocsf/ocsf-schema/issues"
+              href="https://github.com/ocsf/ocsf-schema/pull/1661"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[rgb(166,218,255)] hover:underline"
             >
-              filing pending
+              ocsf-schema#1661
             </a>
             {" · "}
             Spec license: CC-BY-4.0 (content) + Apache-2.0 (reference impl)
