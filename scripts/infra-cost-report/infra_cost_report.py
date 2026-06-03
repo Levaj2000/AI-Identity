@@ -332,7 +332,15 @@ def fetch_sentry(cfg):
             out["projects"] = [s.strip() for s in cfg["SENTRY_PROJECTS"].split(",")]
         e = out["errors_30d"]
         paid = (plan or "").lower() in ("team", "business")
-        if paid and e is not None and e < SENTRY_FREE_QUOTA * 0.5:
+        intentional = cfg.get("SENTRY_PLAN_INTENTIONAL", "").lower() in ("1", "true", "yes")
+        if paid and intentional:
+            out["flags"].append(
+                _ok(
+                    f"Sentry {plan.title()} (~${SENTRY_TEAM_USD:.0f}/mo) — retained by decision "
+                    f"(tracing/spans headroom while pre-launch; revisit after launch)."
+                )
+            )
+        elif paid and e is not None and e < SENTRY_FREE_QUOTA * 0.5:
             out["flags"].append(
                 _flag(
                     f"Sentry on paid {plan.title()} (~${SENTRY_TEAM_USD:.0f}/mo) but only {e} errors/30d — "
