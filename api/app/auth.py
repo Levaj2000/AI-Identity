@@ -1,11 +1,14 @@
-"""Authentication — Clerk JWT verification + legacy X-API-Key fallback.
+"""Authentication — Clerk JWT verification.
 
 Primary auth: Clerk JWT tokens sent as Authorization: Bearer <token>.
 The JWT is verified against Clerk's JWKS endpoint. The user is matched
 by email from the JWT claims to the local users table.
 
-Legacy fallback: X-API-Key header matched against users.email.
-This will be removed once all clients migrate to Clerk auth.
+NOTE: The legacy X-API-Key=email fallback was REMOVED (2026-06-08, see
+Insight #89). It matched X-API-Key directly against users.email — not a
+secret — so any known/guessed email authenticated as that user. Runtime
+agent keys (aid_sk_) authenticate at the gateway via Authorization: Bearer
+and the /api/v1/keys/verify path; they never resolved through this function.
 """
 
 import logging
@@ -100,14 +103,14 @@ def _extract_email_from_clerk_claims(claims: dict) -> str | None:
 
 async def get_current_user(
     request: Request,
-    x_api_key: str | None = Header(None, description="Legacy API key (email)"),
+    x_api_key: str | None = Header(None, description="Deprecated — no longer accepted"),
     db: Session = Depends(get_db),
 ) -> User:
-    """Resolve the authenticated user from Clerk JWT or legacy X-API-Key.
+    """Resolve the authenticated user from a Clerk JWT.
 
-    Auth priority:
-    1. Authorization: Bearer <clerk-jwt> — verified against Clerk JWKS
-    2. X-API-Key header — legacy email-as-key (will be removed)
+    Auth: Authorization: Bearer <clerk-jwt> — verified against Clerk JWKS.
+    The legacy X-API-Key=email fallback was removed (Insight #89); a present
+    X-API-Key header now returns 401 with a migration message.
     """
     user: User | None = None
 
@@ -162,11 +165,18 @@ async def get_current_user(
                 detail="Could not resolve user from token. Ensure email is included in Clerk session claims.",
             )
 
-    # ── Fall back to legacy X-API-Key ───────────────────────────
-    elif x_api_key and len(x_api_key) >= 8:
-        user = db.query(User).filter(User.email == x_api_key).first()
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+    # ── Legacy X-API-Key=email fallback REMOVED (Insight #89) ───
+    # It matched X-API-Key directly against users.email, which is not a
+    # secret — any known/guessed email authenticated as that user. A present
+    # X-API-Key now fails closed with a clear migration message.
+    elif x_api_key:
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "Legacy email API keys are no longer accepted. Authenticate "
+                "with a Clerk session token via 'Authorization: Bearer <token>'."
+            ),
+        )
     else:
         raise HTTPException(status_code=401, detail="Authentication required")
 

@@ -2,7 +2,10 @@
 
 Accepts the same credentials as the main API:
   1. Authorization: Bearer <clerk-jwt>  (primary)
-  2. X-API-Key: <email>               (legacy fallback)
+
+The legacy X-API-Key=email fallback was REMOVED (Insight #89) — it
+authenticated any user by their non-secret email. A present X-API-Key now
+returns 401 with a migration message.
 
 User must already exist in the users table — no auto-provisioning here.
 """
@@ -87,10 +90,17 @@ async def get_current_user(
                 status_code=401, detail="User not found — sign in via the main API first"
             )
 
-    elif x_api_key and len(x_api_key) >= 8:
-        user = db.query(User).filter(User.email == x_api_key).first()
-        if not user:
-            raise HTTPException(status_code=401, detail="Invalid API key")
+    # ── Legacy X-API-Key=email fallback REMOVED (Insight #89) ───
+    # Matched X-API-Key against users.email (not a secret) — auth bypass.
+    # Fails closed; clients must use a Clerk session token (Bearer).
+    elif x_api_key:
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "Legacy email API keys are no longer accepted. Authenticate "
+                "with a Clerk session token via 'Authorization: Bearer <token>'."
+            ),
+        )
     else:
         raise HTTPException(status_code=401, detail="Authentication required")
 
