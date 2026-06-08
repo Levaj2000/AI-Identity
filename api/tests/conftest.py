@@ -130,7 +130,18 @@ def test_user(db_session):
 
 @pytest.fixture
 def client(db_session, test_user):
-    """FastAPI TestClient with DB and auth overrides."""
+    """FastAPI TestClient with DB and auth overrides.
+
+    Auth shim: prod removed the legacy X-API-Key=email path (Insight #89), but
+    the test suite identifies the acting user via ``X-API-Key: <email>`` so that
+    multi-user authz tests can act as different users. We reproduce that mapping
+    here as a dependency override — it lives ONLY in the test harness, never in
+    prod auth. Tests that exercise the real auth path (e.g. asserting email keys
+    are rejected) build their own TestClient without this override.
+    """
+    from fastapi import Header, HTTPException
+
+    from api.app.auth import get_current_user
     from api.app.main import app
 
     def _override_get_db():
@@ -139,7 +150,16 @@ def client(db_session, test_user):
         finally:
             pass
 
+    def _override_get_current_user(x_api_key: str | None = Header(None)):
+        if not x_api_key:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        user = db_session.query(User).filter(User.email == x_api_key).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid API key")
+        return user
+
     app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_get_current_user
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
