@@ -796,7 +796,7 @@ def audit_reconstruct(
 
 @router.get(
     "/report",
-    summary="Generate forensics report",
+    summary="Generate Case File (forensics report)",
     response_description="Forensics report with chain-of-custody certificate",
     tags=["forensics"],
 )
@@ -905,7 +905,7 @@ def audit_report(
         writer.writerow(["report_signature", report_sig])
 
         output.seek(0)
-        filename = f"forensics-{agent.name}-{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}.csv"
+        filename = f"case-file-{agent.name}-{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}.csv"
         return StreamingResponse(
             output,
             media_type="text/csv",
@@ -955,13 +955,14 @@ def audit_report(
 # ── Verification Bundle ────────────────────────────────────────────
 
 _BUNDLE_README = """\
-# AI Identity — Forensic Report Verification
+# AI Identity — Case File Verification
 
-This bundle contains a forensic audit report from AI Identity and a tool to independently verify its integrity.
+This **Case File** is an evidence package from AI Identity: a signed forensic audit report plus a
+tool to independently verify its integrity, offline.
 
 ## What's Inside
 
-- `forensics-report-*.json` — The signed forensic audit report
+- `case-file-*.json` — The signed Case File report, including the **Reliability Statement**
 - `ai_identity_verify.py` — Standalone verification tool (Python 3.9+, no dependencies)
 
 ## Quick Start
@@ -970,7 +971,7 @@ This bundle contains a forensic audit report from AI Identity and a tool to inde
 2. Open a terminal and run:
 
    export AI_IDENTITY_HMAC_KEY="your-key-here"
-   python3 ai_identity_verify.py report forensics-report-*.json
+   python3 ai_identity_verify.py report case-file-*.json
 
 3. You should see:
 
@@ -978,12 +979,22 @@ This bundle contains a forensic audit report from AI Identity and a tool to inde
 
 To also verify the full audit chain:
 
-   python3 ai_identity_verify.py chain forensics-report-*.json
+   python3 ai_identity_verify.py chain case-file-*.json
 
 ## What This Proves
 
 - **Signature VALID**: The report data is authentic and has not been modified since export
 - **Chain INTACT**: Every audit log entry links cryptographically to the previous one — no entries were inserted, deleted, or altered
+
+## Reliability Statement
+
+The `reliability_statement` field in the Case File JSON is a plain-English account, written to
+support a FRE 702 / Daubert reliability showing and ISO/IEC 27037 acquisition documentation. It
+states the integrity method (an HMAC-SHA256 chain with per-row recomputation and a gap-free
+sequence — proving no entries were deleted), what the signature attests, the timestamp source, how
+to verify independently, and — honestly — the current limitation: verification requires the
+organization's symmetric forensic key, so the Case File is verifiable by a key-holder and is not
+yet a publicly verifiable (asymmetric) proof.
 
 ## Need Help?
 
@@ -996,7 +1007,7 @@ _CLI_SCRIPT_PATH = pathlib.Path(__file__).resolve().parents[3] / "cli" / "ai_ide
 
 @router.get(
     "/report/bundle",
-    summary="Download verification bundle",
+    summary="Download Case File (verification bundle)",
     response_description="ZIP file with signed report, verification CLI, and README",
     tags=["forensics"],
 )
@@ -1087,7 +1098,7 @@ def audit_report_bundle(
     # Build the ZIP bundle
     date_str = report_generated_at.strftime("%Y-%m-%d")
     agent_short = agent_id.hex[:8]
-    report_filename = f"forensics-report-{agent_short}-{date_str}.json"
+    report_filename = f"case-file-{agent_short}-{date_str}.json"
 
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -1104,7 +1115,7 @@ def audit_report_bundle(
     zip_buffer.seek(0)
     zip_bytes = zip_buffer.getvalue()
 
-    bundle_filename = f"ai-identity-verify-{agent_short}-{date_str}.zip"
+    bundle_filename = f"ai-identity-case-file-{agent_short}-{date_str}.zip"
     return Response(
         content=zip_bytes,
         media_type="application/zip",

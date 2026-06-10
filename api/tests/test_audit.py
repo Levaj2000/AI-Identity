@@ -410,6 +410,8 @@ class TestForensicsEndpoints:
 
         assert resp.status_code == 200
         assert "text/csv" in resp.headers["content-type"]
+        # Case File rebrand: the download is branded "case-file-*", not "forensics-*"
+        assert "case-file-" in resp.headers["content-disposition"]
         content = resp.text
         assert "id,agent_id,endpoint" in content
         assert "Chain-of-Custody Certificate" in content
