@@ -9,8 +9,12 @@ agent_suspended, agent_revoked.
 import datetime
 import uuid
 
+import pytest
+from fastapi.testclient import TestClient
+
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key
-from common.models import Agent, AgentKey, KeyStatus, KeyType
+from common.config.settings import settings
+from common.models import Agent, AgentKey, KeyStatus, KeyType, get_db
 
 
 def _make_agent_with_key(
@@ -146,13 +150,81 @@ class TestVerifyKeyFailureModes:
         )
 
 
-class TestVerifyKeyAuth:
-    def test_unauthenticated_request_rejected(self, client, db_session, test_user):
-        _, plaintext = _make_agent_with_key(db_session, test_user)
-        resp = client.post("/api/v1/keys/verify", json={"key": plaintext})
-        # No X-API-Key header → 401 from get_current_user
-        assert resp.status_code in (401, 403)
+_SERVICE_TOKEN = "svc_tok_verify_0123456789abcdef0123456789ab"
 
+
+@pytest.fixture
+def raw_verify_client(db_session):
+    """TestClient overriding ONLY get_db — the real require_verify_service runs.
+
+    The shared `client` fixture shims the service-token dependency; these tests
+    exercise the actual X-Service-Token auth.
+    """
+    from api.app.main import app
+
+    def _override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = _override_get_db
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+class TestVerifyServiceTokenAuth:
+    """Real-auth tests (no harness override) for the dedicated X-Service-Token."""
+
+    def test_valid_service_token_authorizes(
+        self, raw_verify_client, db_session, test_user, monkeypatch
+    ):
+        monkeypatch.setattr(settings, "verify_service_token", _SERVICE_TOKEN)
+        agent, plaintext = _make_agent_with_key(db_session, test_user, role="cto")
+        resp = raw_verify_client.post(
+            "/api/v1/keys/verify",
+            json={"key": plaintext},
+            headers={"X-Service-Token": _SERVICE_TOKEN},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["valid"] is True
+        assert resp.json()["agent_id"] == str(agent.id)
+
+    def test_missing_service_token_rejected(
+        self, raw_verify_client, db_session, test_user, monkeypatch
+    ):
+        monkeypatch.setattr(settings, "verify_service_token", _SERVICE_TOKEN)
+        _, plaintext = _make_agent_with_key(db_session, test_user)
+        resp = raw_verify_client.post("/api/v1/keys/verify", json={"key": plaintext})
+        assert resp.status_code == 401
+
+    def test_wrong_service_token_rejected(
+        self, raw_verify_client, db_session, test_user, monkeypatch
+    ):
+        monkeypatch.setattr(settings, "verify_service_token", _SERVICE_TOKEN)
+        _, plaintext = _make_agent_with_key(db_session, test_user)
+        resp = raw_verify_client.post(
+            "/api/v1/keys/verify",
+            json={"key": plaintext},
+            headers={"X-Service-Token": "wrong-token-value"},
+        )
+        assert resp.status_code == 401
+
+    def test_email_as_x_api_key_does_not_authorize(
+        self, raw_verify_client, db_session, test_user, monkeypatch
+    ):
+        # Regression: the removed email-as-key path (Insight #89) must not sneak
+        # back via the verify endpoint. X-API-Key is irrelevant here; only the
+        # dedicated service token authorizes.
+        monkeypatch.setattr(settings, "verify_service_token", _SERVICE_TOKEN)
+        _, plaintext = _make_agent_with_key(db_session, test_user)
+        resp = raw_verify_client.post(
+            "/api/v1/keys/verify",
+            json={"key": plaintext},
+            headers={"X-API-Key": test_user.email},
+        )
+        assert resp.status_code == 401
+
+
+class TestVerifyKeyAuth:
     def test_plaintext_key_never_in_response_when_invalid(self, client, auth_headers):
         # Defense-in-depth: confirm the response body never echoes the key
         # back, even on failure paths.

@@ -21,9 +21,9 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from api.app.auth import get_current_user
+from api.app.auth import require_verify_service
 from common.auth.keys import hash_key
-from common.models import Agent, AgentKey, AgentStatus, KeyStatus, User, get_db
+from common.models import Agent, AgentKey, AgentStatus, KeyStatus, get_db
 
 logger = logging.getLogger("ai_identity.api.verify")
 
@@ -63,31 +63,31 @@ class VerifyKeyResponse(BaseModel):
 )
 def verify_key(
     body: VerifyKeyRequest,
-    user: User = Depends(get_current_user),
+    caller: str = Depends(require_verify_service),
     db: Session = Depends(get_db),
 ) -> VerifyKeyResponse:
     """Resolve a runtime API key to its parent agent.
 
-    Caller authenticates with their own admin credentials. The body carries
-    the runtime key under verification. Plaintext keys are never logged or
-    persisted by this endpoint.
+    The caller authenticates as a trusted backend via the X-Service-Token header
+    (see require_verify_service). The body carries the runtime key under
+    verification. Plaintext keys are never logged or persisted by this endpoint.
     """
     plaintext = body.key
 
     if not plaintext.startswith(("aid_sk_", "aid_admin_")):
-        logger.info("verify_key MALFORMED by user=%s", user.id)
+        logger.info("verify_key MALFORMED by user=%s", caller)
         return VerifyKeyResponse(valid=False, reason="malformed_key")
 
     key_record = db.query(AgentKey).filter(AgentKey.key_hash == hash_key(plaintext)).first()
 
     if key_record is None:
-        logger.info("verify_key MISS by user=%s prefix=%s", user.id, plaintext[:12])
+        logger.info("verify_key MISS by user=%s prefix=%s", caller, plaintext[:12])
         return VerifyKeyResponse(valid=False, reason="key_not_found")
 
     if key_record.status != KeyStatus.active.value:
         logger.info(
             "verify_key INACTIVE by user=%s key_id=%s status=%s",
-            user.id,
+            caller,
             key_record.id,
             key_record.status,
         )
@@ -100,7 +100,7 @@ def verify_key(
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=datetime.UTC)
         if expires_at < now:
-            logger.info("verify_key EXPIRED by user=%s key_id=%s", user.id, key_record.id)
+            logger.info("verify_key EXPIRED by user=%s key_id=%s", caller, key_record.id)
             return VerifyKeyResponse(valid=False, reason="key_expired")
 
     agent = db.query(Agent).filter(Agent.id == key_record.agent_id).first()
@@ -110,13 +110,13 @@ def verify_key(
     if agent.status != AgentStatus.active.value:
         logger.info(
             "verify_key AGENT_INACTIVE by user=%s agent_id=%s status=%s",
-            user.id,
+            caller,
             agent.id,
             agent.status,
         )
         return VerifyKeyResponse(valid=False, reason=f"agent_{agent.status}")
 
-    logger.info("verify_key OK by user=%s agent_id=%s", user.id, agent.id)
+    logger.info("verify_key OK by user=%s agent_id=%s", caller, agent.id)
     return VerifyKeyResponse(
         valid=True,
         agent_id=str(agent.id),
