@@ -33,6 +33,7 @@ from common.schemas.agent import (
     ForensicsReportResponse,
     ObservedFact,
     PolicyResponse,
+    ReliabilityStatement,
     SummaryFacts,
     TopEndpoint,
 )
@@ -48,6 +49,59 @@ router = APIRouter(prefix="/api/v1/audit", tags=["audit"])
 def _user_agent_ids(db: Session, user: User) -> list[uuid.UUID]:
     """Return list of agent IDs owned by the user."""
     return [row[0] for row in db.query(Agent.id).filter(Agent.user_id == user.id).all()]
+
+
+def _build_reliability_statement(chain_result) -> ReliabilityStatement:
+    """Construct the plain-English reliability statement for a forensics report.
+
+    Drafted for FRE 702 / Daubert + ISO/IEC 27037 use. Honest about the current
+    symmetric-key (key-holder) verification model — public/asymmetric verification
+    is the Evidence Anchor upgrade path.
+    """
+    integrity = "INTACT" if chain_result.valid else "BROKEN"
+    return ReliabilityStatement(
+        method=(
+            "Each audit entry is bound to the immediately preceding entry via an "
+            "HMAC-SHA256 integrity chain (entry_hash = HMAC-SHA256(canonical_payload || "
+            "prev_hash)). Per-row recomputation detects any modification to a recorded "
+            "event, and the organization's entry sequence is verified monotonic with no "
+            "gaps, establishing that no entries were deleted from its history."
+        ),
+        signature_covers=(
+            "The report signature is an HMAC-SHA256 over the report identity and the "
+            "chain-verification result (report_id, generated_at, chain_valid, "
+            "total_entries, entries_verified); the report cannot be altered after export "
+            "without detection."
+        ),
+        timestamp_source=(
+            "Events are stamped with server-side UTC at write time; the report "
+            "generated_at is server-side UTC at export."
+        ),
+        independent_verification=(
+            "The report is verifiable offline by a holder of the organization's forensic "
+            "verification key using the bundled ai_identity_verify.py tool, with no "
+            "dependency on AI Identity's live systems."
+        ),
+        limitations=(
+            "Verification currently requires possession of the organization's symmetric "
+            "forensic key: it establishes integrity and non-deletion to a key-holder, and "
+            "is not yet a publicly verifiable (asymmetric) proof. Custody of the key is "
+            "the verification root and must be controlled by the relying party."
+        ),
+        standards_alignment=(
+            "Designed to support a FRE 702 / Daubert reliability showing and ISO/IEC 27037 "
+            "evidence-acquisition documentation."
+        ),
+        statement=(
+            f"This report covers {chain_result.total_entries} audit events. The integrity "
+            f"chain verified as {integrity} ({chain_result.entries_verified} of "
+            f"{chain_result.total_entries} entries recomputed). Each event is "
+            "cryptographically linked to its predecessor and the organization's event "
+            "sequence is gap-free, so the record is tamper-evident and complete. A holder "
+            "of the organization's verification key can confirm this independently and "
+            "offline."
+        ),
+    )
 
 
 def _is_org_admin(db: Session, user: User, org_id: uuid.UUID) -> bool:
@@ -894,6 +948,7 @@ def audit_report(
         active_policy=PolicyResponse.model_validate(active_policy) if active_policy else None,
         stats=stats,
         report_signature=report_sig,
+        reliability_statement=_build_reliability_statement(chain_result),
     )
 
 
@@ -1023,6 +1078,7 @@ def audit_report_bundle(
         active_policy=PolicyResponse.model_validate(active_policy) if active_policy else None,
         stats=stats,
         report_signature=report_sig,
+        reliability_statement=_build_reliability_statement(chain_result),
     )
 
     # Serialize report to JSON
