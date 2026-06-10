@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- R&D strategy deliverables under `docs/strategy/`: an Agent Accountability **landscape & next-bet** report, a frontier **"Horizon 2030"** report (3–5yr; "evidence is the durable asset" thesis), and two gated design proposals — **Evidence Anchor** (transparency-log + offline verifier) and **Case File** (court-ready evidence export). Reports ship with reproducible PDF generators.
 - Forensics report (**Case File**): exports now carry a plain-English **Reliability Statement** (FRE 702 / Daubert + ISO/IEC 27037 framing) describing how integrity is established, what the signature attests, the timestamp source, and the honest limits of key-holder verification. Surfaced on `/api/v1/audit/report` (JSON) and the verification bundle.
 
 ### Security
