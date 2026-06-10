@@ -11,6 +11,7 @@ agent keys (aid_sk_) authenticate at the gateway via Authorization: Bearer
 and the /api/v1/keys/verify path; they never resolved through this function.
 """
 
+import hmac
 import logging
 import uuid
 
@@ -306,3 +307,22 @@ def get_or_create_dev_user(db: Session, api_key: str) -> User:
         db.commit()
         db.refresh(user)
     return user
+
+
+def require_verify_service(
+    x_service_token: str | None = Header(None, alias="X-Service-Token"),
+) -> str:
+    """Authorize a trusted backend (e.g. the CEO Dashboard) calling /keys/verify.
+
+    Service-to-service auth via a strong, dedicated X-Service-Token (constant-time
+    compare). This replaces the removed email-as-X-API-Key path (Insight #89): the
+    general X-API-Key still fails closed in get_current_user; this token is scoped to
+    the verify endpoint only. Returns a caller label for audit logs.
+    """
+    token = settings.verify_service_token
+    if not token or not x_service_token or not hmac.compare_digest(x_service_token, token):
+        raise HTTPException(
+            status_code=401,
+            detail="Valid X-Service-Token required to call the verify endpoint.",
+        )
+    return "service-token"

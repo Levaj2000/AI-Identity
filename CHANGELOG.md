@@ -10,6 +10,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Security
 - **Removed the legacy `X-API-Key`=email authentication fallback** in the main API (`api/app/auth.py`) and the Mandate Service (`mandate/app/auth.py`). It matched the `X-API-Key` header directly against `users.email` — which is not a secret — so anyone who knew or guessed a registered user's email could authenticate as that user against the production API. Both services now require a Clerk session token (`Authorization: Bearer`); a present `X-API-Key` fails closed with a migration message. Runtime agent keys (`aid_sk_`) are unaffected — they authenticate at the gateway via the `/api/v1/keys/verify` path. Added a regression test asserting an email used as `X-API-Key` is rejected. (Insight #89)
+- **`/api/v1/keys/verify` now uses a dedicated `X-Service-Token`** for service-to-service auth (constant-time compare against `VERIFY_SERVICE_TOKEN`), completing the Insight #89 migration on the consumer side — the CEO Dashboard's verify caller had been left on the removed email-as-key path and was failing closed. The general `X-API-Key` stays closed; this token is scoped to the verify endpoint only.
 
 ## [0.2.0] — 2026-04-14
 
