@@ -445,6 +445,24 @@ class AuditReconstructResponse(BaseModel):
     stats: AuditStatsResponse
 
 
+class ReliabilityStatement(BaseModel):
+    """Plain-English reliability statement for a forensics report.
+
+    Drafted to support a FRE 702 / Daubert reliability showing and ISO/IEC 27037
+    evidence-acquisition documentation: how integrity is established, what the
+    signature attests, and how a relying party can verify it independently. Honest
+    about the current symmetric-key (key-holder) verification model.
+    """
+
+    method: str = Field(description="How tamper-evidence and completeness are established")
+    signature_covers: str = Field(description="What the report signature attests")
+    timestamp_source: str = Field(description="Source and basis of timestamps")
+    independent_verification: str = Field(description="How a relying party verifies, offline")
+    limitations: str = Field(description="Honest scope of what the proof does and does not show")
+    standards_alignment: str = Field(description="Evidentiary standards the format targets")
+    statement: str = Field(description="One-paragraph prose summary for the record")
+
+
 class ForensicsReportResponse(BaseModel):
     """Exportable forensics report with chain-of-custody certificate."""
 
@@ -462,6 +480,10 @@ class ForensicsReportResponse(BaseModel):
             "Recompute with verify_report_signature() to confirm this report was produced "
             "by AI Identity and has not been altered since export."
         )
+    )
+    reliability_statement: ReliabilityStatement | None = Field(
+        default=None,
+        description="Plain-English reliability statement for FRE 702 / ISO 27037 use.",
     )
 
 

@@ -387,6 +387,14 @@ class TestForensicsEndpoints:
         assert data["chain_verification"]["valid"] is True
         assert data["stats"]["total_events"] >= 5
 
+        # Case File: court-ready reliability statement (FRE 702 / ISO 27037)
+        rs = data["reliability_statement"]
+        assert rs is not None
+        assert "HMAC-SHA256" in rs["method"]
+        assert "FRE 702" in rs["standards_alignment"]
+        assert "symmetric" in rs["limitations"]
+        assert str(data["chain_verification"]["total_entries"]) in rs["statement"]
+
     def test_audit_report_csv(self, client, auth_headers, db_session):
         """GET /api/v1/audit/report?format=csv returns CSV download."""
         agent_id = self._create_agent(client, auth_headers)
