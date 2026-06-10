@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     # Generate with: python -c "import secrets; print(secrets.token_urlsafe(64))"
     internal_service_key: str = ""
 
+    # Dedicated service token for the /api/v1/keys/verify endpoint, sent by trusted
+    # backends (e.g. the CEO Dashboard) as the X-Service-Token header. Replaces the
+    # removed email-as-X-API-Key path (Insight #89) without re-opening general
+    # X-API-Key auth. Generate with:
+    #   python -c "import secrets; print(secrets.token_urlsafe(48))"
+    verify_service_token: str = ""
+
     # MongoDB — Mandate Service (MongoDB Atlas, H2)
     # Atlas connection string: mongodb+srv://user:pass@cluster.mongodb.net/
     mongodb_uri: str = ""

@@ -141,7 +141,7 @@ def client(db_session, test_user):
     """
     from fastapi import Header, HTTPException
 
-    from api.app.auth import get_current_user
+    from api.app.auth import get_current_user, require_verify_service
     from api.app.main import app
 
     def _override_get_db():
@@ -160,6 +160,9 @@ def client(db_session, test_user):
 
     app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[get_current_user] = _override_get_current_user
+    # Verify endpoint uses a dedicated service-token dependency; shim it in tests
+    # (real service-token auth is exercised in test_verify.py's raw-client tests).
+    app.dependency_overrides[require_verify_service] = lambda: "test-caller"
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
