@@ -89,3 +89,15 @@ class TestOcsfApiActivityMapping:
     def test_severity_elevated_on_deny(self):
         assert audit_log_to_ocsf(_row(decision="allow"))["severity_id"] == 1
         assert audit_log_to_ocsf(_row(decision="deny"))["severity_id"] == 3
+
+    def test_long_form_decisions_map(self):
+        # Some writers / older rows store "allowed"/"denied" (not "allow"/"deny").
+        assert audit_log_to_ocsf(_row(decision="allowed"))["action_id"] == 1
+        assert audit_log_to_ocsf(_row(decision="denied"))["action_id"] == 2
+        assert audit_log_to_ocsf(_row(decision=" Allowed "))["action_id"] == 1  # strip + case
+
+    def test_unknown_decision_is_not_elevated(self):
+        ev = audit_log_to_ocsf(_row(decision="weird"))
+        assert ev["action_id"] == 0
+        assert ev["action"] == "Unknown"
+        assert ev["severity_id"] == 1  # don't alarm on vocabulary we didn't classify

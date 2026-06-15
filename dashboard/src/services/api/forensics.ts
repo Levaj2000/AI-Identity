@@ -91,7 +91,7 @@ export async function downloadOcsf(params: {
   a.href = url
   const disposition = response.headers.get('Content-Disposition')
   const match = disposition?.match(/filename="?([^"]+)"?/)
-  a.download = match?.[1] || 'case-file.ocsf.json'
+  a.download = match?.[1] || 'case-file.ocsf.ndjson'
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
