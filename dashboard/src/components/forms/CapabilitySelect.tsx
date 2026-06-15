@@ -66,10 +66,10 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
   }
 
   const borderColor = error
-    ? 'border-red-500 dark:border-red-500'
+    ? 'border-danger'
     : isOpen
-      ? 'border-[#A6DAFF] ring-2 ring-[#A6DAFF]/50 dark:border-[#A6DAFF]'
-      : 'border-gray-300 dark:border-[#2a2a2d]'
+      ? 'border-brand ring-2 ring-brand/50'
+      : 'border-line-strong'
 
   return (
     <div ref={dropdownRef} className="relative" id={id}>
@@ -77,14 +77,14 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex min-h-[2.5rem] w-full flex-wrap items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-left transition-colors dark:bg-[#04070D] ${borderColor}`}
+        className={`flex min-h-[2.5rem] w-full flex-wrap items-center gap-1.5 rounded-lg border bg-canvas px-3 py-1.5 text-left transition-colors ${borderColor}`}
       >
         {/* Selected pills */}
         {selected.length > 0 ? (
           selected.map((capId) => (
             <span
               key={capId}
-              className="inline-flex items-center gap-1 rounded-md border border-[#A6DAFF]/30 bg-[#A6DAFF]/10 px-2 py-0.5 text-xs font-medium text-[#A6DAFF] dark:border-[#A6DAFF]/20 dark:bg-[#A6DAFF]/5"
+              className="inline-flex items-center gap-1 rounded-md border border-brand bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand"
             >
               {getCapName(capId)}
               <button
@@ -93,7 +93,7 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
                   e.stopPropagation()
                   removeCapability(capId)
                 }}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-[#A6DAFF]/20"
+                className="ml-0.5 rounded-full p-0.5 hover:bg-brand-soft"
                 aria-label={`Remove ${getCapName(capId)}`}
               >
                 <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
@@ -103,14 +103,14 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
             </span>
           ))
         ) : (
-          <span className="text-sm text-gray-400 dark:text-[#52525b]">
+          <span className="text-sm text-faint">
             {isLoading ? 'Loading capabilities...' : 'Select capabilities'}
           </span>
         )}
 
         {/* Chevron */}
         <svg
-          className={`ml-auto h-4 w-4 shrink-0 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`ml-auto h-4 w-4 shrink-0 text-faint transition-transform ${isOpen ? 'rotate-180' : ''}`}
           viewBox="0 0 20 20"
           fill="currentColor"
         >
@@ -124,9 +124,9 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-[#2a2a2d] dark:bg-[#10131C]">
+        <div className="absolute z-50 mt-1 w-full rounded-lg border border-line bg-surface shadow-lg">
           {capabilities.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-gray-400 dark:text-[#52525b]">
+            <div className="px-4 py-3 text-sm text-faint">
               {isLoading ? 'Loading...' : 'No capabilities available'}
             </div>
           ) : (
@@ -139,19 +139,17 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
                     role="option"
                     aria-selected={isSelected}
                     onClick={() => toggleCapability(cap.id)}
-                    className="flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-[#1a1a1d]"
+                    className="flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-elevated"
                   >
                     {/* Checkbox */}
                     <div
                       className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                        isSelected
-                          ? 'border-[#A6DAFF] bg-[#A6DAFF]'
-                          : 'border-gray-300 dark:border-[#3a3a3d]'
+                        isSelected ? 'border-brand bg-brand' : 'border-line-strong'
                       }`}
                     >
                       {isSelected && (
                         <svg
-                          className="h-3 w-3 text-[#04070D]"
+                          className="h-3 w-3 text-brand-ink"
                           viewBox="0 0 20 20"
                           fill="currentColor"
                         >
@@ -167,17 +165,13 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
                     {/* Label + description */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900 dark:text-[#e4e4e7]">
-                          {cap.name}
-                        </span>
-                        <code className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500 dark:bg-[#1a1a1d] dark:text-[#71717a]">
+                        <span className="text-sm font-medium text-ink">{cap.name}</span>
+                        <code className="rounded bg-elevated px-1.5 py-0.5 text-[10px] text-subtle">
                           {cap.id}
                         </code>
                       </div>
-                      <p className="mt-0.5 text-xs text-gray-500 dark:text-[#71717a]">
-                        {cap.description}
-                      </p>
-                      <p className="mt-1 font-[JetBrains_Mono,monospace] text-[10px] text-gray-400 dark:text-[#52525b]">
+                      <p className="mt-0.5 text-xs text-subtle">{cap.description}</p>
+                      <p className="mt-1 font-[JetBrains_Mono,monospace] text-[10px] text-faint">
                         {cap.methods.join(', ')} {cap.endpoints.join(', ')}
                       </p>
                     </div>
@@ -191,7 +185,7 @@ export function CapabilitySelect({ selected, onChange, error, id }: CapabilitySe
 
       {/* Error message */}
       {error && (
-        <p className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+        <p className="mt-1 text-sm text-danger" role="alert">
           {error}
         </p>
       )}

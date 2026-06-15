@@ -11,19 +11,17 @@ export function AgentCard({ agent }: AgentCardProps) {
   return (
     <Link
       to={`/dashboard/agents/${agent.id}`}
-      className="block rounded-xl border border-gray-200 bg-white p-5 transition-colors hover:border-gray-300 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl dark:hover:border-[#A6DAFF]/25"
+      className="block rounded-xl border border-line bg-surface p-5 transition-colors hover:border-line-strong"
     >
       {/* Top row: name + status */}
       <div className="mb-2 flex items-start justify-between gap-3">
-        <h3 className="truncate font-medium text-gray-900 dark:text-[#e4e4e7]">{agent.name}</h3>
+        <h3 className="truncate font-medium text-ink">{agent.name}</h3>
         <AgentStatusBadge status={agent.status} />
       </div>
 
       {/* Description */}
       {agent.description && (
-        <p className="mb-3 truncate text-sm text-gray-500 dark:text-[#a1a1aa]">
-          {agent.description}
-        </p>
+        <p className="mb-3 truncate text-sm text-subtle">{agent.description}</p>
       )}
 
       {/* Capabilities */}
@@ -32,13 +30,13 @@ export function AgentCard({ agent }: AgentCardProps) {
           {agent.capabilities.slice(0, 3).map((cap) => (
             <span
               key={cap}
-              className="rounded-md bg-gray-100 px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:bg-[#1a1a1d] dark:text-[#a1a1aa]"
+              className="rounded-md bg-elevated px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-muted"
             >
               {cap}
             </span>
           ))}
           {agent.capabilities.length > 3 && (
-            <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-[#1a1a1d] dark:text-[#71717a]">
+            <span className="rounded-md bg-elevated px-2 py-0.5 text-xs text-subtle">
               +{agent.capabilities.length - 3}
             </span>
           )}
@@ -46,9 +44,7 @@ export function AgentCard({ agent }: AgentCardProps) {
       )}
 
       {/* Footer: created date */}
-      <p className="text-xs text-gray-400 dark:text-[#71717a]">
-        Created {relativeTime(agent.created_at)}
-      </p>
+      <p className="text-xs text-subtle">Created {relativeTime(agent.created_at)}</p>
     </Link>
   )
 }

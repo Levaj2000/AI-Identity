@@ -60,16 +60,16 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
         aria-modal="true"
         aria-labelledby="api-key-modal-title"
         tabIndex={-1}
-        className="relative z-10 w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl outline-none dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl"
+        className="relative z-10 w-full max-w-lg rounded-2xl border border-line bg-surface p-6 shadow-2xl outline-none"
       >
         {/* Header */}
         <div className="mb-5 flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/10">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-soft">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
               fill="currentColor"
-              className="h-5 w-5 text-emerald-600 dark:text-emerald-400"
+              className="h-5 w-5 text-success"
             >
               <path
                 fillRule="evenodd"
@@ -79,24 +79,21 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
             </svg>
           </div>
           <div>
-            <h2
-              id="api-key-modal-title"
-              className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]"
-            >
+            <h2 id="api-key-modal-title" className="text-lg font-semibold text-ink">
               API Key Created
             </h2>
-            <p className="text-sm text-gray-500 dark:text-[#a1a1aa]">for {agentName}</p>
+            <p className="text-sm text-subtle">for {agentName}</p>
           </div>
         </div>
 
         {/* Warning */}
-        <div className="mb-5 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+        <div className="mb-5 rounded-lg border border-warning bg-warning-soft p-3">
           <div className="flex gap-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
               fill="currentColor"
-              className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400"
+              className="mt-0.5 h-4 w-4 shrink-0 text-warning"
             >
               <path
                 fillRule="evenodd"
@@ -104,7 +101,7 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
                 clipRule="evenodd"
               />
             </svg>
-            <p className="text-sm text-amber-800 dark:text-amber-200">
+            <p className="text-sm text-warning">
               This key will only be shown once. Copy it now and store it securely. You will not be
               able to see it again.
             </p>
@@ -113,8 +110,8 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
 
         {/* Key display + copy */}
         <div className="mb-5">
-          <div className="flex items-start gap-2 rounded-lg bg-gray-100 p-4 dark:bg-[#1a1a1d]">
-            <code className="min-w-0 flex-1 break-all font-[JetBrains_Mono,monospace] text-sm text-gray-900 dark:text-[#e4e4e7]">
+          <div className="flex items-start gap-2 rounded-lg bg-inset p-4">
+            <code className="min-w-0 flex-1 break-all font-[JetBrains_Mono,monospace] text-sm text-ink">
               {apiKey}
             </code>
             <button
@@ -122,8 +119,8 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
               onClick={handleCopy}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 copied
-                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
-                  : 'bg-white text-gray-700 shadow-sm hover:bg-gray-50 dark:bg-[#2a2a2d] dark:text-[#e4e4e7] dark:hover:bg-[#3a3a3d]'
+                  ? 'bg-success-soft text-success'
+                  : 'bg-surface text-muted shadow-sm hover:bg-elevated'
               }`}
             >
               {copied ? (
@@ -161,16 +158,16 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
         </div>
 
         {/* Gateway URL + Quick Start */}
-        <div className="mb-5 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-[#2a2a2d] dark:bg-[#1a1a1d]">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#71717a]">
+        <div className="mb-5 rounded-lg border border-line bg-inset p-4">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-subtle">
             Gateway URL
           </p>
-          <code className="block break-all font-[JetBrains_Mono,monospace] text-sm text-gray-900 dark:text-[#e4e4e7]">
+          <code className="block break-all font-[JetBrains_Mono,monospace] text-sm text-ink">
             {GATEWAY_URL}
           </code>
-          <p className="mt-3 text-xs text-gray-500 dark:text-[#a1a1aa]">
+          <p className="mt-3 text-xs text-subtle">
             Point your agent&rsquo;s base URL here instead of calling OpenAI directly. Use your API
-            key above as the <code className="text-[#A6DAFF]">X-API-Key</code> header.
+            key above as the <code className="text-brand">X-API-Key</code> header.
           </p>
         </div>
 
@@ -180,11 +177,9 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
             type="checkbox"
             checked={acknowledged}
             onChange={(e) => setAcknowledged(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#A6DAFF] focus:ring-[#A6DAFF] dark:border-[#3a3a3d] dark:bg-[#1a1a1d]"
+            className="mt-0.5 h-4 w-4 rounded border-line-strong bg-surface text-brand focus:ring-brand"
           />
-          <span className="text-sm text-gray-700 dark:text-[#d4d4d8]">
-            I have saved this API key in a secure location
-          </span>
+          <span className="text-sm text-muted">I have saved this API key in a secure location</span>
         </label>
 
         {/* Dismiss button */}
@@ -192,7 +187,7 @@ export function ApiKeyModal({ apiKey, agentName, onDismiss }: ApiKeyModalProps) 
           type="button"
           onClick={onDismiss}
           disabled={!acknowledged}
-          className="w-full rounded-lg bg-[#A6DAFF] px-4 py-2.5 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#A6DAFF]"
+          className="w-full rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand"
         >
           Continue to Agent
         </button>
