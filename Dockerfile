@@ -32,6 +32,9 @@ COPY alembic/ alembic/
 # Copy service code + helper scripts
 COPY ${SERVICE}/ ${SERVICE}/
 COPY scripts/ scripts/
+# The Case File bundle ships this verifier to customers — it MUST be in the
+# image (api/app/routers/audit.py reads it from /app/cli/ai_identity_verify.py).
+COPY cli/ai_identity_verify.py cli/ai_identity_verify.py
 
 # Run as non-root user
 USER appuser

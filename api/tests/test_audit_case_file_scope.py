@@ -230,3 +230,23 @@ class TestBundleScope:
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "application/zip"
         assert "ai-identity-case-file-" in resp.headers["content-disposition"]
+
+    def test_bundle_is_self_contained_includes_verifier(self, client, db_session):
+        """The bundle MUST contain the verifier script + report + README — a
+        customer should never have to source the verifier separately."""
+        import io
+        import zipfile
+
+        agent_a, _, _ = _seed(db_session)
+        _entry(db_session, agent_a.id, "/v1/a")
+        resp = client.get(
+            f"/api/v1/audit/report/bundle?agent_id={agent_a.id}&{WINDOW}",
+            headers={"X-API-Key": OWNER_A},
+        )
+        assert resp.status_code == 200
+        zf = zipfile.ZipFile(io.BytesIO(resp.content))
+        names = zf.namelist()
+        assert "ai_identity_verify.py" in names, f"verifier missing from bundle: {names}"
+        assert len(zf.read("ai_identity_verify.py")) > 1000  # a real script, not a stub
+        assert "README.md" in names
+        assert any(n.startswith("case-file-") and n.endswith(".json") for n in names)
