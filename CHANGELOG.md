@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- Case File report signature is now signed with the organization's forensic key (the one in the bundle / dashboard), not AI Identity's internal server key — so a customer's offline `ai_identity_verify.py report` shows **VALID** instead of always **INVALID**, matching the Reliability Statement's "verifiable by a key-holder" promise. Bundle README rewritten for a clean, repeatable verify. (Affects new exports.) (#325)
 - Dogfood agent-identity verification works in prod again: `/api/v1/keys/verify` authenticates trusted backends (the CEO Dashboard) via a dedicated `X-Service-Token`, now mounted into the API pod from Secret Manager — completing the #298/#299 migration. (#321, #323)
 
 ### Added

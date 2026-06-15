@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
 from common.audit import generate_report_signature, verify_chain, verify_global_chain
+from common.audit.writer import _resolve_org_hmac_key
 from common.models import Agent, AuditLog, OrgMembership, Policy, User, get_db
 from common.ocsf import audit_log_to_ocsf
 from common.schemas.agent import (
@@ -913,6 +914,7 @@ def _build_case_file(
         events = events_query.order_by(AuditLog.created_at.asc()).all()
 
         chain_result = verify_chain(db, org_id=agent.org_id, agent_id=agent_id)
+        sig_org_id = agent.org_id
 
         user_agents = _user_agent_ids(db, user)
         stats = _compute_stats(
@@ -964,6 +966,7 @@ def _build_case_file(
         events = events_query.order_by(AuditLog.created_at.asc()).all()
 
         chain_result = verify_chain(db, org_id=target_org, agent_id=None)
+        sig_org_id = target_org
         stats = _compute_stats_for_org(
             db,
             org_id=target_org,
@@ -996,12 +999,19 @@ def _build_case_file(
         first_broken_id=chain_result.first_broken_id,
         message=chain_result.message,
     )
+    # Sign the report with the SAME key the chain verified under (the org's
+    # forensic_verify_key, falling back to the global key for legacy orgs) so a
+    # key-holder can verify the report signature offline with the same key — the
+    # Reliability Statement's promise. Previously this signed with the server-only
+    # AUDIT_HMAC_KEY, so the report signature always read INVALID to a customer.
+    report_key = _resolve_org_hmac_key(db, sig_org_id) if sig_org_id else None
     report_sig = generate_report_signature(
         report_id=report_id,
         generated_at=report_generated_at,
         chain_valid=chain_result.valid,
         total_entries=chain_result.total_entries,
         entries_verified=chain_result.entries_verified,
+        hmac_key=report_key,
     )
     report = ForensicsReportResponse(
         report_id=report_id,
@@ -1159,48 +1169,55 @@ def audit_report(
 _BUNDLE_README = """\
 # AI Identity — Case File Verification
 
-This **Case File** is an evidence package from AI Identity: a signed forensic audit report plus a
-tool to independently verify its integrity, offline.
+This **Case File** is a self-contained evidence package: a signed forensic report plus the
+tool to verify it yourself, offline. Everything you need is in THIS folder — no internet,
+no other downloads.
 
-## What's Inside
+## Verify it (30 seconds)
 
-- `case-file-*.json` — The signed Case File report, including the **Reliability Statement**
-- `ai_identity_verify.py` — Standalone verification tool (Python 3.9+, no dependencies)
+1. Copy your verification key from the AI Identity dashboard:
+   **Organization -> Forensics -> "HMAC signing key"** (the copy button).
 
-## Quick Start
+2. Open a terminal **in this folder** and run these two lines:
 
-1. Get your HMAC verification key from your AI Identity administrator
-2. Open a terminal and run:
+       export AI_IDENTITY_HMAC_KEY="paste-your-key-here"
+       python3 ai_identity_verify.py chain case-file-*.json
 
-   export AI_IDENTITY_HMAC_KEY="your-key-here"
-   python3 ai_identity_verify.py report case-file-*.json
+   Expect:  **Chain INTACT** (every entry recomputed and cryptographically linked)
 
-3. You should see:
+3. (Optional) Also verify the report signature:
 
-   Signature: VALID ✓
+       python3 ai_identity_verify.py report case-file-*.json
 
-To also verify the full audit chain:
+   Expect:  **Signature: VALID**
 
-   python3 ai_identity_verify.py chain case-file-*.json
+Both checks use the **same key** — the one from your dashboard. Run them from this folder
+exactly as written (the script name uses underscores: `ai_identity_verify.py`).
 
-## What This Proves
+## What's in this folder
 
-- **Signature VALID**: The report data is authentic and has not been modified since export
-- **Chain INTACT**: Every audit log entry links cryptographically to the previous one — no entries were inserted, deleted, or altered
+- `case-file-*.json` — the signed report, including the **Reliability Statement**
+- `ai_identity_verify.py` — the standalone verifier (Python 3.9+, no dependencies)
+- `README.md` — this file
+
+## What it proves
+
+- **Chain INTACT** — every audit entry links cryptographically to the previous one; no entry
+  was inserted, deleted, or altered, and the sequence is gap-free.
+- **Signature VALID** — the report header (id, time, counts, chain result) is authentic and
+  unmodified since export.
 
 ## Reliability Statement
 
-The `reliability_statement` field in the Case File JSON is a plain-English account, written to
-support a FRE 702 / Daubert reliability showing and ISO/IEC 27037 acquisition documentation. It
-states the integrity method (an HMAC-SHA256 chain with per-row recomputation and a gap-free
-sequence — proving no entries were deleted), what the signature attests, the timestamp source, how
-to verify independently, and — honestly — the current limitation: verification requires the
-organization's symmetric forensic key, so the Case File is verifiable by a key-holder and is not
-yet a publicly verifiable (asymmetric) proof.
+The `reliability_statement` field in the JSON is a plain-English account written to support a
+FRE 702 / Daubert reliability showing and ISO/IEC 27037 acquisition documentation. It states
+the integrity method, what the signature attests, the timestamp source, how to verify, and —
+honestly — the current limit: verification uses the organization's symmetric forensic key (a
+key-holder can verify; it is not yet a publicly verifiable asymmetric proof).
 
-## Need Help?
+## Help
 
-Contact your AI Identity administrator or visit https://ai-identity.co/docs
+Visit https://ai-identity.co/docs
 """
 
 # Resolve the CLI script path relative to the project root
