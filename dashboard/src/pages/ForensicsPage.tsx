@@ -23,8 +23,10 @@ import {
   fetchAuditSummary,
   fetchForensicsReport,
   downloadOcsf,
+  downloadVerifyBundle,
   verifyAuditChain,
 } from '../services/api/forensics'
+import { ExportMenu } from '../components/forensics/ExportMenu'
 import { ForensicsTimeline } from '../components/forensics/ForensicsTimeline'
 import { IncidentReconstructModal } from '../components/forensics/IncidentReconstructModal'
 import { EventDetailDrawer } from '../components/forensics/EventDetailDrawer'
@@ -318,6 +320,23 @@ export function ForensicsPage() {
       })
     } catch {
       alert('OCSF export failed')
+    }
+  }
+
+  const exportBundle = async () => {
+    const agentId = resolvedAgentId
+    if (!agentId) {
+      alert('Please select a specific agent to download the verification bundle')
+      return
+    }
+    try {
+      await downloadVerifyBundle({
+        agent_id: agentId,
+        start_date: new Date(startDate).toISOString(),
+        end_date: new Date(endDate).toISOString(),
+      })
+    } catch {
+      alert('Verification bundle download failed')
     }
   }
 
@@ -901,19 +920,26 @@ export function ForensicsPage() {
               onSelect={handleLensSelect}
             />
           )}
-          <button
-            onClick={exportCSV}
-            className="px-3 py-2 text-sm font-medium text-muted bg-elevated hover:bg-elevated rounded-lg transition-colors border border-line-strong"
-          >
-            CSV
-          </button>
-          <button
-            onClick={exportOcsf}
-            title="Export as OCSF API Activity events (class_uid 6003, ai_operation profile)"
-            className="px-3 py-2 text-sm font-medium text-muted bg-elevated hover:bg-elevated rounded-lg transition-colors border border-line-strong"
-          >
-            OCSF
-          </button>
+          <ExportMenu
+            items={[
+              {
+                label: 'JSON report',
+                hint: 'Full report + reliability statement',
+                onClick: exportJSON,
+              },
+              { label: 'CSV', hint: 'Flat event table', onClick: exportCSV },
+              {
+                label: 'OCSF',
+                hint: 'API Activity (class_uid 6003) for SIEMs',
+                onClick: exportOcsf,
+              },
+              {
+                label: 'Verification bundle',
+                hint: 'Signed .zip + offline verify CLI',
+                onClick: exportBundle,
+              },
+            ]}
+          />
         </div>
       </div>
 
