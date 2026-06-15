@@ -102,7 +102,7 @@ export function TryDemoButton() {
     return (
       <button
         onClick={runDemo}
-        className="mb-6 flex w-full items-center justify-center gap-2 rounded-lg bg-[#A6DAFF] px-6 py-3 text-sm font-bold text-[#04070D] transition-all hover:bg-[#A6DAFF]/80 hover:-translate-y-0.5"
+        className="mb-6 flex w-full items-center justify-center gap-2 rounded-lg bg-brand px-6 py-3 text-sm font-bold text-brand-ink transition-all hover:bg-brand-hover hover:-translate-y-0.5"
       >
         <svg
           width="16"
@@ -124,14 +124,14 @@ export function TryDemoButton() {
   // --- Error state ---
   if (step === 'error') {
     return (
-      <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 p-5">
-        <p className="mb-3 text-sm text-red-400">{errorMessage}</p>
+      <div className="mb-6 rounded-lg border border-danger bg-danger-soft p-5">
+        <p className="mb-3 text-sm text-danger">{errorMessage}</p>
         <button
           onClick={() => {
             reset()
             runDemo()
           }}
-          className="rounded-lg bg-red-500/20 px-4 py-2 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/30"
+          className="rounded-lg bg-danger-soft px-4 py-2 text-xs font-semibold text-danger transition-colors hover:bg-danger-soft"
         >
           Retry
         </button>
@@ -143,7 +143,7 @@ export function TryDemoButton() {
   const currentIdx = stepIndex(step)
 
   return (
-    <div className="mb-6 rounded-lg border border-[#A6DAFF]/20 bg-[#04070D]/50 p-5">
+    <div className="mb-6 rounded-lg border border-brand/20 bg-inset p-5">
       <div className="space-y-3">
         {STEPS.map((s, i) => {
           const isDone = currentIdx > i || step === 'done'
@@ -167,7 +167,7 @@ export function TryDemoButton() {
             <div key={s.key} className="flex items-center gap-3">
               {isDone ? (
                 <svg
-                  className="h-5 w-5 shrink-0 text-emerald-400"
+                  className="h-5 w-5 shrink-0 text-success"
                   viewBox="0 0 20 20"
                   fill="currentColor"
                 >
@@ -179,15 +179,15 @@ export function TryDemoButton() {
                 </svg>
               ) : isActive ? (
                 <span className="flex h-5 w-5 items-center justify-center">
-                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#A6DAFF]" />
+                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-brand" />
                 </span>
               ) : (
                 <span className="flex h-5 w-5 items-center justify-center">
-                  <span className="h-2.5 w-2.5 rounded-full bg-gray-600" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-faint" />
                 </span>
               )}
               <span
-                className={`text-sm ${isDone ? 'text-emerald-400' : isActive ? 'text-[#A6DAFF]' : 'text-gray-500'}`}
+                className={`text-sm ${isDone ? 'text-success' : isActive ? 'text-brand' : 'text-subtle'}`}
               >
                 {label}
               </span>
@@ -198,26 +198,26 @@ export function TryDemoButton() {
 
       {/* Done: summary card */}
       {step === 'done' && (
-        <div className="mt-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+        <div className="mt-4 rounded-lg border border-success bg-success-soft p-4">
           <div className="mb-3 flex items-center gap-2">
-            <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-bold text-emerald-400">
+            <span className="rounded bg-success-soft px-2 py-0.5 text-xs font-bold text-success">
               {chainResult?.valid ? 'Chain Verified' : 'Chain Error'}
             </span>
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-faint">
               {auditEntries.length} audit entries &middot; {chainResult?.entries_verified} verified
             </span>
           </div>
           <div className="flex flex-wrap gap-3">
             <a
               href={`/dashboard/forensics?agent_id=${agentId}`}
-              className="inline-flex items-center gap-1 rounded-lg bg-[#A6DAFF] px-4 py-2 text-xs font-bold text-[#04070D] transition-all hover:bg-[#A6DAFF]/80"
+              className="inline-flex items-center gap-1 rounded-lg bg-brand px-4 py-2 text-xs font-bold text-brand-ink transition-all hover:bg-brand-hover"
             >
               View Full Forensics
               <span aria-hidden="true">&rarr;</span>
             </a>
             <a
               href={`/dashboard/agents/${agentId}`}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-600 px-4 py-2 text-xs font-semibold text-gray-300 transition-colors hover:border-[#A6DAFF]"
+              className="inline-flex items-center gap-1 rounded-lg border border-line-strong px-4 py-2 text-xs font-semibold text-muted transition-colors hover:border-brand"
             >
               View Agent
             </a>

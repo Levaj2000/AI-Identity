@@ -30,13 +30,13 @@ export function StatDetailDrawer({ mode, onClose }: Props) {
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#10131C] border-l border-[#1a1a1d] z-50 overflow-y-auto shadow-2xl animate-slide-in flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-surface border-l border-line z-50 overflow-y-auto shadow-2xl animate-slide-in flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-[#10131C]/95 backdrop-blur border-b border-[#1a1a1d] px-6 py-4 flex items-center justify-between z-10 shrink-0">
-          <h2 className="text-lg font-semibold text-white">{drawerTitle(mode)}</h2>
+        <div className="sticky top-0 bg-surface/95 backdrop-blur border-b border-line px-6 py-4 flex items-center justify-between z-10 shrink-0">
+          <h2 className="text-lg font-semibold text-ink">{drawerTitle(mode)}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-white rounded transition-colors"
+            className="p-1.5 text-faint hover:text-ink rounded transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -119,35 +119,35 @@ function UsersPanel() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          className="flex-1 px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#A6DAFF]/50"
+          className="flex-1 px-3 py-1.5 bg-inset border border-line rounded-lg text-sm text-ink placeholder:text-faint focus:outline-none focus:border-brand/50"
         />
         <button
           onClick={handleSearch}
-          className="px-3 py-1.5 bg-[#A6DAFF]/10 text-[#A6DAFF] rounded-lg text-sm hover:bg-[#A6DAFF]/20 transition-colors"
+          className="px-3 py-1.5 bg-brand-soft text-brand rounded-lg text-sm hover:bg-brand-soft transition-colors"
         >
           Search
         </button>
       </div>
 
       {loading && !data ? (
-        <div className="text-gray-500 text-sm py-8 text-center">Loading...</div>
+        <div className="text-subtle text-sm py-8 text-center">Loading...</div>
       ) : (
         <>
-          <div className="text-xs text-gray-500">{data?.total ?? 0} total users</div>
+          <div className="text-xs text-subtle">{data?.total ?? 0} total users</div>
           <div className="space-y-2">
             {data?.items.map((u) => (
               <div
                 key={u.id}
-                className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between"
+                className="bg-inset border border-line rounded-lg px-4 py-3 flex items-center justify-between"
               >
                 <div className="min-w-0">
                   <Link
                     to={`/dashboard/admin/users/${u.id}`}
-                    className="text-sm text-[#A6DAFF] hover:underline truncate block"
+                    className="text-sm text-brand hover:underline truncate block"
                   >
                     {u.email || '--'}
                   </Link>
-                  <div className="text-xs text-gray-500 mt-0.5 flex gap-3">
+                  <div className="text-xs text-subtle mt-0.5 flex gap-3">
                     <span>{u.agent_count} agents</span>
                     <span>{u.requests_this_month.toLocaleString()} reqs</span>
                     {u.created_at && <span>{new Date(u.created_at).toLocaleDateString()}</span>}
@@ -156,18 +156,15 @@ function UsersPanel() {
                 <div className="flex items-center gap-2 shrink-0 ml-3">
                   <TierBadge tier={u.tier} />
                   {u.has_subscription ? (
-                    <span
-                      className="w-2 h-2 bg-green-400 rounded-full"
-                      title="Active subscription"
-                    />
+                    <span className="w-2 h-2 bg-success rounded-full" title="Active subscription" />
                   ) : (
-                    <span className="w-2 h-2 bg-gray-600 rounded-full" title="No subscription" />
+                    <span className="w-2 h-2 bg-faint rounded-full" title="No subscription" />
                   )}
                 </div>
               </div>
             ))}
             {data?.items.length === 0 && (
-              <div className="text-gray-500 text-sm py-8 text-center">No users found</div>
+              <div className="text-subtle text-sm py-8 text-center">No users found</div>
             )}
           </div>
 
@@ -243,12 +240,12 @@ function AgentsPanel() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          className="flex-1 px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#A6DAFF]/50"
+          className="flex-1 px-3 py-1.5 bg-inset border border-line rounded-lg text-sm text-ink placeholder:text-faint focus:outline-none focus:border-brand/50"
         />
         <select
           value={statusFilter}
           onChange={(e) => handleStatusChange(e.target.value)}
-          className="px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white focus:outline-none focus:border-[#A6DAFF]/50"
+          className="px-3 py-1.5 bg-inset border border-line rounded-lg text-sm text-ink focus:outline-none focus:border-brand/50"
         >
           <option value="">All statuses</option>
           <option value="active">Active</option>
@@ -257,27 +254,27 @@ function AgentsPanel() {
         </select>
         <button
           onClick={handleSearch}
-          className="px-3 py-1.5 bg-[#A6DAFF]/10 text-[#A6DAFF] rounded-lg text-sm hover:bg-[#A6DAFF]/20 transition-colors"
+          className="px-3 py-1.5 bg-brand-soft text-brand rounded-lg text-sm hover:bg-brand-soft transition-colors"
         >
           Search
         </button>
       </div>
 
       {loading && !data ? (
-        <div className="text-gray-500 text-sm py-8 text-center">Loading...</div>
+        <div className="text-subtle text-sm py-8 text-center">Loading...</div>
       ) : (
         <>
-          <div className="text-xs text-gray-500">{data?.total ?? 0} total agents</div>
+          <div className="text-xs text-subtle">{data?.total ?? 0} total agents</div>
           <div className="space-y-2">
             {data?.items.map((a) => (
               <Link
                 key={a.id}
                 to={`/dashboard/agents/${a.id}`}
-                className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between cursor-pointer hover:border-[#A6DAFF]/30 transition-colors block"
+                className="bg-inset border border-line rounded-lg px-4 py-3 flex items-center justify-between cursor-pointer hover:border-brand/30 transition-colors block"
               >
                 <div className="min-w-0">
-                  <div className="text-sm text-white truncate">{a.name}</div>
-                  <div className="text-xs text-gray-500 mt-0.5 flex gap-3">
+                  <div className="text-sm text-ink truncate">{a.name}</div>
+                  <div className="text-xs text-subtle mt-0.5 flex gap-3">
                     <span>{a.owner_email || '--'}</span>
                     <span>{a.key_count} keys</span>
                     {a.created_at && <span>{new Date(a.created_at).toLocaleDateString()}</span>}
@@ -287,7 +284,7 @@ function AgentsPanel() {
               </Link>
             ))}
             {data?.items.length === 0 && (
-              <div className="text-gray-500 text-sm py-8 text-center">No agents found</div>
+              <div className="text-subtle text-sm py-8 text-center">No agents found</div>
             )}
           </div>
 
@@ -330,39 +327,39 @@ function RequestsPanel() {
   }, [])
 
   if (loading) {
-    return <div className="text-gray-500 text-sm py-8 text-center px-6">Loading...</div>
+    return <div className="text-subtle text-sm py-8 text-center px-6">Loading...</div>
   }
 
   return (
     <div className="px-6 py-5 space-y-4">
-      <div className="text-xs text-gray-500">Users ranked by requests this month</div>
+      <div className="text-xs text-subtle">Users ranked by requests this month</div>
       <div className="space-y-2">
         {data?.items.map((u, idx) => (
           <div
             key={u.id}
-            className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-3 flex items-center justify-between"
+            className="bg-inset border border-line rounded-lg px-4 py-3 flex items-center justify-between"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <span className="text-xs text-gray-600 font-mono w-6 text-right shrink-0">
+              <span className="text-xs text-faint font-mono w-6 text-right shrink-0">
                 #{idx + 1}
               </span>
               <div className="min-w-0">
-                <div className="text-sm text-white truncate">{u.email || '--'}</div>
-                <div className="text-xs text-gray-500 mt-0.5">
+                <div className="text-sm text-ink truncate">{u.email || '--'}</div>
+                <div className="text-xs text-subtle mt-0.5">
                   <TierBadge tier={u.tier} /> &middot; {u.agent_count} agents
                 </div>
               </div>
             </div>
             <div className="text-right shrink-0 ml-3">
-              <div className="text-sm font-semibold text-[#A6DAFF]">
+              <div className="text-sm font-semibold text-brand">
                 {u.requests_this_month.toLocaleString()}
               </div>
-              <div className="text-xs text-gray-500">requests</div>
+              <div className="text-xs text-subtle">requests</div>
             </div>
           </div>
         ))}
         {data?.items.length === 0 && (
-          <div className="text-gray-500 text-sm py-8 text-center">No data</div>
+          <div className="text-subtle text-sm py-8 text-center">No data</div>
         )}
       </div>
     </div>
@@ -387,69 +384,65 @@ function HealthPanel() {
   }, [])
 
   if (loading) {
-    return <div className="text-gray-500 text-sm py-8 text-center px-6">Loading...</div>
+    return <div className="text-subtle text-sm py-8 text-center px-6">Loading...</div>
   }
 
   if (!data) {
     return (
-      <div className="text-red-400 text-sm py-8 text-center px-6">Failed to load health data</div>
+      <div className="text-danger text-sm py-8 text-center px-6">Failed to load health data</div>
     )
   }
 
   const latencyColor =
     data.db_latency_ms < 50
-      ? 'text-green-400'
+      ? 'text-success'
       : data.db_latency_ms < 200
-        ? 'text-yellow-400'
-        : 'text-red-400'
+        ? 'text-warning'
+        : 'text-danger'
   const latencyBg =
-    data.db_latency_ms < 50
-      ? 'bg-green-400'
-      : data.db_latency_ms < 200
-        ? 'bg-yellow-400'
-        : 'bg-red-400'
+    data.db_latency_ms < 50 ? 'bg-success' : data.db_latency_ms < 200 ? 'bg-warning' : 'bg-danger'
 
   return (
     <div className="px-6 py-5 space-y-5">
       {/* Overall status */}
-      <div className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-4">
-        <div className="text-xs text-gray-500 mb-2">Overall Status</div>
+      <div className="bg-inset border border-line rounded-lg px-4 py-4">
+        <div className="text-xs text-subtle mb-2">Overall Status</div>
         <div className="flex items-center gap-2">
           <span
-            className={`w-2.5 h-2.5 rounded-full ${data.status === 'healthy' ? 'bg-green-400' : 'bg-red-400'}`}
+            className={`w-2.5 h-2.5 rounded-full ${data.status === 'healthy' ? 'bg-success' : 'bg-danger'}`}
           />
-          <span className="text-lg font-semibold text-white capitalize">{data.status}</span>
+          <span className="text-lg font-semibold text-ink capitalize">{data.status}</span>
         </div>
       </div>
 
       {/* DB Latency */}
-      <div className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-4">
-        <div className="text-xs text-gray-500 mb-2">Database Latency</div>
+      <div className="bg-inset border border-line rounded-lg px-4 py-4">
+        <div className="text-xs text-subtle mb-2">Database Latency</div>
         <div className="flex items-center gap-3">
           <span className={`text-2xl font-semibold ${latencyColor}`}>{data.db_latency_ms}ms</span>
-          <div className="flex-1 h-2 bg-[#1a1a1d] rounded-full overflow-hidden">
+          <div className="flex-1 h-2 bg-elevated rounded-full overflow-hidden">
             <div
               className={`h-full ${latencyBg} rounded-full transition-all`}
               style={{ width: `${Math.min((data.db_latency_ms / 500) * 100, 100)}%` }}
             />
           </div>
         </div>
-        <div className="text-xs text-gray-600 mt-1">
+        <div className="text-xs text-faint mt-1">
           {data.db_latency_ms < 50 ? 'Excellent' : data.db_latency_ms < 200 ? 'Acceptable' : 'Slow'}
         </div>
       </div>
 
       {/* Table row counts */}
-      <div className="bg-[#04070D] border border-[#1a1a1d] rounded-lg px-4 py-4">
-        <div className="text-xs text-gray-500 mb-3">Table Row Counts</div>
+      <div className="bg-inset border border-line rounded-lg px-4 py-4">
+        <div className="text-xs text-subtle mb-3">Table Row Counts</div>
         <div className="space-y-2">
           {Object.entries(data.table_counts).map(([table, count]) => (
             <div
               key={table}
-              className="flex items-center justify-between py-1.5 border-b border-[#1a1a1d]/50 last:border-b-0"
+              className="flex items-center justify-between py-1.5 border-b border-line last:border-b-0"
             >
-              <span className="text-sm text-gray-300 font-mono">{table}</span>
-              <span className="text-sm font-semibold text-white">{count.toLocaleString()}</span>
+              <span className="text-sm text-muted font-mono">{table}</span>
+              <span className="text-sm font-semibold text-ink">{count.toLocaleString()}</span>
             </div>
           ))}
         </div>
@@ -462,9 +455,9 @@ function HealthPanel() {
 
 function TierBadge({ tier }: { tier: string }) {
   const colors: Record<string, string> = {
-    free: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-    pro: 'bg-[#A6DAFF]/10 text-[#A6DAFF] border-[#A6DAFF]/20',
-    enterprise: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    free: 'bg-elevated text-muted border-line',
+    pro: 'bg-brand-soft text-brand border-brand/20',
+    enterprise: 'bg-ai-soft text-ai border-ai',
   }
   return (
     <span
@@ -477,13 +470,13 @@ function TierBadge({ tier }: { tier: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    active: 'bg-green-500/10 text-green-400 border-green-500/20',
-    suspended: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-    revoked: 'bg-red-500/10 text-red-400 border-red-500/20',
+    active: 'bg-success-soft text-success border-success',
+    suspended: 'bg-warning-soft text-warning border-warning',
+    revoked: 'bg-danger-soft text-danger border-danger',
   }
   return (
     <span
-      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${colors[status] || 'bg-gray-500/10 text-gray-400 border-gray-500/20'}`}
+      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${colors[status] || 'bg-elevated text-muted border-line'}`}
     >
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
@@ -505,21 +498,21 @@ function PaginationControls({
 }) {
   return (
     <div className="flex items-center justify-between pt-2">
-      <span className="text-xs text-gray-500">
+      <span className="text-xs text-subtle">
         {page * pageSize + 1}--{Math.min((page + 1) * pageSize, total)} of {total}
       </span>
       <div className="flex gap-2">
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page === 0}
-          className="px-3 py-1 text-xs rounded border border-[#1a1a1d] text-gray-300 hover:bg-[#1a1a1d] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1 text-xs rounded border border-line text-muted hover:bg-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           Prev
         </button>
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages - 1}
-          className="px-3 py-1 text-xs rounded border border-[#1a1a1d] text-gray-300 hover:bg-[#1a1a1d] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1 text-xs rounded border border-line text-muted hover:bg-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           Next
         </button>

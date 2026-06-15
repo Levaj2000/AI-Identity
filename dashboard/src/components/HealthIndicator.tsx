@@ -4,10 +4,9 @@ interface HealthIndicatorProps {
 }
 
 export function HealthIndicator({ isHealthy, version }: HealthIndicatorProps) {
-  const dotColor = isHealthy === null ? 'bg-slate-500' : isHealthy ? 'bg-emerald-500' : 'bg-red-500'
+  const dotColor = isHealthy === null ? 'bg-subtle' : isHealthy ? 'bg-success' : 'bg-danger'
 
-  const pingColor =
-    isHealthy === null ? 'bg-slate-400' : isHealthy ? 'bg-emerald-400' : 'bg-red-400'
+  const pingColor = isHealthy === null ? 'bg-subtle' : isHealthy ? 'bg-success' : 'bg-danger'
 
   const showPing = isHealthy === null || isHealthy
 
@@ -23,8 +22,8 @@ export function HealthIndicator({ isHealthy, version }: HealthIndicatorProps) {
         )}
         <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${dotColor}`} />
       </span>
-      <span className="text-sm text-gray-500 dark:text-[#a1a1aa]">{label}</span>
-      {version && <span className="text-xs text-gray-400 dark:text-[#52525b]">v{version}</span>}
+      <span className="text-sm text-subtle">{label}</span>
+      {version && <span className="text-xs text-faint">v{version}</span>}
     </div>
   )
 }
