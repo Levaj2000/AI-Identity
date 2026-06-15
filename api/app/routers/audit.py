@@ -1282,11 +1282,23 @@ def audit_report_bundle(
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(report_filename, report_json)
 
-        # Include the CLI verification script from disk
-        if _CLI_SCRIPT_PATH.exists():
-            zf.write(_CLI_SCRIPT_PATH, "ai_identity_verify.py")
-        else:
-            logger.warning("CLI script not found at %s", _CLI_SCRIPT_PATH)
+        # Include the CLI verification script. A Case File without its verifier
+        # is useless to the customer, so fail LOUDLY rather than silently ship a
+        # bundle they can't verify (this was broken in prod when cli/ was
+        # excluded from the Docker image — see Dockerfile / .dockerignore).
+        if not _CLI_SCRIPT_PATH.exists():
+            logger.error(
+                "Case File verifier missing at %s — refusing to ship an unverifiable bundle",
+                _CLI_SCRIPT_PATH,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "Case File bundle could not be generated: the verifier script "
+                    "is unavailable on the server. This is a deployment misconfiguration."
+                ),
+            )
+        zf.write(_CLI_SCRIPT_PATH, "ai_identity_verify.py")
 
         zf.writestr("README.md", _BUNDLE_README)
 
