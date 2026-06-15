@@ -22,6 +22,7 @@ import {
   fetchAuditReconstruct,
   fetchAuditSummary,
   fetchForensicsReport,
+  downloadOcsf,
   verifyAuditChain,
 } from '../services/api/forensics'
 import { ForensicsTimeline } from '../components/forensics/ForensicsTimeline'
@@ -300,6 +301,23 @@ export function ForensicsPage() {
       a.download = `forensics-report-${new Date().toISOString().slice(0, 10)}.json`
       a.click()
       URL.revokeObjectURL(url)
+    }
+  }
+
+  const exportOcsf = async () => {
+    const agentId = resolvedAgentId
+    if (!agentId) {
+      alert('Please select a specific agent to export OCSF events')
+      return
+    }
+    try {
+      await downloadOcsf({
+        agent_id: agentId,
+        start_date: new Date(startDate).toISOString(),
+        end_date: new Date(endDate).toISOString(),
+      })
+    } catch {
+      alert('OCSF export failed')
     }
   }
 
@@ -716,16 +734,14 @@ export function ForensicsPage() {
             verifiable offline
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {['FRE 702 / Daubert', 'ISO/IEC 27037', 'OCSF aligned', 'HMAC-SHA256 chain'].map(
-              (s) => (
-                <span
-                  key={s}
-                  className="rounded-md border border-line bg-surface px-2.5 py-1 text-xs text-muted"
-                >
-                  {s}
-                </span>
-              ),
-            )}
+            {['FRE 702 / Daubert', 'ISO/IEC 27037', 'OCSF export', 'HMAC-SHA256 chain'].map((s) => (
+              <span
+                key={s}
+                className="rounded-md border border-line bg-surface px-2.5 py-1 text-xs text-muted"
+              >
+                {s}
+              </span>
+            ))}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -890,6 +906,13 @@ export function ForensicsPage() {
             className="px-3 py-2 text-sm font-medium text-muted bg-elevated hover:bg-elevated rounded-lg transition-colors border border-line-strong"
           >
             CSV
+          </button>
+          <button
+            onClick={exportOcsf}
+            title="Export as OCSF API Activity events (class_uid 6003, ai_operation profile)"
+            className="px-3 py-2 text-sm font-medium text-muted bg-elevated hover:bg-elevated rounded-lg transition-colors border border-line-strong"
+          >
+            OCSF
           </button>
         </div>
       </div>
