@@ -13,9 +13,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Forensics report (**Case File**): exports now carry a plain-English **Reliability Statement** (FRE 702 / Daubert + ISO/IEC 27037 framing) describing how integrity is established, what the signature attests, the timestamp source, and the honest limits of key-holder verification. Surfaced on `/api/v1/audit/report` (JSON) and the verification bundle.
 - **Case File** branding for the forensics evidence export: the verification bundle, downloaded report JSON, and CSV are now `case-file-*` (was `forensics-*`), the bundle README documents the Reliability Statement, and the API doc summaries say "Case File." Endpoint paths unchanged (non-breaking).
 - Monthly **infra cost report** (`scripts/infra-cost-report/`) summarizing Neon, Atlas, GKE, and Sentry spend.
+- Dashboard **design-token layer** (`dashboard/src/index.css`): semantic colors — surfaces, text, lines, brand, status — defined once per mode and exposed as Tailwind v4 utilities (`bg-surface`, `text-ink`, `border-line`, `bg-brand`…), replacing per-element `dark:` overrides. Light mode is now an intentional palette (brand uses an AA-compliant `#1d6fe0` on light, `#A6DAFF` on dark), and the app shell (layout, sidebar, theme toggle) is migrated to tokens. Phase 1 of the dashboard polish work; pages migrate in a follow-up.
+- **Onboarding Acceptance** (dashboard QA page): the 15-step E2E checklist is now a two-party acceptance record — the customer and AI Identity each sign off — with a downloadable signed PDF bound to the run id and both signatures. (Reframed from "Simulate client onboarding.")
 
 ### Changed
 - `infra-cost-report`: Treat a deliberate paid Sentry plan as a decision rather than a nag — suppresses the downgrade recommendation when the paid tier is intentional (configurable via `scripts/infra-cost-report/.env.example`).
+
+### Fixed
+- QA checklist runner authenticated its self-calls with the removed `X-API-Key`=email credential (broken by Insight #89), so every authenticated step failed (the "3/5" runs). It now replays the caller's Clerk session token, and onboarding runs under the caller's real account instead of a synthetic test user.
 
 ### Security
 - **Removed the legacy `X-API-Key`=email authentication fallback** in the main API (`api/app/auth.py`) and the Mandate Service (`mandate/app/auth.py`). It matched the `X-API-Key` header directly against `users.email` — which is not a secret — so anyone who knew or guessed a registered user's email could authenticate as that user against the production API. Both services now require a Clerk session token (`Authorization: Bearer`); a present `X-API-Key` fails closed with a migration message. Runtime agent keys (`aid_sk_`) are unaffected — they authenticate at the gateway via the `/api/v1/keys/verify` path. Added a regression test asserting an email used as `X-API-Key` is rejected. (Insight #89)
