@@ -1173,30 +1173,30 @@ This **Case File** is a self-contained evidence package: a signed forensic repor
 tool to verify it yourself, offline. Everything you need is in THIS folder — no internet,
 no other downloads.
 
-## Verify it (30 seconds)
+## Easiest: double-click `verify.command` (macOS)
 
-1. Copy your verification key from the AI Identity dashboard:
-   **Organization -> Forensics -> "HMAC signing key"** (the copy button).
+1. Copy your verification key from the dashboard: **Organization -> Forensics** (copy button).
+2. **Double-click `verify.command`** in this folder. A terminal opens.
+3. Paste the key when asked, press Return. You'll see **Chain INTACT** and **Signature: VALID**.
 
-2. Open a terminal **in this folder** and run these two lines:
+Nothing to type — it finds the case file itself. (First time, macOS may ask you to confirm
+opening it: right-click -> Open -> Open.)
 
-       export AI_IDENTITY_HMAC_KEY="paste-your-key-here"
-       python3 ai_identity_verify.py chain case-file-*.json
+## Or run it by hand (any OS)
 
-   Expect:  **Chain INTACT** (every entry recomputed and cryptographically linked)
+Open a terminal **in this folder** and run:
 
-3. (Optional) Also verify the report signature:
+    export AI_IDENTITY_HMAC_KEY="paste-your-key-here"
+    python3 ai_identity_verify.py chain case-file-*.json      # -> Chain INTACT
+    python3 ai_identity_verify.py report case-file-*.json     # -> Signature: VALID
 
-       python3 ai_identity_verify.py report case-file-*.json
-
-   Expect:  **Signature: VALID**
-
-Both checks use the **same key** — the one from your dashboard. Run them from this folder
-exactly as written (the script name uses underscores: `ai_identity_verify.py`).
+Both checks use the **same key** from your dashboard. Run from this folder exactly as written
+(the script name uses underscores: `ai_identity_verify.py`).
 
 ## What's in this folder
 
 - `case-file-*.json` — the signed report, including the **Reliability Statement**
+- `verify.command` — double-click verifier (macOS)
 - `ai_identity_verify.py` — the standalone verifier (Python 3.9+, no dependencies)
 - `README.md` — this file
 
@@ -1218,6 +1218,36 @@ key-holder can verify; it is not yet a publicly verifiable asymmetric proof).
 ## Help
 
 Visit https://ai-identity.co/docs
+"""
+
+
+# Double-clickable turnkey verifier (macOS opens .command files in Terminal).
+# No paths, globs, or filenames to type — it locates the case file itself and
+# only asks for the key (the one thing it can't ship, by design).
+_VERIFY_COMMAND_SCRIPT = """\
+#!/bin/bash
+# AI Identity — Case File verification. Double-click to run.
+cd "$(dirname "$0")" || exit 1
+echo "AI Identity — Case File verification"
+echo "===================================="
+CASE="$(ls case-file-*.json 2>/dev/null | head -1)"
+if [ -z "$CASE" ]; then
+  echo "No case-file-*.json found next to this script."
+  read -n 1 -s -r -p "Press any key to close."; echo; exit 1
+fi
+echo "Case file: $CASE"
+echo
+echo "Paste your verification key (Dashboard -> Organization -> Forensics),"
+printf "then press Return: "
+read -r KEY
+echo
+echo "--- Audit chain ---"
+AI_IDENTITY_HMAC_KEY="$KEY" python3 ai_identity_verify.py chain "$CASE"
+echo
+echo "--- Report signature ---"
+AI_IDENTITY_HMAC_KEY="$KEY" python3 ai_identity_verify.py report "$CASE"
+echo
+read -n 1 -s -r -p "Done. Press any key to close."; echo
 """
 
 # Resolve the CLI script path relative to the project root
@@ -1301,6 +1331,13 @@ def audit_report_bundle(
         zf.write(_CLI_SCRIPT_PATH, "ai_identity_verify.py")
 
         zf.writestr("README.md", _BUNDLE_README)
+
+        # Turnkey, zero-typing verifier: double-click on macOS. It cd's to its
+        # own folder, auto-finds the case-file, prompts for the key, and runs
+        # both checks — so the user never types a path, glob, or filename.
+        verify_cmd_info = zipfile.ZipInfo("verify.command")
+        verify_cmd_info.external_attr = 0o755 << 16  # make it executable in the zip
+        zf.writestr(verify_cmd_info, _VERIFY_COMMAND_SCRIPT)
 
     zip_buffer.seek(0)
     zip_bytes = zip_buffer.getvalue()

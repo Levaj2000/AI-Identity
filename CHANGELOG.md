@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- Case File bundle ships a double-click `verify.command` (macOS): it cd's to its own folder, auto-finds the case file, prompts only for the key, and runs both the chain and signature checks — so verifying is download → unzip → double-click → paste key, with no path, glob, or filename to type. (#328)
+
 ### Fixed
 - Dashboard Organization → Forensics panel: the verifier download saved as `ai-identity-verify.py` (hyphens) while the real script and the Case File bundle use `ai_identity_verify.py` (underscores), so the displayed command never matched the file. Fixed to one consistent name, and the panel was redesigned — the "shared secret, use Attestation for external auditors" caveat now sits prominently under the key, and the two redundant verify boxes are merged into one numbered CLI flow. (#327)
 - Case File bundle now actually contains the verifier script. `cli/` was excluded from the Docker image (`.dockerignore`), so the bundle builder silently skipped `ai_identity_verify.py` and every downloaded bundle shipped without the tool needed to verify it. The verifier is now copied into the prod image (`Dockerfile.api`), and the bundle endpoint fails loudly (500) rather than ever shipping a verifier-less bundle again. (#326, #328)
