@@ -36,6 +36,14 @@
     --danger-soft: #fef2f2;
     --warning: #b45309;
     --warning-soft: #fffbeb;
+    /* nav rail — constant navy in BOTH modes (brand identity anchor) */
+    --rail: #0a0e16;
+    --rail-fg: #c7ccd4;
+    --rail-muted: #8a93a0;
+    --rail-section: #565f6e;
+    --rail-active: #7cc4f51f;
+    --rail-active-fg: #a6daff;
+    --rail-line: #1a2030;
   }
 
   .dark {
@@ -83,6 +91,13 @@
   --color-danger-soft: var(--danger-soft);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
+  --color-rail: var(--rail);
+  --color-rail-fg: var(--rail-fg);
+  --color-rail-muted: var(--rail-muted);
+  --color-rail-section: var(--rail-section);
+  --color-rail-active: var(--rail-active);
+  --color-rail-active-fg: var(--rail-active-fg);
+  --color-rail-line: var(--rail-line);
 }
 
 /* ── Smooth scrolling for anchor links ─────────────────────────── */
