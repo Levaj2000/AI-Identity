@@ -76,6 +76,11 @@ def audit_log_to_ocsf(row: Any) -> dict[str, Any]:
         "ai_agent": {"uid": str(row.agent_id)},
     }
 
+    # Gateway latency → OCSF base ``duration`` (milliseconds), its native home
+    # (per the CMF↔OCSF crossmap) — not ``unmapped``.
+    if row.latency_ms is not None:
+        event["duration"] = row.latency_ms
+
     if row.agent_name:
         event["ai_agent"]["name"] = row.agent_name
     if row.user_id:
@@ -97,9 +102,8 @@ def audit_log_to_ocsf(row: Any) -> dict[str, Any]:
         event["attestation"] = attestation
 
     # Producer facts with no native OCSF home → unmapped (honest, not dropped).
+    # (latency has a native home: OCSF base ``duration``, set above.)
     unmapped: dict[str, Any] = {}
-    if row.latency_ms is not None:
-        unmapped["latency_ms"] = row.latency_ms
     if row.cost_estimate_usd is not None:
         unmapped["cost_estimate_usd"] = float(row.cost_estimate_usd)
     if getattr(row, "org_chain_seq", None) is not None:
