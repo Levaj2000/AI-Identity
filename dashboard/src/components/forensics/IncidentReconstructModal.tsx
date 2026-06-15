@@ -23,22 +23,19 @@ export function IncidentReconstructModal({ data, onClose, onExportJSON, onExport
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-4xl bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl my-8">
+      <div className="relative w-full max-w-4xl bg-surface border border-line rounded-xl shadow-2xl my-8">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-zinc-700">
+        <div className="flex items-center justify-between p-6 border-b border-line">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-100">Incident Reconstruction</h2>
-            <p className="text-sm text-zinc-400 mt-1">
-              Agent: <span className="text-amber-400">{data.agent_name || data.agent_id}</span>
+            <h2 className="text-lg font-semibold text-ink">Incident Reconstruction</h2>
+            <p className="text-sm text-muted mt-1">
+              Agent: <span className="text-warning">{data.agent_name || data.agent_id}</span>
               {' | '}
               {new Date(data.start_date).toLocaleDateString()} &ndash;{' '}
               {new Date(data.end_date).toLocaleDateString()}
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-zinc-400 hover:text-zinc-200 transition-colors"
-          >
+          <button onClick={onClose} className="p-2 text-muted hover:text-ink transition-colors">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -54,8 +51,8 @@ export function IncidentReconstructModal({ data, onClose, onExportJSON, onExport
         <div
           className={`mx-6 mt-4 rounded-lg p-3 text-sm font-medium flex items-center gap-2 ${
             data.chain_verification.valid
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+              ? 'bg-success-soft text-success border border-success'
+              : 'bg-danger-soft text-danger border border-danger'
           }`}
         >
           <svg
@@ -82,34 +79,30 @@ export function IncidentReconstructModal({ data, onClose, onExportJSON, onExport
             Chain Integrity: {data.chain_verification.valid ? 'Verified' : 'BROKEN'} &mdash;{' '}
             {data.chain_verification.message}
           </span>
-          <span className="ml-auto text-xs text-zinc-500">
+          <span className="ml-auto text-xs text-subtle">
             {data.chain_verification.entries_verified} entries verified
           </span>
         </div>
 
         {/* Stats Summary */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-6">
-          <div className="bg-zinc-800 rounded-lg p-3">
-            <div className="text-xs text-zinc-500 uppercase tracking-wider">Events</div>
-            <div className="text-xl font-semibold text-zinc-100 mt-1">
-              {data.stats.total_events}
-            </div>
+          <div className="bg-elevated rounded-lg p-3">
+            <div className="text-xs text-subtle uppercase tracking-wider">Events</div>
+            <div className="text-xl font-semibold text-ink mt-1">{data.stats.total_events}</div>
           </div>
-          <div className="bg-zinc-800 rounded-lg p-3">
-            <div className="text-xs text-emerald-400 uppercase tracking-wider">Allowed</div>
-            <div className="text-xl font-semibold text-emerald-400 mt-1">
+          <div className="bg-elevated rounded-lg p-3">
+            <div className="text-xs text-success uppercase tracking-wider">Allowed</div>
+            <div className="text-xl font-semibold text-success mt-1">
               {data.stats.allowed_count}
             </div>
           </div>
-          <div className="bg-zinc-800 rounded-lg p-3">
-            <div className="text-xs text-red-400 uppercase tracking-wider">Denied</div>
-            <div className="text-xl font-semibold text-red-400 mt-1">{data.stats.denied_count}</div>
+          <div className="bg-elevated rounded-lg p-3">
+            <div className="text-xs text-danger uppercase tracking-wider">Denied</div>
+            <div className="text-xl font-semibold text-danger mt-1">{data.stats.denied_count}</div>
           </div>
-          <div className="bg-zinc-800 rounded-lg p-3">
-            <div className="text-xs text-yellow-400 uppercase tracking-wider">Errors</div>
-            <div className="text-xl font-semibold text-yellow-400 mt-1">
-              {data.stats.error_count}
-            </div>
+          <div className="bg-elevated rounded-lg p-3">
+            <div className="text-xs text-warning uppercase tracking-wider">Errors</div>
+            <div className="text-xl font-semibold text-warning mt-1">{data.stats.error_count}</div>
           </div>
         </div>
 
@@ -118,7 +111,7 @@ export function IncidentReconstructModal({ data, onClose, onExportJSON, onExport
           <div className="mx-6 mb-4">
             <button
               onClick={() => setShowPolicy(!showPolicy)}
-              className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+              className="flex items-center gap-2 text-sm text-muted hover:text-ink transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -135,7 +128,7 @@ export function IncidentReconstructModal({ data, onClose, onExportJSON, onExport
               Active Policy (v{data.active_policy.version})
             </button>
             {showPolicy && (
-              <pre className="mt-2 p-3 bg-zinc-800 rounded-lg text-xs text-zinc-300 overflow-x-auto border border-zinc-700">
+              <pre className="mt-2 p-3 bg-elevated rounded-lg text-xs text-muted overflow-x-auto border border-line">
                 {JSON.stringify(data.active_policy.rules, null, 2)}
               </pre>
             )}
@@ -144,23 +137,23 @@ export function IncidentReconstructModal({ data, onClose, onExportJSON, onExport
 
         {/* Event Timeline */}
         <div className="px-6 pb-4 max-h-96 overflow-y-auto">
-          <h3 className="text-sm font-medium text-zinc-300 mb-3">
+          <h3 className="text-sm font-medium text-muted mb-3">
             Event Timeline ({data.events.length} events)
           </h3>
           <ForensicsTimeline events={data.events} />
         </div>
 
         {/* Footer with export buttons */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-zinc-700">
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-line">
           <button
             onClick={onExportCSV}
-            className="px-4 py-2 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors border border-zinc-600"
+            className="px-4 py-2 text-sm font-medium text-muted bg-elevated hover:bg-elevated rounded-lg transition-colors border border-line-strong"
           >
             Export CSV
           </button>
           <button
             onClick={onExportJSON}
-            className="px-4 py-2 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm font-medium text-brand-ink bg-brand hover:bg-brand-hover rounded-lg transition-colors"
           >
             Export JSON Report
           </button>

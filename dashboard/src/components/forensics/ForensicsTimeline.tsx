@@ -25,35 +25,35 @@ function formatTime(iso: string): string {
 function decisionColor(d: string) {
   if (d === 'allow' || d === 'allowed')
     return {
-      dot: 'bg-emerald-400',
-      border: 'border-emerald-500/30',
-      text: 'text-emerald-400',
-      bg: 'bg-emerald-500/10',
+      dot: 'bg-success',
+      border: 'border-success',
+      text: 'text-success',
+      bg: 'bg-success-soft',
     }
   if (d === 'deny' || d === 'denied')
     return {
-      dot: 'bg-red-400',
-      border: 'border-red-500/30',
-      text: 'text-red-400',
-      bg: 'bg-red-500/10',
+      dot: 'bg-danger',
+      border: 'border-danger',
+      text: 'text-danger',
+      bg: 'bg-danger-soft',
     }
   return {
-    dot: 'bg-yellow-400',
-    border: 'border-yellow-500/30',
-    text: 'text-yellow-400',
-    bg: 'bg-yellow-500/10',
+    dot: 'bg-warning',
+    border: 'border-warning',
+    text: 'text-warning',
+    bg: 'bg-warning-soft',
   }
 }
 
 function methodBadge(m: string) {
   const colors: Record<string, string> = {
-    GET: 'text-blue-400 bg-blue-500/10',
-    POST: 'text-green-400 bg-green-500/10',
-    PUT: 'text-amber-400 bg-amber-500/10',
-    DELETE: 'text-red-400 bg-red-500/10',
+    GET: 'text-brand bg-brand-soft',
+    POST: 'text-success bg-success-soft',
+    PUT: 'text-warning bg-warning-soft',
+    DELETE: 'text-danger bg-danger-soft',
     PATCH: 'text-purple-400 bg-purple-500/10',
   }
-  return colors[m] || 'text-zinc-400 bg-zinc-500/10'
+  return colors[m] || 'text-muted bg-elevated'
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ export function ForensicsTimeline({ events, onEventClick, onExplainAnomaly }: Pr
 
   if (events.length === 0) {
     return (
-      <div className="flex items-center justify-center py-16 text-zinc-500">
+      <div className="flex items-center justify-center py-16 text-subtle">
         No events in this time window.
       </div>
     )
@@ -79,7 +79,7 @@ export function ForensicsTimeline({ events, onEventClick, onExplainAnomaly }: Pr
   return (
     <div className="relative pl-8">
       {/* Vertical line */}
-      <div className="absolute left-3 top-0 bottom-0 w-px bg-zinc-700" />
+      <div className="absolute left-3 top-0 bottom-0 w-px bg-line" />
 
       {events.map((event) => {
         const colors = decisionColor(event.decision)
@@ -91,7 +91,7 @@ export function ForensicsTimeline({ events, onEventClick, onExplainAnomaly }: Pr
           (a) => a.type === 'latency_spike' || a.type === 'cost_outlier',
         )
         const anomalyRing = hasDenyCluster
-          ? 'ring-1 ring-red-500/40'
+          ? 'ring-1 ring-danger'
           : hasLatencyOrCost
             ? 'ring-1 ring-orange-500/40'
             : ''
@@ -101,14 +101,14 @@ export function ForensicsTimeline({ events, onEventClick, onExplainAnomaly }: Pr
             key={event.id}
             className={`relative mb-4 last:mb-0 cursor-pointer transition-colors rounded-lg p-3 ${anomalyRing} ${
               isIncident
-                ? 'bg-zinc-800/80 border border-red-500/20 hover:border-red-500/40'
-                : 'hover:bg-zinc-800/40'
+                ? 'bg-elevated border border-danger hover:border-danger'
+                : 'hover:bg-elevated'
             }`}
             onClick={() => onEventClick?.(event)}
           >
             {/* Timeline dot */}
             <div
-              className={`absolute -left-5 top-4 h-3 w-3 rounded-full ring-2 ring-zinc-900 ${colors.dot}`}
+              className={`absolute -left-5 top-4 h-3 w-3 rounded-full ring-2 ring-canvas ${colors.dot}`}
             />
 
             {/* Event content */}
@@ -125,18 +125,18 @@ export function ForensicsTimeline({ events, onEventClick, onExplainAnomaly }: Pr
                   >
                     {event.method}
                   </span>
-                  <span className="text-sm font-mono text-zinc-300 truncate">{event.endpoint}</span>
+                  <span className="text-sm font-mono text-muted truncate">{event.endpoint}</span>
                 </div>
 
                 {/* Metadata row */}
-                <div className="flex items-center gap-3 text-xs text-zinc-500">
+                <div className="flex items-center gap-3 text-xs text-subtle">
                   <span>{formatTime(event.created_at)}</span>
                   {event.cost_estimate_usd != null && (
                     <span>${event.cost_estimate_usd.toFixed(4)}</span>
                   )}
                   {event.latency_ms != null && <span>{event.latency_ms}ms</span>}
                   {event.request_metadata?.deny_reason != null && (
-                    <span className="text-red-400">{`${event.request_metadata.deny_reason}`}</span>
+                    <span className="text-danger">{`${event.request_metadata.deny_reason}`}</span>
                   )}
                 </div>
 
@@ -146,7 +146,7 @@ export function ForensicsTimeline({ events, onEventClick, onExplainAnomaly }: Pr
                     {anomalies.map((a, i) => {
                       const baseClasses = `inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                         a.type === 'deny_cluster'
-                          ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                          ? 'bg-danger-soft text-danger border border-danger'
                           : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
                       }`
                       const icon =
@@ -187,7 +187,7 @@ export function ForensicsTimeline({ events, onEventClick, onExplainAnomaly }: Pr
               </div>
 
               {/* Hash preview */}
-              <div className="hidden sm:block text-xs font-mono text-zinc-600 shrink-0">
+              <div className="hidden sm:block text-xs font-mono text-faint shrink-0">
                 #{event.entry_hash.slice(0, 8)}
               </div>
             </div>
