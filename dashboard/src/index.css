@@ -3,6 +3,88 @@
 /* Enable class-based dark mode (toggle via .dark on <html>) */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ── Design tokens ─────────────────────────────────────────────────
+ * Semantic colors defined once per mode. Components use the generated
+ * utilities (bg-surface, text-muted, border-line, bg-brand, …) instead
+ * of hardcoded hex + per-element dark: variants. `.dark` swaps the var
+ * values live; @theme inline exposes them to Tailwind v4 utilities.
+ * ----------------------------------------------------------------- */
+@layer base {
+  :root {
+    /* surfaces */
+    --canvas: #f8fafc;
+    --surface: #ffffff;
+    --elevated: #f1f5f9;
+    --inset: #f8fafc;
+    /* text */
+    --ink: #0f172a;
+    --muted: #475569;
+    --subtle: #94a3b8;
+    --faint: #cbd5e1;
+    /* lines */
+    --line: #e2e8f0;
+    --line-strong: #cbd5e1;
+    /* brand — deeper blue on light so it passes AA on white */
+    --brand: #1d6fe0;
+    --brand-hover: #1a63c9;
+    --brand-ink: #ffffff;
+    --brand-soft: #e8f1fd;
+    /* status */
+    --success: #16a34a;
+    --success-soft: #f0fdf4;
+    --danger: #dc2626;
+    --danger-soft: #fef2f2;
+    --warning: #b45309;
+    --warning-soft: #fffbeb;
+  }
+
+  .dark {
+    --canvas: #04070d;
+    --surface: #10131c;
+    --elevated: #181c26;
+    --inset: #0b0e16;
+    --ink: #e4e4e7;
+    --muted: #a1a1aa;
+    --subtle: #71717a;
+    --faint: #52525b;
+    --line: #1f2430;
+    --line-strong: #2a3040;
+    --brand: #a6daff;
+    --brand-hover: #7cc4f5;
+    --brand-ink: #04070d;
+    --brand-soft: #7cc4f51f;
+    --success: #4ade80;
+    --success-soft: #052e16;
+    --danger: #f87171;
+    --danger-soft: #2a0d0d;
+    --warning: #fbbf24;
+    --warning-soft: #2a1d05;
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-inset: var(--inset);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+}
+
 /* ── Smooth scrolling for anchor links ─────────────────────────── */
 html {
   scroll-behavior: smooth;
