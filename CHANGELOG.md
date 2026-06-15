@@ -18,6 +18,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Onboarding Acceptance** (dashboard QA page): the 15-step E2E checklist is now a two-party acceptance record — the customer and AI Identity each sign off — with a downloadable signed PDF bound to the run id and both signatures. (Reframed from "Simulate client onboarding.")
 
 ### Changed
+- Dashboard **Overview redesigned to an action-first layout** (Phase 3): leads with a "Needs your attention" panel — pending approvals, detected shadow agents, and QA awaiting sign-off, wired to real counts (`/approvals/pending/count`, `/shadow-agents/stats`, `/qa/has-pending`) with a graceful "all caught up" state — then demotes the agent counts to a compact metric strip. Built on the design tokens. (Replaces the four stat cards / `StatsGrid`.)
 - `infra-cost-report`: Treat a deliberate paid Sentry plan as a decision rather than a nag — suppresses the downgrade recommendation when the paid tier is intentional (configurable via `scripts/infra-cost-report/.env.example`).
 
 ### Fixed
