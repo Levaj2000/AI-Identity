@@ -36,6 +36,12 @@
     --danger-soft: #fef2f2;
     --warning: #b45309;
     --warning-soft: #fffbeb;
+    /* accents — AI feature (purple) + perf anomaly (orange), AA on light */
+    --ai: #6d28d9;
+    --ai-ink: #ffffff;
+    --ai-soft: #f1ecfd;
+    --anomaly: #c2410c;
+    --anomaly-soft: #fff1e8;
     /* nav rail — constant navy in BOTH modes (brand identity anchor) */
     --rail: #0a0e16;
     --rail-fg: #c7ccd4;
@@ -67,6 +73,11 @@
     --danger-soft: #2a0d0d;
     --warning: #fbbf24;
     --warning-soft: #2a1d05;
+    --ai: #a78bfa;
+    --ai-ink: #160a2e;
+    --ai-soft: #a78bfa1f;
+    --anomaly: #fb923c;
+    --anomaly-soft: #fb923c1f;
   }
 }
 
@@ -91,6 +102,11 @@
   --color-danger-soft: var(--danger-soft);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
+  --color-ai: var(--ai);
+  --color-ai-ink: var(--ai-ink);
+  --color-ai-soft: var(--ai-soft);
+  --color-anomaly: var(--anomaly);
+  --color-anomaly-soft: var(--anomaly-soft);
   --color-rail: var(--rail);
   --color-rail-fg: var(--rail-fg);
   --color-rail-muted: var(--rail-muted);

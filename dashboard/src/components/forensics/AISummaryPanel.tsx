@@ -78,7 +78,7 @@ export function AISummaryPanel({ data, loading, error, scopeLabel, onClose, onRe
                 {data?.title || 'AI Analysis'}
               </h2>
               {scopeLabel && (
-                <p className="text-xs text-purple-300/90 mt-0.5 truncate" title={scopeLabel}>
+                <p className="text-xs text-ai mt-0.5 truncate" title={scopeLabel}>
                   {scopeLabel}
                 </p>
               )}
@@ -110,7 +110,7 @@ export function AISummaryPanel({ data, loading, error, scopeLabel, onClose, onRe
           {/* Loading */}
           {loading && (
             <div className="flex flex-col items-center justify-center py-20 text-muted gap-3">
-              <div className="h-8 w-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
+              <div className="h-8 w-8 border-2 border-ai border-t-transparent rounded-full animate-spin" />
               <p className="text-sm">Analyzing audit activity...</p>
               <p className="text-xs text-subtle">This usually takes 5–10 seconds</p>
             </div>
@@ -123,7 +123,7 @@ export function AISummaryPanel({ data, loading, error, scopeLabel, onClose, onRe
               {error.includes('Pro') ? (
                 <a
                   href="/settings"
-                  className="inline-flex px-4 py-2 text-sm font-medium text-ink bg-purple-500/90 hover:bg-purple-400/90 rounded-lg transition-colors"
+                  className="inline-flex px-4 py-2 text-sm font-medium bg-ai text-ai-ink hover:opacity-90 rounded-lg transition-colors"
                 >
                   Upgrade Plan
                 </a>
@@ -220,7 +220,7 @@ export function AISummaryPanel({ data, loading, error, scopeLabel, onClose, onRe
                   <ol className="space-y-2">
                     {data.recommended_follow_ups.map((rec, i) => (
                       <li key={i} className="flex gap-3 text-sm text-muted leading-relaxed">
-                        <span className="text-xs font-semibold text-purple-400 bg-purple-500/10 rounded-full h-5 w-5 flex items-center justify-center shrink-0 mt-0.5">
+                        <span className="text-xs font-semibold text-ai bg-ai-soft rounded-full h-5 w-5 flex items-center justify-center shrink-0 mt-0.5">
                           {i + 1}
                         </span>
                         <span>{rec}</span>
