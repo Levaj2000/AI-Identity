@@ -19,23 +19,20 @@ export function OverviewPage() {
         <div className="space-y-8">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-[#10131C]"
-              />
+              <div key={i} className="h-28 animate-pulse rounded-xl bg-elevated" />
             ))}
           </div>
-          <div className="h-64 animate-pulse rounded-xl bg-gray-200 dark:bg-[#10131C]" />
+          <div className="h-64 animate-pulse rounded-xl bg-elevated" />
         </div>
       )}
 
       {/* Error state */}
       {error && (
-        <div className="rounded-xl border border-red-300 bg-red-50 p-6 dark:border-red-500/20 dark:bg-red-500/10">
-          <h2 className="mb-1 font-semibold text-red-600 dark:text-red-400">
+        <div className="rounded-xl border border-danger bg-danger-soft p-6">
+          <h2 className="mb-1 font-semibold text-danger">
             {error.status === 401 ? 'Authentication Failed' : 'Unable to Load Dashboard'}
           </h2>
-          <p className="text-sm text-red-500 dark:text-red-400/80">
+          <p className="text-sm text-danger">
             {error.status === 401
               ? 'Your session may have expired. Try signing out and back in.'
               : error.message}
@@ -51,7 +48,7 @@ export function OverviewPage() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link
             to="/dashboard/agents/new"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#A6DAFF] px-6 py-3 font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/90"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-6 py-3 font-semibold text-brand-ink transition-colors hover:bg-brand-hover"
           >
             Create Agent
             <span aria-hidden="true">+</span>
@@ -60,7 +57,7 @@ export function OverviewPage() {
             href={ENDPOINTS.DOCS}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#e4e4e7] dark:hover:bg-[#2a2a2d]"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface px-6 py-3 font-semibold text-muted transition-colors hover:bg-elevated"
           >
             API Documentation
             <span aria-hidden="true">&rarr;</span>
@@ -69,7 +66,7 @@ export function OverviewPage() {
             href={ENDPOINTS.GITHUB}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#e4e4e7] dark:hover:bg-[#2a2a2d]"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-line-strong bg-surface px-6 py-3 font-semibold text-muted transition-colors hover:bg-elevated"
           >
             GitHub
           </a>

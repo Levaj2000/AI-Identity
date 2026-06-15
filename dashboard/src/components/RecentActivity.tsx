@@ -12,7 +12,7 @@ function StatusIcon({ status }: { status: string }) {
     case 'active':
       return (
         <svg
-          className={`${base} text-emerald-500`}
+          className={`${base} text-success`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -28,7 +28,7 @@ function StatusIcon({ status }: { status: string }) {
     case 'revoked':
       return (
         <svg
-          className={`${base} text-red-500`}
+          className={`${base} text-danger`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -44,7 +44,7 @@ function StatusIcon({ status }: { status: string }) {
     case 'suspended':
       return (
         <svg
-          className={`${base} text-amber-500`}
+          className={`${base} text-warning`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -60,7 +60,7 @@ function StatusIcon({ status }: { status: string }) {
     default:
       return (
         <svg
-          className={`${base} text-gray-400`}
+          className={`${base} text-faint`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -78,36 +78,28 @@ function StatusIcon({ status }: { status: string }) {
 
 export function RecentActivity({ agents }: RecentActivityProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
-      <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">
-        Recent Activity
-      </h2>
+    <div className="rounded-xl border border-line bg-surface p-6">
+      <h2 className="mb-4 text-lg font-semibold text-ink">Recent Activity</h2>
 
       <div className="space-y-3">
         {agents.map((agent) => (
           <div
             key={agent.id}
-            className="flex items-center justify-between rounded-lg border border-l-2 border-transparent border-gray-200 bg-gray-50 px-4 py-3 transition-all duration-200 hover:border-l-[#A6DAFF] dark:border-[#1a1a1d] dark:border-l-transparent dark:bg-[#04070D]/50 dark:hover:border-l-[#A6DAFF] dark:hover:bg-[#A6DAFF]/5"
+            className="flex items-center justify-between rounded-lg border border-l-2 border-transparent border-line bg-inset px-4 py-3 transition-all duration-200 hover:border-l-brand hover:bg-brand-soft"
           >
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <StatusIcon status={agent.status} />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-gray-900 dark:text-[#e4e4e7]">
-                  {agent.name}
-                </p>
+                <p className="truncate font-medium text-ink">{agent.name}</p>
                 {agent.description && (
-                  <p className="truncate text-sm text-gray-500 dark:text-[#71717a]">
-                    {agent.description}
-                  </p>
+                  <p className="truncate text-sm text-subtle">{agent.description}</p>
                 )}
               </div>
             </div>
 
             <div className="ml-4 flex shrink-0 items-center gap-3">
               <AgentStatusBadge status={agent.status} />
-              <span className="text-xs text-gray-400 dark:text-[#52525b]">
-                {relativeTime(agent.updated_at)}
-              </span>
+              <span className="text-xs text-faint">{relativeTime(agent.updated_at)}</span>
             </div>
           </div>
         ))}
