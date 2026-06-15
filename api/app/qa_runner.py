@@ -96,8 +96,14 @@ def _check(
     return passed
 
 
-async def run_qa_checks(api_url: str, gateway_url: str, api_key: str) -> QARunResult:
+async def run_qa_checks(api_url: str, gateway_url: str, auth_token: str) -> QARunResult:
     """Run all 15 QA checks and return structured results.
+
+    ``auth_token`` is a Clerk session JWT (the same token the caller used to
+    reach the QA endpoint). It is forwarded as ``Authorization: Bearer`` on
+    every authenticated self-call, so the runner exercises the real
+    production auth path. The legacy ``X-API-Key=email`` credential was
+    removed in prod (security Insight #89) and no longer authenticates.
 
     Creates temporary resources (agent, policy, keys) and cleans them up.
     Safe to run against production — all test data is removed at the end.
@@ -107,7 +113,10 @@ async def run_qa_checks(api_url: str, gateway_url: str, api_key: str) -> QARunRe
     agent_id: str | None = None
 
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        headers = {"X-API-Key": api_key, "Content-Type": "application/json"}
+        headers = {
+            "Authorization": f"Bearer {auth_token}",
+            "Content-Type": "application/json",
+        }
 
         # ── 1. API Health ───────────────────────────────────────────
         t = time.perf_counter()
