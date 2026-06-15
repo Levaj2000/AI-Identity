@@ -38,7 +38,11 @@ docker-compose.override.yml
 k8s/
 landing-page/
 sdk/
-cli/
+# Exclude cli/ EXCEPT the verifier the Case File bundle ships to customers.
+# (Without the exception this was excluded from the image, so every bundle
+# shipped without ai_identity_verify.py and was unverifiable.)
+cli/*
+!cli/ai_identity_verify.py
 docs/
 .github/
 .claude/
