@@ -301,7 +301,9 @@ function InlineEditName({
 
 const VERIFY_SCRIPT_URL =
   'https://raw.githubusercontent.com/Levaj2000/AI-Identity/main/cli/ai_identity_verify.py'
-const VERIFY_SCRIPT_FILENAME = 'ai-identity-verify.py'
+// Must match the script name shipped INSIDE the Case File bundle (underscores),
+// so the dashboard command, the downloaded file, and the bundle are identical.
+const VERIFY_SCRIPT_FILENAME = 'ai_identity_verify.py'
 const SAMPLE_CHAIN_FILENAME = 'ai-identity-sample-chain.json'
 
 function maskedKey(k: string) {
@@ -614,27 +616,105 @@ function ForensicsKeySection({
             </button>
           </div>
 
-          {/* CLI usage snippet (manual env-var flow) */}
-          <div className="mt-4 rounded-lg border border-line bg-inset p-4">
-            <p className="mb-2 text-xs font-medium text-muted">CLI verification (manual)</p>
-            <pre className="overflow-x-auto text-xs text-muted">
-              {`export AI_IDENTITY_HMAC_KEY='${snippetKey}'
-python3 ${VERIFY_SCRIPT_FILENAME} chain export.json`}
-            </pre>
+          {/* Security caveat — placed right under the key, where copying happens */}
+          <div className="mt-4 flex gap-2 rounded-lg border border-warning bg-warning-soft p-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="mt-0.5 h-4 w-4 shrink-0 text-warning"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <p className="text-xs leading-relaxed text-warning">
+              <span className="font-semibold">
+                Shared secret — never give this to an external auditor.
+              </span>{' '}
+              Anyone who has it can both verify and forge. For third-party or court verification,
+              send an{' '}
+              <Link
+                to="/dashboard/attestation"
+                className="font-medium underline underline-offset-2 hover:text-warning"
+              >
+                Attestation
+              </Link>{' '}
+              (public-key, no secret shared) instead.
+            </p>
           </div>
 
-          {/* CLI Quickstart panel */}
-          <div className="mt-4 rounded-lg border border-brand bg-brand-soft p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-ink">Verify CLI — 60 second quickstart</p>
-                <p className="mt-0.5 text-xs text-muted">
-                  Download the script and a tiny sample chain, then paste one command to see a full
-                  round-trip verify.
-                </p>
-              </div>
+          {/* Verify via CLI — one clear flow */}
+          <div className="mt-5 border-t border-line pt-5">
+            <h3 className="text-sm font-semibold text-ink">Verify via CLI</h3>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              A 60-second round-trip on a sample chain. A real Case File uses the same tool — the
+              bundle from{' '}
+              <Link to="/dashboard/forensics" className="text-ink underline underline-offset-2">
+                Case File
+              </Link>{' '}
+              already includes the verifier; unzip it and run the same command on{' '}
+              <code className="font-mono text-[11px]">case-file-*.json</code>.
+            </p>
+
+            <ol className="mt-3 space-y-2.5">
+              <li className="flex items-start gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-medium text-brand">
+                  1
+                </span>
+                <span className="text-xs leading-relaxed text-muted">
+                  Download the verifier and a sample chain (buttons below).
+                </span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-medium text-brand">
+                  2
+                </span>
+                <span className="text-xs leading-relaxed text-muted">
+                  Run the command below in that folder → expect{' '}
+                  <span className="font-medium text-success">Chain INTACT</span>
+                </span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-medium text-brand">
+                  3
+                </span>
+                <span className="text-xs leading-relaxed text-muted">
+                  Optional: swap <code className="font-mono text-[11px]">chain</code> →{' '}
+                  <code className="font-mono text-[11px]">report</code> for the signature →{' '}
+                  <span className="font-medium text-success">Signature VALID</span>
+                </span>
+              </li>
+            </ol>
+
+            {/* Command box with inline copy */}
+            <div className="relative mt-3 rounded-lg border border-line bg-inset p-3">
+              <pre className="overflow-x-auto pr-9 text-xs leading-relaxed text-muted">
+                {`export AI_IDENTITY_HMAC_KEY='${snippetKey}'
+python3 ${VERIFY_SCRIPT_FILENAME} chain ./${SAMPLE_CHAIN_FILENAME}`}
+              </pre>
+              <button
+                onClick={handleCopyCommand}
+                disabled={!key}
+                title="Copy command"
+                aria-label="Copy command"
+                className="absolute right-2 top-2 rounded-md border border-line bg-surface p-1.5 text-subtle transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="h-3.5 w-3.5"
+                >
+                  <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
+                  <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
+                </svg>
+              </button>
             </div>
 
+            {/* Downloads */}
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={handleDownloadScript}
@@ -673,43 +753,15 @@ python3 ${VERIFY_SCRIPT_FILENAME} chain export.json`}
                     clipRule="evenodd"
                   />
                 </svg>
-                {downloadingSample ? 'Building…' : `Download sample chain`}
-              </button>
-
-              <button
-                onClick={handleCopyCommand}
-                disabled={!key}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  className="h-3.5 w-3.5"
-                >
-                  <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0117 6.622V12.5a1.5 1.5 0 01-1.5 1.5h-1v-3.379a3 3 0 00-.879-2.121L10.5 5.379A3 3 0 008.379 4.5H7v-1z" />
-                  <path d="M4.5 6A1.5 1.5 0 003 7.5v9A1.5 1.5 0 004.5 18h7a1.5 1.5 0 001.5-1.5v-5.879a1.5 1.5 0 00-.44-1.06L9.44 6.439A1.5 1.5 0 008.378 6H4.5z" />
-                </svg>
-                Copy CLI command
+                {downloadingSample ? 'Building…' : 'Sample chain'}
               </button>
             </div>
 
-            <p className="mt-3 text-xs text-muted">
-              <span className="font-medium text-ink">VERIFIED ✓</span> means every entry's HMAC and
-              chain linkage matches; <span className="font-medium text-ink">TAMPERED ✗</span> means
-              an entry was altered or the wrong key was used.
-            </p>
-            <p className="mt-2 text-xs text-warning">
-              <span className="font-semibold">Internal use only.</span> This HMAC key is your
-              organization's shared secret — never share it with external auditors or customers. For
-              external verification, use the{' '}
-              <Link
-                to="/dashboard/compliance/exports"
-                className="font-medium underline underline-offset-2 hover:text-warning"
-              >
-                DSSE attestation flow
-              </Link>{' '}
-              (ECDSA public-key path) instead.
+            {/* Result legend */}
+            <p className="mt-3 text-xs leading-relaxed text-subtle">
+              <span className="font-medium text-success">INTACT / VALID</span> — every entry's HMAC
+              and linkage matches. <span className="font-medium text-danger">TAMPERED</span> — an
+              entry was altered or the wrong key was used.
             </p>
           </div>
         </>
