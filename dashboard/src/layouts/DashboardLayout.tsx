@@ -1,31 +1,45 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from '../components/Sidebar'
 import { HealthIndicator } from '../components/HealthIndicator'
 import { useHealthCheck } from '../hooks/useHealthCheck'
+import { NAV_ITEMS } from '../config/nav'
+
+/** Resolve the current page's label from the nav config (longest path match). */
+function useCurrentTitle(): string {
+  const { pathname } = useLocation()
+  let best = ''
+  let title = 'Dashboard'
+  for (const item of NAV_ITEMS) {
+    const match = item.end
+      ? pathname === item.to
+      : pathname === item.to || pathname.startsWith(item.to + '/')
+    if (match && item.to.length > best.length) {
+      best = item.to
+      title = item.label
+    }
+  }
+  return title
+}
 
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const health = useHealthCheck()
+  const title = useCurrentTitle()
 
   return (
     <div className="relative flex h-screen bg-canvas font-[Inter,system-ui,sans-serif] text-ink">
-      {/* Brand accent line — both modes (uses the brand token) */}
-      <div className="absolute top-0 left-0 right-0 z-50">
-        <div className="h-[2px] w-full bg-gradient-to-r from-brand via-brand/50 to-transparent" />
-      </div>
-
-      {/* Sidebar */}
+      {/* Navy nav rail */}
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top bar (mobile hamburger + health indicator) */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-line bg-canvas px-4 lg:px-6">
+        {/* Top bar — clinical: white surface, breadcrumb, status */}
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-line bg-surface px-4 lg:px-6">
           {/* Hamburger — mobile only */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="rounded-lg p-2 text-muted hover:bg-elevated lg:hidden"
+            className="rounded-md p-2 text-muted hover:bg-elevated lg:hidden"
             aria-label="Open sidebar"
           >
             <svg
@@ -42,12 +56,16 @@ export function DashboardLayout() {
             </svg>
           </button>
 
-          {/* Brand visible on mobile (hidden on desktop since sidebar shows it) */}
-          <h1 className="text-lg font-bold tracking-tight lg:hidden">
-            <span className="text-brand">AI</span> <span className="text-ink">Identity</span>
-          </h1>
+          {/* Breadcrumb / page title */}
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="hidden text-sm text-subtle sm:inline">AI Identity</span>
+            <span className="hidden text-subtle sm:inline" aria-hidden="true">
+              /
+            </span>
+            <span className="truncate text-sm font-medium text-ink">{title}</span>
+          </div>
 
-          {/* Health indicator — pushed to the right */}
+          {/* Status — pushed right */}
           <div className="ml-auto">
             <HealthIndicator isHealthy={health.isHealthy} version={health.version} />
           </div>
