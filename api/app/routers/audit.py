@@ -11,8 +11,10 @@ import io
 import json
 import logging
 import pathlib
+import re
 import uuid
 import zipfile
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -265,6 +267,64 @@ def _compute_stats(
     avg_latency = round(float(agg[2]), 1) if agg and agg[2] is not None else None
 
     # Top endpoints
+    top_eps = (
+        base.with_entities(AuditLog.endpoint, func.count(AuditLog.id).label("cnt"))
+        .group_by(AuditLog.endpoint)
+        .order_by(func.count(AuditLog.id).desc())
+        .limit(10)
+        .all()
+    )
+
+    return AuditStatsResponse(
+        total_events=total_events,
+        allowed_count=counts.get("allow", 0) + counts.get("allowed", 0),
+        denied_count=counts.get("deny", 0) + counts.get("denied", 0),
+        error_count=counts.get("error", 0),
+        total_cost_usd=total_cost,
+        avg_latency_ms=avg_latency,
+        top_endpoints=[TopEndpoint(endpoint=ep, count=cnt) for ep, cnt in top_eps],
+    )
+
+
+def _compute_stats_for_org(
+    db: Session,
+    *,
+    org_id: uuid.UUID,
+    correlation_id: str | None = None,
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+) -> AuditStatsResponse:
+    """Aggregate stats for an org-wide or incident-scoped Case File export.
+
+    Unlike :func:`_compute_stats` (scoped to the caller's own agents), this
+    scopes to the whole tenant via the denormalized ``org_id`` index — the
+    correct denominator for an org-wide report. Optionally narrows to one
+    ``correlation_id`` (incident scope).
+    """
+    base = db.query(AuditLog).filter(AuditLog.org_id == org_id)
+    if correlation_id:
+        base = base.filter(AuditLog.correlation_id == correlation_id)
+    if start_date:
+        base = base.filter(AuditLog.created_at >= start_date)
+    if end_date:
+        base = base.filter(AuditLog.created_at <= end_date)
+
+    decision_counts = (
+        base.with_entities(AuditLog.decision, func.count(AuditLog.id))
+        .group_by(AuditLog.decision)
+        .all()
+    )
+    counts = {d: c for d, c in decision_counts}
+
+    agg = base.with_entities(
+        func.count(AuditLog.id),
+        func.coalesce(func.sum(AuditLog.cost_estimate_usd), 0),
+        func.avg(AuditLog.latency_ms),
+    ).first()
+    total_events = agg[0] if agg else 0
+    total_cost = float(agg[1]) if agg else 0.0
+    avg_latency = round(float(agg[2]), 1) if agg and agg[2] is not None else None
+
     top_eps = (
         base.with_entities(AuditLog.endpoint, func.count(AuditLog.id).label("cnt"))
         .group_by(AuditLog.endpoint)
@@ -796,6 +856,172 @@ def audit_reconstruct(
     )
 
 
+@dataclass
+class _CaseFile:
+    """Result of building a Case File: the signed report plus the raw events
+    and filename tokens that CSV / OCSF / ZIP serialization need."""
+
+    report: ForensicsReportResponse
+    events: list  # raw AuditLog ORM rows (for CSV / OCSF serialization)
+    file_label: str  # human-readable slug for CSV / OCSF filenames
+    short_token: str  # short token for the bundle filename + report_id
+
+
+def _build_case_file(
+    db: Session,
+    user: User,
+    *,
+    agent_id: uuid.UUID | None,
+    correlation_id: str | None,
+    org_id: uuid.UUID | None,
+    start_date: datetime | None,
+    end_date: datetime | None,
+) -> _CaseFile:
+    """Resolve and authorize an export scope, then build the signed Case File.
+
+    Shared by ``GET /report`` and ``GET /report/bundle`` so the two never
+    drift. Three scopes, most-to-least specific:
+
+      * ``agent_id``        — single agent (legacy default). Ownership enforced;
+        behavior is byte-identical to the pre-#403 endpoint when
+        ``correlation_id`` is unset.
+      * ``correlation_id``  — one *incident*: every event sharing the id within
+        the org. Org owner/admin only.
+      * neither             — *org-wide*: every agent's events in the tenant.
+        Org owner/admin only.
+
+    ``org_id`` defaults to the caller's org; only platform admins may target a
+    foreign org (mirrors ``GET /verify``). Chain verification uses
+    ``verify_chain(org_id=…, agent_id=…)`` — org-wide scope gets the full
+    sequence + linkage + hash proof; agent scope gets per-row hash recompute.
+    """
+    report_generated_at = datetime.now(tz=UTC)
+
+    if agent_id is not None:
+        # ── Agent scope (legacy contract: ownership, org derived from agent) ──
+        agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == user.id).first()
+        if not agent:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
+        events_query = db.query(AuditLog).filter(AuditLog.agent_id == agent_id)
+        if correlation_id is not None:
+            events_query = events_query.filter(AuditLog.correlation_id == correlation_id)
+        if start_date is not None:
+            events_query = events_query.filter(AuditLog.created_at >= start_date)
+        if end_date is not None:
+            events_query = events_query.filter(AuditLog.created_at <= end_date)
+        events = events_query.order_by(AuditLog.created_at.asc()).all()
+
+        chain_result = verify_chain(db, org_id=agent.org_id, agent_id=agent_id)
+
+        user_agents = _user_agent_ids(db, user)
+        stats = _compute_stats(
+            db, user_agents, agent_id=agent_id, start_date=start_date, end_date=end_date
+        )
+        active_policy = (
+            db.query(Policy)
+            .filter(Policy.agent_id == agent_id, Policy.is_active.is_(True))
+            .order_by(Policy.version.desc())
+            .first()
+        )
+        agent_block = {
+            "id": str(agent.id),
+            "name": agent.name,
+            "status": agent.status.value if hasattr(agent.status, "value") else str(agent.status),
+            "description": agent.description,
+        }
+        scope = {"type": "agent", "agent_id": str(agent_id)}
+        if agent.org_id:
+            scope["org_id"] = str(agent.org_id)
+        file_label = agent.name
+        short_token = agent_id.hex[:8]
+    else:
+        # ── Org-wide / incident scope (org owner/admin gated) ──
+        target_org = org_id if org_id is not None else user.org_id
+        if target_org is None:
+            raise HTTPException(
+                status_code=400,
+                detail="No org context: caller has no org_id and none was specified",
+            )
+        if org_id is not None and org_id != user.org_id and user.role != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Only platform admins may export another organization's evidence",
+            )
+        if not _is_org_admin(db, user, target_org):
+            raise HTTPException(
+                status_code=403,
+                detail="Org-wide and incident-scoped exports require an org owner or admin role",
+            )
+
+        events_query = db.query(AuditLog).filter(AuditLog.org_id == target_org)
+        if correlation_id is not None:
+            events_query = events_query.filter(AuditLog.correlation_id == correlation_id)
+        if start_date is not None:
+            events_query = events_query.filter(AuditLog.created_at >= start_date)
+        if end_date is not None:
+            events_query = events_query.filter(AuditLog.created_at <= end_date)
+        events = events_query.order_by(AuditLog.created_at.asc()).all()
+
+        chain_result = verify_chain(db, org_id=target_org, agent_id=None)
+        stats = _compute_stats_for_org(
+            db,
+            org_id=target_org,
+            correlation_id=correlation_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        active_policy = None
+        agent_block = None
+        if correlation_id is not None:
+            scope = {
+                "type": "incident",
+                "correlation_id": correlation_id,
+                "org_id": str(target_org),
+            }
+            safe_corr = re.sub(r"[^A-Za-z0-9_-]", "", correlation_id) or "incident"
+            file_label = f"incident-{safe_corr[:16]}"
+            short_token = safe_corr[:8] or "incident"
+        else:
+            scope = {"type": "org", "org_id": str(target_org)}
+            file_label = "org-wide"
+            short_token = target_org.hex[:8]
+
+    window_token = (start_date or report_generated_at).strftime("%Y%m%d%H%M")
+    report_id = f"fr-{short_token}-{window_token}"
+    chain_verify = AuditChainVerifyResponse(
+        valid=chain_result.valid,
+        total_entries=chain_result.total_entries,
+        entries_verified=chain_result.entries_verified,
+        first_broken_id=chain_result.first_broken_id,
+        message=chain_result.message,
+    )
+    report_sig = generate_report_signature(
+        report_id=report_id,
+        generated_at=report_generated_at,
+        chain_valid=chain_result.valid,
+        total_entries=chain_result.total_entries,
+        entries_verified=chain_result.entries_verified,
+    )
+    report = ForensicsReportResponse(
+        report_id=report_id,
+        generated_at=report_generated_at,
+        agent=agent_block,
+        scope=scope,
+        time_window={
+            "start": start_date.isoformat() if start_date else None,
+            "end": end_date.isoformat() if end_date else None,
+        },
+        events=[AuditLogResponse.model_validate(e) for e in events],
+        chain_verification=chain_verify,
+        active_policy=PolicyResponse.model_validate(active_policy) if active_policy else None,
+        stats=stats,
+        report_signature=report_sig,
+        reliability_statement=_build_reliability_statement(chain_result),
+    )
+    return _CaseFile(report=report, events=events, file_label=file_label, short_token=short_token)
+
+
 @router.get(
     "/report",
     summary="Generate Case File (forensics report)",
@@ -803,56 +1029,53 @@ def audit_reconstruct(
     tags=["forensics"],
 )
 def audit_report(
-    agent_id: uuid.UUID = Query(..., description="Agent to report on"),
-    start_date: datetime = Query(..., description="Report window start"),
-    end_date: datetime = Query(..., description="Report window end"),
+    agent_id: uuid.UUID | None = Query(
+        None,
+        description="Scope to a single agent (legacy default). Omit for org-wide or incident scope.",
+    ),
+    correlation_id: str | None = Query(
+        None,
+        max_length=64,
+        description="Scope to one incident — every event sharing this correlation_id.",
+    ),
+    org_id: uuid.UUID | None = Query(
+        None,
+        description=(
+            "Org-wide export scope. Defaults to the caller's org. Platform admins "
+            "may pass any org_id; non-admins requesting a foreign org_id get 403."
+        ),
+    ),
+    start_date: datetime | None = Query(
+        None, description="Report window start (optional for org/incident scope)"
+    ),
+    end_date: datetime | None = Query(None, description="Report window end (optional)"),
     format: str = Query(
         "json", pattern="^(json|csv|ocsf)$", description="Output format (json, csv, or ocsf)"
     ),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Generate an exportable forensics report.
+    """Generate an exportable Case File (forensics report).
 
-    JSON format includes a chain-of-custody verification certificate.
-    CSV format provides a flat event table for external analysis.
+    Scope is one of: a single ``agent_id`` (default), one ``correlation_id``
+    (incident), or org-wide (omit both). JSON includes a chain-of-custody
+    verification certificate and reliability statement; CSV is a flat event
+    table; OCSF is NDJSON API Activity events for SIEM ingestion.
     """
-    user_agents = _user_agent_ids(db, user)
-
-    # Verify agent ownership
-    agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == user.id).first()
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
-
-    # Get events
-    events = (
-        db.query(AuditLog)
-        .filter(
-            AuditLog.agent_id == agent_id,
-            AuditLog.created_at >= start_date,
-            AuditLog.created_at <= end_date,
-        )
-        .order_by(AuditLog.created_at.asc())
-        .all()
+    cf = _build_case_file(
+        db,
+        user,
+        agent_id=agent_id,
+        correlation_id=correlation_id,
+        org_id=org_id,
+        start_date=start_date,
+        end_date=end_date,
     )
+    report = cf.report
+    event_responses = report.events
 
-    # Chain verification (scoped to agent's org)
-    chain_result = verify_chain(db, org_id=agent.org_id, agent_id=agent_id)
-
-    # Active policy
-    active_policy = (
-        db.query(Policy)
-        .filter(Policy.agent_id == agent_id, Policy.is_active.is_(True))
-        .order_by(Policy.version.desc())
-        .first()
-    )
-
-    # Stats
-    stats = _compute_stats(
-        db, user_agents, agent_id=agent_id, start_date=start_date, end_date=end_date
-    )
-
-    event_responses = [AuditLogResponse.model_validate(e) for e in events]
+    def _date_token(d: datetime | None) -> str:
+        return d.strftime("%Y%m%d") if d else "all"
 
     if format == "csv":
         # Build CSV in memory
@@ -890,26 +1113,22 @@ def audit_report(
                 ]
             )
 
-        # Add chain verification and report signature as footer
-        report_generated_at = datetime.now(tz=UTC)
-        report_sig = generate_report_signature(
-            report_id=f"fr-{agent_id.hex[:8]}-{start_date.strftime('%Y%m%d%H%M')}",
-            generated_at=report_generated_at,
-            chain_valid=chain_result.valid,
-            total_entries=chain_result.total_entries,
-            entries_verified=chain_result.entries_verified,
-        )
+        # Chain-of-custody footer — reuse the single signature already
+        # computed in _build_case_file so CSV / JSON / bundle never diverge.
+        cv = report.chain_verification
         writer.writerow([])
         writer.writerow(["# Chain-of-Custody Certificate"])
-        writer.writerow(["chain_valid", chain_result.valid])
-        writer.writerow(["total_entries", chain_result.total_entries])
-        writer.writerow(["entries_verified", chain_result.entries_verified])
-        writer.writerow(["verification_message", chain_result.message])
-        writer.writerow(["generated_at", report_generated_at.isoformat()])
-        writer.writerow(["report_signature", report_sig])
+        writer.writerow(["chain_valid", cv.valid])
+        writer.writerow(["total_entries", cv.total_entries])
+        writer.writerow(["entries_verified", cv.entries_verified])
+        writer.writerow(["verification_message", cv.message])
+        writer.writerow(["generated_at", report.generated_at.isoformat()])
+        writer.writerow(["report_signature", report.report_signature])
 
         output.seek(0)
-        filename = f"case-file-{agent.name}-{start_date.strftime('%Y%m%d')}-{end_date.strftime('%Y%m%d')}.csv"
+        filename = (
+            f"case-file-{cf.file_label}-{_date_token(start_date)}-{_date_token(end_date)}.csv"
+        )
         return StreamingResponse(
             output,
             media_type="text/csv",
@@ -920,10 +1139,10 @@ def audit_report(
         # OCSF API Activity (class_uid 6003) events with the ai_operation profile,
         # emitted as NDJSON — one event per line, the de-facto SIEM ingestion
         # format (Splunk HEC, etc.). Streams cleanly; no megabyte-long single line.
-        ndjson = "".join(json.dumps(audit_log_to_ocsf(e), default=str) + "\n" for e in events)
+        ndjson = "".join(json.dumps(audit_log_to_ocsf(e), default=str) + "\n" for e in cf.events)
         filename = (
-            f"case-file-{agent.name}-{start_date.strftime('%Y%m%d')}-"
-            f"{end_date.strftime('%Y%m%d')}.ocsf.ndjson"
+            f"case-file-{cf.file_label}-{_date_token(start_date)}-"
+            f"{_date_token(end_date)}.ocsf.ndjson"
         )
         return Response(
             content=ndjson,
@@ -931,44 +1150,8 @@ def audit_report(
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
-    # JSON format
-    report_id = f"fr-{agent_id.hex[:8]}-{start_date.strftime('%Y%m%d%H%M')}"
-    report_generated_at = datetime.now(tz=UTC)
-    chain_verify = AuditChainVerifyResponse(
-        valid=chain_result.valid,
-        total_entries=chain_result.total_entries,
-        entries_verified=chain_result.entries_verified,
-        first_broken_id=chain_result.first_broken_id,
-        message=chain_result.message,
-    )
-    report_sig = generate_report_signature(
-        report_id=report_id,
-        generated_at=report_generated_at,
-        chain_valid=chain_result.valid,
-        total_entries=chain_result.total_entries,
-        entries_verified=chain_result.entries_verified,
-    )
-
-    return ForensicsReportResponse(
-        report_id=report_id,
-        generated_at=report_generated_at,
-        agent={
-            "id": str(agent.id),
-            "name": agent.name,
-            "status": agent.status.value if hasattr(agent.status, "value") else str(agent.status),
-            "description": agent.description,
-        },
-        time_window={
-            "start": start_date.isoformat(),
-            "end": end_date.isoformat(),
-        },
-        events=event_responses,
-        chain_verification=chain_verify,
-        active_policy=PolicyResponse.model_validate(active_policy) if active_policy else None,
-        stats=stats,
-        report_signature=report_sig,
-        reliability_statement=_build_reliability_statement(chain_result),
-    )
+    # JSON format — the signed report is already fully built.
+    return report
 
 
 # ── Verification Bundle ────────────────────────────────────────────
@@ -1031,92 +1214,51 @@ _CLI_SCRIPT_PATH = pathlib.Path(__file__).resolve().parents[3] / "cli" / "ai_ide
     tags=["forensics"],
 )
 def audit_report_bundle(
-    agent_id: uuid.UUID = Query(..., description="Agent to report on"),
-    start_date: datetime = Query(..., description="Report window start"),
-    end_date: datetime = Query(..., description="Report window end"),
+    agent_id: uuid.UUID | None = Query(
+        None,
+        description="Scope to a single agent (legacy default). Omit for org-wide or incident scope.",
+    ),
+    correlation_id: str | None = Query(
+        None,
+        max_length=64,
+        description="Scope to one incident — every event sharing this correlation_id.",
+    ),
+    org_id: uuid.UUID | None = Query(
+        None,
+        description=(
+            "Org-wide export scope. Defaults to the caller's org. Platform admins "
+            "may pass any org_id; non-admins requesting a foreign org_id get 403."
+        ),
+    ),
+    start_date: datetime | None = Query(
+        None, description="Report window start (optional for org/incident scope)"
+    ),
+    end_date: datetime | None = Query(None, description="Report window end (optional)"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Response:
-    """Download a ZIP bundle containing the signed forensics report, the standalone
+    """Download a ZIP bundle containing the signed Case File report, the standalone
     verification CLI script, and a client-facing README with instructions.
+
+    Accepts the same agent / incident / org-wide scoping as ``GET /report``.
     """
-    # Verify agent ownership
-    agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == user.id).first()
-    if not agent:
-        raise HTTPException(status_code=404, detail="Agent not found")
-
-    # Generate the full signed report (reuse the same logic as /report)
-    events = (
-        db.query(AuditLog)
-        .filter(
-            AuditLog.agent_id == agent_id,
-            AuditLog.created_at >= start_date,
-            AuditLog.created_at <= end_date,
-        )
-        .order_by(AuditLog.created_at.asc())
-        .all()
+    cf = _build_case_file(
+        db,
+        user,
+        agent_id=agent_id,
+        correlation_id=correlation_id,
+        org_id=org_id,
+        start_date=start_date,
+        end_date=end_date,
     )
-
-    chain_result = verify_chain(db, org_id=agent.org_id, agent_id=agent_id)
-
-    active_policy = (
-        db.query(Policy)
-        .filter(Policy.agent_id == agent_id, Policy.is_active.is_(True))
-        .order_by(Policy.version.desc())
-        .first()
-    )
-
-    user_agents = _user_agent_ids(db, user)
-    stats = _compute_stats(
-        db, user_agents, agent_id=agent_id, start_date=start_date, end_date=end_date
-    )
-
-    event_responses = [AuditLogResponse.model_validate(e) for e in events]
-
-    report_id = f"fr-{agent_id.hex[:8]}-{start_date.strftime('%Y%m%d%H%M')}"
-    report_generated_at = datetime.now(tz=UTC)
-    chain_verify = AuditChainVerifyResponse(
-        valid=chain_result.valid,
-        total_entries=chain_result.total_entries,
-        entries_verified=chain_result.entries_verified,
-        first_broken_id=chain_result.first_broken_id,
-        message=chain_result.message,
-    )
-    report_sig = generate_report_signature(
-        report_id=report_id,
-        generated_at=report_generated_at,
-        chain_valid=chain_result.valid,
-        total_entries=chain_result.total_entries,
-        entries_verified=chain_result.entries_verified,
-    )
-
-    report = ForensicsReportResponse(
-        report_id=report_id,
-        generated_at=report_generated_at,
-        agent={
-            "id": str(agent.id),
-            "name": agent.name,
-            "status": agent.status.value if hasattr(agent.status, "value") else str(agent.status),
-            "description": agent.description,
-        },
-        time_window={
-            "start": start_date.isoformat(),
-            "end": end_date.isoformat(),
-        },
-        events=event_responses,
-        chain_verification=chain_verify,
-        active_policy=PolicyResponse.model_validate(active_policy) if active_policy else None,
-        stats=stats,
-        report_signature=report_sig,
-        reliability_statement=_build_reliability_statement(chain_result),
-    )
+    report = cf.report
 
     # Serialize report to JSON
     report_json = report.model_dump_json(indent=2)
 
     # Build the ZIP bundle
-    date_str = report_generated_at.strftime("%Y-%m-%d")
-    agent_short = agent_id.hex[:8]
+    date_str = report.generated_at.strftime("%Y-%m-%d")
+    agent_short = cf.short_token
     report_filename = f"case-file-{agent_short}-{date_str}.json"
 
     zip_buffer = io.BytesIO()

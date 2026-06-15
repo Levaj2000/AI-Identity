@@ -468,7 +468,17 @@ class ForensicsReportResponse(BaseModel):
 
     report_id: str = Field(description="Unique report identifier")
     generated_at: datetime
-    agent: dict = Field(description="Agent details")
+    agent: dict | None = Field(
+        default=None,
+        description="Agent details (present for agent-scoped exports; null for org-wide / incident scope)",
+    )
+    scope: dict = Field(
+        default_factory=dict,
+        description=(
+            "Export scope descriptor: {type: 'agent'|'incident'|'org', plus identifiers}. "
+            "States on the face of the Case File exactly what the evidence set covers."
+        ),
+    )
     time_window: dict = Field(description="Start and end timestamps")
     events: list[AuditLogResponse]
     chain_verification: AuditChainVerifyResponse
