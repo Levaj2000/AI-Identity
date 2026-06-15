@@ -896,9 +896,9 @@ export function ForensicsPage() {
 
       {/* Deep-linked shadow agent banner */}
       {deepLinkedAgentId && (
-        <div className="flex items-center justify-between bg-purple-500/10 border border-purple-500/20 rounded-xl px-4 py-3">
+        <div className="flex items-center justify-between bg-ai-soft border border-ai rounded-xl px-4 py-3">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-400">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-ai-soft border border-ai px-2.5 py-0.5 text-xs font-medium text-ai">
               Shadow Agent
             </span>
             <span className="text-sm font-mono text-muted">{deepLinkedAgentId}</span>
@@ -1211,7 +1211,7 @@ export function ForensicsPage() {
                   const rowBg = hasDenyCluster
                     ? 'bg-danger-soft'
                     : hasLatencyOrCost
-                      ? 'bg-orange-500/5'
+                      ? 'bg-anomaly-soft'
                       : ''
                   return (
                     <tr

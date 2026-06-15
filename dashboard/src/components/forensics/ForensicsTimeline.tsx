@@ -51,7 +51,7 @@ function methodBadge(m: string) {
     POST: 'text-success bg-success-soft',
     PUT: 'text-warning bg-warning-soft',
     DELETE: 'text-danger bg-danger-soft',
-    PATCH: 'text-purple-400 bg-purple-500/10',
+    PATCH: 'text-ai bg-ai-soft',
   }
   return colors[m] || 'text-muted bg-elevated'
 }
@@ -93,7 +93,7 @@ export function ForensicsTimeline({ events, onEventClick, onExplainAnomaly }: Pr
         const anomalyRing = hasDenyCluster
           ? 'ring-1 ring-danger'
           : hasLatencyOrCost
-            ? 'ring-1 ring-orange-500/40'
+            ? 'ring-1 ring-anomaly'
             : ''
 
         return (
@@ -147,7 +147,7 @@ export function ForensicsTimeline({ events, onEventClick, onExplainAnomaly }: Pr
                       const baseClasses = `inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                         a.type === 'deny_cluster'
                           ? 'bg-danger-soft text-danger border border-danger'
-                          : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                          : 'bg-anomaly-soft text-anomaly border border-anomaly'
                       }`
                       const icon =
                         a.type === 'latency_spike'
