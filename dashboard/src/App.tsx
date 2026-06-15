@@ -21,6 +21,7 @@ import { ShadowAgentsPage } from './pages/ShadowAgentsPage'
 import { QAChecklistPage } from './pages/QAChecklistPage'
 import { WebPropertiesPage } from './pages/WebPropertiesPage'
 import { ForensicsPage } from './pages/ForensicsPage'
+import { AttestationPage } from './pages/AttestationPage'
 import { OrganizationPage } from './pages/OrganizationPage'
 import { SupportTicketsPage } from './pages/SupportTicketsPage'
 import { TicketDetailPage } from './pages/TicketDetailPage'
@@ -55,6 +56,7 @@ function App() {
           <Route path="exports" element={<ComplianceExportsPage />} />
         </Route>
         <Route path="forensics" element={<ForensicsPage />} />
+        <Route path="attestation" element={<AttestationPage />} />
         <Route path="qa" element={<QAChecklistPage />} />
         <Route path="properties" element={<WebPropertiesPage />} />
         <Route path="approvals" element={<ApprovalsPage />} />
