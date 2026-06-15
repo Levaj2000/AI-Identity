@@ -57,7 +57,7 @@ export function AdminUserDetailPage() {
   if (loading && !user) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-gray-400">Loading user profile...</div>
+        <div className="text-muted">Loading user profile...</div>
       </div>
     )
   }
@@ -67,11 +67,11 @@ export function AdminUserDetailPage() {
       <div className="max-w-4xl mx-auto p-6">
         <Link
           to="/dashboard/admin"
-          className="text-[#A6DAFF] hover:underline text-sm mb-4 inline-block"
+          className="text-brand hover:underline text-sm mb-4 inline-block"
         >
           &larr; Back to Admin
         </Link>
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-red-400">
+        <div className="bg-danger-soft border border-danger rounded-xl p-6 text-danger">
           <h3 className="font-semibold mb-1">Error</h3>
           <p className="text-sm">{error}</p>
         </div>
@@ -109,29 +109,29 @@ export function AdminUserDetailPage() {
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Back Link + Header */}
       <div>
-        <Link to="/dashboard/admin" className="text-[#A6DAFF] hover:underline text-sm">
+        <Link to="/dashboard/admin" className="text-brand hover:underline text-sm">
           &larr; Back to Admin
         </Link>
         <div className="flex items-start justify-between mt-3">
           <div>
-            <h1 className="text-2xl font-semibold text-white flex items-center gap-3">
+            <h1 className="text-2xl font-semibold text-ink flex items-center gap-3">
               {user.email || 'Unknown User'}
               <TierBadge tier={user.tier} />
               {user.role === 'admin' && (
-                <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium border bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
+                <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium border bg-warning-soft text-warning border-warning">
                   Admin
                 </span>
               )}
             </h1>
-            <p className="text-gray-400 mt-1 text-sm font-mono">{user.id}</p>
+            <p className="text-muted mt-1 text-sm font-mono">{user.id}</p>
           </div>
           <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-400">Tier:</label>
+            <label className="text-sm text-muted">Tier:</label>
             <select
               value={user.tier}
               disabled={changingTier}
               onChange={(e) => handleTierChange(e.target.value)}
-              className="px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white focus:outline-none focus:border-[#A6DAFF]/50 disabled:opacity-50"
+              className="px-3 py-1.5 bg-inset border border-line rounded-lg text-sm text-ink focus:outline-none focus:border-brand/50 disabled:opacity-50"
             >
               <option value="free">Free</option>
               <option value="pro">Pro</option>
@@ -144,8 +144,8 @@ export function AdminUserDetailPage() {
       {/* Account Info + Quota Cards */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Account Info */}
-        <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl p-5">
-          <h3 className="text-sm font-medium text-gray-400 mb-4">Account Info</h3>
+        <div className="bg-surface border border-line rounded-xl p-5">
+          <h3 className="text-sm font-medium text-muted mb-4">Account Info</h3>
           <div className="space-y-3 text-sm">
             <InfoRow label="Created" value={formatDate(user.created_at)} />
             <InfoRow label="Updated" value={formatDate(user.updated_at)} />
@@ -153,18 +153,18 @@ export function AdminUserDetailPage() {
               label="Subscription"
               value={
                 user.has_subscription ? (
-                  <span className="inline-flex items-center gap-1 text-green-400">
-                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+                  <span className="inline-flex items-center gap-1 text-success">
+                    <span className="w-1.5 h-1.5 bg-success rounded-full" />
                     Active
                   </span>
                 ) : (
-                  <span className="text-gray-500">None</span>
+                  <span className="text-subtle">None</span>
                 )
               }
             />
             <InfoRow
               label="Stripe Customer"
-              value={user.stripe_customer_id || <span className="text-gray-500">N/A</span>}
+              value={user.stripe_customer_id || <span className="text-subtle">N/A</span>}
             />
             <InfoRow
               label="Welcome Email"
@@ -172,7 +172,7 @@ export function AdminUserDetailPage() {
                 user.welcome_email_sent_at ? (
                   formatDate(user.welcome_email_sent_at)
                 ) : (
-                  <span className="text-gray-500">Not sent</span>
+                  <span className="text-subtle">Not sent</span>
                 )
               }
             />
@@ -182,7 +182,7 @@ export function AdminUserDetailPage() {
                 user.followup_email_sent_at ? (
                   formatDate(user.followup_email_sent_at)
                 ) : (
-                  <span className="text-gray-500">Not sent</span>
+                  <span className="text-subtle">Not sent</span>
                 )
               }
             />
@@ -190,8 +190,8 @@ export function AdminUserDetailPage() {
         </div>
 
         {/* Quota Usage */}
-        <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl p-5">
-          <h3 className="text-sm font-medium text-gray-400 mb-4">
+        <div className="bg-surface border border-line rounded-xl p-5">
+          <h3 className="text-sm font-medium text-muted mb-4">
             Tier Quotas ({user.tier.charAt(0).toUpperCase() + user.tier.slice(1)})
           </h3>
           <div className="space-y-4">
@@ -203,19 +203,19 @@ export function AdminUserDetailPage() {
       </div>
 
       {/* Agents Table */}
-      <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl overflow-hidden">
-        <div className="p-5 border-b border-[#1a1a1d]">
-          <h3 className="text-lg font-medium text-white">
-            Agents <span className="text-gray-500 text-sm font-normal">({user.agents.length})</span>
+      <div className="bg-surface border border-line rounded-xl overflow-hidden">
+        <div className="p-5 border-b border-line">
+          <h3 className="text-lg font-medium text-ink">
+            Agents <span className="text-subtle text-sm font-normal">({user.agents.length})</span>
           </h3>
         </div>
         {user.agents.length === 0 ? (
-          <div className="px-5 py-8 text-center text-gray-500">No agents created</div>
+          <div className="px-5 py-8 text-center text-subtle">No agents created</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-400 border-b border-[#1a1a1d]">
+                <tr className="text-left text-muted border-b border-line">
                   <th className="px-5 py-3 font-medium">Name</th>
                   <th className="px-5 py-3 font-medium">Status</th>
                   <th className="px-5 py-3 font-medium">Keys</th>
@@ -226,24 +226,22 @@ export function AdminUserDetailPage() {
                 {user.agents.map((agent) => (
                   <tr
                     key={agent.id}
-                    className="border-b border-[#1a1a1d]/50 hover:bg-[#1a1a1d]/30 transition-colors"
+                    className="border-b border-line hover:bg-elevated transition-colors"
                   >
                     <td className="px-5 py-3">
                       <Link
                         to={`/dashboard/agents/${agent.id}`}
-                        className="text-[#A6DAFF] hover:underline"
+                        className="text-brand hover:underline"
                       >
                         {agent.name}
                       </Link>
-                      <div className="text-xs text-gray-500 font-mono">
-                        {agent.id.slice(0, 8)}...
-                      </div>
+                      <div className="text-xs text-subtle font-mono">{agent.id.slice(0, 8)}...</div>
                     </td>
                     <td className="px-5 py-3">
                       <StatusBadge status={agent.status} />
                     </td>
-                    <td className="px-5 py-3 text-gray-300">{agent.key_count}</td>
-                    <td className="px-5 py-3 text-gray-400">{formatDate(agent.created_at)}</td>
+                    <td className="px-5 py-3 text-muted">{agent.key_count}</td>
+                    <td className="px-5 py-3 text-muted">{formatDate(agent.created_at)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -253,22 +251,22 @@ export function AdminUserDetailPage() {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl overflow-hidden">
-        <div className="p-5 border-b border-[#1a1a1d]">
-          <h3 className="text-lg font-medium text-white">
+      <div className="bg-surface border border-line rounded-xl overflow-hidden">
+        <div className="p-5 border-b border-line">
+          <h3 className="text-lg font-medium text-ink">
             Recent Activity{' '}
-            <span className="text-gray-500 text-sm font-normal">
+            <span className="text-subtle text-sm font-normal">
               (last {user.recent_audit_logs.length} requests)
             </span>
           </h3>
         </div>
         {user.recent_audit_logs.length === 0 ? (
-          <div className="px-5 py-8 text-center text-gray-500">No activity recorded</div>
+          <div className="px-5 py-8 text-center text-subtle">No activity recorded</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-400 border-b border-[#1a1a1d]">
+                <tr className="text-left text-muted border-b border-line">
                   <th className="px-5 py-3 font-medium">Timestamp</th>
                   <th className="px-5 py-3 font-medium">Agent</th>
                   <th className="px-5 py-3 font-medium">Endpoint</th>
@@ -281,20 +279,20 @@ export function AdminUserDetailPage() {
                 {user.recent_audit_logs.map((entry) => (
                   <tr
                     key={entry.id}
-                    className="border-b border-[#1a1a1d]/50 hover:bg-[#1a1a1d]/30 transition-colors"
+                    className="border-b border-line hover:bg-elevated transition-colors"
                   >
-                    <td className="px-5 py-3 text-gray-400 whitespace-nowrap">
+                    <td className="px-5 py-3 text-muted whitespace-nowrap">
                       {formatDateTime(entry.created_at)}
                     </td>
-                    <td className="px-5 py-3 text-gray-300">
+                    <td className="px-5 py-3 text-muted">
                       {entry.agent_name || (
-                        <span className="text-gray-500 font-mono text-xs">
+                        <span className="text-subtle font-mono text-xs">
                           {entry.agent_id.slice(0, 8)}...
                         </span>
                       )}
                     </td>
                     <td className="px-5 py-3">
-                      <span className="text-gray-300 font-mono text-xs">{entry.endpoint}</span>
+                      <span className="text-muted font-mono text-xs">{entry.endpoint}</span>
                     </td>
                     <td className="px-5 py-3">
                       <MethodBadge method={entry.method} />
@@ -302,7 +300,7 @@ export function AdminUserDetailPage() {
                     <td className="px-5 py-3">
                       <DecisionBadge decision={entry.decision} />
                     </td>
-                    <td className="px-5 py-3 text-gray-400">
+                    <td className="px-5 py-3 text-muted">
                       {entry.latency_ms != null ? `${entry.latency_ms}ms` : '—'}
                     </td>
                   </tr>
@@ -321,8 +319,8 @@ export function AdminUserDetailPage() {
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between">
-      <span className="text-gray-400">{label}</span>
-      <span className="text-white">{value}</span>
+      <span className="text-muted">{label}</span>
+      <span className="text-ink">{value}</span>
     </div>
   )
 }
@@ -348,8 +346,8 @@ function QuotaBar({
     return (
       <div>
         <div className="flex justify-between text-sm mb-1">
-          <span className="text-gray-400">{label}</span>
-          <span className="text-white">{displayMax}</span>
+          <span className="text-muted">{label}</span>
+          <span className="text-ink">{displayMax}</span>
         </div>
       </div>
     )
@@ -361,15 +359,15 @@ function QuotaBar({
   return (
     <div>
       <div className="flex justify-between text-sm mb-1">
-        <span className="text-gray-400">{label}</span>
-        <span className="text-white">
+        <span className="text-muted">{label}</span>
+        <span className="text-ink">
           {used.toLocaleString()} / {displayMax}
         </span>
       </div>
       {!isUnlimited && (
-        <div className="h-1.5 bg-[#1a1a1d] rounded-full overflow-hidden">
+        <div className="h-1.5 bg-elevated rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${isHigh ? 'bg-red-500' : 'bg-[#A6DAFF]'}`}
+            className={`h-full rounded-full transition-all ${isHigh ? 'bg-danger' : 'bg-brand'}`}
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -380,9 +378,9 @@ function QuotaBar({
 
 function TierBadge({ tier }: { tier: string }) {
   const colors: Record<string, string> = {
-    free: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-    pro: 'bg-[#A6DAFF]/10 text-[#A6DAFF] border-[#A6DAFF]/20',
-    enterprise: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    free: 'bg-elevated text-muted border-line',
+    pro: 'bg-brand-soft text-brand border-brand/20',
+    enterprise: 'bg-ai-soft text-ai border-ai',
   }
   return (
     <span
@@ -395,19 +393,15 @@ function TierBadge({ tier }: { tier: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    active: 'text-green-400',
-    suspended: 'text-yellow-400',
-    revoked: 'text-red-400',
+    active: 'text-success',
+    suspended: 'text-warning',
+    revoked: 'text-danger',
   }
   return (
-    <span className={`inline-flex items-center gap-1 text-xs ${colors[status] || 'text-gray-400'}`}>
+    <span className={`inline-flex items-center gap-1 text-xs ${colors[status] || 'text-muted'}`}>
       <span
         className={`w-1.5 h-1.5 rounded-full ${
-          status === 'active'
-            ? 'bg-green-400'
-            : status === 'suspended'
-              ? 'bg-yellow-400'
-              : 'bg-red-400'
+          status === 'active' ? 'bg-success' : status === 'suspended' ? 'bg-warning' : 'bg-danger'
         }`}
       />
       {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -417,14 +411,14 @@ function StatusBadge({ status }: { status: string }) {
 
 function MethodBadge({ method }: { method: string }) {
   const colors: Record<string, string> = {
-    GET: 'text-green-400',
-    POST: 'text-[#A6DAFF]',
-    PUT: 'text-yellow-400',
-    PATCH: 'text-yellow-400',
-    DELETE: 'text-red-400',
+    GET: 'text-success',
+    POST: 'text-brand',
+    PUT: 'text-warning',
+    PATCH: 'text-warning',
+    DELETE: 'text-danger',
   }
   return (
-    <span className={`font-mono text-xs font-medium ${colors[method] || 'text-gray-400'}`}>
+    <span className={`font-mono text-xs font-medium ${colors[method] || 'text-muted'}`}>
       {method}
     </span>
   )
@@ -432,9 +426,9 @@ function MethodBadge({ method }: { method: string }) {
 
 function DecisionBadge({ decision }: { decision: string }) {
   const map: Record<string, { color: string; dot: string }> = {
-    allow: { color: 'text-green-400', dot: 'bg-green-400' },
-    deny: { color: 'text-red-400', dot: 'bg-red-400' },
-    error: { color: 'text-yellow-400', dot: 'bg-yellow-400' },
+    allow: { color: 'text-success', dot: 'bg-success' },
+    deny: { color: 'text-danger', dot: 'bg-danger' },
+    error: { color: 'text-warning', dot: 'bg-warning' },
   }
   const style = map[decision] || map.error
   return (

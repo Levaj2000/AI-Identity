@@ -35,9 +35,7 @@ function StatusBadge({ passed }: { passed: boolean }) {
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-        passed
-          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+        passed ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'
       }`}
     >
       {passed ? 'PASS' : 'FAIL'}
@@ -142,36 +140,34 @@ function SignatureCard({
 }) {
   const signed = !!by
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-[#1a1a1d] dark:bg-[#10131C]">
+    <div className="rounded-xl border border-line bg-surface p-4">
       <div className="mb-2.5 flex items-center justify-between">
-        <span className="text-xs text-gray-500 dark:text-[#a1a1aa]">{label}</span>
+        <span className="text-xs text-subtle">{label}</span>
         {signed ? (
-          <span className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Signed
+          <span className="inline-flex items-center gap-1 text-xs text-success">
+            <span className="h-1.5 w-1.5 rounded-full bg-success" /> Signed
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Awaiting
+          <span className="inline-flex items-center gap-1 text-xs text-warning">
+            <span className="h-1.5 w-1.5 rounded-full bg-warning" /> Awaiting
           </span>
         )}
       </div>
       <div
         className={`border-b pb-2 font-serif text-xl ${
-          signed
-            ? 'border-gray-300 text-gray-900 dark:border-[#2a3040] dark:text-white'
-            : 'border-dashed border-gray-300 text-gray-400 dark:border-[#2a3040] dark:text-[#3f4658]'
+          signed ? 'border-line-strong text-ink' : 'border-dashed border-line-strong text-faint'
         }`}
       >
         {signed ? by : 'Sign to accept'}
       </div>
-      <p className="mt-2 text-xs text-gray-400 dark:text-[#71717a]">
+      <p className="mt-2 text-xs text-subtle">
         {signed && at ? new Date(at).toLocaleString() : 'Countersign to issue the certificate'}
       </p>
       {!signed && canSign && (
         <button
           onClick={onSign}
           disabled={signing}
-          className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#A6DAFF] px-3 py-1.5 text-xs font-medium text-[#A6DAFF] hover:bg-[#A6DAFF]/10 disabled:opacity-50"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-brand px-3 py-1.5 text-xs font-medium text-brand hover:bg-brand-soft disabled:opacity-50"
         >
           {signing ? 'Signing...' : `Sign off as ${label}`}
         </button>
@@ -186,35 +182,25 @@ function CheckRow({ check }: { check: QACheck }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div
-      className={`border-l-2 py-2 pl-4 ${
-        check.passed
-          ? 'border-green-400 dark:border-green-600'
-          : 'border-red-400 dark:border-red-600'
-      }`}
-    >
+    <div className={`border-l-2 py-2 pl-4 ${check.passed ? 'border-success' : 'border-danger'}`}>
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center justify-between text-left"
       >
         <div className="flex items-center gap-3">
-          <span className="text-xs font-mono text-gray-400 dark:text-[#52525b] w-6">
-            {check.step}
-          </span>
-          <span className="text-sm text-gray-700 dark:text-[#e4e4e7]">{check.name}</span>
+          <span className="text-xs font-mono text-faint w-6">{check.step}</span>
+          <span className="text-sm text-muted">{check.name}</span>
           <StatusBadge passed={check.passed} />
         </div>
-        <span className="text-xs text-gray-400 dark:text-[#52525b]">
+        <span className="text-xs text-faint">
           {check.duration_ms}ms
           <span className="ml-2">{expanded ? '▾' : '▸'}</span>
         </span>
       </button>
       {expanded && (
         <div className="mt-2 ml-9 space-y-1">
-          <p className="text-xs text-gray-500 dark:text-[#71717a] font-mono">{check.details}</p>
-          {check.error && (
-            <p className="text-xs text-red-500 dark:text-red-400 font-mono">Error: {check.error}</p>
-          )}
+          <p className="text-xs text-subtle font-mono">{check.details}</p>
+          {check.error && <p className="text-xs text-danger font-mono">Error: {check.error}</p>}
         </div>
       )}
     </div>
@@ -246,20 +232,18 @@ function RunDetail({
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Onboarding acceptance
-            </h3>
-            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-[#1a1a1d] dark:text-[#71717a]">
+            <h3 className="text-lg font-semibold text-ink">Onboarding acceptance</h3>
+            <span className="rounded-full bg-elevated px-2.5 py-0.5 text-xs font-medium text-subtle">
               {run.mode === 'onboarding' ? 'Partner run' : 'Admin check'}
             </span>
           </div>
-          <p className="mt-0.5 text-sm text-gray-500 dark:text-[#71717a]">
+          <p className="mt-0.5 text-sm text-subtle">
             Two-party validation that onboarding succeeded — both sign to accept
           </p>
         </div>
         <button
           onClick={() => downloadAcceptanceRecord(run)}
-          className="flex shrink-0 items-center gap-2 rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-medium text-black hover:bg-[#7CC4F5]"
+          className="flex shrink-0 items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-ink hover:bg-brand-hover"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
             <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
@@ -270,30 +254,24 @@ function RunDetail({
       </div>
 
       {/* Certificate hero */}
-      <div className="border-l-[3px] border-[#A6DAFF] bg-gray-50 p-5 dark:bg-[#10131C]">
+      <div className="border-l-[3px] border-brand bg-inset p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-[#71717a]">
-              Ran as
-            </div>
-            <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
-              {run.run_by}
-            </div>
-            <div className="mt-1 font-mono text-xs text-gray-500 dark:text-[#a1a1aa]">
+            <div className="text-[11px] uppercase tracking-wider text-subtle">Ran as</div>
+            <div className="mt-1 text-lg font-semibold text-ink">{run.run_by}</div>
+            <div className="mt-1 font-mono text-xs text-muted">
               {run.run_id} · {run.environment} · {(run.duration_ms / 1000).toFixed(1)}s
             </div>
           </div>
           <div className="text-right">
             <span
               className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium ${
-                passed
-                  ? 'bg-[#7CC4F5]/15 text-[#A6DAFF] ring-1 ring-[#7CC4F5]/40'
-                  : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                passed ? 'bg-brand-soft text-brand ring-1 ring-brand' : 'bg-danger-soft text-danger'
               }`}
             >
               {run.passed_count} / {run.total_count} checks {passed ? 'passed' : 'with issues'}
             </span>
-            <div className="mt-1.5 text-xs text-gray-400 dark:text-[#71717a]">
+            <div className="mt-1.5 text-xs text-subtle">
               {new Date(run.created_at).toLocaleString()}
             </div>
           </div>
@@ -308,16 +286,9 @@ function RunDetail({
           const p = c.filter((x) => x.passed).length
           const ok = p === c.length
           return (
-            <div
-              key={section}
-              className="rounded-lg border border-gray-200 bg-white p-3 dark:border-[#1a1a1d] dark:bg-[#10131C]"
-            >
-              <div className="text-xs text-gray-700 dark:text-[#e4e4e7]">{section}</div>
-              <div
-                className={`mt-1.5 text-xs font-medium ${
-                  ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                }`}
-              >
+            <div key={section} className="rounded-lg border border-line bg-surface p-3">
+              <div className="text-xs text-muted">{section}</div>
+              <div className={`mt-1.5 text-xs font-medium ${ok ? 'text-success' : 'text-danger'}`}>
                 {p} / {c.length} pass
               </div>
             </div>
@@ -327,7 +298,7 @@ function RunDetail({
 
       {/* Acceptance signatures */}
       <div>
-        <div className="mb-2.5 text-[11px] uppercase tracking-wider text-gray-400 dark:text-[#71717a]">
+        <div className="mb-2.5 text-[11px] uppercase tracking-wider text-subtle">
           Acceptance signatures
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -349,8 +320,8 @@ function RunDetail({
           />
         </div>
         {fullySignedOff && (
-          <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#A6DAFF]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#A6DAFF]" />
+          <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-brand">
+            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
             Fully validated — both parties signed
           </div>
         )}
@@ -360,7 +331,7 @@ function RunDetail({
       <div>
         <button
           onClick={() => setShowLog((v) => !v)}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-[#a1a1aa] dark:hover:text-white"
+          className="flex items-center gap-1.5 text-sm text-muted hover:text-ink"
         >
           <span>{showLog ? '▾' : '▸'}</span>
           {showLog ? 'Hide' : 'View'} full check log ({checks.length} steps)
@@ -374,12 +345,10 @@ function RunDetail({
               return (
                 <div key={section}>
                   <div className="mb-2 flex items-center gap-2">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-[#a1a1aa]">
-                      {section}
-                    </h4>
+                    <h4 className="text-sm font-semibold text-muted">{section}</h4>
                     <StatusBadge passed={allPassed} />
                   </div>
-                  <div className="space-y-1 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-[#1a1a1d] dark:bg-[#10131C]">
+                  <div className="space-y-1 rounded-lg border border-line bg-inset p-3">
                     {sectionChecks.map((check) => (
                       <CheckRow key={check.step} check={check} />
                     ))}
@@ -455,10 +424,8 @@ export function QAChecklistPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Onboarding acceptance
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-[#71717a]">
+          <h1 className="text-2xl font-bold text-ink">Onboarding acceptance</h1>
+          <p className="text-sm text-subtle">
             15-step E2E validation, dual-signed by the customer and AI Identity
           </p>
         </div>
@@ -466,7 +433,7 @@ export function QAChecklistPage() {
           <button
             onClick={() => handleRunQA('onboarding')}
             disabled={running}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 rounded-lg bg-brand px-5 py-2.5 text-sm font-medium text-brand-ink hover:bg-brand-hover disabled:opacity-50 transition-colors"
           >
             {running ? (
               <>
@@ -504,7 +471,7 @@ export function QAChecklistPage() {
           <button
             onClick={() => handleRunQA('admin')}
             disabled={running}
-            className="flex items-center gap-2 rounded-lg border border-[#A6DAFF] px-5 py-2.5 text-sm font-medium text-[#A6DAFF] hover:bg-[#A6DAFF]/10 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 rounded-lg border border-brand px-5 py-2.5 text-sm font-medium text-brand hover:bg-brand-soft disabled:opacity-50 transition-colors"
           >
             {running ? (
               'Running...'
@@ -530,7 +497,7 @@ export function QAChecklistPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-lg border border-danger bg-danger-soft px-4 py-3 text-sm text-danger">
           {error}
         </div>
       )}
@@ -538,11 +505,11 @@ export function QAChecklistPage() {
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         {/* Run history sidebar */}
         <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-gray-600 dark:text-[#a1a1aa]">Run history</h2>
+          <h2 className="text-sm font-semibold text-muted">Run history</h2>
           {loading ? (
-            <p className="text-sm text-gray-400 dark:text-[#52525b]">Loading...</p>
+            <p className="text-sm text-faint">Loading...</p>
           ) : runs.length === 0 ? (
-            <p className="text-sm text-gray-400 dark:text-[#52525b]">
+            <p className="text-sm text-faint">
               No runs yet. Run an onboarding acceptance to start.
             </p>
           ) : (
@@ -555,33 +522,27 @@ export function QAChecklistPage() {
                     key={run.id}
                     onClick={() => setSelectedRun(run)}
                     className={`w-full rounded-lg px-3 py-2.5 text-left transition-colors ${
-                      isSelected
-                        ? 'bg-[#A6DAFF]/10 ring-1 ring-[#A6DAFF]/30'
-                        : 'hover:bg-gray-100 dark:hover:bg-[#1a1a1d]'
+                      isSelected ? 'bg-brand-soft ring-1 ring-brand' : 'hover:bg-elevated'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700 dark:text-[#e4e4e7]">
-                        {run.run_id}
-                      </span>
+                      <span className="text-sm font-medium text-muted">{run.run_id}</span>
                       <span
                         className={`text-xs font-medium ${
-                          run.status === 'passed'
-                            ? 'text-green-600 dark:text-green-400'
-                            : 'text-red-600 dark:text-red-400'
+                          run.status === 'passed' ? 'text-success' : 'text-danger'
                         }`}
                       >
                         {run.passed_count}/{run.total_count}
                       </span>
                     </div>
                     <div className="mt-0.5 flex items-center gap-2">
-                      <span className="text-xs text-gray-400 dark:text-[#52525b]">
+                      <span className="text-xs text-faint">
                         {new Date(run.created_at).toLocaleDateString()}
                       </span>
                       {run.mode === 'onboarding' && (
-                        <span className="text-xs text-blue-500 dark:text-blue-400">Onboarding</span>
+                        <span className="text-xs text-brand">Onboarding</span>
                       )}
-                      {fullySignedOff && <span className="text-xs text-[#A6DAFF]">Validated</span>}
+                      {fullySignedOff && <span className="text-xs text-brand">Validated</span>}
                     </div>
                   </button>
                 )
@@ -591,11 +552,11 @@ export function QAChecklistPage() {
         </div>
 
         {/* Run detail */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#04070D]">
+        <div className="rounded-xl border border-line bg-surface p-6">
           {selectedRun ? (
             <RunDetail run={selectedRun} onSignoff={handleSignoff} signingOff={signingOff} />
           ) : (
-            <div className="flex h-64 items-center justify-center text-gray-400 dark:text-[#52525b]">
+            <div className="flex h-64 items-center justify-center text-faint">
               <p>Run an onboarding acceptance to see results here</p>
             </div>
           )}

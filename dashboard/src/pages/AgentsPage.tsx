@@ -98,7 +98,7 @@ export function AgentsPage() {
           <button
             onClick={() => setShowPurgeConfirm(true)}
             disabled={purging}
-            className="rounded-lg bg-danger px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-danger disabled:opacity-50"
+            className="rounded-lg bg-danger px-3 py-1.5 text-sm font-medium text-danger-ink transition-colors hover:bg-danger disabled:opacity-50"
           >
             {purging ? 'Purging...' : 'Purge All'}
           </button>
@@ -124,7 +124,7 @@ export function AgentsPage() {
               </button>
               <button
                 onClick={handlePurge}
-                className="rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-danger"
+                className="rounded-lg bg-danger px-4 py-2 text-sm font-medium text-danger-ink transition-colors hover:bg-danger"
               >
                 Purge {total} Agent{total !== 1 ? 's' : ''}
               </button>

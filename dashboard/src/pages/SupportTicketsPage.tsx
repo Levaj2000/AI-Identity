@@ -45,28 +45,28 @@ export function SupportTicketsPage() {
   const getPriorityColor = (priority: TicketPriority) => {
     switch (priority) {
       case 'urgent':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+        return 'bg-danger-soft text-danger'
       case 'high':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
+        return 'bg-anomaly-soft text-anomaly'
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+        return 'bg-warning-soft text-warning'
       case 'low':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+        return 'bg-success-soft text-success'
     }
   }
 
   const getStatusColor = (status: TicketStatus) => {
     switch (status) {
       case 'open':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+        return 'bg-brand-soft text-brand'
       case 'in_progress':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
+        return 'bg-ai-soft text-ai'
       case 'waiting_customer':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+        return 'bg-warning-soft text-warning'
       case 'resolved':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+        return 'bg-success-soft text-success'
       case 'closed':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+        return 'bg-elevated text-muted'
     }
   }
 
@@ -87,14 +87,12 @@ export function SupportTicketsPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">Support Tickets</h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-[#a1a1aa]">
-            View and manage your support tickets
-          </p>
+          <h1 className="text-2xl font-bold text-ink">Support Tickets</h1>
+          <p className="mt-1 text-sm text-muted">View and manage your support tickets</p>
         </div>
         <button
           onClick={() => setIsCreateModalOpen(true)}
-          className="rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-medium text-gray-900 hover:bg-[#8fc7ff]"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-ink hover:bg-brand-hover"
         >
           Create Ticket
         </button>
@@ -103,17 +101,14 @@ export function SupportTicketsPage() {
       {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-4">
         <div>
-          <label
-            htmlFor="status"
-            className="block text-xs font-medium text-gray-700 dark:text-[#e4e4e7] mb-1"
-          >
+          <label htmlFor="status" className="block text-xs font-medium text-muted mb-1">
             Status
           </label>
           <select
             id="status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as TicketStatus | '')}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#27272a] dark:bg-[#09090b] dark:text-[#e4e4e7]"
+            className="rounded-lg border border-line-strong bg-inset px-3 py-1.5 text-sm text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           >
             <option value="">All Statuses</option>
             <option value="open">Open</option>
@@ -125,17 +120,14 @@ export function SupportTicketsPage() {
         </div>
 
         <div>
-          <label
-            htmlFor="priority"
-            className="block text-xs font-medium text-gray-700 dark:text-[#e4e4e7] mb-1"
-          >
+          <label htmlFor="priority" className="block text-xs font-medium text-muted mb-1">
             Priority
           </label>
           <select
             id="priority"
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value as TicketPriority | '')}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#27272a] dark:bg-[#09090b] dark:text-[#e4e4e7]"
+            className="rounded-lg border border-line-strong bg-inset px-3 py-1.5 text-sm text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           >
             <option value="">All Priorities</option>
             <option value="low">Low</option>
@@ -146,17 +138,14 @@ export function SupportTicketsPage() {
         </div>
 
         <div>
-          <label
-            htmlFor="category"
-            className="block text-xs font-medium text-gray-700 dark:text-[#e4e4e7] mb-1"
-          >
+          <label htmlFor="category" className="block text-xs font-medium text-muted mb-1">
             Category
           </label>
           <select
             id="category"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as TicketCategory | '')}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#27272a] dark:bg-[#09090b] dark:text-[#e4e4e7]"
+            className="rounded-lg border border-line-strong bg-inset px-3 py-1.5 text-sm text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
           >
             <option value="">All Categories</option>
             <option value="technical">Technical</option>
@@ -174,7 +163,7 @@ export function SupportTicketsPage() {
               setPriorityFilter('')
               setCategoryFilter('')
             }}
-            className="self-end rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 dark:border-[#27272a] dark:text-[#e4e4e7] dark:hover:bg-[#27272a]"
+            className="self-end rounded-lg border border-line-strong px-3 py-1.5 text-sm text-muted hover:bg-elevated"
           >
             Clear Filters
           </button>
@@ -184,24 +173,20 @@ export function SupportTicketsPage() {
       {/* Loading State */}
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <div className="text-gray-600 dark:text-[#a1a1aa]">Loading tickets...</div>
+          <div className="text-muted">Loading tickets...</div>
         </div>
       )}
 
       {/* Error State */}
-      {error && (
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-          {error}
-        </div>
-      )}
+      {error && <div className="rounded-lg bg-danger-soft p-4 text-sm text-danger">{error}</div>}
 
       {/* Tickets List */}
       {!isLoading && !error && (
         <div className="space-y-3">
           {tickets.length === 0 ? (
-            <div className="rounded-lg border border-gray-200 bg-white p-12 text-center dark:border-[#27272a] dark:bg-[#09090b]">
+            <div className="rounded-lg border border-line bg-surface p-12 text-center">
               <svg
-                className="mx-auto h-12 w-12 text-gray-400"
+                className="mx-auto h-12 w-12 text-faint"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -213,10 +198,8 @@ export function SupportTicketsPage() {
                   d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
                 />
               </svg>
-              <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-[#e4e4e7]">
-                No tickets found
-              </h3>
-              <p className="mt-2 text-sm text-gray-600 dark:text-[#a1a1aa]">
+              <h3 className="mt-4 text-lg font-medium text-ink">No tickets found</h3>
+              <p className="mt-2 text-sm text-muted">
                 {statusFilter || priorityFilter || categoryFilter
                   ? 'Try adjusting your filters'
                   : 'Create your first support ticket to get started'}
@@ -227,14 +210,12 @@ export function SupportTicketsPage() {
               <div
                 key={ticket.id}
                 onClick={() => navigate(`/dashboard/support/${ticket.id}`)}
-                className="cursor-pointer rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-[#A6DAFF] hover:bg-gray-50 dark:border-[#27272a] dark:bg-[#09090b] dark:hover:border-[#A6DAFF] dark:hover:bg-[#1a1a1d]"
+                className="cursor-pointer rounded-lg border border-line bg-surface p-4 transition-colors hover:border-brand hover:bg-elevated"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm font-mono text-gray-500 dark:text-[#71717a]">
-                        {ticket.ticket_number}
-                      </span>
+                      <span className="text-sm font-mono text-subtle">{ticket.ticket_number}</span>
                       <span
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(ticket.status)}`}
                       >
@@ -246,18 +227,14 @@ export function SupportTicketsPage() {
                         {ticket.priority.toUpperCase()}
                       </span>
                       {ticket.category && (
-                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                        <span className="inline-flex items-center rounded-full bg-elevated px-2 py-0.5 text-xs font-medium text-muted">
                           {ticket.category.replace(/_/g, ' ')}
                         </span>
                       )}
                     </div>
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-[#e4e4e7] mb-1">
-                      {ticket.subject}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-[#a1a1aa] line-clamp-2">
-                      {ticket.description}
-                    </p>
-                    <div className="mt-2 flex items-center gap-4 text-xs text-gray-500 dark:text-[#71717a]">
+                    <h3 className="text-base font-semibold text-ink mb-1">{ticket.subject}</h3>
+                    <p className="text-sm text-muted line-clamp-2">{ticket.description}</p>
+                    <div className="mt-2 flex items-center gap-4 text-xs text-subtle">
                       <span>Created {formatDate(ticket.created_at)}</span>
                       {ticket.comment_count > 0 && (
                         <span className="flex items-center gap-1">
@@ -298,7 +275,7 @@ export function SupportTicketsPage() {
                     </div>
                   </div>
                   <svg
-                    className="h-5 w-5 text-gray-400 flex-shrink-0 ml-4"
+                    className="h-5 w-5 text-faint flex-shrink-0 ml-4"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"

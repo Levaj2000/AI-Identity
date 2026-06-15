@@ -20,26 +20,26 @@ function tierLabel(tier: string): string {
 function tierColor(tier: string): string {
   switch (tier) {
     case 'pro':
-      return 'text-[#A6DAFF]'
+      return 'text-brand'
     case 'business':
-      return 'text-blue-400'
+      return 'text-brand'
     case 'enterprise':
-      return 'text-purple-400'
+      return 'text-ai'
     default:
-      return 'text-gray-400'
+      return 'text-muted'
   }
 }
 
 function tierBadgeClasses(tier: string): string {
   switch (tier) {
     case 'pro':
-      return 'bg-[#A6DAFF]/10 text-[#A6DAFF] border-[#A6DAFF]/20'
+      return 'bg-brand-soft text-brand border-brand'
     case 'business':
-      return 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+      return 'bg-brand-soft text-brand border-brand'
     case 'enterprise':
-      return 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+      return 'bg-ai-soft text-ai border-ai'
     default:
-      return 'bg-gray-500/10 text-gray-400 border-gray-500/20'
+      return 'bg-elevated text-muted border-line-strong'
   }
 }
 
@@ -56,23 +56,23 @@ function formatDate(ts: number): string {
 }
 
 function progressColor(pct: number): string {
-  if (pct >= 90) return 'bg-red-500'
-  if (pct >= 70) return 'bg-yellow-500'
-  return 'bg-[#A6DAFF]'
+  if (pct >= 90) return 'bg-danger'
+  if (pct >= 70) return 'bg-warning'
+  return 'bg-brand'
 }
 
 function subStatusBadge(status: string): string {
   switch (status) {
     case 'active':
     case 'trialing':
-      return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+      return 'bg-success-soft text-success border-success'
     case 'past_due':
-      return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+      return 'bg-warning-soft text-warning border-warning'
     case 'canceled':
     case 'unpaid':
-      return 'bg-red-500/10 text-red-400 border-red-500/20'
+      return 'bg-danger-soft text-danger border-danger'
     default:
-      return 'bg-gray-500/10 text-gray-400 border-gray-500/20'
+      return 'bg-elevated text-muted border-line-strong'
   }
 }
 
@@ -88,25 +88,25 @@ function QuotaBar({
   icon: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
+    <div className="rounded-xl border border-line bg-surface p-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-gray-400">{icon}</span>
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-400">{label}</p>
+          <span className="text-muted">{icon}</span>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted">{label}</p>
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-subtle">
           {quota.current.toLocaleString()} / {formatLimit(quota)}
         </p>
       </div>
-      <div className="mt-3 h-2 rounded-full bg-[#1a1a1d]">
+      <div className="mt-3 h-2 rounded-full bg-elevated">
         <div
           className={`h-full rounded-full transition-all duration-500 ${
-            quota.unlimited ? 'bg-[#A6DAFF]/30' : progressColor(quota.percentage)
+            quota.unlimited ? 'bg-brand-soft' : progressColor(quota.percentage)
           }`}
           style={{ width: `${quota.unlimited ? 0 : Math.min(quota.percentage, 100)}%` }}
         />
       </div>
-      <p className="mt-1.5 text-right text-xs text-gray-500">
+      <p className="mt-1.5 text-right text-xs text-subtle">
         {quota.unlimited ? 'Unlimited' : `${quota.percentage.toFixed(1)}% used`}
       </p>
     </div>
@@ -120,9 +120,9 @@ function DailyChart({ daily }: { daily: UsageAggregation['daily'] }) {
   const maxRequests = Math.max(...daily.map((d) => d.total_requests), 1)
 
   return (
-    <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
-      <h3 className="text-sm font-medium text-white">Daily Requests</h3>
-      <p className="mt-1 text-xs text-gray-500">Current billing period</p>
+    <div className="rounded-xl border border-line bg-surface p-5">
+      <h3 className="text-sm font-medium text-ink">Daily Requests</h3>
+      <p className="mt-1 text-xs text-subtle">Current billing period</p>
       <div className="mt-4 flex items-end gap-[2px] h-32">
         {daily.map((d) => {
           const height = (d.total_requests / maxRequests) * 100
@@ -138,23 +138,23 @@ function DailyChart({ daily }: { daily: UsageAggregation['daily'] }) {
             >
               {/* Tooltip */}
               <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block z-10">
-                <div className="rounded-lg bg-[#1a1a1d] border border-[#2a2a2d] px-2.5 py-1.5 text-[10px] text-gray-300 whitespace-nowrap shadow-lg">
-                  <p className="font-medium text-white">{d.date}</p>
+                <div className="rounded-lg bg-elevated border border-line-strong px-2.5 py-1.5 text-[10px] text-muted whitespace-nowrap shadow-lg">
+                  <p className="font-medium text-ink">{d.date}</p>
                   <p>{d.total_requests} total</p>
-                  {d.denied > 0 && <p className="text-red-400">{d.denied} denied</p>}
+                  {d.denied > 0 && <p className="text-danger">{d.denied} denied</p>}
                 </div>
               </div>
               {/* Stacked bar */}
               <div
-                className="w-full rounded-t-sm bg-red-500/80 transition-all"
+                className="w-full rounded-t-sm bg-danger transition-all"
                 style={{ height: `${errorPct}%` }}
               />
               <div
-                className="w-full bg-red-400/60 transition-all"
+                className="w-full bg-danger transition-all"
                 style={{ height: `${deniedPct}%` }}
               />
               <div
-                className="w-full rounded-t-sm bg-[#A6DAFF] transition-all hover:bg-[#A6DAFF]/80"
+                className="w-full rounded-t-sm bg-brand transition-all hover:bg-brand-hover"
                 style={{ height: `${allowedPct}%`, minHeight: d.total_requests > 0 ? '2px' : '0' }}
               />
             </div>
@@ -162,20 +162,20 @@ function DailyChart({ daily }: { daily: UsageAggregation['daily'] }) {
         })}
       </div>
       {/* Date axis labels */}
-      <div className="mt-2 flex justify-between text-[9px] text-gray-600">
+      <div className="mt-2 flex justify-between text-[9px] text-faint">
         <span>{daily[0]?.date?.slice(5)}</span>
         <span>{daily[daily.length - 1]?.date?.slice(5)}</span>
       </div>
       {/* Legend */}
-      <div className="mt-3 flex items-center gap-4 text-[10px] text-gray-500">
+      <div className="mt-3 flex items-center gap-4 text-[10px] text-subtle">
         <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-sm bg-[#A6DAFF]" /> Allowed
+          <span className="inline-block h-2 w-2 rounded-sm bg-brand" /> Allowed
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-sm bg-red-400/60" /> Denied
+          <span className="inline-block h-2 w-2 rounded-sm bg-danger" /> Denied
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-2 w-2 rounded-sm bg-red-500/80" /> Errors
+          <span className="inline-block h-2 w-2 rounded-sm bg-danger" /> Errors
         </span>
       </div>
     </div>
@@ -187,9 +187,9 @@ function DailyChart({ daily }: { daily: UsageAggregation['daily'] }) {
 function AgentBreakdown({ agents }: { agents: UsageAggregation['by_agent'] }) {
   if (agents.length === 0) {
     return (
-      <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
-        <h3 className="text-sm font-medium text-white">Per-Agent Breakdown</h3>
-        <p className="mt-4 text-center text-sm text-gray-500">
+      <div className="rounded-xl border border-line bg-surface p-5">
+        <h3 className="text-sm font-medium text-ink">Per-Agent Breakdown</h3>
+        <p className="mt-4 text-center text-sm text-subtle">
           No agent activity this billing period
         </p>
       </div>
@@ -197,57 +197,57 @@ function AgentBreakdown({ agents }: { agents: UsageAggregation['by_agent'] }) {
   }
 
   return (
-    <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
-      <h3 className="text-sm font-medium text-white">Per-Agent Breakdown</h3>
-      <p className="mt-1 text-xs text-gray-500">Current billing period</p>
+    <div className="rounded-xl border border-line bg-surface p-5">
+      <h3 className="text-sm font-medium text-ink">Per-Agent Breakdown</h3>
+      <p className="mt-1 text-xs text-subtle">Current billing period</p>
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#1a1a1d]">
-              <th className="pb-2 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+            <tr className="border-b border-line">
+              <th className="pb-2 text-left text-xs font-medium uppercase tracking-wider text-muted">
                 Agent
               </th>
-              <th className="pb-2 text-right text-xs font-medium uppercase tracking-wider text-gray-400">
+              <th className="pb-2 text-right text-xs font-medium uppercase tracking-wider text-muted">
                 Requests
               </th>
-              <th className="pb-2 text-right text-xs font-medium uppercase tracking-wider text-gray-400">
+              <th className="pb-2 text-right text-xs font-medium uppercase tracking-wider text-muted">
                 Allowed
               </th>
-              <th className="pb-2 text-right text-xs font-medium uppercase tracking-wider text-gray-400">
+              <th className="pb-2 text-right text-xs font-medium uppercase tracking-wider text-muted">
                 Denied
               </th>
-              <th className="pb-2 text-right text-xs font-medium uppercase tracking-wider text-gray-400">
+              <th className="pb-2 text-right text-xs font-medium uppercase tracking-wider text-muted">
                 Last Active
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#1a1a1d]">
+          <tbody className="divide-y divide-line">
             {agents.map((a) => (
-              <tr key={a.agent_id} className="hover:bg-[#1a1a1d]/30 transition-colors">
+              <tr key={a.agent_id} className="hover:bg-elevated transition-colors">
                 <td className="py-2.5">
                   <div className="flex items-center gap-2">
                     <span
                       className={`h-2 w-2 rounded-full ${
                         a.agent_status === 'active'
-                          ? 'bg-emerald-400'
+                          ? 'bg-success'
                           : a.agent_status === 'suspended'
-                            ? 'bg-yellow-400'
-                            : 'bg-red-400'
+                            ? 'bg-warning'
+                            : 'bg-danger'
                       }`}
                     />
-                    <span className="text-sm text-white">{a.agent_name}</span>
+                    <span className="text-sm text-ink">{a.agent_name}</span>
                   </div>
                 </td>
-                <td className="py-2.5 text-right font-mono text-sm text-gray-300">
+                <td className="py-2.5 text-right font-mono text-sm text-muted">
                   {a.total_requests.toLocaleString()}
                 </td>
-                <td className="py-2.5 text-right font-mono text-sm text-emerald-400">
+                <td className="py-2.5 text-right font-mono text-sm text-success">
                   {a.allowed.toLocaleString()}
                 </td>
-                <td className="py-2.5 text-right font-mono text-sm text-red-400">
+                <td className="py-2.5 text-right font-mono text-sm text-danger">
                   {a.denied > 0 ? a.denied.toLocaleString() : '—'}
                 </td>
-                <td className="py-2.5 text-right text-xs text-gray-500">
+                <td className="py-2.5 text-right text-xs text-subtle">
                   {a.last_active
                     ? new Date(a.last_active).toLocaleDateString('en-US', {
                         month: 'short',
@@ -324,22 +324,22 @@ function TierComparison({ currentTier }: { currentTier: string }) {
             key={t.key}
             className={`rounded-xl border p-5 transition-colors ${
               isCurrent
-                ? 'border-[#A6DAFF]/40 bg-[#A6DAFF]/5'
-                : 'border-[#1a1a1d] bg-[#10131C]/80 hover:border-[#2a2a2d]'
+                ? 'border-brand bg-brand-soft'
+                : 'border-line bg-surface hover:border-line-strong'
             }`}
           >
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-white">{t.name}</h4>
+              <h4 className="text-sm font-semibold text-ink">{t.name}</h4>
               {isCurrent && (
-                <span className="rounded-full border border-[#A6DAFF]/30 bg-[#A6DAFF]/10 px-2 py-0.5 text-[10px] font-medium text-[#A6DAFF]">
+                <span className="rounded-full border border-brand bg-brand-soft px-2 py-0.5 text-[10px] font-medium text-brand">
                   Current
                 </span>
               )}
             </div>
-            <p className="mt-1 text-2xl font-bold text-white">{t.price}</p>
+            <p className="mt-1 text-2xl font-bold text-ink">{t.price}</p>
             <ul className="mt-4 space-y-2">
               {t.features.map((f) => (
-                <li key={f} className="flex items-center gap-2 text-xs text-gray-400">
+                <li key={f} className="flex items-center gap-2 text-xs text-muted">
                   <svg
                     width="12"
                     height="12"
@@ -451,13 +451,13 @@ export function UsageBillingPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]" />
+          <div className="h-2 w-2 animate-bounce rounded-full bg-brand" />
           <div
-            className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]"
+            className="h-2 w-2 animate-bounce rounded-full bg-brand"
             style={{ animationDelay: '0.15s' }}
           />
           <div
-            className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]"
+            className="h-2 w-2 animate-bounce rounded-full bg-brand"
             style={{ animationDelay: '0.3s' }}
           />
         </div>
@@ -472,8 +472,8 @@ export function UsageBillingPage() {
       {/* Page header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Usage & Billing</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-[#71717a]">
+          <h1 className="text-2xl font-bold text-ink">Usage & Billing</h1>
+          <p className="mt-1 text-sm text-subtle">
             Monitor your resource usage and manage your subscription
           </p>
         </div>
@@ -487,7 +487,7 @@ export function UsageBillingPage() {
             <button
               onClick={handleUpgrade}
               disabled={checkoutLoading}
-              className="rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-medium text-black hover:bg-[#A6DAFF]/90 transition-colors disabled:opacity-50"
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-ink hover:bg-brand-hover transition-colors disabled:opacity-50"
             >
               {checkoutLoading ? 'Redirecting...' : 'Upgrade to Pro'}
             </button>
@@ -496,7 +496,7 @@ export function UsageBillingPage() {
             <button
               onClick={handleManageSubscription}
               disabled={portalLoading}
-              className="rounded-lg border border-[#1a1a1d] bg-[#10131C] px-4 py-2 text-sm text-gray-300 hover:border-[#A6DAFF]/30 hover:text-white transition-colors disabled:opacity-50"
+              className="rounded-lg border border-line bg-surface px-4 py-2 text-sm text-muted hover:border-brand hover:text-ink transition-colors disabled:opacity-50"
             >
               {portalLoading ? 'Opening...' : 'Manage Subscription'}
             </button>
@@ -506,7 +506,7 @@ export function UsageBillingPage() {
 
       {/* Error banner */}
       {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+        <div className="rounded-xl border border-danger bg-danger-soft p-4">
           <div className="flex items-center gap-2">
             <svg
               width="16"
@@ -520,35 +520,35 @@ export function UsageBillingPage() {
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
-            <p className="text-sm text-red-400">{error}</p>
+            <p className="text-sm text-danger">{error}</p>
           </div>
         </div>
       )}
 
       {/* Subscription status card (if subscribed) */}
       {billing?.subscription && (
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
+        <div className="rounded-xl border border-line bg-surface p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-3">
-                <h3 className="text-sm font-medium text-white">Subscription</h3>
+                <h3 className="text-sm font-medium text-ink">Subscription</h3>
                 <span
                   className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-medium ${subStatusBadge(billing.subscription.status)}`}
                 >
                   {billing.subscription.status}
                 </span>
                 {billing.subscription.cancel_at_period_end && (
-                  <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-400">
+                  <span className="rounded-full border border-warning bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
                     Cancels at period end
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-subtle">
                 Current period: {formatDate(billing.subscription.current_period_start)} –{' '}
                 {formatDate(billing.subscription.current_period_end)}
               </p>
             </div>
-            <p className="text-xs text-gray-500 font-mono">{billing.subscription.id}</p>
+            <p className="text-xs text-subtle font-mono">{billing.subscription.id}</p>
           </div>
         </div>
       )}
@@ -626,15 +626,15 @@ export function UsageBillingPage() {
       {/* Billing period summary */}
       {aggregation?.billing_period && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+          <div className="rounded-xl border border-line bg-surface p-5">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">
               Billing Period
             </p>
-            <p className="mt-2 text-lg font-bold text-white">
+            <p className="mt-2 text-lg font-bold text-ink">
               {aggregation.billing_period.period_start.slice(5)} –{' '}
               {aggregation.billing_period.period_end.slice(5)}
             </p>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-subtle">
               {usage ? `${usage.agents.current} active` : ''}
               {usage && aggregation.billing_period.agents_seen > 0 ? ' · ' : ''}
               {aggregation.billing_period.agents_seen > 0
@@ -642,39 +642,37 @@ export function UsageBillingPage() {
                 : 'No agents seen in logs'}
             </p>
           </div>
-          <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+          <div className="rounded-xl border border-line bg-surface p-5">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">
               Total Requests
             </p>
-            <p className="mt-2 text-2xl font-bold text-white">
+            <p className="mt-2 text-2xl font-bold text-ink">
               {aggregation.billing_period.total_requests.toLocaleString()}
             </p>
             <div className="mt-1 flex items-center gap-2 text-xs">
-              <span className="text-emerald-400">
+              <span className="text-success">
                 {aggregation.billing_period.allowed.toLocaleString()} allowed
               </span>
               {aggregation.billing_period.denied > 0 && (
-                <span className="text-red-400">
+                <span className="text-danger">
                   {aggregation.billing_period.denied.toLocaleString()} denied
                 </span>
               )}
             </div>
           </div>
-          <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Peak Daily</p>
-            <p className="mt-2 text-2xl font-bold text-white">
+          <div className="rounded-xl border border-line bg-surface p-5">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">Peak Daily</p>
+            <p className="mt-2 text-2xl font-bold text-ink">
               {aggregation.billing_period.peak_daily_requests.toLocaleString()}
             </p>
-            <p className="mt-1 text-xs text-gray-500">requests in a single day</p>
+            <p className="mt-1 text-xs text-subtle">requests in a single day</p>
           </div>
-          <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-              Daily Average
-            </p>
-            <p className="mt-2 text-2xl font-bold text-white">
+          <div className="rounded-xl border border-line bg-surface p-5">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">Daily Average</p>
+            <p className="mt-2 text-2xl font-bold text-ink">
               {aggregation.billing_period.avg_daily_requests.toFixed(0)}
             </p>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-subtle">
               {aggregation.previous_period
                 ? `Previous: ${aggregation.previous_period.avg_daily_requests.toFixed(0)}/day`
                 : 'No previous period data'}
@@ -691,10 +689,8 @@ export function UsageBillingPage() {
 
       {/* Tier comparison */}
       <div>
-        <h2 className="text-lg font-semibold text-white">Plans</h2>
-        <p className="mt-1 text-sm text-gray-500 dark:text-[#71717a]">
-          Compare available plans and their limits
-        </p>
+        <h2 className="text-lg font-semibold text-ink">Plans</h2>
+        <p className="mt-1 text-sm text-subtle">Compare available plans and their limits</p>
         <div className="mt-4">
           <TierComparison currentTier={currentTier} />
         </div>
@@ -702,11 +698,11 @@ export function UsageBillingPage() {
 
       {/* Audit retention info */}
       {usage && (
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
+        <div className="rounded-xl border border-line bg-surface p-5">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-medium text-white">Audit Log Retention</h3>
-              <p className="mt-1 text-xs text-gray-500">
+              <h3 className="text-sm font-medium text-ink">Audit Log Retention</h3>
+              <p className="mt-1 text-xs text-subtle">
                 {usage.audit_retention_days === -1
                   ? 'Unlimited retention — all audit entries are preserved indefinitely'
                   : `Audit entries are retained for ${usage.audit_retention_days} days`}

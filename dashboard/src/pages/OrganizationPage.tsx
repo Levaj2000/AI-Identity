@@ -79,7 +79,7 @@ function Toast({
     <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
       <div
         className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
-          type === 'success' ? 'bg-success text-white' : 'bg-danger text-white'
+          type === 'success' ? 'bg-success text-success-ink' : 'bg-danger text-danger-ink'
         }`}
       >
         {type === 'success' ? (

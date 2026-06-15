@@ -317,7 +317,7 @@ export function AgentKeysPage() {
               </p>
               <a
                 href="/dashboard/agents"
-                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-danger px-3 py-1.5 text-xs font-medium text-white hover:bg-danger transition-colors"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-danger px-3 py-1.5 text-xs font-medium text-danger-ink hover:bg-danger transition-colors"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

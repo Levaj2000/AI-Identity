@@ -35,10 +35,9 @@ function formatDate(iso: string): string {
 
 /** Match both "allow"/"allowed" and "deny"/"denied" variants (same as Forensics page). */
 function decisionBadge(d: string) {
-  if (d === 'allow' || d === 'allowed')
-    return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-  if (d === 'deny' || d === 'denied') return 'bg-red-500/10 text-red-400 border-red-500/20'
-  return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+  if (d === 'allow' || d === 'allowed') return 'bg-success-soft text-success border-success'
+  if (d === 'deny' || d === 'denied') return 'bg-danger-soft text-danger border-danger'
+  return 'bg-warning-soft text-warning border-warning'
 }
 
 /** Check if a decision string represents a deny. */
@@ -256,8 +255,8 @@ export function CompliancePage() {
       {/* Page header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Compliance & Audit</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-[#71717a]">
+          <h1 className="text-2xl font-bold text-ink">Compliance & Audit</h1>
+          <p className="mt-1 text-sm text-subtle">
             SOC 2-ready audit trail — HMAC-SHA256 integrity chain plus DSSE + ECDSA P-256 session
             attestations auditors can verify offline
           </p>
@@ -265,7 +264,7 @@ export function CompliancePage() {
         <div className="flex items-center gap-2">
           <button
             onClick={exportCSV}
-            className="rounded-lg border border-[#1a1a1d] bg-[#10131C] px-3 py-2 text-sm text-gray-300 hover:border-[#A6DAFF]/30 hover:text-white transition-colors"
+            className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-muted hover:border-brand hover:text-ink transition-colors"
           >
             <span className="flex items-center gap-1.5">
               <svg
@@ -285,7 +284,7 @@ export function CompliancePage() {
           </button>
           <button
             onClick={exportJSON}
-            className="rounded-lg border border-[#1a1a1d] bg-[#10131C] px-3 py-2 text-sm text-gray-300 hover:border-[#A6DAFF]/30 hover:text-white transition-colors"
+            className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-muted hover:border-brand hover:text-ink transition-colors"
           >
             <span className="flex items-center gap-1.5">
               <svg
@@ -309,22 +308,22 @@ export function CompliancePage() {
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Chain Integrity */}
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
+        <div className="rounded-xl border border-line bg-surface p-5">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+            <p className="text-xs font-medium uppercase tracking-wider text-subtle">
               Chain Integrity
             </p>
             <div
               className={`h-3 w-3 rounded-full ${
                 verifyResult === null
-                  ? 'bg-gray-600'
+                  ? 'bg-faint'
                   : verifyResult.valid
-                    ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]'
-                    : 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.5)]'
+                    ? 'bg-success shadow-[0_0_8px_rgba(52,211,153,0.5)]'
+                    : 'bg-danger shadow-[0_0_8px_rgba(248,113,113,0.5)]'
               }`}
             />
           </div>
-          <p className="mt-2 text-2xl font-bold text-white">
+          <p className="mt-2 text-2xl font-bold text-ink">
             {verifyResult === null
               ? verifying
                 ? 'Checking...'
@@ -333,7 +332,7 @@ export function CompliancePage() {
                 ? 'VALID'
                 : 'BROKEN'}
           </p>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-subtle">
             {lastVerified
               ? `Last checked ${lastVerified}`
               : verifying
@@ -343,48 +342,44 @@ export function CompliancePage() {
           <button
             onClick={runVerify}
             disabled={verifying}
-            className="mt-3 w-full rounded-lg bg-[#A6DAFF]/10 px-3 py-1.5 text-xs font-medium text-[#A6DAFF] hover:bg-[#A6DAFF]/20 transition-colors disabled:opacity-50"
+            className="mt-3 w-full rounded-lg bg-brand-soft px-3 py-1.5 text-xs font-medium text-brand hover:bg-brand-soft transition-colors disabled:opacity-50"
           >
             {verifying ? 'Verifying...' : 'Verify Now'}
           </button>
         </div>
 
         {/* Total Entries */}
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-            Total Entries
-          </p>
-          <p className="mt-2 text-2xl font-bold text-white">
-            {stats.totalEntries.toLocaleString()}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">Append-only audit records</p>
+        <div className="rounded-xl border border-line bg-surface p-5">
+          <p className="text-xs font-medium uppercase tracking-wider text-subtle">Total Entries</p>
+          <p className="mt-2 text-2xl font-bold text-ink">{stats.totalEntries.toLocaleString()}</p>
+          <p className="mt-1 text-xs text-subtle">Append-only audit records</p>
         </div>
 
         {/* Allow / Deny */}
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Decisions</p>
+        <div className="rounded-xl border border-line bg-surface p-5">
+          <p className="text-xs font-medium uppercase tracking-wider text-subtle">Decisions</p>
           <div className="mt-2 flex items-baseline gap-3">
-            <span className="text-2xl font-bold text-emerald-400">{stats.allowCount}</span>
-            <span className="text-sm text-gray-500">allowed</span>
+            <span className="text-2xl font-bold text-success">{stats.allowCount}</span>
+            <span className="text-sm text-subtle">allowed</span>
           </div>
           <div className="mt-1 flex items-baseline gap-3">
-            <span className="text-lg font-bold text-red-400">{stats.denyCount}</span>
-            <span className="text-sm text-gray-500">denied</span>
+            <span className="text-lg font-bold text-danger">{stats.denyCount}</span>
+            <span className="text-sm text-subtle">denied</span>
             {stats.errorCount > 0 && (
               <>
-                <span className="text-lg font-bold text-yellow-400">{stats.errorCount}</span>
-                <span className="text-sm text-gray-500">errors</span>
+                <span className="text-lg font-bold text-warning">{stats.errorCount}</span>
+                <span className="text-sm text-subtle">errors</span>
               </>
             )}
           </div>
         </div>
 
         {/* Compliance Score */}
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 backdrop-blur-xl p-5">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+        <div className="rounded-xl border border-line bg-surface p-5">
+          <p className="text-xs font-medium uppercase tracking-wider text-subtle">
             Compliance Readiness
           </p>
-          <p className="mt-2 text-2xl font-bold text-[#A6DAFF]">SOC 2</p>
+          <p className="mt-2 text-2xl font-bold text-brand">SOC 2</p>
           <div className="mt-2 space-y-1">
             <div className="flex items-center gap-2 text-xs">
               <svg
@@ -397,7 +392,7 @@ export function CompliancePage() {
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <span className="text-gray-400">HMAC integrity chain</span>
+              <span className="text-muted">HMAC integrity chain</span>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <svg
@@ -410,7 +405,7 @@ export function CompliancePage() {
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <span className="text-gray-400">Append-only enforcement</span>
+              <span className="text-muted">Append-only enforcement</span>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <svg
@@ -423,7 +418,7 @@ export function CompliancePage() {
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <span className="text-gray-400">PII sanitization</span>
+              <span className="text-muted">PII sanitization</span>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <svg
@@ -436,7 +431,7 @@ export function CompliancePage() {
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <span className="text-gray-400">Tenant isolation (RLS)</span>
+              <span className="text-muted">Tenant isolation (RLS)</span>
             </div>
           </div>
         </div>
@@ -446,15 +441,13 @@ export function CompliancePage() {
       {verifyResult && (
         <div
           className={`rounded-xl border p-4 ${
-            verifyResult.valid
-              ? 'border-emerald-500/30 bg-emerald-500/5'
-              : 'border-red-500/30 bg-red-500/5'
+            verifyResult.valid ? 'border-success bg-success-soft' : 'border-danger bg-danger-soft'
           }`}
         >
           <div className="flex items-start gap-3">
             <div
               className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
-                verifyResult.valid ? 'bg-emerald-500/20' : 'bg-red-500/20'
+                verifyResult.valid ? 'bg-success-soft' : 'bg-danger-soft'
               }`}
             >
               {verifyResult.valid ? (
@@ -484,11 +477,11 @@ export function CompliancePage() {
             </div>
             <div>
               <p
-                className={`text-sm font-medium ${verifyResult.valid ? 'text-emerald-400' : 'text-red-400'}`}
+                className={`text-sm font-medium ${verifyResult.valid ? 'text-success' : 'text-danger'}`}
               >
                 {verifyResult.message}
               </p>
-              <p className="mt-0.5 text-xs text-gray-500">
+              <p className="mt-0.5 text-xs text-subtle">
                 {verifyResult.entries_verified} of {verifyResult.total_entries} entries verified via
                 HMAC-SHA256 chain
                 {verifyResult.first_broken_id &&
@@ -507,7 +500,7 @@ export function CompliancePage() {
             setFilterDecision(e.target.value)
             setOffset(0)
           }}
-          className="rounded-lg border border-[#1a1a1d] bg-[#10131C] px-3 py-2 text-sm text-gray-300 focus:border-[#A6DAFF]/50 focus:outline-none"
+          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-muted focus:border-brand focus:outline-none"
         >
           <option value="">All decisions</option>
           <option value="allowed">Allowed</option>
@@ -523,58 +516,58 @@ export function CompliancePage() {
             setFilterAgent(e.target.value)
             setOffset(0)
           }}
-          className="rounded-lg border border-[#1a1a1d] bg-[#10131C] px-3 py-2 text-sm text-gray-300 placeholder:text-gray-600 focus:border-[#A6DAFF]/50 focus:outline-none"
+          className="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-muted placeholder:text-faint focus:border-brand focus:outline-none"
         />
 
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-subtle">
           {total} {total === 1 ? 'entry' : 'entries'}
         </span>
       </div>
 
       {/* Audit log table */}
-      <div className="overflow-hidden rounded-xl border border-[#1a1a1d]">
+      <div className="overflow-hidden rounded-xl border border-line">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#1a1a1d] bg-[#10131C]">
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+              <tr className="border-b border-line bg-elevated">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   #
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Timestamp
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Agent
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Endpoint
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Method
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Decision
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Details
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-400">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Hash
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1a1a1d]">
+            <tbody className="divide-y divide-line">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-12 text-center text-subtle">
                     <div className="flex items-center justify-center gap-2">
-                      <div className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]" />
+                      <div className="h-2 w-2 animate-bounce rounded-full bg-brand" />
                       <div
-                        className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]"
+                        className="h-2 w-2 animate-bounce rounded-full bg-brand"
                         style={{ animationDelay: '0.15s' }}
                       />
                       <div
-                        className="h-2 w-2 animate-bounce rounded-full bg-[#A6DAFF]"
+                        className="h-2 w-2 animate-bounce rounded-full bg-brand"
                         style={{ animationDelay: '0.3s' }}
                       />
                     </div>
@@ -582,7 +575,7 @@ export function CompliancePage() {
                 </tr>
               ) : entries.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-12 text-center text-subtle">
                     <p className="text-sm">No audit entries found</p>
                     <p className="mt-1 text-xs">
                       Entries are created when agents make requests through the gateway
@@ -593,19 +586,19 @@ export function CompliancePage() {
                 entries.map((entry) => (
                   <tr
                     key={entry.id}
-                    className="bg-[#04070D] hover:bg-[#10131C]/50 transition-colors cursor-pointer"
+                    className="bg-surface hover:bg-elevated transition-colors cursor-pointer"
                     onClick={() => setSelectedEvent(entry)}
                   >
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{entry.id}</td>
-                    <td className="px-4 py-3 text-xs text-gray-300 whitespace-nowrap">
+                    <td className="px-4 py-3 font-mono text-xs text-subtle">{entry.id}</td>
+                    <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
                       {formatDate(entry.created_at)}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-400">
+                    <td className="px-4 py-3 font-mono text-xs text-muted">
                       {entry.agent_id.slice(0, 8)}...
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-white">{entry.endpoint}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-ink">{entry.endpoint}</td>
                     <td className="px-4 py-3">
-                      <span className="rounded bg-[#1a1a1d] px-1.5 py-0.5 font-mono text-xs text-gray-300">
+                      <span className="rounded bg-elevated px-1.5 py-0.5 font-mono text-xs text-muted">
                         {entry.method}
                       </span>
                     </td>
@@ -616,7 +609,7 @@ export function CompliancePage() {
                         {entry.decision}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500 max-w-[200px] truncate">
+                    <td className="px-4 py-3 text-xs text-subtle max-w-[200px] truncate">
                       {entry.request_metadata?.deny_reason
                         ? String(entry.request_metadata.deny_reason)
                         : entry.latency_ms
@@ -625,7 +618,7 @@ export function CompliancePage() {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className="font-mono text-xs text-gray-600 cursor-help"
+                        className="font-mono text-xs text-faint cursor-help"
                         title={`entry: ${entry.entry_hash}\nprev: ${entry.prev_hash}`}
                       >
                         {entry.entry_hash.slice(0, 12)}...
@@ -640,22 +633,22 @@ export function CompliancePage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-[#1a1a1d] bg-[#10131C] px-4 py-3">
-            <p className="text-xs text-gray-500">
+          <div className="flex items-center justify-between border-t border-line bg-elevated px-4 py-3">
+            <p className="text-xs text-subtle">
               Page {currentPage} of {totalPages}
             </p>
             <div className="flex gap-2">
               <button
                 onClick={() => setOffset(Math.max(0, offset - limit))}
                 disabled={offset === 0}
-                className="rounded-lg border border-[#1a1a1d] px-3 py-1.5 text-xs text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+                className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-ink disabled:opacity-30 transition-colors"
               >
                 Previous
               </button>
               <button
                 onClick={() => setOffset(offset + limit)}
                 disabled={offset + limit >= total}
-                className="rounded-lg border border-[#1a1a1d] px-3 py-1.5 text-xs text-gray-400 hover:text-white disabled:opacity-30 transition-colors"
+                className="rounded-lg border border-line px-3 py-1.5 text-xs text-muted hover:text-ink disabled:opacity-30 transition-colors"
               >
                 Next
               </button>
@@ -666,9 +659,9 @@ export function CompliancePage() {
 
       {/* Hash chain visualization */}
       {entries.length > 0 && (
-        <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 p-5">
-          <h3 className="text-sm font-medium text-white">HMAC Chain Visualization</h3>
-          <p className="mt-1 text-xs text-gray-500">
+        <div className="rounded-xl border border-line bg-surface p-5">
+          <h3 className="text-sm font-medium text-ink">HMAC Chain Visualization</h3>
+          <p className="mt-1 text-xs text-subtle">
             Each entry's hash includes the previous entry's hash, creating a tamper-evident chain
           </p>
           <div className="mt-4 flex items-center gap-2 overflow-x-auto pb-2">
@@ -677,36 +670,31 @@ export function CompliancePage() {
                 <div
                   className={`rounded-lg border px-3 py-2 text-center cursor-pointer hover:opacity-80 transition-opacity ${
                     isAllowDecision(entry.decision)
-                      ? 'border-emerald-500/20 bg-emerald-500/5'
+                      ? 'border-success bg-success-soft'
                       : isDenyDecision(entry.decision)
-                        ? 'border-red-500/20 bg-red-500/5'
-                        : 'border-yellow-500/20 bg-yellow-500/5'
+                        ? 'border-danger bg-danger-soft'
+                        : 'border-warning bg-warning-soft'
                   }`}
                   onClick={() => setSelectedEvent(entry)}
                 >
-                  <p className="font-mono text-[10px] text-gray-500">#{entry.id}</p>
+                  <p className="font-mono text-[10px] text-subtle">#{entry.id}</p>
                   <p
                     className={`text-xs font-medium ${
                       isAllowDecision(entry.decision)
-                        ? 'text-emerald-400'
+                        ? 'text-success'
                         : isDenyDecision(entry.decision)
-                          ? 'text-red-400'
-                          : 'text-yellow-400'
+                          ? 'text-danger'
+                          : 'text-warning'
                     }`}
                   >
                     {entry.decision}
                   </p>
-                  <p className="mt-0.5 font-mono text-[9px] text-gray-600">
+                  <p className="mt-0.5 font-mono text-[9px] text-faint">
                     {entry.entry_hash.slice(0, 8)}
                   </p>
                 </div>
                 {i < Math.min(entries.length, 8) - 1 && (
-                  <svg
-                    width="20"
-                    height="12"
-                    viewBox="0 0 20 12"
-                    className="text-[#A6DAFF]/40 shrink-0"
-                  >
+                  <svg width="20" height="12" viewBox="0 0 20 12" className="text-brand shrink-0">
                     <line x1="0" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="1.5" />
                     <polyline
                       points="11,2 15,6 11,10"
@@ -719,7 +707,7 @@ export function CompliancePage() {
               </div>
             ))}
             {entries.length > 8 && (
-              <span className="text-xs text-gray-500 shrink-0">+{entries.length - 8} more</span>
+              <span className="text-xs text-subtle shrink-0">+{entries.length - 8} more</span>
             )}
           </div>
         </div>
