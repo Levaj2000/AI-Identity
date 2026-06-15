@@ -46,17 +46,15 @@ const steps = [
 
 export function GettingStarted() {
   return (
-    <div className="rounded-xl border border-[#A6DAFF]/20 bg-[#A6DAFF]/5 p-8 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
-      <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">
-        Getting Started
-      </h2>
-      <p className="mb-6 text-sm text-gray-500 dark:text-[#a1a1aa]">
+    <div className="rounded-xl border border-line bg-brand-soft p-8">
+      <h2 className="mb-2 text-lg font-semibold text-ink">Getting Started</h2>
+      <p className="mb-6 text-sm text-muted">
         Set up your first agent in four steps — identity, policy, compliance, and forensics. See the{' '}
         <a
           href={`${API_BASE_URL}/docs`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#A6DAFF] underline underline-offset-2 hover:text-[#A6DAFF] dark:text-[#A6DAFF] dark:hover:text-[#A6DAFF]"
+          className="text-brand underline underline-offset-2 hover:text-brand"
         >
           API docs
         </a>{' '}
@@ -67,26 +65,23 @@ export function GettingStarted() {
 
       <div className="space-y-4">
         {steps.map((step) => (
-          <div
-            key={step.number}
-            className="rounded-lg border border-gray-200 bg-white p-5 dark:border-[#1a1a1d] dark:bg-[#04070D]/50"
-          >
+          <div key={step.number} className="rounded-lg border border-line bg-surface p-5">
             <div className="mb-2 flex items-center gap-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#A6DAFF] text-xs font-bold text-[#04070D]">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-brand-ink">
                 {step.number}
               </span>
-              <h3 className="font-medium text-gray-900 dark:text-[#e4e4e7]">{step.title}</h3>
+              <h3 className="font-medium text-ink">{step.title}</h3>
             </div>
-            <p className="mb-3 text-sm text-gray-500 dark:text-[#a1a1aa]">{step.description}</p>
+            <p className="mb-3 text-sm text-muted">{step.description}</p>
             {step.code && (
-              <pre className="overflow-x-auto rounded-lg bg-gray-100 p-4 font-[JetBrains_Mono,monospace] text-xs leading-relaxed text-gray-700 dark:bg-[#1a1a1d] dark:text-[#d4d4d8]">
+              <pre className="overflow-x-auto rounded-lg bg-inset p-4 font-[JetBrains_Mono,monospace] text-xs leading-relaxed text-muted">
                 {step.code}
               </pre>
             )}
             {step.link && (
               <a
                 href={step.link.href}
-                className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-[#A6DAFF] hover:underline"
+                className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-brand hover:underline"
               >
                 {step.link.label}
                 <span aria-hidden="true">&rarr;</span>

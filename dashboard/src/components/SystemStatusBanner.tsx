@@ -46,7 +46,7 @@ function MiniSparkline({ values }: { values: number[] }) {
       <path
         d={path}
         fill="none"
-        stroke="#A6DAFF"
+        className="stroke-brand"
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -110,27 +110,25 @@ export function SystemStatusBanner() {
 
   return (
     <div
-      className={`rounded-xl border border-l-4 border-gray-200 ${isHealthy ? 'border-l-emerald-500' : 'border-l-yellow-500'} bg-white p-5 dark:border-[#A6DAFF]/10 ${isHealthy ? 'dark:border-l-emerald-500' : 'dark:border-l-yellow-500'} dark:bg-[#10131C]/80 dark:backdrop-blur-xl`}
+      className={`rounded-xl border border-l-4 border-line ${isHealthy ? 'border-l-success' : 'border-l-warning'} bg-surface p-5`}
     >
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {/* Gateway Status */}
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#71717a]">
-            Gateway Status
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wider text-subtle">Gateway Status</p>
           <div className="mt-1 flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
               {isHealthy && (
                 <span
-                  className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75"
+                  className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75"
                   style={{ animationDuration: '2s' }}
                 />
               )}
               <span
-                className={`relative inline-flex h-2.5 w-2.5 rounded-full ${isHealthy ? 'bg-emerald-500' : health ? 'bg-yellow-500' : 'bg-gray-400'}`}
+                className={`relative inline-flex h-2.5 w-2.5 rounded-full ${isHealthy ? 'bg-success' : health ? 'bg-warning' : 'bg-subtle'}`}
               />
             </span>
-            <span className="font-semibold text-gray-900 dark:text-[#e4e4e7]">
+            <span className="font-semibold text-ink">
               {health ? (isHealthy ? 'Operational' : 'Degraded') : '—'}
             </span>
           </div>
@@ -138,11 +136,9 @@ export function SystemStatusBanner() {
 
         {/* API Latency */}
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#71717a]">
-            API Latency
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wider text-subtle">API Latency</p>
           <div className="mt-1 flex items-center gap-2">
-            <span className="font-semibold text-gray-900 dark:text-[#e4e4e7]">
+            <span className="font-semibold text-ink">
               {latency !== null ? `${latency}ms` : '—'}
             </span>
             {latencyHistory.length > 1 && <MiniSparkline values={latencyHistory} />}
@@ -151,20 +147,18 @@ export function SystemStatusBanner() {
 
         {/* Uptime — placeholder until we have uptime tracking */}
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#71717a]">
-            Uptime
-          </p>
-          <p className="mt-1 font-semibold text-emerald-500">{isHealthy ? '✓ Online' : '—'}</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-subtle">Uptime</p>
+          <p className="mt-1 font-semibold text-success">{isHealthy ? '✓ Online' : '—'}</p>
         </div>
 
         {/* Last Key Rotation */}
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#71717a]">
+          <p className="text-xs font-medium uppercase tracking-wider text-subtle">
             Last Key Rotation
           </p>
           <div className="mt-1 flex items-center gap-2">
             <svg
-              className="h-4 w-4 text-gray-400 dark:text-[#71717a]"
+              className="h-4 w-4 text-faint"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -176,7 +170,7 @@ export function SystemStatusBanner() {
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <span className="font-semibold text-gray-900 dark:text-[#e4e4e7]">
+            <span className="font-semibold text-ink">
               {lastRotation ? timeAgo(lastRotation) : 'No keys yet'}
             </span>
           </div>
