@@ -269,12 +269,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       {/* Sidebar panel */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-200 ease-in-out dark:border-[#1a1a1d] dark:bg-[#04070D] lg:static lg:z-auto lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-line bg-canvas transition-transform duration-200 ease-in-out lg:static lg:z-auto lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand */}
-        <div className="flex h-16 shrink-0 items-center gap-2 border-b border-gray-200 px-6 dark:border-[#1a1a1d]">
+        <div className="flex h-16 shrink-0 items-center gap-2 border-b border-line px-6">
           <AIIdentityLogo5 className="h-[28px] w-auto" variant="primary" />
         </div>
 
@@ -291,8 +291,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-[#A6DAFF]/10 text-[#A6DAFF] dark:bg-[#A6DAFF]/10 dark:text-[#A6DAFF]'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d] dark:hover:text-[#e4e4e7]'
+                      ? 'bg-brand-soft text-brand'
+                      : 'text-muted hover:bg-elevated hover:text-ink'
                   }`
                 }
               >
@@ -307,7 +307,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           {/* Admin separator + link (admin only) */}
           {user?.role === 'admin' && (
             <>
-              <div className="my-3 border-t border-gray-200 dark:border-[#1a1a1d]" />
+              <div className="my-3 border-t border-line" />
 
               <NavLink
                 to="/dashboard/admin"
@@ -315,8 +315,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-[#A6DAFF]/10 text-[#A6DAFF] dark:bg-[#A6DAFF]/10 dark:text-[#A6DAFF]'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d] dark:hover:text-[#e4e4e7]'
+                      ? 'bg-brand-soft text-brand'
+                      : 'text-muted hover:bg-elevated hover:text-ink'
                   }`
                 }
               >
@@ -339,20 +339,18 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </nav>
 
         {/* Footer — user info + logout */}
-        <div className="border-t border-gray-200 px-4 py-4 dark:border-[#1a1a1d]">
+        <div className="border-t border-line px-4 py-4">
           {user && (
             <div className="mb-3 flex items-center justify-between">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-gray-700 dark:text-[#e4e4e7]">
-                  {user.email}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-[#52525b]">
+                <p className="truncate text-sm font-medium text-ink">{user.email}</p>
+                <p className="text-xs text-subtle">
                   {user.role} &middot; {user.tier}
                 </p>
               </div>
               <button
                 onClick={handleLogout}
-                className="ml-2 rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-[#1a1a1d] dark:hover:text-[#e4e4e7]"
+                className="ml-2 rounded-lg p-2 text-subtle hover:bg-elevated hover:text-ink"
                 title="Log out"
               >
                 <svg
@@ -376,9 +374,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             </div>
           )}
           <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-500 dark:text-[#52525b]">
-              &copy; {new Date().getFullYear()} AI Identity
-            </p>
+            <p className="text-xs text-subtle">&copy; {new Date().getFullYear()} AI Identity</p>
             <ThemeToggle />
           </div>
         </div>
