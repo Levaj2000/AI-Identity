@@ -60,14 +60,14 @@ export function AgentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">Agents</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">
+          <h1 className="text-2xl font-bold text-ink">Agents</h1>
+          <p className="mt-1 text-sm text-muted">
             Manage your AI agent identities and permissions.
           </p>
         </div>
         <Link
           to="/dashboard/agents/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80"
+          className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -91,14 +91,14 @@ export function AgentsPage() {
 
       {/* Purge revoked agents (admin only) */}
       {showPurgeButton && (
-        <div className="flex items-center justify-between rounded-xl border border-red-300/20 bg-red-500/5 px-4 py-3 dark:border-red-500/10 dark:bg-red-500/5">
-          <p className="text-sm text-red-400">
+        <div className="flex items-center justify-between rounded-xl border border-danger bg-danger-soft px-4 py-3">
+          <p className="text-sm text-danger">
             {total} revoked agent{total !== 1 ? 's' : ''} found.
           </p>
           <button
             onClick={() => setShowPurgeConfirm(true)}
             disabled={purging}
-            className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+            className="rounded-lg bg-danger px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-danger disabled:opacity-50"
           >
             {purging ? 'Purging...' : 'Purge All'}
           </button>
@@ -108,25 +108,23 @@ export function AgentsPage() {
       {/* Purge confirmation modal */}
       {showPurgeConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="mx-4 w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl dark:border-[#A6DAFF]/10 dark:bg-[#10131C]">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">
-              Purge Revoked Agents
-            </h3>
-            <p className="mt-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
+          <div className="mx-4 w-full max-w-md rounded-xl border border-line bg-surface p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-ink">Purge Revoked Agents</h3>
+            <p className="mt-2 text-sm text-muted">
               This will permanently delete {total} revoked agent{total !== 1 ? 's' : ''} and all
               associated keys, policies, and credentials. Audit logs will be preserved.
             </p>
-            <p className="mt-2 text-sm font-medium text-red-500">This action cannot be undone.</p>
+            <p className="mt-2 text-sm font-medium text-danger">This action cannot be undone.</p>
             <div className="mt-4 flex justify-end gap-3">
               <button
                 onClick={() => setShowPurgeConfirm(false)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#A6DAFF]/10 dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d]"
+                className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-muted transition-colors hover:bg-elevated"
               >
                 Cancel
               </button>
               <button
                 onClick={handlePurge}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+                className="rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-danger"
               >
                 Purge {total} Agent{total !== 1 ? 's' : ''}
               </button>
@@ -137,14 +135,14 @@ export function AgentsPage() {
 
       {/* Purge result toast */}
       {purgeResult && (
-        <div className="rounded-xl border border-green-300/20 bg-green-500/10 px-4 py-3 dark:border-green-500/10">
+        <div className="rounded-xl border border-success bg-success-soft px-4 py-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-green-400">
+            <p className="text-sm text-success">
               Purged {purgeResult.count} agent{purgeResult.count !== 1 ? 's' : ''}.
             </p>
             <button
               onClick={() => setPurgeResult(null)}
-              className="text-green-400 hover:text-green-300"
+              className="text-success hover:text-success"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -164,21 +162,21 @@ export function AgentsPage() {
         <>
           {/* Desktop skeleton: table rows */}
           <div className="hidden space-y-0 md:block">
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
+            <div className="overflow-hidden rounded-xl border border-line bg-surface">
               {/* Header row */}
-              <div className="border-b border-gray-200 px-6 py-3 dark:border-[#1a1a1d]">
-                <div className="h-3 w-48 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+              <div className="border-b border-line px-6 py-3">
+                <div className="h-3 w-48 animate-pulse rounded bg-elevated" />
               </div>
               {/* Body rows */}
               {Array.from({ length: 5 }).map((_, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-6 border-b border-gray-100 px-6 py-4 last:border-0 dark:border-[#1a1a1d]/50"
+                  className="flex items-center gap-6 border-b border-line px-6 py-4 last:border-0"
                 >
-                  <div className="h-4 w-40 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
-                  <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-[#1a1a1d]" />
-                  <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
-                  <div className="h-4 w-20 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+                  <div className="h-4 w-40 animate-pulse rounded bg-elevated" />
+                  <div className="h-5 w-16 animate-pulse rounded-full bg-elevated" />
+                  <div className="h-4 w-32 animate-pulse rounded bg-elevated" />
+                  <div className="h-4 w-20 animate-pulse rounded bg-elevated" />
                 </div>
               ))}
             </div>
@@ -186,10 +184,7 @@ export function AgentsPage() {
           {/* Mobile skeleton: cards */}
           <div className="space-y-3 md:hidden">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-28 animate-pulse rounded-xl bg-gray-200 dark:bg-[#10131C]"
-              />
+              <div key={i} className="h-28 animate-pulse rounded-xl bg-elevated" />
             ))}
           </div>
         </>
@@ -197,11 +192,11 @@ export function AgentsPage() {
 
       {/* Error state */}
       {error && (
-        <div className="rounded-xl border border-red-300 bg-red-50 p-6 dark:border-red-500/20 dark:bg-red-500/10">
-          <h2 className="mb-1 font-semibold text-red-600 dark:text-red-400">
+        <div className="rounded-xl border border-danger bg-danger-soft p-6">
+          <h2 className="mb-1 font-semibold text-danger">
             {error.status === 401 ? 'Authentication Failed' : 'Unable to Load Agents'}
           </h2>
-          <p className="text-sm text-red-500 dark:text-red-400/80">
+          <p className="text-sm text-danger">
             {error.status === 401
               ? 'Check your API key configuration. Set VITE_API_KEY in your .env file.'
               : error.message}

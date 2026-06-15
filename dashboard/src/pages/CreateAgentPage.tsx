@@ -131,8 +131,8 @@ export function CreateAgentPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
-        <Link to="/dashboard/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
+      <nav className="flex items-center gap-2 text-sm text-muted">
+        <Link to="/dashboard/agents" className="hover:text-ink">
           Agents
         </Link>
         <svg
@@ -147,39 +147,31 @@ export function CreateAgentPage() {
             clipRule="evenodd"
           />
         </svg>
-        <span className="text-gray-900 dark:text-[#e4e4e7]">New Agent</span>
+        <span className="text-ink">New Agent</span>
       </nav>
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">Create Agent</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">
-          Register a new AI agent identity.
-        </p>
+        <h1 className="text-2xl font-bold text-ink">Create Agent</h1>
+        <p className="mt-1 text-sm text-muted">Register a new AI agent identity.</p>
       </div>
 
       {/* General error */}
       {generalError && (
-        <div className="rounded-xl border border-red-300 bg-red-50 p-4 dark:border-red-500/20 dark:bg-red-500/10">
-          <p className="text-sm font-medium text-red-600 dark:text-red-400" role="alert">
+        <div className="rounded-xl border border-danger bg-danger-soft p-4">
+          <p className="text-sm font-medium text-danger" role="alert">
             {generalError}
           </p>
         </div>
       )}
 
       {/* Form card */}
-      <form
-        onSubmit={handleSubmit}
-        className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl"
-      >
+      <form onSubmit={handleSubmit} className="rounded-xl border border-line bg-surface p-6">
         <div className="space-y-6">
           {/* Name */}
           <div>
-            <label
-              htmlFor="agent-name"
-              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]"
-            >
-              Name <span className="text-red-500">*</span>
+            <label htmlFor="agent-name" className="mb-1.5 block text-sm font-medium text-muted">
+              Name <span className="text-danger">*</span>
             </label>
             <input
               ref={nameInputRef}
@@ -189,20 +181,14 @@ export function CreateAgentPage() {
               onChange={(e) => dispatch({ type: 'SET_NAME', value: e.target.value })}
               placeholder="My AI Agent"
               autoFocus
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#04070D] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
-                fieldErrors.name
-                  ? 'border-red-500 dark:border-red-500'
-                  : 'border-gray-300 focus:border-[#A6DAFF] dark:border-[#2a2a2d] dark:focus:border-[#A6DAFF]'
+              className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors placeholder:text-faint ${
+                fieldErrors.name ? 'border-danger' : 'border-line-strong focus:border-brand'
               }`}
               aria-invalid={!!fieldErrors.name}
               aria-describedby={fieldErrors.name ? 'name-error' : undefined}
             />
             {fieldErrors.name && (
-              <p
-                id="name-error"
-                className="mt-1 text-sm text-red-600 dark:text-red-400"
-                role="alert"
-              >
+              <p id="name-error" className="mt-1 text-sm text-danger" role="alert">
                 {fieldErrors.name}
               </p>
             )}
@@ -212,7 +198,7 @@ export function CreateAgentPage() {
           <div>
             <label
               htmlFor="agent-description"
-              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]"
+              className="mb-1.5 block text-sm font-medium text-muted"
             >
               Description
             </label>
@@ -222,20 +208,14 @@ export function CreateAgentPage() {
               onChange={(e) => dispatch({ type: 'SET_DESCRIPTION', value: e.target.value })}
               placeholder="A brief description of what this agent does..."
               rows={3}
-              className={`w-full resize-none rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#04070D] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
-                fieldErrors.description
-                  ? 'border-red-500 dark:border-red-500'
-                  : 'border-gray-300 focus:border-[#A6DAFF] dark:border-[#2a2a2d] dark:focus:border-[#A6DAFF]'
+              className={`w-full resize-none rounded-lg border bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors placeholder:text-faint ${
+                fieldErrors.description ? 'border-danger' : 'border-line-strong focus:border-brand'
               }`}
               aria-invalid={!!fieldErrors.description}
               aria-describedby={fieldErrors.description ? 'description-error' : undefined}
             />
             {fieldErrors.description && (
-              <p
-                id="description-error"
-                className="mt-1 text-sm text-red-600 dark:text-red-400"
-                role="alert"
-              >
+              <p id="description-error" className="mt-1 text-sm text-danger" role="alert">
                 {fieldErrors.description}
               </p>
             )}
@@ -245,11 +225,11 @@ export function CreateAgentPage() {
           <div>
             <label
               htmlFor="agent-capabilities"
-              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]"
+              className="mb-1.5 block text-sm font-medium text-muted"
             >
               Capabilities
             </label>
-            <p className="mb-2 text-xs text-gray-500 dark:text-[#71717a]">
+            <p className="mb-2 text-xs text-subtle">
               Select capabilities to auto-generate a gateway policy that scopes which endpoints this
               agent can access.
             </p>
@@ -263,10 +243,8 @@ export function CreateAgentPage() {
 
           {/* Metadata */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
-              Metadata
-            </label>
-            <p className="mb-2 text-xs text-gray-500 dark:text-[#71717a]">
+            <label className="mb-1.5 block text-sm font-medium text-muted">Metadata</label>
+            <p className="mb-2 text-xs text-subtle">
               Optional tags for organizing your agents. Use to track team ownership, environment, or
               version.
             </p>
@@ -279,17 +257,17 @@ export function CreateAgentPage() {
         </div>
 
         {/* Submit */}
-        <div className="mt-8 flex items-center justify-end gap-3 border-t border-gray-200 pt-6 dark:border-[#1a1a1d]">
+        <div className="mt-8 flex items-center justify-end gap-3 border-t border-line pt-6">
           <Link
             to="/dashboard/agents"
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]"
+            className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-muted transition-colors hover:bg-elevated"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#A6DAFF] px-5 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#A6DAFF]"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand px-5 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand"
             aria-busy={isSubmitting}
           >
             {isSubmitting && (

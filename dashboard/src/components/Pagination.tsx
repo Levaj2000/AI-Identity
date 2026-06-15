@@ -39,15 +39,12 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange }: 
   return (
     <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
       {/* Result summary */}
-      <p className="text-sm text-gray-500 dark:text-[#a1a1aa]">
+      <p className="text-sm text-subtle">
         Showing{' '}
-        <span className="font-[JetBrains_Mono,monospace] font-medium text-gray-700 dark:text-[#e4e4e7]">
+        <span className="font-[JetBrains_Mono,monospace] font-medium text-ink">
           {from}-{to}
         </span>{' '}
-        of{' '}
-        <span className="font-[JetBrains_Mono,monospace] font-medium text-gray-700 dark:text-[#e4e4e7]">
-          {total}
-        </span>{' '}
+        of <span className="font-[JetBrains_Mono,monospace] font-medium text-ink">{total}</span>{' '}
         agents
       </p>
 
@@ -57,7 +54,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange }: 
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]"
+          className="rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Previous page"
         >
           &larr;
@@ -65,10 +62,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange }: 
 
         {pages.map((p, i) =>
           p === '...' ? (
-            <span
-              key={`ellipsis-${i}`}
-              className="px-2 py-2 text-sm text-gray-400 dark:text-[#52525b]"
-            >
+            <span key={`ellipsis-${i}`} className="px-2 py-2 text-sm text-faint">
               &hellip;
             </span>
           ) : (
@@ -79,9 +73,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange }: 
               aria-current={p === page ? 'page' : undefined}
               aria-label={`Go to page ${p}`}
               className={`min-w-[2.25rem] rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                p === page
-                  ? 'bg-[#A6DAFF] text-[#04070D]'
-                  : 'text-gray-700 hover:bg-gray-100 dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]'
+                p === page ? 'bg-brand text-brand-ink' : 'text-muted hover:bg-elevated'
               }`}
             >
               {p}
@@ -93,7 +85,7 @@ export function Pagination({ page, totalPages, total, pageSize, onPageChange }: 
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]"
+          className="rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Next page"
         >
           &rarr;

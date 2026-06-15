@@ -248,40 +248,40 @@ export function AgentDetailPage() {
       <div className="space-y-6">
         {/* Breadcrumb skeleton */}
         <div className="flex items-center gap-2">
-          <div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
-          <div className="h-4 w-4 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
-          <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+          <div className="h-4 w-16 animate-pulse rounded bg-elevated" />
+          <div className="h-4 w-4 animate-pulse rounded bg-elevated" />
+          <div className="h-4 w-32 animate-pulse rounded bg-elevated" />
         </div>
         {/* Header skeleton */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
+        <div className="rounded-xl border border-line bg-surface p-6">
           <div className="flex items-center gap-4">
-            <div className="h-7 w-48 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
-            <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200 dark:bg-[#1a1a1d]" />
+            <div className="h-7 w-48 animate-pulse rounded bg-elevated" />
+            <div className="h-5 w-16 animate-pulse rounded-full bg-elevated" />
           </div>
-          <div className="mt-2 h-4 w-64 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+          <div className="mt-2 h-4 w-64 animate-pulse rounded bg-elevated" />
           <div className="mt-4 flex gap-3">
-            <div className="h-9 w-28 animate-pulse rounded-lg bg-gray-200 dark:bg-[#1a1a1d]" />
-            <div className="h-9 w-24 animate-pulse rounded-lg bg-gray-200 dark:bg-[#1a1a1d]" />
+            <div className="h-9 w-28 animate-pulse rounded-lg bg-elevated" />
+            <div className="h-9 w-24 animate-pulse rounded-lg bg-elevated" />
           </div>
         </div>
         {/* Details skeleton */}
-        <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
+        <div className="rounded-xl border border-line bg-surface p-6">
           <div className="space-y-6">
             <div>
-              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
-              <div className="h-4 w-full animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-elevated" />
+              <div className="h-4 w-full animate-pulse rounded bg-elevated" />
             </div>
             <div>
-              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-elevated" />
               <div className="flex gap-2">
-                <div className="h-6 w-16 animate-pulse rounded-md bg-gray-200 dark:bg-[#1a1a1d]" />
-                <div className="h-6 w-20 animate-pulse rounded-md bg-gray-200 dark:bg-[#1a1a1d]" />
-                <div className="h-6 w-24 animate-pulse rounded-md bg-gray-200 dark:bg-[#1a1a1d]" />
+                <div className="h-6 w-16 animate-pulse rounded-md bg-elevated" />
+                <div className="h-6 w-20 animate-pulse rounded-md bg-elevated" />
+                <div className="h-6 w-24 animate-pulse rounded-md bg-elevated" />
               </div>
             </div>
             <div>
-              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
-              <div className="h-16 w-full animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+              <div className="mb-2 h-4 w-24 animate-pulse rounded bg-elevated" />
+              <div className="h-16 w-full animate-pulse rounded bg-elevated" />
             </div>
           </div>
         </div>
@@ -294,19 +294,19 @@ export function AgentDetailPage() {
   if (notFound) {
     return (
       <div className="space-y-6">
-        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
-          <Link to="/dashboard/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
+        <nav className="flex items-center gap-2 text-sm text-muted">
+          <Link to="/dashboard/agents" className="hover:text-ink">
             Agents
           </Link>
           <ChevronIcon />
-          <span className="text-gray-900 dark:text-[#e4e4e7]">Not Found</span>
+          <span className="text-ink">Not Found</span>
         </nav>
-        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-[#2a2a2d] dark:bg-[#10131C]/50">
+        <div className="rounded-xl border border-dashed border-line-strong bg-inset p-12 text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
-            className="mx-auto h-10 w-10 text-gray-400 dark:text-[#52525b]"
+            className="mx-auto h-10 w-10 text-faint"
           >
             <path
               fillRule="evenodd"
@@ -314,16 +314,14 @@ export function AgentDetailPage() {
               clipRule="evenodd"
             />
           </svg>
-          <h2 className="mt-4 text-lg font-semibold text-gray-700 dark:text-[#d4d4d8]">
-            Agent Not Found
-          </h2>
-          <p className="mt-2 text-sm text-gray-500 dark:text-[#71717a]">
+          <h2 className="mt-4 text-lg font-semibold text-muted">Agent Not Found</h2>
+          <p className="mt-2 text-sm text-subtle">
             The agent you&apos;re looking for doesn&apos;t exist or has been removed.
           </p>
           <div className="mt-6">
             <Link
               to="/dashboard/agents"
-              className="inline-flex items-center gap-2 text-sm font-medium text-[#A6DAFF] hover:text-[#A6DAFF] dark:text-[#A6DAFF] dark:hover:text-[#A6DAFF]"
+              className="inline-flex items-center gap-2 text-sm font-medium text-brand hover:text-brand"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -350,18 +348,16 @@ export function AgentDetailPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
-          <Link to="/dashboard/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
+        <nav className="flex items-center gap-2 text-sm text-muted">
+          <Link to="/dashboard/agents" className="hover:text-ink">
             Agents
           </Link>
           <ChevronIcon />
-          <span className="text-gray-900 dark:text-[#e4e4e7]">{id}</span>
+          <span className="text-ink">{id}</span>
         </nav>
-        <div className="rounded-xl border border-red-300 bg-red-50 p-6 dark:border-red-500/20 dark:bg-red-500/10">
-          <h2 className="mb-1 font-semibold text-red-600 dark:text-red-400">
-            Unable to Load Agent
-          </h2>
-          <p className="text-sm text-red-500 dark:text-red-400/80">{error.message}</p>
+        <div className="rounded-xl border border-danger bg-danger-soft p-6">
+          <h2 className="mb-1 font-semibold text-danger">Unable to Load Agent</h2>
+          <p className="text-sm text-danger">{error.message}</p>
         </div>
       </div>
     )
@@ -376,26 +372,23 @@ export function AgentDetailPage() {
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-[#a1a1aa]">
-        <Link to="/dashboard/agents" className="hover:text-gray-700 dark:hover:text-[#e4e4e7]">
+      <nav className="flex items-center gap-2 text-sm text-muted">
+        <Link to="/dashboard/agents" className="hover:text-ink">
           Agents
         </Link>
         <ChevronIcon />
-        <span className="text-gray-900 dark:text-[#e4e4e7]">{agent.name}</span>
+        <span className="text-ink">{agent.name}</span>
       </nav>
 
       {/* Revoked banner */}
       {isRevoked && (
-        <div
-          className="rounded-xl border border-red-300 bg-red-50 p-4 dark:border-red-500/20 dark:bg-red-500/10"
-          role="alert"
-        >
+        <div className="rounded-xl border border-danger bg-danger-soft p-4" role="alert">
           <div className="flex items-center gap-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
               fill="currentColor"
-              className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400"
+              className="h-5 w-5 shrink-0 text-danger"
             >
               <path
                 fillRule="evenodd"
@@ -403,7 +396,7 @@ export function AgentDetailPage() {
                 clipRule="evenodd"
               />
             </svg>
-            <p className="text-sm font-medium text-red-600 dark:text-red-400">
+            <p className="text-sm font-medium text-danger">
               This agent has been revoked. All API keys have been deactivated. This action cannot be
               undone.
             </p>
@@ -413,24 +406,22 @@ export function AgentDetailPage() {
 
       {/* General error (from save/toggle/revoke) */}
       {generalError && (
-        <div className="rounded-xl border border-red-300 bg-red-50 p-4 dark:border-red-500/20 dark:bg-red-500/10">
-          <p className="text-sm font-medium text-red-600 dark:text-red-400" role="alert">
+        <div className="rounded-xl border border-danger bg-danger-soft p-4">
+          <p className="text-sm font-medium text-danger" role="alert">
             {generalError}
           </p>
         </div>
       )}
 
       {/* Header card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
+      <div className="rounded-xl border border-line bg-surface p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <h1 className="truncate text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">
-                {agent.name}
-              </h1>
+              <h1 className="truncate text-2xl font-bold text-ink">{agent.name}</h1>
               <AgentStatusBadge status={agent.status} />
             </div>
-            <p className="mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">
+            <p className="mt-1 text-sm text-muted">
               Created {relativeTime(agent.created_at)} · Updated {relativeTime(agent.updated_at)}
             </p>
           </div>
@@ -441,7 +432,7 @@ export function AgentDetailPage() {
           {/* Manage Keys */}
           <Link
             to={`/dashboard/agents/${agent.id}/keys`}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]"
+            className="inline-flex items-center gap-2 rounded-lg border border-line-strong px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-elevated"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -466,8 +457,8 @@ export function AgentDetailPage() {
               disabled={isTogglingStatus || isEditing}
               className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                 agent.status === 'active'
-                  ? 'border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-500/30 dark:text-amber-400 dark:hover:bg-amber-500/10'
-                  : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-400 dark:hover:bg-emerald-500/10'
+                  ? 'border-warning text-warning hover:bg-warning-soft'
+                  : 'border-success text-success hover:bg-success-soft'
               }`}
               aria-busy={isTogglingStatus}
             >
@@ -505,7 +496,7 @@ export function AgentDetailPage() {
                   type="button"
                   onClick={cancelEdit}
                   disabled={isSaving}
-                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#2a2a2d] dark:text-[#d4d4d8] dark:hover:bg-[#1a1a1d]"
+                  className="rounded-lg border border-line-strong px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -513,7 +504,7 @@ export function AgentDetailPage() {
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#A6DAFF] px-3 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#A6DAFF]"
+                  className="inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand"
                   aria-busy={isSaving}
                 >
                   {isSaving && (
@@ -545,7 +536,7 @@ export function AgentDetailPage() {
               <button
                 type="button"
                 onClick={enterEditMode}
-                className="inline-flex items-center gap-2 rounded-lg bg-[#A6DAFF] px-3 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -564,7 +555,7 @@ export function AgentDetailPage() {
             <button
               type="button"
               onClick={() => setShowRevokeModal(true)}
-              className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
+              className="rounded-lg border border-danger px-3 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger-soft"
             >
               Revoke
             </button>
@@ -573,16 +564,13 @@ export function AgentDetailPage() {
       </div>
 
       {/* Details card */}
-      <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
+      <div className="rounded-xl border border-line bg-surface p-6">
         <div className="space-y-6">
           {/* Name (edit mode only — view mode shows in header) */}
           {isEditing && (
             <div>
-              <label
-                htmlFor="edit-name"
-                className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]"
-              >
-                Name <span className="text-red-500">*</span>
+              <label htmlFor="edit-name" className="mb-1.5 block text-sm font-medium text-muted">
+                Name <span className="text-danger">*</span>
               </label>
               <input
                 ref={nameInputRef}
@@ -590,20 +578,14 @@ export function AgentDetailPage() {
                 type="text"
                 value={editForm.name}
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#04070D] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
-                  fieldErrors.name
-                    ? 'border-red-500 dark:border-red-500'
-                    : 'border-gray-300 focus:border-[#A6DAFF] dark:border-[#2a2a2d] dark:focus:border-[#A6DAFF]'
+                className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors placeholder:text-faint ${
+                  fieldErrors.name ? 'border-danger' : 'border-line-strong focus:border-brand'
                 }`}
                 aria-invalid={!!fieldErrors.name}
                 aria-describedby={fieldErrors.name ? 'edit-name-error' : undefined}
               />
               {fieldErrors.name && (
-                <p
-                  id="edit-name-error"
-                  className="mt-1 text-sm text-red-600 dark:text-red-400"
-                  role="alert"
-                >
+                <p id="edit-name-error" className="mt-1 text-sm text-danger" role="alert">
                   {fieldErrors.name}
                 </p>
               )}
@@ -612,9 +594,7 @@ export function AgentDetailPage() {
 
           {/* Description */}
           <div>
-            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
-              Description
-            </h3>
+            <h3 className="mb-1.5 text-sm font-medium text-muted">Description</h3>
             {isEditing ? (
               <>
                 <textarea
@@ -623,32 +603,28 @@ export function AgentDetailPage() {
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                   placeholder="A brief description of what this agent does..."
                   rows={3}
-                  className={`w-full resize-none rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 dark:bg-[#04070D] dark:text-[#e4e4e7] dark:placeholder:text-[#52525b] ${
+                  className={`w-full resize-none rounded-lg border bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors placeholder:text-faint ${
                     fieldErrors.description
-                      ? 'border-red-500 dark:border-red-500'
-                      : 'border-gray-300 focus:border-[#A6DAFF] dark:border-[#2a2a2d] dark:focus:border-[#A6DAFF]'
+                      ? 'border-danger'
+                      : 'border-line-strong focus:border-brand'
                   }`}
                 />
                 {fieldErrors.description && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                  <p className="mt-1 text-sm text-danger" role="alert">
                     {fieldErrors.description}
                   </p>
                 )}
               </>
             ) : (
-              <p className="text-sm text-gray-600 dark:text-[#a1a1aa]">
-                {agent.description || (
-                  <span className="italic text-gray-400 dark:text-[#52525b]">No description</span>
-                )}
+              <p className="text-sm text-muted">
+                {agent.description || <span className="italic text-faint">No description</span>}
               </p>
             )}
           </div>
 
           {/* Capabilities */}
           <div>
-            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
-              Capabilities
-            </h3>
+            <h3 className="mb-1.5 text-sm font-medium text-muted">Capabilities</h3>
             {isEditing ? (
               <CapabilitySelect
                 id="edit-capabilities"
@@ -661,23 +637,21 @@ export function AgentDetailPage() {
                 {agent.capabilities.map((cap) => (
                   <span
                     key={cap}
-                    className="rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#a1a1aa]"
+                    className="rounded-md border border-line bg-elevated px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-muted"
                   >
                     {cap}
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="text-sm italic text-gray-400 dark:text-[#52525b]">No capabilities</p>
+              <p className="text-sm italic text-faint">No capabilities</p>
             )}
           </div>
 
           {/* Metadata */}
           <div>
-            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
-              Metadata
-            </h3>
-            <p className="mb-2 text-xs text-gray-500 dark:text-[#71717a]">
+            <h3 className="mb-1.5 text-sm font-medium text-muted">Metadata</h3>
+            <p className="mb-2 text-xs text-subtle">
               Optional tags for organizing your agents. Use to track team ownership, environment, or
               version.
             </p>
@@ -688,28 +662,21 @@ export function AgentDetailPage() {
                 error={fieldErrors.metadata}
               />
             ) : Object.keys(agent.metadata).length > 0 ? (
-              <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-[#2a2a2d]">
+              <div className="overflow-hidden rounded-lg border border-line">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-200 bg-gray-50 dark:border-[#2a2a2d] dark:bg-[#1a1a1d]/50">
-                      <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-[#a1a1aa]">
-                        Key
-                      </th>
-                      <th className="px-4 py-2 text-left font-medium text-gray-600 dark:text-[#a1a1aa]">
-                        Value
-                      </th>
+                    <tr className="border-b border-line bg-inset">
+                      <th className="px-4 py-2 text-left font-medium text-muted">Key</th>
+                      <th className="px-4 py-2 text-left font-medium text-muted">Value</th>
                     </tr>
                   </thead>
                   <tbody>
                     {Object.entries(agent.metadata).map(([key, value]) => (
-                      <tr
-                        key={key}
-                        className="border-b border-gray-100 last:border-0 dark:border-[#1a1a1d]"
-                      >
-                        <td className="px-4 py-2 font-[JetBrains_Mono,monospace] text-xs text-gray-700 dark:text-[#d4d4d8]">
+                      <tr key={key} className="border-b border-line last:border-0">
+                        <td className="px-4 py-2 font-[JetBrains_Mono,monospace] text-xs text-muted">
                           {key}
                         </td>
-                        <td className="px-4 py-2 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:text-[#a1a1aa]">
+                        <td className="px-4 py-2 font-[JetBrains_Mono,monospace] text-xs text-muted">
                           {String(value)}
                         </td>
                       </tr>
@@ -718,16 +685,14 @@ export function AgentDetailPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-sm italic text-gray-400 dark:text-[#52525b]">No metadata</p>
+              <p className="text-sm italic text-faint">No metadata</p>
             )}
           </div>
 
           {/* EU AI Act classification */}
           <div>
-            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
-              EU AI Act classification
-            </h3>
-            <p className="mb-2 text-xs text-gray-500 dark:text-[#71717a]">
+            <h3 className="mb-1.5 text-sm font-medium text-muted">EU AI Act classification</h3>
+            <p className="mb-2 text-xs text-subtle">
               Annex III high-risk category this agent falls under. Surfaces in the EU AI Act and
               NIST compliance exports. Pick <em>Not in scope</em> only if the deployer has evaluated
               the agent and determined it is not a high-risk AI system.
@@ -738,10 +703,10 @@ export function AgentDetailPage() {
                   id="edit-eu-ai-act-risk-class"
                   value={editForm.euAiActRiskClass}
                   onChange={(e) => setEditForm({ ...editForm, euAiActRiskClass: e.target.value })}
-                  className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors dark:bg-[#04070D] dark:text-[#e4e4e7] ${
+                  className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors ${
                     fieldErrors.eu_ai_act_risk_class
-                      ? 'border-red-500 dark:border-red-500'
-                      : 'border-gray-300 focus:border-[#A6DAFF] dark:border-[#2a2a2d] dark:focus:border-[#A6DAFF]'
+                      ? 'border-danger'
+                      : 'border-line-strong focus:border-brand'
                   }`}
                   aria-label="EU AI Act Annex III classification"
                 >
@@ -754,12 +719,12 @@ export function AgentDetailPage() {
                   ))}
                 </select>
                 {fieldErrors.eu_ai_act_risk_class && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                  <p className="mt-1 text-sm text-danger" role="alert">
                     {fieldErrors.eu_ai_act_risk_class}
                   </p>
                 )}
                 {editForm.euAiActRiskClass === '' && agent.eu_ai_act_risk_class !== null && (
-                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                  <p className="mt-1 text-xs text-warning">
                     API doesn't support clearing a previously-set classification via this form.
                     Leave your existing value selected or pick a new one.
                   </p>
@@ -770,15 +735,15 @@ export function AgentDetailPage() {
                 <span
                   className={`rounded-md px-2 py-0.5 text-xs ${
                     riskClassStatus(agent.eu_ai_act_risk_class) === 'in_scope'
-                      ? 'border border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300'
+                      ? 'border border-warning bg-warning-soft text-warning'
                       : riskClassStatus(agent.eu_ai_act_risk_class) === 'out_of_scope'
-                        ? 'border border-gray-200 bg-gray-100 text-gray-600 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#a1a1aa]'
-                        : 'border border-dashed border-gray-300 text-gray-500 dark:border-[#3f3f46] dark:text-[#71717a]'
+                        ? 'border border-line bg-elevated text-muted'
+                        : 'border border-dashed border-line-strong text-subtle'
                   }`}
                 >
                   {agent.eu_ai_act_risk_class ?? 'unclassified'}
                 </span>
-                <span className="text-sm text-gray-600 dark:text-[#a1a1aa]">
+                <span className="text-sm text-muted">
                   {riskClassLabel(agent.eu_ai_act_risk_class)}
                 </span>
               </div>
@@ -787,12 +752,8 @@ export function AgentDetailPage() {
 
           {/* Agent ID (always read-only) */}
           <div>
-            <h3 className="mb-1.5 text-sm font-medium text-gray-700 dark:text-[#d4d4d8]">
-              Agent ID
-            </h3>
-            <p className="font-[JetBrains_Mono,monospace] text-sm text-gray-600 dark:text-[#a1a1aa]">
-              {agent.id}
-            </p>
+            <h3 className="mb-1.5 text-sm font-medium text-muted">Agent ID</h3>
+            <p className="font-[JetBrains_Mono,monospace] text-sm text-muted">{agent.id}</p>
           </div>
         </div>
       </div>

@@ -28,10 +28,10 @@ function formatDate(iso: string): string {
 
 function TierBadge({ tier }: { tier: string }) {
   const colors: Record<string, string> = {
-    free: 'bg-gray-100 text-gray-700 dark:bg-[#1a1a1d] dark:text-[#a1a1aa]',
-    starter: 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',
-    pro: 'bg-purple-100 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400',
-    enterprise: 'bg-[#A6DAFF]/10 text-[#A6DAFF] dark:bg-[#A6DAFF]/10 dark:text-[#A6DAFF]',
+    free: 'bg-elevated text-muted',
+    starter: 'bg-brand-soft text-brand',
+    pro: 'bg-brand-soft text-brand',
+    enterprise: 'bg-brand-soft text-brand',
   }
   const cls = colors[tier.toLowerCase()] || colors.free
   return (
@@ -45,9 +45,9 @@ function TierBadge({ tier }: { tier: string }) {
 
 function RoleBadge({ role }: { role: string }) {
   const colors: Record<string, string> = {
-    owner: 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400',
-    admin: 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',
-    member: 'bg-gray-100 text-gray-700 dark:bg-[#1a1a1d] dark:text-[#a1a1aa]',
+    owner: 'bg-warning-soft text-warning',
+    admin: 'bg-brand-soft text-brand',
+    member: 'bg-elevated text-muted',
   }
   const cls = colors[role] || colors.member
   return (
@@ -79,7 +79,7 @@ function Toast({
     <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
       <div
         className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${
-          type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+          type === 'success' ? 'bg-success text-white' : 'bg-danger text-white'
         }`}
       >
         {type === 'success' ? (
@@ -130,19 +130,19 @@ function Toast({
 function Skeleton() {
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#10131C]">
-        <div className="h-6 w-48 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
-        <div className="mt-4 h-4 w-64 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+      <div className="rounded-2xl border border-line bg-surface p-6">
+        <div className="h-6 w-48 animate-pulse rounded bg-elevated" />
+        <div className="mt-4 h-4 w-64 animate-pulse rounded bg-elevated" />
         <div className="mt-6 flex gap-4">
-          <div className="h-16 w-32 animate-pulse rounded-lg bg-gray-200 dark:bg-[#1a1a1d]" />
-          <div className="h-16 w-32 animate-pulse rounded-lg bg-gray-200 dark:bg-[#1a1a1d]" />
+          <div className="h-16 w-32 animate-pulse rounded-lg bg-elevated" />
+          <div className="h-16 w-32 animate-pulse rounded-lg bg-elevated" />
         </div>
       </div>
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#10131C]">
-        <div className="h-6 w-36 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+      <div className="rounded-2xl border border-line bg-surface p-6">
+        <div className="h-6 w-36 animate-pulse rounded bg-elevated" />
         <div className="mt-4 space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-10 animate-pulse rounded bg-gray-200 dark:bg-[#1a1a1d]" />
+            <div key={i} className="h-10 animate-pulse rounded bg-elevated" />
           ))}
         </div>
       </div>
@@ -174,23 +174,21 @@ function CreateOrgCard({ onCreated }: { onCreated: (org: Organization) => void }
 
   return (
     <div className="mx-auto max-w-lg">
-      <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center dark:border-[#1a1a1d] dark:bg-[#10131C]">
+      <div className="rounded-2xl border border-line bg-surface p-8 text-center">
         {/* Icon */}
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#A6DAFF]/10">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-soft">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
-            className="h-7 w-7 text-[#A6DAFF]"
+            className="h-7 w-7 text-brand"
           >
             <path d="M7 8a3 3 0 100-6 3 3 0 000 6zM14.5 9a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM1.615 16.428a1.224 1.224 0 01-.569-1.175 6.002 6.002 0 0111.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 017 18a9.953 9.953 0 01-5.385-1.572zM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 00-1.588-3.755 4.502 4.502 0 015.874 2.636.818.818 0 01-.36.98A7.465 7.465 0 0114.5 16z" />
           </svg>
         </div>
 
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">
-          Create Your Organization
-        </h2>
-        <p className="mt-2 text-sm text-gray-600 dark:text-[#a1a1aa]">
+        <h2 className="text-lg font-semibold text-ink">Create Your Organization</h2>
+        <p className="mt-2 text-sm text-muted">
           Bring your team together. Create an organization to share agents and manage access.
         </p>
 
@@ -200,14 +198,14 @@ function CreateOrgCard({ onCreated }: { onCreated: (org: Organization) => void }
             placeholder="Organization name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#2a2a2d] dark:bg-[#04070D] dark:text-[#e4e4e7] dark:placeholder-[#52525b]"
+            className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder-faint focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
             required
           />
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
           <button
             type="submit"
             disabled={loading || !name.trim()}
-            className="w-full rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create Organization'}
           </button>
@@ -275,7 +273,7 @@ function InlineEditName({
         onBlur={save}
         onKeyDown={handleKeyDown}
         disabled={saving}
-        className="rounded-lg border border-[#A6DAFF] bg-white px-3 py-1.5 text-xl font-bold text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:bg-[#04070D] dark:text-[#e4e4e7]"
+        className="rounded-lg border border-brand bg-surface px-3 py-1.5 text-xl font-bold text-ink focus:outline-none focus:ring-1 focus:ring-brand"
       />
     )
   }
@@ -283,7 +281,7 @@ function InlineEditName({
   return (
     <button
       onClick={() => setEditing(true)}
-      className="group flex items-center gap-2 text-xl font-bold text-gray-900 dark:text-[#e4e4e7]"
+      className="group flex items-center gap-2 text-xl font-bold text-ink"
       title="Click to edit"
     >
       {value}
@@ -291,7 +289,7 @@ function InlineEditName({
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 20 20"
         fill="currentColor"
-        className="h-4 w-4 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100"
+        className="h-4 w-4 text-faint opacity-0 transition-opacity group-hover:opacity-100"
       >
         <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
       </svg>
@@ -506,13 +504,13 @@ function ForensicsKeySection({
   const snippetKey = key ? (revealed ? key : maskedKey(key)) : '<your-key>'
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#10131C]">
+    <div className="rounded-2xl border border-line bg-surface p-6">
       <div className="flex items-center gap-2">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
-          className="h-5 w-5 text-[#A6DAFF]"
+          className="h-5 w-5 text-brand"
         >
           <path
             fillRule="evenodd"
@@ -520,22 +518,22 @@ function ForensicsKeySection({
             clipRule="evenodd"
           />
         </svg>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">Forensics</h2>
+        <h2 className="text-lg font-semibold text-ink">Forensics</h2>
       </div>
-      <p className="mt-1 text-sm text-gray-500 dark:text-[#a1a1aa]">
+      <p className="mt-1 text-sm text-muted">
         Your organization's HMAC signing key for verifying audit chain exports.
       </p>
 
       {loading ? (
-        <div className="mt-4 h-10 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-[#1a1a1d]" />
+        <div className="mt-4 h-10 w-full animate-pulse rounded-lg bg-elevated" />
       ) : noAccess ? (
-        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-[#1a1a1d] dark:bg-[#04070D]">
+        <div className="mt-4 rounded-lg border border-line bg-inset p-4">
           <div className="flex items-center gap-2">
-            <code className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 font-mono text-sm text-gray-400 dark:border-[#1a1a1d] dark:bg-[#10131C] dark:text-[#52525b]">
+            <code className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 font-mono text-sm text-faint">
               ••••••••…
             </code>
           </div>
-          <p className="mt-3 text-xs text-gray-500 dark:text-[#a1a1aa]">
+          <p className="mt-3 text-xs text-muted">
             Contact your organization admin or owner to retrieve the audit-log HMAC key for CLI
             verification.
           </p>
@@ -546,7 +544,7 @@ function ForensicsKeySection({
           <div className="mt-4 flex items-center gap-2">
             <code
               data-testid="forensic-key-display"
-              className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-sm text-gray-900 dark:border-[#1a1a1d] dark:bg-[#04070D] dark:text-[#e4e4e7]"
+              className="flex-1 rounded-lg border border-line bg-inset px-3 py-2 font-mono text-sm text-ink"
             >
               {displayKey}
             </code>
@@ -556,7 +554,7 @@ function ForensicsKeySection({
               onClick={() => setRevealed((v) => !v)}
               title={revealed ? 'Hide key' : 'Reveal key'}
               aria-label={revealed ? 'Hide key' : 'Reveal key'}
-              className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:border-[#1a1a1d] dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d]"
+              className="rounded-lg border border-line p-2 text-subtle transition-colors hover:bg-elevated"
             >
               {revealed ? (
                 <svg
@@ -594,7 +592,7 @@ function ForensicsKeySection({
               onClick={handleCopyKey}
               title="Copy key"
               aria-label="Copy key"
-              className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-100 dark:border-[#1a1a1d] dark:text-[#a1a1aa] dark:hover:bg-[#1a1a1d]"
+              className="rounded-lg border border-line p-2 text-subtle transition-colors hover:bg-elevated"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -610,31 +608,27 @@ function ForensicsKeySection({
             {/* Regenerate button */}
             <button
               onClick={() => setRegenerateModal(true)}
-              className="rounded-lg border border-amber-300 px-3 py-2 text-xs font-medium text-amber-600 transition-colors hover:bg-amber-50 dark:border-amber-500/30 dark:text-amber-400 dark:hover:bg-amber-500/10"
+              className="rounded-lg border border-warning px-3 py-2 text-xs font-medium text-warning transition-colors hover:bg-warning-soft"
             >
               Regenerate
             </button>
           </div>
 
           {/* CLI usage snippet (manual env-var flow) */}
-          <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-[#1a1a1d] dark:bg-[#04070D]">
-            <p className="mb-2 text-xs font-medium text-gray-500 dark:text-[#a1a1aa]">
-              CLI verification (manual)
-            </p>
-            <pre className="overflow-x-auto text-xs text-gray-700 dark:text-[#a1a1aa]">
+          <div className="mt-4 rounded-lg border border-line bg-inset p-4">
+            <p className="mb-2 text-xs font-medium text-muted">CLI verification (manual)</p>
+            <pre className="overflow-x-auto text-xs text-muted">
               {`export AI_IDENTITY_HMAC_KEY='${snippetKey}'
 python3 ${VERIFY_SCRIPT_FILENAME} chain export.json`}
             </pre>
           </div>
 
           {/* CLI Quickstart panel */}
-          <div className="mt-4 rounded-lg border border-[#A6DAFF]/40 bg-[#A6DAFF]/5 p-4 dark:border-[#A6DAFF]/20 dark:bg-[#A6DAFF]/5">
+          <div className="mt-4 rounded-lg border border-brand bg-brand-soft p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-[#e4e4e7]">
-                  Verify CLI — 60 second quickstart
-                </p>
-                <p className="mt-0.5 text-xs text-gray-600 dark:text-[#a1a1aa]">
+                <p className="text-sm font-semibold text-ink">Verify CLI — 60 second quickstart</p>
+                <p className="mt-0.5 text-xs text-muted">
                   Download the script and a tiny sample chain, then paste one command to see a full
                   round-trip verify.
                 </p>
@@ -645,7 +639,7 @@ python3 ${VERIFY_SCRIPT_FILENAME} chain export.json`}
               <button
                 onClick={handleDownloadScript}
                 disabled={downloadingScript}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#1a1a1d] dark:bg-[#10131C] dark:text-[#e4e4e7] dark:hover:bg-[#1a1a1d]"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -665,7 +659,7 @@ python3 ${VERIFY_SCRIPT_FILENAME} chain export.json`}
               <button
                 onClick={handleDownloadSample}
                 disabled={downloadingSample || !key}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-[#1a1a1d] dark:bg-[#10131C] dark:text-[#e4e4e7] dark:hover:bg-[#1a1a1d]"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -685,7 +679,7 @@ python3 ${VERIFY_SCRIPT_FILENAME} chain export.json`}
               <button
                 onClick={handleCopyCommand}
                 disabled={!key}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#A6DAFF] px-3 py-1.5 text-xs font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-brand-ink transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -700,19 +694,18 @@ python3 ${VERIFY_SCRIPT_FILENAME} chain export.json`}
               </button>
             </div>
 
-            <p className="mt-3 text-xs text-gray-600 dark:text-[#a1a1aa]">
-              <span className="font-medium text-gray-900 dark:text-[#e4e4e7]">VERIFIED ✓</span>{' '}
-              means every entry's HMAC and chain linkage matches;{' '}
-              <span className="font-medium text-gray-900 dark:text-[#e4e4e7]">TAMPERED ✗</span>{' '}
-              means an entry was altered or the wrong key was used.
+            <p className="mt-3 text-xs text-muted">
+              <span className="font-medium text-ink">VERIFIED ✓</span> means every entry's HMAC and
+              chain linkage matches; <span className="font-medium text-ink">TAMPERED ✗</span> means
+              an entry was altered or the wrong key was used.
             </p>
-            <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+            <p className="mt-2 text-xs text-warning">
               <span className="font-semibold">Internal use only.</span> This HMAC key is your
               organization's shared secret — never share it with external auditors or customers. For
               external verification, use the{' '}
               <Link
                 to="/dashboard/compliance/exports"
-                className="font-medium underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-300"
+                className="font-medium underline underline-offset-2 hover:text-warning"
               >
                 DSSE attestation flow
               </Link>{' '}
@@ -878,7 +871,7 @@ export function OrganizationPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">Organization</h1>
+        <h1 className="text-2xl font-bold text-ink">Organization</h1>
         <Skeleton />
       </div>
     )
@@ -887,7 +880,7 @@ export function OrganizationPage() {
   if (noOrg) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">Organization</h1>
+        <h1 className="text-2xl font-bold text-ink">Organization</h1>
         <CreateOrgCard
           onCreated={(newOrg) => {
             setOrg(newOrg)
@@ -905,24 +898,22 @@ export function OrganizationPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">Organization</h1>
+      <h1 className="text-2xl font-bold text-ink">Organization</h1>
 
       {/* ── Section 1: Org Info ─────────────────────────────────────── */}
       {org && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#10131C]">
+        <div className="rounded-2xl border border-line bg-surface p-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
               <InlineEditName value={org.name} onSave={handleUpdateName} />
               <div className="flex items-center gap-3">
                 <TierBadge tier={org.tier} />
-                <span className="text-xs text-gray-500 dark:text-[#52525b]">
-                  Created {formatDate(org.created_at)}
-                </span>
+                <span className="text-xs text-subtle">Created {formatDate(org.created_at)}</span>
               </div>
             </div>
             <button
               onClick={() => setDeleteModal(true)}
-              className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
+              className="rounded-lg border border-danger px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger-soft"
             >
               Delete Organization
             </button>
@@ -930,29 +921,25 @@ export function OrganizationPage() {
 
           {/* Stats */}
           <div className="mt-6 flex flex-wrap gap-4">
-            <div className="rounded-lg border border-gray-200 px-4 py-3 dark:border-[#1a1a1d]">
-              <p className="text-xs text-gray-500 dark:text-[#52525b]">Members</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">
-                {org.member_count}
-              </p>
+            <div className="rounded-lg border border-line px-4 py-3">
+              <p className="text-xs text-subtle">Members</p>
+              <p className="text-2xl font-bold text-ink">{org.member_count}</p>
             </div>
-            <div className="rounded-lg border border-gray-200 px-4 py-3 dark:border-[#1a1a1d]">
-              <p className="text-xs text-gray-500 dark:text-[#52525b]">Agents</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">
-                {org.agent_count}
-              </p>
+            <div className="rounded-lg border border-line px-4 py-3">
+              <p className="text-xs text-subtle">Agents</p>
+              <p className="text-2xl font-bold text-ink">{org.agent_count}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* ── Section 2: Team Members ────────────────────────────────── */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-[#1a1a1d] dark:bg-[#10131C]">
+      <div className="rounded-2xl border border-line bg-surface p-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">Team Members</h2>
+          <h2 className="text-lg font-semibold text-ink">Team Members</h2>
           <button
             onClick={() => setShowInvite(!showInvite)}
-            className="rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover"
           >
             {showInvite ? 'Cancel' : 'Invite Member'}
           </button>
@@ -962,29 +949,25 @@ export function OrganizationPage() {
         {showInvite && (
           <form
             onSubmit={handleInvite}
-            className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-[#1a1a1d] dark:bg-[#04070D]"
+            className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-line bg-inset p-4"
           >
             <div className="flex-1">
-              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-[#a1a1aa]">
-                Email
-              </label>
+              <label className="mb-1 block text-xs font-medium text-muted">Email</label>
               <input
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="colleague@company.com"
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#2a2a2d] dark:bg-[#04070D] dark:text-[#e4e4e7] dark:placeholder-[#52525b]"
+                className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder-faint focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 required
               />
             </div>
             <div className="w-32">
-              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-[#a1a1aa]">
-                Role
-              </label>
+              <label className="mb-1 block text-xs font-medium text-muted">Role</label>
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value as 'admin' | 'member')}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#2a2a2d] dark:bg-[#04070D] dark:text-[#e4e4e7]"
+                className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               >
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>
@@ -993,18 +976,18 @@ export function OrganizationPage() {
             <button
               type="submit"
               disabled={inviteLoading || !inviteEmail.trim()}
-              className="rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-semibold text-[#04070D] transition-colors hover:bg-[#A6DAFF]/80 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               {inviteLoading ? 'Sending...' : 'Send Invite'}
             </button>
-            {inviteError && <p className="w-full text-sm text-red-500">{inviteError}</p>}
+            {inviteError && <p className="w-full text-sm text-danger">{inviteError}</p>}
           </form>
         )}
 
         {/* Members Table */}
         {members.length === 0 ? (
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-500 dark:text-[#52525b]">
+            <p className="text-sm text-subtle">
               No team members yet. Invite someone to get started.
             </p>
           </div>
@@ -1012,19 +995,17 @@ export function OrganizationPage() {
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-[#1a1a1d]">
-                  <th className="pb-3 pr-4 font-medium text-gray-500 dark:text-[#52525b]">Email</th>
-                  <th className="pb-3 pr-4 font-medium text-gray-500 dark:text-[#52525b]">Role</th>
-                  <th className="pb-3 pr-4 font-medium text-gray-500 dark:text-[#52525b]">
-                    Joined
-                  </th>
-                  <th className="pb-3 font-medium text-gray-500 dark:text-[#52525b]">Actions</th>
+                <tr className="border-b border-line">
+                  <th className="pb-3 pr-4 font-medium text-subtle">Email</th>
+                  <th className="pb-3 pr-4 font-medium text-subtle">Role</th>
+                  <th className="pb-3 pr-4 font-medium text-subtle">Joined</th>
+                  <th className="pb-3 font-medium text-subtle">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-[#1a1a1d]">
+              <tbody className="divide-y divide-line">
                 {members.map((member) => (
                   <tr key={member.user_id}>
-                    <td className="py-3 pr-4 text-gray-900 dark:text-[#e4e4e7]">{member.email}</td>
+                    <td className="py-3 pr-4 text-ink">{member.email}</td>
                     <td className="py-3 pr-4">
                       {member.role === 'owner' ? (
                         <RoleBadge role={member.role} />
@@ -1032,23 +1013,21 @@ export function OrganizationPage() {
                         <select
                           value={member.role}
                           onChange={(e) => handleChangeRole(member.user_id, e.target.value)}
-                          className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#2a2a2d] dark:bg-[#04070D] dark:text-[#e4e4e7]"
+                          className="rounded-lg border border-line-strong bg-surface px-2 py-1 text-xs font-medium text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                         >
                           <option value="admin">Admin</option>
                           <option value="member">Member</option>
                         </select>
                       )}
                     </td>
-                    <td className="py-3 pr-4 text-gray-600 dark:text-[#a1a1aa]">
-                      {formatDate(member.joined_at)}
-                    </td>
+                    <td className="py-3 pr-4 text-muted">{formatDate(member.joined_at)}</td>
                     <td className="py-3">
                       {member.role === 'owner' ? (
-                        <span className="text-xs text-gray-400 dark:text-[#52525b]">--</span>
+                        <span className="text-xs text-faint">--</span>
                       ) : (
                         <button
                           onClick={() => setRemoveMemberModal(member)}
-                          className="rounded-lg px-3 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
+                          className="rounded-lg px-3 py-1 text-xs font-medium text-danger transition-colors hover:bg-danger-soft"
                         >
                           Remove
                         </button>
