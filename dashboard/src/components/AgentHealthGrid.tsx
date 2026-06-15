@@ -11,11 +11,11 @@ interface AgentHealthGridProps {
 
 function StatusDot({ status }: { status: string }) {
   const colorMap: Record<string, string> = {
-    active: 'bg-emerald-500',
-    suspended: 'bg-amber-500',
-    revoked: 'bg-red-500',
+    active: 'bg-success',
+    suspended: 'bg-warning',
+    revoked: 'bg-danger',
   }
-  const color = colorMap[status] || 'bg-gray-400'
+  const color = colorMap[status] || 'bg-subtle'
   const isActive = status === 'active'
 
   return (
@@ -38,22 +38,22 @@ function statusLabel(status: string): string {
 function statusColor(status: string): string {
   switch (status) {
     case 'active':
-      return 'text-emerald-500'
+      return 'text-success'
     case 'suspended':
-      return 'text-amber-500'
+      return 'text-warning'
     case 'revoked':
-      return 'text-red-500'
+      return 'text-danger'
     default:
-      return 'text-gray-400'
+      return 'text-faint'
   }
 }
 
 export function AgentHealthGrid({ agents }: AgentHealthGridProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
+    <div className="rounded-xl border border-line bg-surface p-6">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">Agent Health</h2>
-        <p className="text-sm text-gray-500 dark:text-[#71717a]">
+        <h2 className="text-lg font-semibold text-ink">Agent Health</h2>
+        <p className="text-sm text-subtle">
           {agents.length} agent{agents.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -62,13 +62,13 @@ export function AgentHealthGrid({ agents }: AgentHealthGridProps) {
         {agents.map((agent) => (
           <div
             key={agent.id}
-            className="rounded-lg border border-gray-200 bg-gray-50 p-4 transition-all duration-200 hover:border-[#A6DAFF]/30 hover:bg-gray-100 dark:border-[#1a1a1d] dark:bg-[#04070D]/50 dark:hover:border-[#A6DAFF]/30 dark:hover:bg-[#A6DAFF]/5"
+            className="rounded-lg border border-line bg-inset p-4 transition-all duration-200 hover:border-line-strong hover:bg-brand-soft"
           >
             <div className="flex items-center gap-3">
               <StatusDot status={agent.status} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
-                  <p className="truncate font-medium text-gray-900 dark:text-white">{agent.name}</p>
+                  <p className="truncate font-medium text-ink">{agent.name}</p>
                   <span
                     className={`ml-2 shrink-0 text-xs font-medium ${statusColor(agent.status)}`}
                   >
@@ -76,9 +76,7 @@ export function AgentHealthGrid({ agents }: AgentHealthGridProps) {
                   </span>
                 </div>
                 {agent.description && (
-                  <p className="mt-0.5 truncate text-sm text-gray-500 dark:text-[#71717a]">
-                    {agent.description}
-                  </p>
+                  <p className="mt-0.5 truncate text-sm text-subtle">{agent.description}</p>
                 )}
               </div>
             </div>

@@ -17,10 +17,10 @@ export function QuickStartBar() {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
+    <div className="rounded-xl border border-line bg-surface p-6">
       <div className="mb-4 flex items-center gap-2">
         <svg
-          className="h-5 w-5 text-[#A6DAFF]"
+          className="h-5 w-5 text-brand"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -32,47 +32,45 @@ export function QuickStartBar() {
             d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
           />
         </svg>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">Quick Start</h2>
+        <h2 className="text-lg font-semibold text-ink">Quick Start</h2>
       </div>
 
       <div className="relative">
-        <pre className="overflow-x-auto rounded-lg bg-gray-100 p-4 font-mono text-sm dark:bg-[#04070D]">
+        <pre className="overflow-x-auto rounded-lg bg-inset p-4 font-mono text-sm">
           <code>
-            <span className="text-gray-700 dark:text-[#e4e4e7]">curl -X POST </span>
-            <span className="text-[#A6DAFF]">https://api.ai-identity.co/v1/agents</span>
-            <span className="text-gray-700 dark:text-[#e4e4e7]"> \</span>
+            <span className="text-muted">curl -X POST </span>
+            <span className="text-brand">https://api.ai-identity.co/v1/agents</span>
+            <span className="text-muted"> \</span>
             {'\n'}
-            <span className="text-gray-700 dark:text-[#e4e4e7]">{'  '}-H </span>
-            <span className="text-[#A6DAFF]">&quot;Authorization: Bearer aid_sk_...&quot;</span>
-            <span className="text-gray-700 dark:text-[#e4e4e7]"> \</span>
+            <span className="text-muted">{'  '}-H </span>
+            <span className="text-brand">&quot;Authorization: Bearer aid_sk_...&quot;</span>
+            <span className="text-muted"> \</span>
             {'\n'}
-            <span className="text-gray-700 dark:text-[#e4e4e7]">{'  '}-H </span>
-            <span className="text-[#A6DAFF]">&quot;Content-Type: application/json&quot;</span>
-            <span className="text-gray-700 dark:text-[#e4e4e7]"> \</span>
+            <span className="text-muted">{'  '}-H </span>
+            <span className="text-brand">&quot;Content-Type: application/json&quot;</span>
+            <span className="text-muted"> \</span>
             {'\n'}
-            <span className="text-gray-700 dark:text-[#e4e4e7]">{'  '}-d </span>
-            <span className="text-[#A6DAFF]">{`'{"name": "my-agent"}'`}</span>
+            <span className="text-muted">{'  '}-d </span>
+            <span className="text-brand">{`'{"name": "my-agent"}'`}</span>
           </code>
         </pre>
         <button
           onClick={handleCopy}
-          className="absolute right-2 top-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#e4e4e7] dark:hover:bg-[#2a2a2d]"
+          className="absolute right-2 top-2 rounded-md border border-line-strong bg-surface px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-elevated"
         >
           {copied ? 'Copied!' : 'Copy'}
         </button>
       </div>
 
       {/* Gateway URL */}
-      <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-[#2a2a2d] dark:bg-[#1a1a1d]">
-        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#71717a]">
+      <div className="mt-4 rounded-lg border border-line bg-inset p-3">
+        <p className="mb-1 text-xs font-medium uppercase tracking-wider text-subtle">
           Gateway URL &mdash; point your agents here
         </p>
-        <code className="text-sm font-[JetBrains_Mono,monospace] text-[#A6DAFF]">
-          {GATEWAY_URL}
-        </code>
-        <p className="mt-1.5 text-xs text-gray-500 dark:text-[#a1a1aa]">
+        <code className="text-sm font-[JetBrains_Mono,monospace] text-brand">{GATEWAY_URL}</code>
+        <p className="mt-1.5 text-xs text-muted">
           Swap your OpenAI base URL for this. Add your <code>aid_sk_</code> key as the{' '}
-          <code className="text-[#A6DAFF]">X-API-Key</code> header.
+          <code className="text-brand">X-API-Key</code> header.
         </p>
       </div>
 
@@ -81,7 +79,7 @@ export function QuickStartBar() {
           href="https://ai-identity.co/docs"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-gray-500 transition-colors hover:text-[#A6DAFF] dark:text-[#71717a] dark:hover:text-[#A6DAFF]"
+          className="text-subtle transition-colors hover:text-brand"
         >
           Documentation &rarr;
         </a>
@@ -89,7 +87,7 @@ export function QuickStartBar() {
           href="https://api.ai-identity.co/redoc"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-gray-500 transition-colors hover:text-[#A6DAFF] dark:text-[#71717a] dark:hover:text-[#A6DAFF]"
+          className="text-subtle transition-colors hover:text-brand"
         >
           API Reference &rarr;
         </a>
@@ -97,7 +95,7 @@ export function QuickStartBar() {
           href="https://github.com/Levaj2000/AI-Identity#python-sdk"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-gray-500 transition-colors hover:text-[#A6DAFF] dark:text-[#71717a] dark:hover:text-[#A6DAFF]"
+          className="text-subtle transition-colors hover:text-brand"
         >
           Python SDK &rarr;
         </a>
@@ -105,7 +103,7 @@ export function QuickStartBar() {
           href="https://github.com/Levaj2000/AI-Identity#examples"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-gray-500 transition-colors hover:text-[#A6DAFF] dark:text-[#71717a] dark:hover:text-[#A6DAFF]"
+          className="text-subtle transition-colors hover:text-brand"
         >
           Examples &rarr;
         </a>

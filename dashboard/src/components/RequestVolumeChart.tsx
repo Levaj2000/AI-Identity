@@ -40,7 +40,7 @@ export function RequestVolumeChart() {
   }, [])
 
   if (isLoading) {
-    return <div className="h-80 animate-pulse rounded-xl bg-gray-200 dark:bg-[#10131C]" />
+    return <div className="h-80 animate-pulse rounded-xl bg-elevated" />
   }
 
   const dayLabels = data.map((d) => {
@@ -65,19 +65,17 @@ export function RequestVolumeChart() {
   const areaPath = `${linePath} L${points[points.length - 1].x},${padding.top + innerHeight} L${points[0].x},${padding.top + innerHeight} Z`
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
+    <div className="rounded-xl border border-line bg-surface p-6">
       <div className="mb-4 flex items-start justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7]">
-            Request Volume
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-[#71717a]">Last 7 days</p>
+          <h2 className="text-lg font-semibold text-ink">Request Volume</h2>
+          <p className="text-sm text-subtle">Last 7 days</p>
         </div>
-        <span className="text-2xl font-bold text-[#A6DAFF]">{total.toLocaleString()}</span>
+        <span className="text-2xl font-bold text-brand">{total.toLocaleString()}</span>
       </div>
 
       {total === 0 ? (
-        <div className="flex h-[200px] items-center justify-center text-sm text-gray-500 dark:text-[#71717a]">
+        <div className="flex h-[200px] items-center justify-center text-sm text-subtle">
           No request data yet — volume will appear as your agents process requests.
         </div>
       ) : (
@@ -88,8 +86,8 @@ export function RequestVolumeChart() {
         >
           <defs>
             <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#A6DAFF" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#A6DAFF" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="var(--brand)" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -97,7 +95,7 @@ export function RequestVolumeChart() {
           <path
             d={linePath}
             fill="none"
-            stroke="#A6DAFF"
+            className="stroke-brand"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -109,10 +107,8 @@ export function RequestVolumeChart() {
                 cx={p.x}
                 cy={p.y}
                 r={hoveredIndex === i ? 5 : 3.5}
-                fill="#A6DAFF"
-                stroke="#04070D"
                 strokeWidth="2"
-                className="cursor-pointer transition-all"
+                className="cursor-pointer fill-brand stroke-canvas transition-all"
                 onMouseEnter={() => setHoveredIndex(i)}
                 onMouseLeave={() => setHoveredIndex(null)}
               />
@@ -132,15 +128,14 @@ export function RequestVolumeChart() {
                     width="60"
                     height="22"
                     rx="4"
-                    fill="#1a1a1d"
-                    stroke="#A6DAFF"
+                    className="fill-elevated stroke-brand"
                     strokeWidth="0.5"
                   />
                   <text
                     x={p.x}
                     y={p.y - 15}
                     textAnchor="middle"
-                    fill="#A6DAFF"
+                    className="fill-brand"
                     fontSize="12"
                     fontWeight="600"
                   >
@@ -152,7 +147,7 @@ export function RequestVolumeChart() {
                 x={p.x}
                 y={padding.top + innerHeight + 18}
                 textAnchor="middle"
-                fill="#71717a"
+                className="fill-subtle"
                 fontSize="11"
               >
                 {dayLabels[i]}
@@ -162,24 +157,15 @@ export function RequestVolumeChart() {
         </svg>
       )}
 
-      <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-4 text-sm dark:border-[#1a1a1d]">
-        <span className="text-gray-500 dark:text-[#71717a]">
-          Peak:{' '}
-          <span className="font-medium text-gray-900 dark:text-[#e4e4e7]">
-            {peak.toLocaleString()}
-          </span>
+      <div className="mt-4 flex items-center justify-between border-t border-line pt-4 text-sm">
+        <span className="text-subtle">
+          Peak: <span className="font-medium text-ink">{peak.toLocaleString()}</span>
         </span>
-        <span className="text-gray-500 dark:text-[#71717a]">
-          Avg:{' '}
-          <span className="font-medium text-gray-900 dark:text-[#e4e4e7]">
-            {avg.toLocaleString()}
-          </span>
+        <span className="text-subtle">
+          Avg: <span className="font-medium text-ink">{avg.toLocaleString()}</span>
         </span>
-        <span className="text-gray-500 dark:text-[#71717a]">
-          Total:{' '}
-          <span className="font-medium text-gray-900 dark:text-[#e4e4e7]">
-            {total.toLocaleString()}
-          </span>
+        <span className="text-subtle">
+          Total: <span className="font-medium text-ink">{total.toLocaleString()}</span>
         </span>
       </div>
     </div>
