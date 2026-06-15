@@ -32,6 +32,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `infra-cost-report`: Treat a deliberate paid Sentry plan as a decision rather than a nag — suppresses the downgrade recommendation when the paid tier is intentional (configurable via `scripts/infra-cost-report/.env.example`).
 
 ### Fixed
+- OCSF export: the `decision` → `action_id` mapping now handles long-form values (`allowed`/`denied`) and is whitespace/case-tolerant, so rows no longer fall through to `action_id: 0` ("Unknown"); `severity_id` is no longer falsely elevated for unclassified decisions.
 - QA checklist runner authenticated its self-calls with the removed `X-API-Key`=email credential (broken by Insight #89), so every authenticated step failed (the "3/5" runs). It now replays the caller's Clerk session token, and onboarding runs under the caller's real account instead of a synthetic test user.
 
 ### Security

@@ -30,26 +30,32 @@ _METHOD_ACTIVITY: dict[str, int] = {
 }
 
 # OCSF base ``action_id``: 1 Allowed, 2 Denied, 99 Other, 0 Unknown.
+# Accept both the short form the gateway writes ("allow"/"deny") and the long
+# form some writers/older rows use ("allowed"/"denied") so nothing falls through
+# to Unknown just because of vocabulary drift.
 _DECISION_ACTION: dict[str, tuple[int, str]] = {
     "allow": (1, "Allowed"),
+    "allowed": (1, "Allowed"),
     "deny": (2, "Denied"),
+    "denied": (2, "Denied"),
     "error": (99, "Other"),
 }
 
 
 def audit_log_to_ocsf(row: Any) -> dict[str, Any]:
     """Transform an ``AuditLog`` ORM row into a single OCSF API Activity event."""
-    method = (row.method or "").upper()
-    decision = (row.decision or "").lower()
+    method = (row.method or "").strip().upper()
+    decision = (row.decision or "").strip().lower()
     activity_id = _METHOD_ACTIVITY.get(method, 0)
     action_id, action = _DECISION_ACTION.get(decision, (0, "Unknown"))
 
     # OCSF ``time`` is epoch milliseconds.
     time_ms = int(row.created_at.timestamp() * 1000) if row.created_at else None
 
-    # severity_id: 1 Informational (allow) · 3 Medium (deny/error) — a denied or
-    # errored agent action is more interesting to a SOC than an allowed one.
-    severity_id = 1 if decision == "allow" else 3
+    # severity_id: 3 Medium for a denied/errored action (more interesting to a
+    # SOC) · 1 Informational otherwise (allowed, and unmapped/unknown — don't
+    # alarm on vocabulary we didn't classify).
+    severity_id = 3 if action_id in (2, 99) else 1
 
     metadata: dict[str, Any] = {"version": OCSF_VERSION, "profiles": ["ai_operation"]}
     if row.correlation_id:
