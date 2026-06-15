@@ -431,9 +431,9 @@ export function DemoPage() {
       case 'command':
         return 'text-[#A6DAFF]'
       case 'response':
-        return 'text-gray-300'
+        return 'text-rail-fg'
       case 'info':
-        return 'text-gray-500'
+        return 'text-rail-muted'
       case 'error':
         return 'text-red-400'
       case 'success':
@@ -442,28 +442,28 @@ export function DemoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#04070D] font-[Inter,system-ui,sans-serif]">
+    <div className="min-h-screen bg-canvas font-[Inter,system-ui,sans-serif]">
       {/* Gradient accent line */}
       <div className="absolute top-0 left-0 right-0">
-        <div className="h-[2px] w-full bg-gradient-to-r from-[#A6DAFF] via-[#A6DAFF]/50 to-transparent" />
+        <div className="h-[2px] w-full bg-gradient-to-r from-brand via-brand/50 to-transparent" />
       </div>
 
       {/* Header */}
-      <header className="border-b border-[#1a1a1d] px-6 py-4">
+      <header className="border-b border-line px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <a href="https://ai-identity.co" className="flex items-center gap-2">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-[#A6DAFF]">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-brand">
               <rect x="3" y="12" width="4" height="8" rx="1" fill="currentColor" opacity="0.6" />
               <rect x="10" y="8" width="4" height="12" rx="1" fill="currentColor" opacity="0.8" />
               <rect x="17" y="4" width="4" height="16" rx="1" fill="currentColor" />
             </svg>
-            <span className="text-lg font-semibold text-[#A6DAFF]">AI Identity</span>
+            <span className="text-lg font-semibold text-brand">AI Identity</span>
           </a>
           <div className="flex items-center gap-4">
-            <span className="rounded-full border border-[#A6DAFF]/30 bg-[#A6DAFF]/10 px-3 py-1 text-xs font-medium text-[#A6DAFF]">
+            <span className="rounded-full border border-brand/30 bg-brand-soft px-3 py-1 text-xs font-medium text-brand">
               Live API Demo
             </span>
-            <a href="/login" className="text-sm text-gray-400 hover:text-white transition-colors">
+            <a href="/login" className="text-sm text-muted hover:text-ink transition-colors">
               Sign In
             </a>
           </div>
@@ -473,21 +473,21 @@ export function DemoPage() {
       <div className="mx-auto max-w-6xl px-6 py-8">
         {/* Title */}
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white md:text-4xl">
-            Interactive API <span className="text-[#A6DAFF]">Playground</span>
+          <h1 className="text-3xl font-bold text-ink md:text-4xl">
+            Interactive API <span className="text-brand">Playground</span>
           </h1>
-          <p className="mt-2 text-gray-400">
+          <p className="mt-2 text-muted">
             Execute real API calls against the live AI Identity backend. No mock data.
           </p>
         </div>
 
         {/* API Key Input */}
         {showKeyInput && (
-          <div className="mx-auto mb-8 max-w-xl rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 p-6">
-            <label className="mb-2 block text-sm font-medium text-gray-300">Your API Key</label>
-            <p className="mb-3 text-xs text-gray-500">
+          <div className="mx-auto mb-8 max-w-xl rounded-xl border border-line bg-surface/80 p-6">
+            <label className="mb-2 block text-sm font-medium text-muted">Your API Key</label>
+            <p className="mb-3 text-xs text-subtle">
               Enter your user API key to make authenticated requests. Don't have one?{' '}
-              <a href="/login" className="text-[#A6DAFF] hover:underline">
+              <a href="/login" className="text-brand hover:underline">
                 Sign up free
               </a>
             </p>
@@ -497,13 +497,13 @@ export function DemoPage() {
                 value={userKey}
                 onChange={(e) => setUserKey(e.target.value)}
                 placeholder="your-api-key-here"
-                className="flex-1 rounded-lg border border-[#1a1a1d] bg-[#04070D] px-4 py-2.5 text-sm text-white placeholder:text-gray-600 focus:border-[#A6DAFF]/50 focus:outline-none"
+                className="flex-1 rounded-lg border border-line bg-canvas px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-brand/50 focus:outline-none"
               />
               <button
                 onClick={() => {
                   if (userKey) setShowKeyInput(false)
                 }}
-                className="rounded-lg bg-[#A6DAFF] px-4 py-2.5 text-sm font-medium text-[#04070D] hover:bg-[#A6DAFF]/80 transition-colors"
+                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-ink hover:bg-brand-hover transition-colors"
               >
                 Save
               </button>
@@ -521,11 +521,11 @@ export function DemoPage() {
                 disabled={loading || (!s.active && i > step)}
                 className={`w-full rounded-xl border p-4 text-left transition-all ${
                   s.active
-                    ? 'border-[#A6DAFF]/50 bg-[#A6DAFF]/10'
+                    ? 'border-brand/50 bg-brand-soft'
                     : i < step
-                      ? 'border-emerald-500/30 bg-emerald-500/5'
-                      : 'border-[#1a1a1d] bg-[#10131C]/50 opacity-50'
-                } ${loading ? 'cursor-wait' : i <= step ? 'cursor-pointer hover:border-[#A6DAFF]/30' : 'cursor-not-allowed'}`}
+                      ? 'border-success/30 bg-success-soft'
+                      : 'border-line bg-surface/50 opacity-50'
+                } ${loading ? 'cursor-wait' : i <= step ? 'cursor-pointer hover:border-brand/30' : 'cursor-not-allowed'}`}
               >
                 <div className="flex items-center gap-2">
                   {i < step ? (
@@ -534,25 +534,26 @@ export function DemoPage() {
                       height="16"
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke="#10b981"
+                      stroke="currentColor"
                       strokeWidth="2"
+                      className="text-success"
                     >
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   ) : s.active ? (
-                    <div className="h-2 w-2 animate-pulse rounded-full bg-[#A6DAFF]" />
+                    <div className="h-2 w-2 animate-pulse rounded-full bg-brand" />
                   ) : (
-                    <div className="h-2 w-2 rounded-full bg-gray-600" />
+                    <div className="h-2 w-2 rounded-full bg-faint" />
                   )}
                   <span
                     className={`text-sm font-medium ${
-                      s.active ? 'text-[#A6DAFF]' : i < step ? 'text-emerald-400' : 'text-gray-500'
+                      s.active ? 'text-brand' : i < step ? 'text-success' : 'text-subtle'
                     }`}
                   >
                     {s.label}
                   </span>
                 </div>
-                <p className="mt-1 pl-5 text-xs text-gray-500">{s.description}</p>
+                <p className="mt-1 pl-5 text-xs text-subtle">{s.description}</p>
               </button>
             ))}
 
@@ -561,10 +562,10 @@ export function DemoPage() {
               <button
                 onClick={runCleanup}
                 disabled={loading}
-                className="w-full rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-left transition-all hover:border-red-500/50"
+                className="w-full rounded-xl border border-danger/30 bg-danger-soft p-4 text-left transition-all hover:border-danger/50"
               >
-                <span className="text-sm font-medium text-red-400">Clean Up Demo Agent</span>
-                <p className="mt-1 text-xs text-gray-500">Revoke the agent created during demo</p>
+                <span className="text-sm font-medium text-danger">Clean Up Demo Agent</span>
+                <p className="mt-1 text-xs text-subtle">Revoke the agent created during demo</p>
               </button>
             )}
 
@@ -582,20 +583,20 @@ export function DemoPage() {
                 setAgent(null)
                 setApiKey(null)
               }}
-              className="w-full rounded-lg border border-[#1a1a1d] px-4 py-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              className="w-full rounded-lg border border-line px-4 py-2 text-xs text-subtle hover:text-muted transition-colors"
             >
               Reset Terminal
             </button>
           </div>
 
           {/* Terminal */}
-          <div className="rounded-xl border border-[#1a1a1d] bg-[#04070D] overflow-hidden">
+          <div className="rounded-xl border border-rail-line bg-rail overflow-hidden">
             {/* Terminal header */}
-            <div className="flex items-center gap-2 border-b border-[#1a1a1d] px-4 py-3">
+            <div className="flex items-center gap-2 border-b border-rail-line px-4 py-3">
               <div className="h-3 w-3 rounded-full bg-red-500/80" />
               <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
               <div className="h-3 w-3 rounded-full bg-green-500/80" />
-              <span className="ml-2 text-xs text-gray-500">ai-identity-demo — bash</span>
+              <span className="ml-2 text-xs text-rail-muted">ai-identity-demo — bash</span>
               {loading && (
                 <div className="ml-auto flex items-center gap-1.5">
                   <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#A6DAFF]" />
@@ -632,17 +633,17 @@ export function DemoPage() {
         {(agent || apiKey) && (
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {agent && (
-              <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 p-4">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <div className="rounded-xl border border-line bg-surface/80 p-4">
+                <p className="text-xs font-medium text-muted uppercase tracking-wider">
                   Demo Agent
                 </p>
-                <p className="mt-1 text-sm font-mono text-white truncate">{agent.name}</p>
-                <p className="mt-0.5 text-xs text-gray-500 font-mono truncate">{agent.id}</p>
+                <p className="mt-1 text-sm font-mono text-ink truncate">{agent.name}</p>
+                <p className="mt-0.5 text-xs text-subtle font-mono truncate">{agent.id}</p>
                 <span
                   className={`mt-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
                     agent.status === 'active'
-                      ? 'bg-emerald-500/10 text-emerald-400'
-                      : 'bg-red-500/10 text-red-400'
+                      ? 'bg-success-soft text-success'
+                      : 'bg-danger-soft text-danger'
                   }`}
                 >
                   {agent.status}
@@ -650,33 +651,31 @@ export function DemoPage() {
               </div>
             )}
             {apiKey && (
-              <div className="rounded-xl border border-[#1a1a1d] bg-[#10131C]/80 p-4">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">
+              <div className="rounded-xl border border-line bg-surface/80 p-4">
+                <p className="text-xs font-medium text-muted uppercase tracking-wider">
                   Agent API Key
                 </p>
-                <p className="mt-1 text-sm font-mono text-[#A6DAFF] truncate">
-                  {apiKey.key_prefix}...
-                </p>
-                <p className="mt-0.5 text-xs text-gray-500">Runtime key — shown only once</p>
+                <p className="mt-1 text-sm font-mono text-brand truncate">{apiKey.key_prefix}...</p>
+                <p className="mt-0.5 text-xs text-subtle">Runtime key — shown only once</p>
               </div>
             )}
           </div>
         )}
 
         {/* Footer */}
-        <div className="mt-12 border-t border-[#1a1a1d] pt-6 text-center">
-          <p className="text-sm text-gray-500">
+        <div className="mt-12 border-t border-line pt-6 text-center">
+          <p className="text-sm text-subtle">
             All API calls hit the live production backend at{' '}
-            <code className="text-[#A6DAFF]">{API_BASE}</code>
+            <code className="text-brand">{API_BASE}</code>
           </p>
           <div className="mt-3 flex items-center justify-center gap-4">
             <a
               href="https://ai-identity.co"
-              className="text-sm text-gray-400 hover:text-white transition-colors"
+              className="text-sm text-muted hover:text-ink transition-colors"
             >
               &larr; Back to site
             </a>
-            <a href="/dashboard" className="text-sm text-[#A6DAFF] hover:underline">
+            <a href="/dashboard" className="text-sm text-brand hover:underline">
               Open Dashboard
             </a>
           </div>
