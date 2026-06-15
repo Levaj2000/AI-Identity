@@ -49,10 +49,9 @@ function formatDate(iso: string): string {
 }
 
 function decisionBadge(d: string) {
-  if (d === 'allow' || d === 'allowed')
-    return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-  if (d === 'deny' || d === 'denied') return 'bg-red-500/10 text-red-400 border-red-500/20'
-  return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+  if (d === 'allow' || d === 'allowed') return 'bg-success-soft text-success border-success'
+  if (d === 'deny' || d === 'denied') return 'bg-danger-soft text-danger border-danger'
+  return 'bg-warning-soft text-warning border-warning'
 }
 
 /** Default to last 7 days. */
@@ -711,11 +710,23 @@ export function ForensicsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-100">AI Forensics</h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Reconstruct agent decisions with HMAC-chained audit logs and DSSE-signed session
-            attestations
+          <h1 className="text-2xl font-bold text-ink">Case File</h1>
+          <p className="text-sm text-muted mt-1">
+            Court-ready evidence — HMAC-chained audit logs and DSSE-signed session attestations,
+            verifiable offline
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {['FRE 702 / Daubert', 'ISO/IEC 27037', 'OCSF aligned', 'HMAC-SHA256 chain'].map(
+              (s) => (
+                <span
+                  key={s}
+                  className="rounded-md border border-line bg-surface px-2.5 py-1 text-xs text-muted"
+                >
+                  {s}
+                </span>
+              ),
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {/* Tamper-evidence check — on-demand HMAC chain verification.
@@ -732,8 +743,8 @@ export function ForensicsPage() {
               }
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
                 chainValid
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/15'
-                  : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/15'
+                  ? 'bg-success-soft text-success border border-success hover:bg-success-soft'
+                  : 'bg-danger-soft text-danger border border-danger hover:bg-danger-soft'
               }`}
             >
               {chainVerifying ? (
@@ -762,10 +773,10 @@ export function ForensicsPage() {
                 </>
               ) : chainValid ? (
                 <>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-success" />
                   Tamper-Evident · {chainEntriesVerified.toLocaleString()}{' '}
                   {chainEntriesVerified === 1 ? 'entry' : 'entries'} verified
-                  <span className="text-emerald-400/60 ml-0.5">(full chain)</span>
+                  <span className="text-success/60 ml-0.5">(full chain)</span>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 20 20"
@@ -782,7 +793,7 @@ export function ForensicsPage() {
                 </>
               ) : (
                 <>
-                  <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-danger" />
                   Tampering Detected
                   {chainFirstBrokenId !== null && ` · entry #${chainFirstBrokenId}`}
                   <svg
@@ -806,7 +817,7 @@ export function ForensicsPage() {
               onClick={handleVerifyChain}
               disabled={chainVerifying}
               title="Run cryptographic verification of the entire audit chain — independent of the date range and filters shown on the page (chain integrity is end-to-end by design). Recomputes each row's HMAC-SHA256 hash and checks the prev_hash links to prove no entries were modified, deleted, or reordered. Same algorithm runs in the offline CLI auditors can use."
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border border-zinc-600 text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border border-line-strong text-muted hover:text-ink hover:border-line-strong transition-colors disabled:opacity-50"
             >
               {chainVerifying ? (
                 <>
@@ -876,7 +887,7 @@ export function ForensicsPage() {
           )}
           <button
             onClick={exportCSV}
-            className="px-3 py-2 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors border border-zinc-600"
+            className="px-3 py-2 text-sm font-medium text-muted bg-elevated hover:bg-elevated rounded-lg transition-colors border border-line-strong"
           >
             CSV
           </button>
@@ -890,14 +901,14 @@ export function ForensicsPage() {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 px-2.5 py-0.5 text-xs font-medium text-purple-400">
               Shadow Agent
             </span>
-            <span className="text-sm font-mono text-zinc-300">{deepLinkedAgentId}</span>
+            <span className="text-sm font-mono text-muted">{deepLinkedAgentId}</span>
           </div>
           <button
             onClick={() => {
               setDeepLinkedAgentId(null)
               setOffset(0)
             }}
-            className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="text-xs text-muted hover:text-ink transition-colors"
           >
             Clear filter
           </button>
@@ -908,18 +919,18 @@ export function ForensicsPage() {
       <ForensicsAlertBanner alerts={alerts} onDismiss={handleDismissAlert} />
 
       {/* Filters */}
-      <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
+      <div className="bg-surface border border-line rounded-xl p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Agent selector */}
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">Agent</label>
+            <label className="block text-xs text-subtle mb-1">Agent</label>
             <select
               value={selectedAgent}
               onChange={(e) => {
                 setSelectedAgent(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
+              className="w-full rounded-lg bg-surface border border-line text-ink text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brand"
             >
               <option value="">All Agents</option>
               {agents.map((a) => (
@@ -932,7 +943,7 @@ export function ForensicsPage() {
 
           {/* Start date */}
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">From</label>
+            <label className="block text-xs text-subtle mb-1">From</label>
             <input
               type="datetime-local"
               value={startDate}
@@ -940,13 +951,13 @@ export function ForensicsPage() {
                 setStartDate(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
+              className="w-full rounded-lg bg-surface border border-line text-ink text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
 
           {/* End date */}
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">To</label>
+            <label className="block text-xs text-subtle mb-1">To</label>
             <input
               type="datetime-local"
               value={endDate}
@@ -954,20 +965,20 @@ export function ForensicsPage() {
                 setEndDate(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
+              className="w-full rounded-lg bg-surface border border-line text-ink text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
 
           {/* Decision filter */}
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">Decision</label>
+            <label className="block text-xs text-subtle mb-1">Decision</label>
             <select
               value={filterDecision}
               onChange={(e) => {
                 setFilterDecision(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
+              className="w-full rounded-lg bg-surface border border-line text-ink text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brand"
             >
               <option value="">All</option>
               <option value="allowed">Allowed</option>
@@ -978,7 +989,7 @@ export function ForensicsPage() {
 
           {/* Endpoint search */}
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">Endpoint</label>
+            <label className="block text-xs text-subtle mb-1">Endpoint</label>
             <input
               type="text"
               value={filterEndpoint}
@@ -987,7 +998,7 @@ export function ForensicsPage() {
                 setOffset(0)
               }}
               placeholder="/v1/chat"
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-sky-400"
+              className="w-full rounded-lg bg-surface border border-line text-ink text-sm px-3 py-2 placeholder-faint focus:outline-none focus:ring-1 focus:ring-brand"
             />
           </div>
         </div>
@@ -996,14 +1007,14 @@ export function ForensicsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">
           {/* Action type */}
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">Action Type</label>
+            <label className="block text-xs text-subtle mb-1">Action Type</label>
             <select
               value={filterActionType}
               onChange={(e) => {
                 setFilterActionType(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
+              className="w-full rounded-lg bg-surface border border-line text-ink text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brand"
             >
               <option value="">All</option>
               <option value="agent_created">agent_created</option>
@@ -1017,14 +1028,14 @@ export function ForensicsPage() {
 
           {/* Model */}
           <div>
-            <label className="block text-xs text-zinc-500 mb-1">Model</label>
+            <label className="block text-xs text-subtle mb-1">Model</label>
             <select
               value={filterModel}
               onChange={(e) => {
                 setFilterModel(e.target.value)
                 setOffset(0)
               }}
-              className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-400"
+              className="w-full rounded-lg bg-surface border border-line text-ink text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-brand"
             >
               <option value="">All</option>
               <option value="gpt-4">gpt-4</option>
@@ -1038,7 +1049,7 @@ export function ForensicsPage() {
 
           {/* Cost range */}
           <div className="sm:col-span-2">
-            <label className="block text-xs text-zinc-500 mb-1">Cost Range (USD)</label>
+            <label className="block text-xs text-subtle mb-1">Cost Range (USD)</label>
             <div className="flex items-center gap-2">
               <input
                 type="number"
@@ -1050,9 +1061,9 @@ export function ForensicsPage() {
                 placeholder="Min"
                 step="0.001"
                 min="0"
-                className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                className="w-full rounded-lg bg-surface border border-line text-ink text-sm px-3 py-2 placeholder-faint focus:outline-none focus:ring-1 focus:ring-brand"
               />
-              <span className="text-zinc-500 text-sm">–</span>
+              <span className="text-subtle text-sm">–</span>
               <input
                 type="number"
                 value={filterCostMax}
@@ -1063,7 +1074,7 @@ export function ForensicsPage() {
                 placeholder="Max"
                 step="0.001"
                 min="0"
-                className="w-full rounded-lg bg-zinc-800 border border-zinc-600 text-zinc-200 text-sm px-3 py-2 placeholder-zinc-600 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                className="w-full rounded-lg bg-surface border border-line text-ink text-sm px-3 py-2 placeholder-faint focus:outline-none focus:ring-1 focus:ring-brand"
               />
             </div>
           </div>
@@ -1071,11 +1082,11 @@ export function ForensicsPage() {
 
         {/* Investigate button */}
         {effectiveAgentId && (
-          <div className="mt-3 pt-3 border-t border-zinc-700">
+          <div className="mt-3 pt-3 border-t border-line">
             <button
               onClick={handleReconstruct}
               disabled={reconstructing}
-              className="px-4 py-2 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 disabled:opacity-50 rounded-lg transition-colors inline-flex items-center gap-2"
+              className="px-4 py-2 text-sm font-medium text-brand-ink bg-brand hover:bg-brand-hover disabled:opacity-50 rounded-lg transition-colors inline-flex items-center gap-2"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -1094,39 +1105,39 @@ export function ForensicsPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-            <div className="text-xs text-zinc-500 uppercase tracking-wider">Total Events</div>
-            <div className="text-2xl font-bold text-[#A6DAFF] mt-1">
+          <div className="bg-surface border border-line rounded-xl p-4">
+            <div className="text-xs text-subtle uppercase tracking-wider">Total Events</div>
+            <div className="text-2xl font-bold text-brand mt-1">
               {stats.total_events.toLocaleString()}
             </div>
           </div>
-          <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-            <div className="text-xs text-emerald-400 uppercase tracking-wider">Allowed</div>
-            <div className="text-2xl font-bold text-emerald-400 mt-1">
+          <div className="bg-surface border border-line rounded-xl p-4">
+            <div className="text-xs text-success uppercase tracking-wider">Allowed</div>
+            <div className="text-2xl font-bold text-success mt-1">
               {stats.allowed_count.toLocaleString()}
             </div>
           </div>
-          <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-            <div className="text-xs text-red-400 uppercase tracking-wider">Denied</div>
-            <div className="text-2xl font-bold text-red-400 mt-1">
+          <div className="bg-surface border border-line rounded-xl p-4">
+            <div className="text-xs text-danger uppercase tracking-wider">Denied</div>
+            <div className="text-2xl font-bold text-danger mt-1">
               {stats.denied_count.toLocaleString()}
             </div>
           </div>
-          <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-            <div className="text-xs text-yellow-400 uppercase tracking-wider">Errors</div>
-            <div className="text-2xl font-bold text-yellow-400 mt-1">
+          <div className="bg-surface border border-line rounded-xl p-4">
+            <div className="text-xs text-warning uppercase tracking-wider">Errors</div>
+            <div className="text-2xl font-bold text-warning mt-1">
               {stats.error_count.toLocaleString()}
             </div>
           </div>
-          <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-            <div className="text-xs text-zinc-500 uppercase tracking-wider">Total Cost</div>
-            <div className="text-2xl font-bold text-zinc-100 mt-1">
+          <div className="bg-surface border border-line rounded-xl p-4">
+            <div className="text-xs text-subtle uppercase tracking-wider">Total Cost</div>
+            <div className="text-2xl font-bold text-ink mt-1">
               ${stats.total_cost_usd.toFixed(2)}
             </div>
           </div>
-          <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl p-4">
-            <div className="text-xs text-zinc-500 uppercase tracking-wider">Avg Latency</div>
-            <div className="text-2xl font-bold text-zinc-100 mt-1">
+          <div className="bg-surface border border-line rounded-xl p-4">
+            <div className="text-xs text-subtle uppercase tracking-wider">Avg Latency</div>
+            <div className="text-2xl font-bold text-ink mt-1">
               {stats.avg_latency_ms != null ? `${stats.avg_latency_ms}ms` : '--'}
             </div>
           </div>
@@ -1135,16 +1146,14 @@ export function ForensicsPage() {
 
       {/* View Toggle + Results Count */}
       <div className="flex items-center justify-between">
-        <div className="text-sm text-zinc-500">
+        <div className="text-sm text-subtle">
           {total.toLocaleString()} event{total !== 1 ? 's' : ''} found
         </div>
-        <div className="flex items-center gap-1 bg-zinc-800 rounded-lg p-0.5 border border-zinc-700">
+        <div className="flex items-center gap-1 bg-elevated rounded-lg p-0.5 border border-line">
           <button
             onClick={() => setViewMode('timeline')}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              viewMode === 'timeline'
-                ? 'bg-[#A6DAFF] text-[#04070D]'
-                : 'text-zinc-400 hover:text-zinc-200'
+              viewMode === 'timeline' ? 'bg-brand text-brand-ink' : 'text-muted hover:text-ink'
             }`}
           >
             Timeline
@@ -1152,9 +1161,7 @@ export function ForensicsPage() {
           <button
             onClick={() => setViewMode('table')}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              viewMode === 'table'
-                ? 'bg-[#A6DAFF] text-[#04070D]'
-                : 'text-zinc-400 hover:text-zinc-200'
+              viewMode === 'table' ? 'bg-brand text-brand-ink' : 'text-muted hover:text-ink'
             }`}
           >
             Table
@@ -1167,11 +1174,11 @@ export function ForensicsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-zinc-500">
+        <div className="flex items-center justify-center py-16 text-subtle">
           Loading audit events...
         </div>
       ) : viewMode === 'timeline' ? (
-        <div className="bg-zinc-800/30 border border-zinc-700 rounded-xl p-6">
+        <div className="bg-surface border border-line rounded-xl p-6">
           <ForensicsTimeline
             events={entries}
             onEventClick={setSelectedEvent}
@@ -1180,11 +1187,11 @@ export function ForensicsPage() {
         </div>
       ) : (
         /* Table View */
-        <div className="bg-zinc-800/30 border border-zinc-700 rounded-xl overflow-hidden">
+        <div className="bg-surface border border-line rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-zinc-700 text-left text-xs text-zinc-500 uppercase tracking-wider">
+                <tr className="border-b border-line text-left text-xs text-subtle uppercase tracking-wider">
                   <th className="px-4 py-3">Time</th>
                   <th className="px-4 py-3">Decision</th>
                   <th className="px-4 py-3">Method</th>
@@ -1194,7 +1201,7 @@ export function ForensicsPage() {
                   <th className="px-4 py-3">Hash</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-800">
+              <tbody className="divide-y divide-line">
                 {entries.map((e) => {
                   const rowAnomalies = anomalyMap.get(e.id)
                   const hasDenyCluster = rowAnomalies?.some((a) => a.type === 'deny_cluster')
@@ -1202,17 +1209,17 @@ export function ForensicsPage() {
                     (a) => a.type === 'latency_spike' || a.type === 'cost_outlier',
                   )
                   const rowBg = hasDenyCluster
-                    ? 'bg-red-500/5'
+                    ? 'bg-danger-soft'
                     : hasLatencyOrCost
                       ? 'bg-orange-500/5'
                       : ''
                   return (
                     <tr
                       key={e.id}
-                      className={`hover:bg-zinc-800/50 transition-colors cursor-pointer ${rowBg}`}
+                      className={`hover:bg-elevated transition-colors cursor-pointer ${rowBg}`}
                       onClick={() => setSelectedEvent(e)}
                     >
-                      <td className="px-4 py-3 text-zinc-300 whitespace-nowrap">
+                      <td className="px-4 py-3 text-muted whitespace-nowrap">
                         {formatDate(e.created_at)}
                       </td>
                       <td className="px-4 py-3">
@@ -1222,17 +1229,17 @@ export function ForensicsPage() {
                           {e.decision}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-zinc-400 font-mono text-xs">{e.method}</td>
-                      <td className="px-4 py-3 text-zinc-300 font-mono text-xs max-w-xs truncate">
+                      <td className="px-4 py-3 text-muted font-mono text-xs">{e.method}</td>
+                      <td className="px-4 py-3 text-muted font-mono text-xs max-w-xs truncate">
                         {e.endpoint}
                       </td>
-                      <td className="px-4 py-3 text-zinc-400">
+                      <td className="px-4 py-3 text-muted">
                         {e.cost_estimate_usd != null ? `$${e.cost_estimate_usd.toFixed(4)}` : '--'}
                       </td>
-                      <td className="px-4 py-3 text-zinc-400">
+                      <td className="px-4 py-3 text-muted">
                         {e.latency_ms != null ? `${e.latency_ms}ms` : '--'}
                       </td>
-                      <td className="px-4 py-3 text-zinc-600 font-mono text-xs">
+                      <td className="px-4 py-3 text-faint font-mono text-xs">
                         {e.entry_hash.slice(0, 12)}...
                       </td>
                     </tr>
@@ -1247,21 +1254,21 @@ export function ForensicsPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-2">
-          <span className="text-sm text-zinc-500">
+          <span className="text-sm text-subtle">
             Page {currentPage} of {totalPages}
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setOffset(Math.max(0, offset - limit))}
               disabled={offset === 0}
-              className="px-3 py-1.5 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 rounded-lg transition-colors border border-zinc-600"
+              className="px-3 py-1.5 text-sm font-medium text-muted bg-elevated hover:bg-elevated disabled:opacity-40 rounded-lg transition-colors border border-line-strong"
             >
               Previous
             </button>
             <button
               onClick={() => setOffset(offset + limit)}
               disabled={offset + limit >= total}
-              className="px-3 py-1.5 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 rounded-lg transition-colors border border-zinc-600"
+              className="px-3 py-1.5 text-sm font-medium text-muted bg-elevated hover:bg-elevated disabled:opacity-40 rounded-lg transition-colors border border-line-strong"
             >
               Next
             </button>
@@ -1271,23 +1278,21 @@ export function ForensicsPage() {
 
       {/* Top Endpoints */}
       {stats && stats.top_endpoints.length > 0 && (
-        <div className="bg-zinc-800/30 border border-zinc-700 rounded-xl p-6">
-          <h3 className="text-sm font-medium text-zinc-300 mb-3">Top Endpoints</h3>
+        <div className="bg-surface border border-line rounded-xl p-6">
+          <h3 className="text-sm font-medium text-muted mb-3">Top Endpoints</h3>
           <div className="space-y-2">
             {stats.top_endpoints.map((ep) => {
               const pct = stats.total_events > 0 ? (ep.count / stats.total_events) * 100 : 0
               return (
                 <div key={ep.endpoint} className="flex items-center gap-3">
-                  <span className="text-xs font-mono text-zinc-400 w-48 truncate">
-                    {ep.endpoint}
-                  </span>
-                  <div className="flex-1 bg-zinc-700/50 rounded-full h-2">
+                  <span className="text-xs font-mono text-muted w-48 truncate">{ep.endpoint}</span>
+                  <div className="flex-1 bg-elevated rounded-full h-2">
                     <div
-                      className="bg-[#A6DAFF] h-2 rounded-full transition-all"
+                      className="bg-brand h-2 rounded-full transition-all"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <span className="text-xs text-zinc-500 w-16 text-right">
+                  <span className="text-xs text-subtle w-16 text-right">
                     {ep.count} ({pct.toFixed(0)}%)
                   </span>
                 </div>

@@ -42,25 +42,25 @@ export function HashChainView({ events }: Props) {
   const allValid = brokenCount === 0
 
   return (
-    <div className="bg-zinc-800/50 border border-zinc-700 rounded-xl overflow-hidden">
+    <div className="bg-surface border border-line rounded-xl overflow-hidden">
       {/* Collapsible header */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-zinc-800/80 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-elevated transition-colors"
       >
         <div className="flex items-center gap-2">
           <span className="text-sm">🔗</span>
-          <span className="text-sm font-medium text-zinc-300">
+          <span className="text-sm font-medium text-muted">
             Hash Chain ({sorted.length} entries)
           </span>
           {allValid ? (
-            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-success-soft text-success border border-success">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" />
               Verified
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+            <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-danger-soft text-danger border border-danger">
+              <span className="h-1.5 w-1.5 rounded-full bg-danger" />
               {brokenCount} broken link{brokenCount !== 1 ? 's' : ''}
             </span>
           )}
@@ -69,7 +69,7 @@ export function HashChainView({ events }: Props) {
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 20 20"
           fill="currentColor"
-          className={`h-4 w-4 text-zinc-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          className={`h-4 w-4 text-subtle transition-transform ${expanded ? 'rotate-180' : ''}`}
         >
           <path
             fillRule="evenodd"
@@ -89,19 +89,19 @@ export function HashChainView({ events }: Props) {
               return (
                 <div key={entry.id}>
                   {/* Entry block */}
-                  <div className="bg-zinc-800 rounded-lg px-3 py-2 border border-zinc-700">
+                  <div className="bg-elevated rounded-lg px-3 py-2 border border-line">
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs text-zinc-500 shrink-0">#{entry.id}</span>
-                        <span className="font-mono text-xs text-zinc-300 truncate">
+                        <span className="text-xs text-subtle shrink-0">#{entry.id}</span>
+                        <span className="font-mono text-xs text-muted truncate">
                           {entry.entry_hash.slice(0, 8)}
                         </span>
                       </div>
-                      <span className="text-xs text-zinc-500 shrink-0 whitespace-nowrap">
+                      <span className="text-xs text-subtle shrink-0 whitespace-nowrap">
                         {formatTime(entry.created_at)}
                       </span>
                     </div>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-zinc-600">
+                    <div className="mt-1 flex items-center gap-2 text-xs text-faint">
                       <span className="font-mono">prev: {entry.prev_hash.slice(0, 8)}</span>
                     </div>
                   </div>
@@ -110,14 +110,12 @@ export function HashChainView({ events }: Props) {
                   {link && (
                     <div className="flex items-center justify-center py-1">
                       <div className="flex flex-col items-center">
-                        <div
-                          className={`w-px h-3 ${link.valid ? 'bg-emerald-400' : 'bg-red-400'}`}
-                        />
+                        <div className={`w-px h-3 ${link.valid ? 'bg-success' : 'bg-danger'}`} />
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 20 20"
                           fill="currentColor"
-                          className={`h-3 w-3 ${link.valid ? 'text-emerald-400' : 'text-red-400'}`}
+                          className={`h-3 w-3 ${link.valid ? 'text-success' : 'text-danger'}`}
                         >
                           <path
                             fillRule="evenodd"
@@ -126,7 +124,7 @@ export function HashChainView({ events }: Props) {
                           />
                         </svg>
                         {!link.valid && (
-                          <span className="text-xs text-red-400 font-medium">BREAK</span>
+                          <span className="text-xs text-danger font-medium">BREAK</span>
                         )}
                       </div>
                     </div>

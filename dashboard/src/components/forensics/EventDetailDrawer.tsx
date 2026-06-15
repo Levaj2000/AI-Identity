@@ -30,21 +30,20 @@ function formatMetaValue(val: unknown): string {
 }
 
 function decisionStyle(d: string) {
-  if (d === 'allow' || d === 'allowed')
-    return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-  if (d === 'deny' || d === 'denied') return 'bg-red-500/10 text-red-400 border-red-500/20'
-  return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+  if (d === 'allow' || d === 'allowed') return 'bg-success-soft text-success border-success'
+  if (d === 'deny' || d === 'denied') return 'bg-danger-soft text-danger border-danger'
+  return 'bg-warning-soft text-warning border-warning'
 }
 
 function methodStyle(m: string) {
   const colors: Record<string, string> = {
-    GET: 'text-blue-400 bg-blue-500/10',
-    POST: 'text-green-400 bg-green-500/10',
-    PUT: 'text-amber-400 bg-amber-500/10',
-    DELETE: 'text-red-400 bg-red-500/10',
+    GET: 'text-brand bg-brand-soft',
+    POST: 'text-success bg-success-soft',
+    PUT: 'text-warning bg-warning-soft',
+    DELETE: 'text-danger bg-danger-soft',
     PATCH: 'text-purple-400 bg-purple-500/10',
   }
-  return colors[m] || 'text-zinc-400 bg-zinc-500/10'
+  return colors[m] || 'text-muted bg-elevated'
 }
 
 // ── Component ────────────────────────────────────────────────────
@@ -160,12 +159,12 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate, onExplai
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-zinc-900 border-l border-zinc-700 z-50 overflow-y-auto shadow-2xl animate-slide-in">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-surface border-l border-line z-50 overflow-y-auto shadow-2xl animate-slide-in">
         {/* Header */}
-        <div className="sticky top-0 bg-zinc-900/95 backdrop-blur border-b border-zinc-700 px-6 py-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-surface/95 backdrop-blur border-b border-line px-6 py-4 flex items-center justify-between z-10">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-zinc-100">Event Detail</h2>
-            <span className="text-xs font-mono text-zinc-500">#{event.entry_hash.slice(0, 8)}</span>
+            <h2 className="text-lg font-semibold text-ink">Event Detail</h2>
+            <span className="text-xs font-mono text-subtle">#{event.entry_hash.slice(0, 8)}</span>
           </div>
           <div className="flex items-center gap-2">
             {/* Nav arrows */}
@@ -174,7 +173,7 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate, onExplai
                 <button
                   onClick={() => prevEvent && onNavigate?.(prevEvent)}
                   disabled={!prevEvent}
-                  className="p-1.5 text-zinc-400 hover:text-zinc-200 disabled:opacity-30 rounded transition-colors"
+                  className="p-1.5 text-muted hover:text-ink disabled:opacity-30 rounded transition-colors"
                   title="Previous event"
                 >
                   <svg
@@ -190,13 +189,13 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate, onExplai
                     />
                   </svg>
                 </button>
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-subtle">
                   {currentIndex + 1}/{events.length}
                 </span>
                 <button
                   onClick={() => nextEvent && onNavigate?.(nextEvent)}
                   disabled={!nextEvent}
-                  className="p-1.5 text-zinc-400 hover:text-zinc-200 disabled:opacity-30 rounded transition-colors"
+                  className="p-1.5 text-muted hover:text-ink disabled:opacity-30 rounded transition-colors"
                   title="Next event"
                 >
                   <svg
@@ -216,7 +215,7 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate, onExplai
             )}
             <button
               onClick={onClose}
-              className="p-1.5 text-zinc-400 hover:text-zinc-200 rounded transition-colors"
+              className="p-1.5 text-muted hover:text-ink rounded transition-colors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -243,16 +242,14 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate, onExplai
             >
               {event.method}
             </span>
-            <span className="text-sm font-mono text-zinc-300 truncate flex-1">
-              {event.endpoint}
-            </span>
+            <span className="text-sm font-mono text-muted truncate flex-1">{event.endpoint}</span>
           </div>
 
           {/* Explain this event — AI focused analysis */}
           {onExplain && (
             <button
               onClick={() => onExplain(event)}
-              className="w-full px-4 py-2.5 text-sm font-medium text-zinc-100 bg-purple-500/90 hover:bg-purple-400/90 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+              className="w-full px-4 py-2.5 text-sm font-medium text-ink bg-purple-500/90 hover:bg-purple-400/90 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
               title="Ask AI why this specific event happened"
             >
               <svg
@@ -269,7 +266,7 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate, onExplai
 
           {/* Core fields */}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+            <h3 className="text-xs font-semibold text-subtle uppercase tracking-wider">
               Event Info
             </h3>
             <div className="grid grid-cols-2 gap-3">
@@ -308,11 +305,11 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate, onExplai
 
           {/* Deny reason (if denied) */}
           {metadata.deny_reason != null && (
-            <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-4">
-              <h3 className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">
+            <div className="bg-danger-soft border border-danger rounded-lg p-4">
+              <h3 className="text-xs font-semibold text-danger uppercase tracking-wider mb-2">
                 Deny Reason
               </h3>
-              <p className="text-sm text-red-300 font-mono">{String(metadata.deny_reason)}</p>
+              <p className="text-sm text-danger font-mono">{String(metadata.deny_reason)}</p>
             </div>
           )}
 
@@ -320,26 +317,26 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate, onExplai
           {metaKeys.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+                <h3 className="text-xs font-semibold text-subtle uppercase tracking-wider">
                   Request Metadata
                 </h3>
                 <button
                   onClick={() => copyToClipboard(JSON.stringify(metadata, null, 2), 'metadata')}
-                  className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+                  className="text-xs text-subtle hover:text-muted transition-colors flex items-center gap-1"
                 >
                   {copied === 'metadata' ? '✓ Copied' : 'Copy'}
                 </button>
               </div>
-              <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg overflow-hidden">
+              <div className="bg-inset border border-line rounded-lg overflow-hidden">
                 {metaKeys.map((key) => (
                   <div
                     key={key}
-                    className="flex items-start gap-3 px-4 py-2.5 border-b border-zinc-700/50 last:border-b-0"
+                    className="flex items-start gap-3 px-4 py-2.5 border-b border-line last:border-b-0"
                   >
-                    <span className="text-xs font-mono text-zinc-500 shrink-0 w-32 pt-0.5">
+                    <span className="text-xs font-mono text-subtle shrink-0 w-32 pt-0.5">
                       {key}
                     </span>
-                    <span className="text-xs font-mono text-zinc-300 break-all">
+                    <span className="text-xs font-mono text-muted break-all">
                       {formatMetaValue(metadata[key])}
                     </span>
                   </div>
@@ -350,35 +347,35 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate, onExplai
 
           {/* HMAC Chain */}
           <div className="space-y-3">
-            <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+            <h3 className="text-xs font-semibold text-subtle uppercase tracking-wider">
               Chain of Custody
             </h3>
-            <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4 space-y-3">
+            <div className="bg-inset border border-line rounded-lg p-4 space-y-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-zinc-500">Entry Hash</span>
+                  <span className="text-xs text-subtle">Entry Hash</span>
                   <button
                     onClick={() => copyToClipboard(event.entry_hash, 'entry_hash')}
-                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                    className="text-xs text-subtle hover:text-muted transition-colors"
                   >
                     {copied === 'entry_hash' ? '✓ Copied' : 'Copy'}
                   </button>
                 </div>
-                <p className="text-xs font-mono text-emerald-400 break-all">{event.entry_hash}</p>
+                <p className="text-xs font-mono text-success break-all">{event.entry_hash}</p>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-zinc-500">Previous Hash</span>
+                  <span className="text-xs text-subtle">Previous Hash</span>
                   <button
                     onClick={() => copyToClipboard(event.prev_hash, 'prev_hash')}
-                    className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                    className="text-xs text-subtle hover:text-muted transition-colors"
                   >
                     {copied === 'prev_hash' ? '✓ Copied' : 'Copy'}
                   </button>
                 </div>
-                <p className="text-xs font-mono text-zinc-400 break-all">
+                <p className="text-xs font-mono text-muted break-all">
                   {event.prev_hash === 'GENESIS' ? (
-                    <span className="text-amber-400">GENESIS (first entry in chain)</span>
+                    <span className="text-warning">GENESIS (first entry in chain)</span>
                   ) : (
                     event.prev_hash
                   )}
@@ -390,47 +387,47 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate, onExplai
           {/* Raw JSON */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+              <h3 className="text-xs font-semibold text-subtle uppercase tracking-wider">
                 Raw JSON
               </h3>
               <button
                 onClick={() => copyToClipboard(fullJSON, 'json')}
-                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+                className="text-xs text-subtle hover:text-muted transition-colors flex items-center gap-1"
               >
                 {copied === 'json' ? '✓ Copied' : 'Copy JSON'}
               </button>
             </div>
-            <pre className="bg-zinc-950 border border-zinc-700 rounded-lg p-4 text-xs font-mono text-zinc-400 overflow-x-auto max-h-64 overflow-y-auto">
+            <pre className="bg-canvas border border-line rounded-lg p-4 text-xs font-mono text-muted overflow-x-auto max-h-64 overflow-y-auto">
               {fullJSON}
             </pre>
           </div>
 
           {/* Actions */}
-          <div className="space-y-3 pt-2 border-t border-zinc-700">
+          <div className="space-y-3 pt-2 border-t border-line">
             <div className="flex items-center gap-3">
               <button
                 onClick={exportSingleEntry}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-100 bg-sky-400/90 hover:bg-sky-300/90 rounded-lg transition-colors text-center"
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-brand-ink bg-brand hover:bg-brand-hover rounded-lg transition-colors text-center"
                 title="Exports in report envelope format compatible with ai_identity_verify.py"
               >
                 Export Entry as JSON
               </button>
               <button
                 onClick={() => copyToClipboard(fullJSON, 'json')}
-                className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-colors border border-zinc-600 text-center"
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-muted bg-elevated hover:bg-elevated rounded-lg transition-colors border border-line-strong text-center"
               >
                 {copied === 'json' ? '✓ Copied!' : 'Copy to Clipboard'}
               </button>
             </div>
             <button
               onClick={handleDownloadScript}
-              className="w-full px-4 py-2.5 text-sm font-medium text-emerald-100 bg-emerald-600/80 hover:bg-emerald-500/80 rounded-lg transition-colors text-center flex items-center justify-center gap-2"
+              className="w-full px-4 py-2.5 text-sm font-medium text-success bg-success-soft hover:bg-success-soft rounded-lg transition-colors text-center flex items-center justify-center gap-2"
             >
               Download Verify Script
             </button>
-            <p className="text-xs text-zinc-500 text-center">
+            <p className="text-xs text-subtle text-center">
               Export the JSON above, then run:{' '}
-              <code className="font-mono text-zinc-400">
+              <code className="font-mono text-muted">
                 python3 ai_identity_verify.py chain &lt;exported-file&gt;.json
               </code>
             </p>
@@ -460,10 +457,10 @@ function Field({
 }) {
   return (
     <div>
-      <div className="text-xs text-zinc-500 mb-0.5">{label}</div>
+      <div className="text-xs text-subtle mb-0.5">{label}</div>
       <div className="flex items-center gap-1">
         <span
-          className={`text-sm text-zinc-200 ${mono ? 'font-mono text-xs' : ''} truncate`}
+          className={`text-sm text-ink ${mono ? 'font-mono text-xs' : ''} truncate`}
           title={value}
         >
           {value}
@@ -471,7 +468,7 @@ function Field({
         {copyable && onCopy && (
           <button
             onClick={onCopy}
-            className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors shrink-0"
+            className="text-xs text-faint hover:text-muted transition-colors shrink-0"
             title="Copy"
           >
             {copied ? '✓' : '📋'}

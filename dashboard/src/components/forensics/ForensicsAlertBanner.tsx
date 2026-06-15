@@ -29,18 +29,18 @@ interface Props {
 }
 
 const severityStyles: Record<AlertSeverity, string> = {
-  high: 'border-red-500/30 bg-red-500/5',
+  high: 'border-danger bg-danger-soft',
   medium: 'border-orange-500/30 bg-orange-500/5',
 }
 
 const severityIconBg: Record<AlertSeverity, string> = {
-  high: 'bg-red-500/15 text-red-400',
+  high: 'bg-danger-soft text-danger',
   medium: 'bg-orange-500/15 text-orange-400',
 }
 
 const severityCta: Record<AlertSeverity, string> = {
-  high: 'bg-red-500/90 hover:bg-red-400/90 text-zinc-100',
-  medium: 'bg-orange-500/90 hover:bg-orange-400/90 text-zinc-100',
+  high: 'bg-danger hover:bg-danger text-ink',
+  medium: 'bg-orange-500/90 hover:bg-orange-400/90 text-ink',
 }
 
 export function ForensicsAlertBanner({ alerts, onDismiss }: Props) {
@@ -61,8 +61,8 @@ export function ForensicsAlertBanner({ alerts, onDismiss }: Props) {
               {alert.icon}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-zinc-100">{alert.title}</p>
-              <p className="text-xs text-zinc-400 mt-0.5">{alert.description}</p>
+              <p className="text-sm font-semibold text-ink">{alert.title}</p>
+              <p className="text-xs text-muted mt-0.5">{alert.description}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -75,7 +75,7 @@ export function ForensicsAlertBanner({ alerts, onDismiss }: Props) {
             <button
               onClick={() => onDismiss(alert.fingerprint)}
               title="Dismiss for this session"
-              className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="p-1.5 text-subtle hover:text-muted transition-colors"
               aria-label="Dismiss alert"
             >
               <svg
