@@ -917,16 +917,17 @@ def audit_report(
         )
 
     if format == "ocsf":
-        # OCSF API Activity (class_uid 6003) events with the ai_operation profile
-        # — a clean array a SIEM/OCSF consumer (Splunk, etc.) ingests directly.
-        ocsf_events = [audit_log_to_ocsf(e) for e in events]
+        # OCSF API Activity (class_uid 6003) events with the ai_operation profile,
+        # emitted as NDJSON — one event per line, the de-facto SIEM ingestion
+        # format (Splunk HEC, etc.). Streams cleanly; no megabyte-long single line.
+        ndjson = "".join(json.dumps(audit_log_to_ocsf(e), default=str) + "\n" for e in events)
         filename = (
             f"case-file-{agent.name}-{start_date.strftime('%Y%m%d')}-"
-            f"{end_date.strftime('%Y%m%d')}.ocsf.json"
+            f"{end_date.strftime('%Y%m%d')}.ocsf.ndjson"
         )
         return Response(
-            content=json.dumps(ocsf_events, default=str),
-            media_type="application/json",
+            content=ndjson,
+            media_type="application/x-ndjson",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
