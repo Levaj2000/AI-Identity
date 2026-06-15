@@ -80,13 +80,13 @@ export function AILensMenu({ visibleCount, hasDenials, hasAnomalies, loading, on
 
   return (
     <div ref={wrapperRef} className="relative">
-      <div className="inline-flex rounded-lg overflow-hidden border border-purple-400/40">
+      <div className="inline-flex rounded-lg overflow-hidden border border-ai">
         {/* Primary: Explain N visible events */}
         <button
           onClick={() => select('explain_visible')}
           disabled={loading || visibleCount === 0}
           title={`Analyze the ${visibleCount} event${visibleCount === 1 ? '' : 's'} matching your current filters`}
-          className="px-3 py-2 text-sm font-medium text-ink bg-purple-500/90 hover:bg-purple-400/90 transition-colors inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-3 py-2 text-sm font-medium bg-ai text-ai-ink hover:opacity-90 transition-colors inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? (
             <>
@@ -115,7 +115,7 @@ export function AILensMenu({ visibleCount, hasDenials, hasAnomalies, loading, on
           aria-haspopup="menu"
           aria-expanded={open}
           title="Choose a focused AI lens"
-          className="px-2 py-2 text-ink bg-purple-500/90 hover:bg-purple-400/90 transition-colors border-l border-purple-300/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 py-2 bg-ai text-ai-ink hover:opacity-90 transition-colors border-l border-ai disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -151,9 +151,7 @@ export function AILensMenu({ visibleCount, hasDenials, hasAnomalies, loading, on
                 disabled={disabled}
                 title={lens.disabledReason}
                 className={`w-full text-left px-3 py-2.5 flex items-start gap-3 transition-colors border-b border-line last:border-b-0 ${
-                  disabled
-                    ? 'opacity-40 cursor-not-allowed'
-                    : 'hover:bg-purple-500/10 cursor-pointer'
+                  disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-ai-soft cursor-pointer'
                 }`}
               >
                 <span className="text-lg leading-6 shrink-0">{lens.icon}</span>

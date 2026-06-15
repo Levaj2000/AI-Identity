@@ -30,17 +30,17 @@ interface Props {
 
 const severityStyles: Record<AlertSeverity, string> = {
   high: 'border-danger bg-danger-soft',
-  medium: 'border-orange-500/30 bg-orange-500/5',
+  medium: 'border-anomaly bg-anomaly-soft',
 }
 
 const severityIconBg: Record<AlertSeverity, string> = {
   high: 'bg-danger-soft text-danger',
-  medium: 'bg-orange-500/15 text-orange-400',
+  medium: 'bg-anomaly-soft text-anomaly',
 }
 
 const severityCta: Record<AlertSeverity, string> = {
   high: 'bg-danger hover:bg-danger text-ink',
-  medium: 'bg-orange-500/90 hover:bg-orange-400/90 text-ink',
+  medium: 'bg-anomaly text-white hover:opacity-90',
 }
 
 export function ForensicsAlertBanner({ alerts, onDismiss }: Props) {

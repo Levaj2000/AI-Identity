@@ -41,7 +41,7 @@ function methodStyle(m: string) {
     POST: 'text-success bg-success-soft',
     PUT: 'text-warning bg-warning-soft',
     DELETE: 'text-danger bg-danger-soft',
-    PATCH: 'text-purple-400 bg-purple-500/10',
+    PATCH: 'text-ai bg-ai-soft',
   }
   return colors[m] || 'text-muted bg-elevated'
 }
@@ -249,7 +249,7 @@ export function EventDetailDrawer({ event, onClose, events, onNavigate, onExplai
           {onExplain && (
             <button
               onClick={() => onExplain(event)}
-              className="w-full px-4 py-2.5 text-sm font-medium text-ink bg-purple-500/90 hover:bg-purple-400/90 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+              className="w-full px-4 py-2.5 text-sm font-medium bg-ai text-ai-ink hover:opacity-90 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
               title="Ask AI why this specific event happened"
             >
               <svg
