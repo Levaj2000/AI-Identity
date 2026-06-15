@@ -92,7 +92,7 @@ export function ApprovalsPage() {
   if (error) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-red-400">
+        <div className="bg-danger-soft border border-danger rounded-xl p-6 text-danger">
           <h3 className="font-semibold mb-1">Error</h3>
           <p className="text-sm">{error}</p>
         </div>
@@ -104,20 +104,20 @@ export function ApprovalsPage() {
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-white">Approvals</h1>
-        <p className="text-gray-400 mt-1">Human-in-the-loop review for sensitive agent actions</p>
+        <h1 className="text-2xl font-semibold text-ink">Approvals</h1>
+        <p className="text-muted mt-1">Human-in-the-loop review for sensitive agent actions</p>
       </div>
 
       {/* Status Tabs */}
-      <div className="flex gap-1 bg-[#10131C] border border-[#1a1a1d] rounded-xl p-1">
+      <div className="flex gap-1 bg-surface border border-line rounded-xl p-1">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
             onClick={() => handleStatusFilter(tab.value)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === tab.value
-                ? 'bg-[#A6DAFF]/10 text-[#A6DAFF]'
-                : 'text-gray-400 hover:text-white hover:bg-[#1a1a1d]'
+                ? 'bg-brand-soft text-brand'
+                : 'text-muted hover:text-ink hover:bg-elevated'
             }`}
           >
             {tab.label}
@@ -127,18 +127,18 @@ export function ApprovalsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl overflow-hidden">
+      <div className="bg-surface border border-line rounded-xl overflow-hidden">
         {loading && !data ? (
-          <div className="px-5 py-12 text-center text-gray-500">Loading approvals...</div>
+          <div className="px-5 py-12 text-center text-subtle">Loading approvals...</div>
         ) : data?.items.length === 0 ? (
-          <div className="px-5 py-12 text-center text-gray-500">
+          <div className="px-5 py-12 text-center text-subtle">
             {statusFilter ? `No ${statusFilter} approvals` : 'No approval requests yet'}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-400 border-b border-[#1a1a1d]">
+                <tr className="text-left text-muted border-b border-line">
                   <th className="px-5 py-3 font-medium">Timestamp</th>
                   <th className="px-5 py-3 font-medium">Agent</th>
                   <th className="px-5 py-3 font-medium">Endpoint</th>
@@ -152,21 +152,21 @@ export function ApprovalsPage() {
                 {data?.items.map((item) => (
                   <tr
                     key={item.id}
-                    className="border-b border-[#1a1a1d]/50 hover:bg-[#1a1a1d]/30 transition-colors cursor-pointer"
+                    className="border-b border-line hover:bg-elevated transition-colors cursor-pointer"
                     onClick={() => setSelectedApproval(item)}
                   >
-                    <td className="px-5 py-3 text-gray-400 whitespace-nowrap">
+                    <td className="px-5 py-3 text-muted whitespace-nowrap">
                       {formatDateTime(item.created_at)}
                     </td>
-                    <td className="px-5 py-3 text-gray-300">
+                    <td className="px-5 py-3 text-muted">
                       {item.agent_name || (
-                        <span className="text-gray-500 font-mono text-xs">
+                        <span className="text-subtle font-mono text-xs">
                           {item.agent_id.slice(0, 8)}...
                         </span>
                       )}
                     </td>
                     <td className="px-5 py-3">
-                      <span className="text-gray-300 font-mono text-xs">{item.endpoint}</span>
+                      <span className="text-muted font-mono text-xs">{item.endpoint}</span>
                     </td>
                     <td className="px-5 py-3">
                       <MethodBadge method={item.method} />
@@ -174,7 +174,7 @@ export function ApprovalsPage() {
                     <td className="px-5 py-3">
                       <StatusBadge status={item.status} />
                     </td>
-                    <td className="px-5 py-3 text-gray-400 whitespace-nowrap text-xs">
+                    <td className="px-5 py-3 text-muted whitespace-nowrap text-xs">
                       {item.status === 'pending' ? (
                         <CountdownTimer expiresAt={item.expires_at} />
                       ) : (
@@ -187,14 +187,14 @@ export function ApprovalsPage() {
                           <button
                             onClick={() => handleResolve(item.id, 'approve')}
                             disabled={resolving === item.id}
-                            className="px-3 py-1 rounded bg-green-500/10 text-green-400 text-xs font-medium hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                            className="px-3 py-1 rounded bg-success-soft text-success text-xs font-medium hover:bg-success-soft transition-colors disabled:opacity-50"
                           >
                             Approve
                           </button>
                           <button
                             onClick={() => handleResolve(item.id, 'reject')}
                             disabled={resolving === item.id}
-                            className="px-3 py-1 rounded bg-red-500/10 text-red-400 text-xs font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                            className="px-3 py-1 rounded bg-danger-soft text-danger text-xs font-medium hover:bg-danger-soft transition-colors disabled:opacity-50"
                           >
                             Reject
                           </button>
@@ -210,8 +210,8 @@ export function ApprovalsPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-[#1a1a1d]">
-            <span className="text-sm text-gray-400">
+          <div className="flex items-center justify-between px-5 py-3 border-t border-line">
+            <span className="text-sm text-muted">
               Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, data?.total || 0)} of{' '}
               {data?.total || 0}
             </span>
@@ -219,14 +219,14 @@ export function ApprovalsPage() {
               <button
                 onClick={() => handlePageChange(page - 1)}
                 disabled={page === 0}
-                className="px-3 py-1 text-sm rounded border border-[#1a1a1d] text-gray-300 hover:bg-[#1a1a1d] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1 text-sm rounded border border-line text-muted hover:bg-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
               <button
                 onClick={() => handlePageChange(page + 1)}
                 disabled={page >= totalPages - 1}
-                className="px-3 py-1 text-sm rounded border border-[#1a1a1d] text-gray-300 hover:bg-[#1a1a1d] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1 text-sm rounded border border-line text-muted hover:bg-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
@@ -267,16 +267,16 @@ function ApprovalDrawer({
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#10131C] border-l border-[#1a1a1d] z-50 overflow-y-auto shadow-2xl flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-surface border-l border-line z-50 overflow-y-auto shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-[#10131C]/95 backdrop-blur border-b border-[#1a1a1d] px-6 py-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-surface backdrop-blur border-b border-line px-6 py-4 flex items-center justify-between z-10">
           <div>
-            <h2 className="text-lg font-semibold text-white">Approval Detail</h2>
-            <p className="text-xs text-gray-500 font-mono mt-0.5">{approval.id}</p>
+            <h2 className="text-lg font-semibold text-ink">Approval Detail</h2>
+            <p className="text-xs text-subtle font-mono mt-0.5">{approval.id}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-white rounded transition-colors"
+            className="p-1.5 text-muted hover:text-ink rounded transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -299,14 +299,14 @@ function ApprovalDrawer({
                 <button
                   onClick={() => onResolve(approval.id, 'approve')}
                   disabled={resolving === approval.id}
-                  className="px-4 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg bg-success-soft border border-success text-success text-sm font-medium hover:bg-success-soft transition-colors disabled:opacity-50"
                 >
                   Approve
                 </button>
                 <button
                   onClick={() => onResolve(approval.id, 'reject')}
                   disabled={resolving === approval.id}
-                  className="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg bg-danger-soft border border-danger text-danger text-sm font-medium hover:bg-danger-soft transition-colors disabled:opacity-50"
                 >
                   Reject
                 </button>
@@ -315,8 +315,8 @@ function ApprovalDrawer({
           </div>
 
           {/* Request Info */}
-          <div className="bg-[#04070D] border border-[#1a1a1d] rounded-xl p-4 space-y-3 text-sm">
-            <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider">Request</h3>
+          <div className="bg-inset border border-line rounded-xl p-4 space-y-3 text-sm">
+            <h3 className="text-muted font-medium text-xs uppercase tracking-wider">Request</h3>
             <InfoRow label="Agent" value={approval.agent_name || approval.agent_id} />
             <InfoRow label="Endpoint" value={approval.endpoint} mono />
             <InfoRow label="Method" value={<MethodBadge method={approval.method} />} />
@@ -335,8 +335,8 @@ function ApprovalDrawer({
 
           {/* Reviewer Info (if resolved) */}
           {approval.resolved_at && (
-            <div className="bg-[#04070D] border border-[#1a1a1d] rounded-xl p-4 space-y-3 text-sm">
-              <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider">
+            <div className="bg-inset border border-line rounded-xl p-4 space-y-3 text-sm">
+              <h3 className="text-muted font-medium text-xs uppercase tracking-wider">
                 Resolution
               </h3>
               <InfoRow label="Decision" value={<StatusBadge status={approval.status} />} />
@@ -347,11 +347,9 @@ function ApprovalDrawer({
 
           {/* Request Metadata */}
           {Object.keys(approval.request_metadata).length > 0 && (
-            <div className="bg-[#04070D] border border-[#1a1a1d] rounded-xl p-4 space-y-3 text-sm">
-              <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider">
-                Metadata
-              </h3>
-              <pre className="text-xs text-gray-400 overflow-x-auto">
+            <div className="bg-inset border border-line rounded-xl p-4 space-y-3 text-sm">
+              <h3 className="text-muted font-medium text-xs uppercase tracking-wider">Metadata</h3>
+              <pre className="text-xs text-muted overflow-x-auto">
                 {JSON.stringify(approval.request_metadata, null, 2)}
               </pre>
             </div>
@@ -375,8 +373,8 @@ function InfoRow({
 }) {
   return (
     <div className="flex justify-between">
-      <span className="text-gray-400">{label}</span>
-      <span className={`text-white ${mono ? 'font-mono text-xs' : ''}`}>{value}</span>
+      <span className="text-muted">{label}</span>
+      <span className={`text-ink ${mono ? 'font-mono text-xs' : ''}`}>{value}</span>
     </div>
   )
 }
@@ -384,24 +382,24 @@ function InfoRow({
 function StatusBadge({ status, large }: { status: string; large?: boolean }) {
   const map: Record<string, { bg: string; text: string; dot: string }> = {
     pending: {
-      bg: 'bg-yellow-500/10 border-yellow-500/20',
-      text: 'text-yellow-400',
-      dot: 'bg-yellow-400',
+      bg: 'bg-warning-soft border-warning',
+      text: 'text-warning',
+      dot: 'bg-warning',
     },
     approved: {
-      bg: 'bg-green-500/10 border-green-500/20',
-      text: 'text-green-400',
-      dot: 'bg-green-400',
+      bg: 'bg-success-soft border-success',
+      text: 'text-success',
+      dot: 'bg-success',
     },
     rejected: {
-      bg: 'bg-red-500/10 border-red-500/20',
-      text: 'text-red-400',
-      dot: 'bg-red-400',
+      bg: 'bg-danger-soft border-danger',
+      text: 'text-danger',
+      dot: 'bg-danger',
     },
     expired: {
-      bg: 'bg-gray-500/10 border-gray-500/20',
-      text: 'text-gray-400',
-      dot: 'bg-gray-400',
+      bg: 'bg-elevated border-line-strong',
+      text: 'text-muted',
+      dot: 'bg-faint',
     },
   }
   const style = map[status] || map.expired
@@ -419,14 +417,14 @@ function StatusBadge({ status, large }: { status: string; large?: boolean }) {
 
 function MethodBadge({ method }: { method: string }) {
   const colors: Record<string, string> = {
-    GET: 'text-green-400',
-    POST: 'text-[#A6DAFF]',
-    PUT: 'text-yellow-400',
-    PATCH: 'text-yellow-400',
-    DELETE: 'text-red-400',
+    GET: 'text-success',
+    POST: 'text-brand',
+    PUT: 'text-warning',
+    PATCH: 'text-warning',
+    DELETE: 'text-danger',
   }
   return (
-    <span className={`font-mono text-xs font-medium ${colors[method] || 'text-gray-400'}`}>
+    <span className={`font-mono text-xs font-medium ${colors[method] || 'text-muted'}`}>
       {method}
     </span>
   )
@@ -435,7 +433,7 @@ function MethodBadge({ method }: { method: string }) {
 function PendingDot() {
   return (
     <span className="relative ml-1.5">
-      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-warning rounded-full animate-pulse" />
     </span>
   )
 }
@@ -462,7 +460,7 @@ function CountdownTimer({ expiresAt }: { expiresAt: string }) {
     return () => clearInterval(interval)
   }, [expiresAt])
 
-  return <span className={isLow ? 'text-red-400 font-medium' : 'text-gray-400'}>{remaining}</span>
+  return <span className={isLow ? 'text-danger font-medium' : 'text-muted'}>{remaining}</span>
 }
 
 // ── Formatters ──────────────────────────────────────────────────────

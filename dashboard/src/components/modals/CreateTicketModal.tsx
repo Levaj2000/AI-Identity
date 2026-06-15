@@ -55,14 +55,12 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl dark:bg-[#1a1a1d]">
+      <div className="w-full max-w-2xl rounded-lg bg-surface p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-[#e4e4e7]">
-            Create Support Ticket
-          </h2>
+          <h2 className="text-xl font-bold text-ink">Create Support Ticket</h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-[#27272a] dark:hover:text-[#e4e4e7]"
+            className="rounded-lg p-2 text-faint hover:bg-elevated hover:text-muted"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -78,10 +76,7 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Subject */}
           <div>
-            <label
-              htmlFor="subject"
-              className="block text-sm font-medium text-gray-700 dark:text-[#e4e4e7]"
-            >
+            <label htmlFor="subject" className="block text-sm font-medium text-muted">
               Subject *
             </label>
             <input
@@ -92,17 +87,14 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
               required
               minLength={5}
               maxLength={255}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#27272a] dark:bg-[#09090b] dark:text-[#e4e4e7]"
+              className="mt-1 block w-full rounded-lg border border-line-strong bg-inset px-3 py-2 text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               placeholder="Brief description of the issue"
             />
           </div>
 
           {/* Description */}
           <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-gray-700 dark:text-[#e4e4e7]"
-            >
+            <label htmlFor="description" className="block text-sm font-medium text-muted">
               Description *
             </label>
             <textarea
@@ -112,7 +104,7 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
               required
               minLength={10}
               rows={6}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#27272a] dark:bg-[#09090b] dark:text-[#e4e4e7]"
+              className="mt-1 block w-full rounded-lg border border-line-strong bg-inset px-3 py-2 text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               placeholder="Detailed description of the issue, steps to reproduce, expected vs actual behavior..."
             />
           </div>
@@ -120,17 +112,14 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
           {/* Priority and Category */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label
-                htmlFor="priority"
-                className="block text-sm font-medium text-gray-700 dark:text-[#e4e4e7]"
-              >
+              <label htmlFor="priority" className="block text-sm font-medium text-muted">
                 Priority
               </label>
               <select
                 id="priority"
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as TicketPriority)}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#27272a] dark:bg-[#09090b] dark:text-[#e4e4e7]"
+                className="mt-1 block w-full rounded-lg border border-line-strong bg-inset px-3 py-2 text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -140,17 +129,14 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
             </div>
 
             <div>
-              <label
-                htmlFor="category"
-                className="block text-sm font-medium text-gray-700 dark:text-[#e4e4e7]"
-              >
+              <label htmlFor="category" className="block text-sm font-medium text-muted">
                 Category
               </label>
               <select
                 id="category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as TicketCategory)}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#27272a] dark:bg-[#09090b] dark:text-[#e4e4e7]"
+                className="mt-1 block w-full rounded-lg border border-line-strong bg-inset px-3 py-2 text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               >
                 <option value="technical">Technical Issue</option>
                 <option value="billing">Billing</option>
@@ -163,10 +149,7 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
 
           {/* Related Agent (Optional) */}
           <div>
-            <label
-              htmlFor="relatedAgent"
-              className="block text-sm font-medium text-gray-700 dark:text-[#e4e4e7]"
-            >
+            <label htmlFor="relatedAgent" className="block text-sm font-medium text-muted">
               Related Agent ID (Optional)
             </label>
             <input
@@ -174,19 +157,17 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
               id="relatedAgent"
               value={relatedAgentId}
               onChange={(e) => setRelatedAgentId(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#27272a] dark:bg-[#09090b] dark:text-[#e4e4e7]"
+              className="mt-1 block w-full rounded-lg border border-line-strong bg-inset px-3 py-2 text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
               placeholder="Link this ticket to a specific agent"
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-[#71717a]">
+            <p className="mt-1 text-xs text-subtle">
               If this issue is related to a specific agent, paste its ID here
             </p>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-              {error}
-            </div>
+            <div className="rounded-lg bg-danger-soft p-3 text-sm text-danger">{error}</div>
           )}
 
           {/* Actions */}
@@ -195,14 +176,14 @@ export function CreateTicketModal({ isOpen, onClose, onSuccess }: CreateTicketMo
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-[#27272a] dark:text-[#e4e4e7] dark:hover:bg-[#27272a]"
+              className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-muted hover:bg-elevated disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-medium text-gray-900 hover:bg-[#8fc7ff] disabled:opacity-50"
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-ink hover:bg-brand-hover disabled:opacity-50"
             >
               {isSubmitting ? 'Creating...' : 'Create Ticket'}
             </button>

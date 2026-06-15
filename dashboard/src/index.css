@@ -36,6 +36,10 @@
     --danger-soft: #fef2f2;
     --warning: #b45309;
     --warning-soft: #fffbeb;
+    /* ink = readable text/icon ON a solid status fill */
+    --success-ink: #ffffff;
+    --danger-ink: #ffffff;
+    --warning-ink: #ffffff;
     /* accents — AI feature (purple) + perf anomaly (orange), AA on light */
     --ai: #6d28d9;
     --ai-ink: #ffffff;
@@ -73,6 +77,9 @@
     --danger-soft: #2a0d0d;
     --warning: #fbbf24;
     --warning-soft: #2a1d05;
+    --success-ink: #052e16;
+    --danger-ink: #2a0d0d;
+    --warning-ink: #2a1d05;
     --ai: #a78bfa;
     --ai-ink: #160a2e;
     --ai-soft: #a78bfa1f;
@@ -102,6 +109,9 @@
   --color-danger-soft: var(--danger-soft);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
+  --color-success-ink: var(--success-ink);
+  --color-danger-ink: var(--danger-ink);
+  --color-warning-ink: var(--warning-ink);
   --color-ai: var(--ai);
   --color-ai-ink: var(--ai-ink);
   --color-ai-soft: var(--ai-soft);

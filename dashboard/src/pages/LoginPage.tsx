@@ -14,20 +14,20 @@ export function LoginPage() {
   }, [isLoaded, isSignedIn, navigate])
 
   return (
-    <div className="min-h-screen bg-[#04070D] flex flex-col items-center justify-center px-4 font-[Inter,system-ui,sans-serif]">
+    <div className="min-h-screen bg-canvas flex flex-col items-center justify-center px-4 font-[Inter,system-ui,sans-serif]">
       {/* Gradient accent line */}
       <div className="absolute top-0 left-0 right-0">
-        <div className="h-[2px] w-full bg-gradient-to-r from-[#A6DAFF] via-[#A6DAFF]/50 to-transparent" />
+        <div className="h-[2px] w-full bg-gradient-to-r from-brand via-brand/50 to-transparent" />
       </div>
 
       {/* Logo */}
       <a href="https://ai-identity.co" className="flex items-center gap-2 mb-10">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="text-[#A6DAFF]">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="text-brand">
           <rect x="3" y="12" width="4" height="8" rx="1" fill="currentColor" opacity="0.6" />
           <rect x="10" y="8" width="4" height="12" rx="1" fill="currentColor" opacity="0.8" />
           <rect x="17" y="4" width="4" height="16" rx="1" fill="currentColor" />
         </svg>
-        <span className="text-2xl font-semibold text-[#A6DAFF]">AI Identity</span>
+        <span className="text-2xl font-semibold text-brand">AI Identity</span>
       </a>
 
       {/* Clerk SignIn widget */}
@@ -35,7 +35,7 @@ export function LoginPage() {
         appearance={{
           elements: {
             rootBox: 'mx-auto',
-            card: 'bg-[#10131C]/80 backdrop-blur-xl border border-[#A6DAFF]/10 rounded-2xl',
+            card: 'bg-surface/80 backdrop-blur-xl border border-brand/10 rounded-2xl',
           },
         }}
         routing="hash"
@@ -44,17 +44,17 @@ export function LoginPage() {
 
       {/* Try Demo + Contact Sales */}
       <div className="mt-8 text-center space-y-2">
-        <p className="text-gray-500 text-sm">
+        <p className="text-subtle text-sm">
           Want to see it in action?{' '}
-          <a href="/demo" className="text-[#A6DAFF] hover:underline font-medium">
+          <a href="/demo" className="text-brand hover:underline font-medium">
             Try the Live Demo &rarr;
           </a>
         </p>
-        <p className="text-gray-500 text-sm">
+        <p className="text-subtle text-sm">
           Need an enterprise plan?{' '}
           <a
             href="mailto:jeff@ai-identity.co?subject=Enterprise%20Plan%20Inquiry"
-            className="text-[#A6DAFF] hover:underline font-medium"
+            className="text-brand hover:underline font-medium"
           >
             Contact Sales
           </a>
@@ -64,7 +64,7 @@ export function LoginPage() {
       {/* Back to site */}
       <a
         href="https://ai-identity.co"
-        className="mt-4 text-sm text-gray-600 hover:text-gray-400 transition-colors"
+        className="mt-4 text-sm text-faint hover:text-muted transition-colors"
       >
         &larr; Back to ai-identity.co
       </a>

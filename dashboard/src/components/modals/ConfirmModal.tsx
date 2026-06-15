@@ -46,7 +46,7 @@ export function ConfirmModal({
 
   const confirmClasses =
     confirmVariant === 'danger'
-      ? 'bg-danger text-white hover:bg-danger/90 disabled:hover:bg-danger'
+      ? 'bg-danger text-danger-ink hover:bg-danger/90 disabled:hover:bg-danger'
       : 'bg-brand text-brand-ink hover:bg-brand-hover disabled:hover:bg-brand'
 
   const modal = (
