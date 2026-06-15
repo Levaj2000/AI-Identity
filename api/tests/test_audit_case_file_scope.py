@@ -31,7 +31,13 @@ def _seed(db_session):
     db_session.add_all([owner_a, owner_b, member_a])
     db_session.flush()
 
-    org_a = Organization(id=ORG_A_ID, name="CF Org A", owner_id=owner_a.id, tier="business")
+    org_a = Organization(
+        id=ORG_A_ID,
+        name="CF Org A",
+        owner_id=owner_a.id,
+        tier="business",
+        forensic_verify_key="cf-org-a-forensic-key-0123456789abcdef",
+    )
     org_b = Organization(id=ORG_B_ID, name="CF Org B", owner_id=owner_b.id, tier="business")
     db_session.add_all([org_a, org_b])
     db_session.flush()
@@ -90,6 +96,38 @@ def _entry(db_session, agent_id, endpoint, correlation_id=None):
         request_metadata={},
         correlation_id=correlation_id,
     )
+
+
+# ── Report signature must verify with the ORG key (not the server key) ───
+
+
+class TestReportSignatureUsesOrgKey:
+    def test_report_signature_verifies_with_org_forensic_key(self, client, db_session):
+        """The report signature must recompute with the org's forensic key — the
+        same key that ships in the bundle and verifies the chain — so a key-holder
+        can verify it offline (the Reliability Statement's promise)."""
+        from datetime import datetime
+
+        from common.audit import generate_report_signature
+
+        agent_a, _, _ = _seed(db_session)
+        _entry(db_session, agent_a.id, "/v1/a")
+        resp = client.get(
+            f"/api/v1/audit/report?agent_id={agent_a.id}&{WINDOW}&format=json",
+            headers={"X-API-Key": OWNER_A},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        cv = body["chain_verification"]
+        expected = generate_report_signature(
+            report_id=body["report_id"],
+            generated_at=datetime.fromisoformat(body["generated_at"]),
+            chain_valid=cv["valid"],
+            total_entries=cv["total_entries"],
+            entries_verified=cv["entries_verified"],
+            hmac_key="cf-org-a-forensic-key-0123456789abcdef",
+        )
+        assert expected == body["report_signature"]
 
 
 # ── Backward compatibility: agent scope unchanged ────────────────────
