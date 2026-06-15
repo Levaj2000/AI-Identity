@@ -51,6 +51,13 @@ const icons = {
   caseFile: svg(
     <path d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" />,
   ),
+  attestation: svg(
+    <path
+      fillRule="evenodd"
+      d="M16.403 12.652a3 3 0 000-5.304 3 3 0 00-3.75-3.751 3 3 0 00-5.305 0 3 3 0 00-3.751 3.75 3 3 0 000 5.305 3 3 0 003.75 3.751 3 3 0 005.305 0 3 3 0 003.751-3.75zm-2.546-4.46a.75.75 0 00-1.214-.883l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+      clipRule="evenodd"
+    />,
+  ),
   compliance: svg(
     <path
       fillRule="evenodd"
@@ -128,6 +135,7 @@ export const NAV_GROUPS: NavGroup[] = [
     title: 'Assurance',
     items: [
       { label: 'Case File', to: '/dashboard/forensics', icon: icons.caseFile },
+      { label: 'Attestation', to: '/dashboard/attestation', icon: icons.attestation },
       { label: 'Compliance', to: '/dashboard/compliance', icon: icons.compliance },
       { label: 'Onboarding QA', to: '/dashboard/qa', icon: icons.qa },
     ],
