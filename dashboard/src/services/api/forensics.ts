@@ -73,6 +73,31 @@ export async function downloadForensicsCSV(params: {
   URL.revokeObjectURL(url)
 }
 
+/** Download the Case File as OCSF API Activity events (class_uid 6003) — a
+ *  JSON array a SIEM / OCSF consumer (Splunk, etc.) ingests directly. */
+export async function downloadOcsf(params: {
+  agent_id: string
+  start_date: string
+  end_date: string
+}): Promise<void> {
+  const qs = toQueryString({ ...params, format: 'ocsf' })
+  const headers = await getAuthHeaders()
+  const response = await fetch(`${getApiBaseUrl()}/api/v1/audit/report${qs}`, { headers })
+  if (!response.ok) throw new Error('Failed to download OCSF export')
+
+  const blob = await response.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  const disposition = response.headers.get('Content-Disposition')
+  const match = disposition?.match(/filename="?([^"]+)"?/)
+  a.download = match?.[1] || 'case-file.ocsf.json'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 /** Download a verification bundle (ZIP) with report + CLI tool + README. */
 export async function downloadVerifyBundle(params: {
   agent_id: string

@@ -8,6 +8,7 @@ reconstruction and reporting.
 
 import csv
 import io
+import json
 import logging
 import pathlib
 import uuid
@@ -22,6 +23,7 @@ from sqlalchemy.orm import Session
 from api.app.auth import get_current_user
 from common.audit import generate_report_signature, verify_chain, verify_global_chain
 from common.models import Agent, AuditLog, OrgMembership, Policy, User, get_db
+from common.ocsf import audit_log_to_ocsf
 from common.schemas.agent import (
     AuditChainVerifyResponse,
     AuditLogListResponse,
@@ -804,7 +806,9 @@ def audit_report(
     agent_id: uuid.UUID = Query(..., description="Agent to report on"),
     start_date: datetime = Query(..., description="Report window start"),
     end_date: datetime = Query(..., description="Report window end"),
-    format: str = Query("json", pattern="^(json|csv)$", description="Output format"),
+    format: str = Query(
+        "json", pattern="^(json|csv|ocsf)$", description="Output format (json, csv, or ocsf)"
+    ),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -909,6 +913,20 @@ def audit_report(
         return StreamingResponse(
             output,
             media_type="text/csv",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    if format == "ocsf":
+        # OCSF API Activity (class_uid 6003) events with the ai_operation profile
+        # — a clean array a SIEM/OCSF consumer (Splunk, etc.) ingests directly.
+        ocsf_events = [audit_log_to_ocsf(e) for e in events]
+        filename = (
+            f"case-file-{agent.name}-{start_date.strftime('%Y%m%d')}-"
+            f"{end_date.strftime('%Y%m%d')}.ocsf.json"
+        )
+        return Response(
+            content=json.dumps(ocsf_events, default=str),
+            media_type="application/json",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
 
