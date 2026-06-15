@@ -3,6 +3,8 @@ import { ENDPOINTS } from '../config/api'
 import { useDashboardData } from '../hooks/useDashboardData'
 import { AttentionPanel } from '../components/AttentionPanel'
 import { MetricStrip } from '../components/MetricStrip'
+import { EvidenceIntegrityPanel } from '../components/EvidenceIntegrityPanel'
+import { StandardsPanel } from '../components/StandardsPanel'
 import { RecentActivity } from '../components/RecentActivity'
 import { GettingStarted } from '../components/GettingStarted'
 import { SystemStatusBanner } from '../components/SystemStatusBanner'
@@ -43,6 +45,16 @@ export function OverviewPage() {
         <>
           {/* Demoted at-a-glance counts */}
           <MetricStrip stats={stats} />
+
+          {/* Evidence & integrity (real audit-chain verification) + standards */}
+          {!isEmpty && (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <EvidenceIntegrityPanel />
+              </div>
+              <StandardsPanel />
+            </div>
+          )}
 
           {!isEmpty && <SystemStatusBanner />}
 
