@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Dogfood agent-identity verification works in prod again: `/api/v1/keys/verify` authenticates trusted backends (the CEO Dashboard) via a dedicated `X-Service-Token`, now mounted into the API pod from Secret Manager — completing the #298/#299 migration. (#321, #323)
+
 ### Added
 - **Case File export scope** — `GET /api/v1/audit/report` (and `/report/bundle`) now export beyond a single agent + date window: by **incident** (`correlation_id` — every event sharing the id) or **org-wide** (omit `agent_id`). All four formats (JSON/CSV/OCSF/ZIP) inherit the scope, each Case File states its `scope` on its face, and org-wide / incident exports require an org owner/admin (cross-tenant is platform-admin-only). Agent-scoped exports are unchanged. (#403)
 - **OCSF export** — the Case File can now export its audit events as **OCSF API Activity** (`class_uid 6003`) with the **`ai_operation` profile** and an **`attestation`** integrity object (hash-chain `entry_hash`/`prev_entry_hash`/`chain_uid`), grounded in AI Identity's OCSF contributions (PR #1641 `ai_agent` placement, #1661 provenance). New `common/ocsf` mapper + `format=ocsf` on `GET /api/v1/audit/report` (returns **NDJSON** — one OCSF event per line — the de-facto SIEM ingestion format, e.g. Splunk HEC) + an "OCSF" export button on the Case File page. The dashboard's OCSF claim is now backed by a real export (chip: "OCSF export").
