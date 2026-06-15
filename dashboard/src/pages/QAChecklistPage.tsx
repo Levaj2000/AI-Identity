@@ -45,28 +45,138 @@ function StatusBadge({ passed }: { passed: boolean }) {
   )
 }
 
-// ── Signoff badge ────────────────────────────────────────────────
+// ── Acceptance record (print → PDF) ──────────────────────────────
 
-function SignoffBadge({ label, by, at }: { label: string; by: string | null; at: string | null }) {
-  if (!by) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-500 dark:bg-[#1a1a1d] dark:text-[#52525b]">
-        <span className="h-2 w-2 rounded-full bg-gray-300 dark:bg-[#3f3f46]" />
-        {label}: Pending
-      </span>
-    )
-  }
+/**
+ * Open a clean, light, print-friendly acceptance certificate in a new
+ * window and trigger the browser's print dialog (→ Save as PDF). No PDF
+ * dependency — the rendered certificate is the artifact, bound to the run id
+ * and both signatures.
+ */
+function downloadAcceptanceRecord(run: QARun): void {
+  const checks = run.results?.checks || []
+  const grouped = groupChecks(checks)
+  const fmt = (s: string | null) => (s ? new Date(s).toLocaleString() : '—')
+
+  const sectionRows = SECTIONS.map((section) => {
+    const c = grouped[section] || []
+    if (c.length === 0) return ''
+    const passed = c.filter((x) => x.passed).length
+    const ok = passed === c.length
+    return `<tr>
+      <td>${section}</td>
+      <td style="text-align:right;color:${ok ? '#15803d' : '#b91c1c'};font-weight:600;">${passed} / ${c.length}</td>
+    </tr>`
+  }).join('')
+
+  const sig = (label: string, by: string | null, at: string | null) => `
+    <div class="sig">
+      <div class="sig-name">${by || '—'}</div>
+      <div class="sig-rule"></div>
+      <div class="sig-label">${label}</div>
+      <div class="sig-date">${fmt(at)}</div>
+    </div>`
+
+  const html = `<!doctype html><html><head><meta charset="utf-8" />
+    <title>Onboarding acceptance — ${run.run_id}</title>
+    <style>
+      *{box-sizing:border-box} body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f172a;margin:0;padding:48px;}
+      .wrap{max-width:720px;margin:0 auto;}
+      .brand{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#185fa5;}
+      h1{font-size:26px;margin:6px 0 2px;font-weight:600;}
+      .sub{color:#64748b;font-size:14px;margin-bottom:24px;}
+      .verdict{display:inline-block;border:1.5px solid #185fa5;color:#185fa5;border-radius:999px;padding:8px 16px;font-weight:600;font-size:15px;margin-bottom:24px;}
+      table{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:8px;}
+      td{padding:9px 0;border-bottom:1px solid #e2e8f0;}
+      .meta{font-size:13px;color:#475569;line-height:1.9;margin-bottom:24px;}
+      .meta b{color:#0f172a;font-weight:600;}
+      .sigs{display:flex;gap:32px;margin-top:36px;}
+      .sig{flex:1;}
+      .sig-name{font-family:Georgia,'Times New Roman',serif;font-size:22px;min-height:30px;color:#0f172a;}
+      .sig-rule{border-bottom:1px solid #0f172a;margin:4px 0 8px;}
+      .sig-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#64748b;}
+      .sig-date{font-size:12px;color:#94a3b8;margin-top:2px;}
+      .foot{margin-top:40px;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:12px;}
+    </style></head><body><div class="wrap">
+      <div class="brand">AI Identity · onboarding acceptance</div>
+      <h1>${run.run_id}</h1>
+      <div class="sub">Two-party acceptance record</div>
+      <div class="verdict">${run.passed_count} / ${run.total_count} checks ${run.status === 'passed' ? 'passed' : 'with issues'}</div>
+      <div class="meta">
+        <div><b>Ran as:</b> ${run.run_by}</div>
+        <div><b>Environment:</b> ${run.environment}</div>
+        <div><b>Completed:</b> ${fmt(run.created_at)} · ${(run.duration_ms / 1000).toFixed(1)}s</div>
+      </div>
+      <table>${sectionRows}</table>
+      <div class="sigs">
+        ${sig('Customer', run.customer_signoff_by, run.customer_signoff_at)}
+        ${sig('AI Identity staff', run.staff_signoff_by, run.staff_signoff_at)}
+      </div>
+      <div class="foot">Both signatures bind to run ${run.run_id}. Generated ${new Date().toLocaleString()}.</div>
+    </div>
+    <script>window.onload=function(){window.print()}</script>
+    </body></html>`
+
+  const w = window.open('', '_blank', 'width=820,height=900')
+  if (!w) return
+  w.document.write(html)
+  w.document.close()
+}
+
+// ── Signature card ───────────────────────────────────────────────
+
+function SignatureCard({
+  label,
+  by,
+  at,
+  canSign,
+  signing,
+  onSign,
+}: {
+  label: string
+  by: string | null
+  at: string | null
+  canSign: boolean
+  signing: boolean
+  onSign: () => void
+}) {
+  const signed = !!by
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs text-green-700 dark:bg-green-900/30 dark:text-green-400">
-      <span className="h-2 w-2 rounded-full bg-green-500" />
-      {label}: {by}
-      {at && (
-        <span className="text-green-600 dark:text-green-500">
-          {' '}
-          ({new Date(at).toLocaleDateString()})
-        </span>
+    <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-[#1a1a1d] dark:bg-[#10131C]">
+      <div className="mb-2.5 flex items-center justify-between">
+        <span className="text-xs text-gray-500 dark:text-[#a1a1aa]">{label}</span>
+        {signed ? (
+          <span className="inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500" /> Signed
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Awaiting
+          </span>
+        )}
+      </div>
+      <div
+        className={`border-b pb-2 font-serif text-xl ${
+          signed
+            ? 'border-gray-300 text-gray-900 dark:border-[#2a3040] dark:text-white'
+            : 'border-dashed border-gray-300 text-gray-400 dark:border-[#2a3040] dark:text-[#3f4658]'
+        }`}
+      >
+        {signed ? by : 'Sign to accept'}
+      </div>
+      <p className="mt-2 text-xs text-gray-400 dark:text-[#71717a]">
+        {signed && at ? new Date(at).toLocaleString() : 'Countersign to issue the certificate'}
+      </p>
+      {!signed && canSign && (
+        <button
+          onClick={onSign}
+          disabled={signing}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-[#A6DAFF] px-3 py-1.5 text-xs font-medium text-[#A6DAFF] hover:bg-[#A6DAFF]/10 disabled:opacity-50"
+        >
+          {signing ? 'Signing...' : `Sign off as ${label}`}
+        </button>
       )}
-    </span>
+    </div>
   )
 }
 
@@ -123,116 +233,163 @@ function RunDetail({
   signingOff: boolean
 }) {
   const { user } = useAuth()
+  const [showLog, setShowLog] = useState(false)
   const checks = run.results?.checks || []
   const grouped = groupChecks(checks)
 
   const fullySignedOff = !!run.customer_signoff_by && !!run.staff_signoff_by
+  const passed = run.status === 'passed'
 
   return (
-    <div className="space-y-6">
-      {/* Summary header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      {/* Header + export */}
+      <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{run.run_id}</h3>
-            {run.mode === 'onboarding' && (
-              <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                Client Onboarding
-              </span>
-            )}
-            {run.mode === 'admin' && (
-              <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-[#1a1a1d] dark:text-[#71717a]">
-                Admin Check
-              </span>
-            )}
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Onboarding acceptance
+            </h3>
+            <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-[#1a1a1d] dark:text-[#71717a]">
+              {run.mode === 'onboarding' ? 'Partner run' : 'Admin check'}
+            </span>
           </div>
-          <p className="text-sm text-gray-500 dark:text-[#71717a]">
-            {new Date(run.created_at).toLocaleString()} &middot; {run.run_by} &middot;{' '}
-            {run.environment} &middot; {(run.duration_ms / 1000).toFixed(1)}s
+          <p className="mt-0.5 text-sm text-gray-500 dark:text-[#71717a]">
+            Two-party validation that onboarding succeeded — both sign to accept
           </p>
         </div>
-        <div
-          className={`rounded-lg px-4 py-2 text-center ${
-            run.status === 'passed'
-              ? 'bg-green-100 dark:bg-green-900/30'
-              : 'bg-red-100 dark:bg-red-900/30'
-          }`}
+        <button
+          onClick={() => downloadAcceptanceRecord(run)}
+          className="flex shrink-0 items-center gap-2 rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-medium text-black hover:bg-[#7CC4F5]"
         >
-          <p
-            className={`text-2xl font-bold ${
-              run.status === 'passed'
-                ? 'text-green-700 dark:text-green-400'
-                : 'text-red-700 dark:text-red-400'
-            }`}
-          >
-            {run.passed_count}/{run.total_count}
-          </p>
-          <p
-            className={`text-xs font-medium ${
-              run.status === 'passed'
-                ? 'text-green-600 dark:text-green-500'
-                : 'text-red-600 dark:text-red-500'
-            }`}
-          >
-            {run.status === 'passed' ? 'ALL PASSED' : 'ISSUES FOUND'}
-          </p>
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+            <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+            <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+          </svg>
+          Download signed PDF
+        </button>
+      </div>
+
+      {/* Certificate hero */}
+      <div className="border-l-[3px] border-[#A6DAFF] bg-gray-50 p-5 dark:bg-[#10131C]">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-[11px] uppercase tracking-wider text-gray-400 dark:text-[#71717a]">
+              Ran as
+            </div>
+            <div className="mt-1 text-lg font-semibold text-gray-900 dark:text-white">
+              {run.run_by}
+            </div>
+            <div className="mt-1 font-mono text-xs text-gray-500 dark:text-[#a1a1aa]">
+              {run.run_id} · {run.environment} · {(run.duration_ms / 1000).toFixed(1)}s
+            </div>
+          </div>
+          <div className="text-right">
+            <span
+              className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium ${
+                passed
+                  ? 'bg-[#7CC4F5]/15 text-[#A6DAFF] ring-1 ring-[#7CC4F5]/40'
+                  : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+              }`}
+            >
+              {run.passed_count} / {run.total_count} checks {passed ? 'passed' : 'with issues'}
+            </span>
+            <div className="mt-1.5 text-xs text-gray-400 dark:text-[#71717a]">
+              {new Date(run.created_at).toLocaleString()}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Sign-off status */}
-      <div className="flex flex-wrap items-center gap-3">
-        <SignoffBadge label="Customer" by={run.customer_signoff_by} at={run.customer_signoff_at} />
-        <SignoffBadge label="Staff" by={run.staff_signoff_by} at={run.staff_signoff_at} />
+      {/* Section summary */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+        {SECTIONS.map((section) => {
+          const c = grouped[section] || []
+          if (c.length === 0) return null
+          const p = c.filter((x) => x.passed).length
+          const ok = p === c.length
+          return (
+            <div
+              key={section}
+              className="rounded-lg border border-gray-200 bg-white p-3 dark:border-[#1a1a1d] dark:bg-[#10131C]"
+            >
+              <div className="text-xs text-gray-700 dark:text-[#e4e4e7]">{section}</div>
+              <div
+                className={`mt-1.5 text-xs font-medium ${
+                  ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                }`}
+              >
+                {p} / {c.length} pass
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Acceptance signatures */}
+      <div>
+        <div className="mb-2.5 text-[11px] uppercase tracking-wider text-gray-400 dark:text-[#71717a]">
+          Acceptance signatures
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <SignatureCard
+            label="Customer"
+            by={run.customer_signoff_by}
+            at={run.customer_signoff_at}
+            canSign={!!user}
+            signing={signingOff}
+            onSign={() => onSignoff('customer')}
+          />
+          <SignatureCard
+            label="AI Identity staff"
+            by={run.staff_signoff_by}
+            at={run.staff_signoff_at}
+            canSign={!!user}
+            signing={signingOff}
+            onSign={() => onSignoff('staff')}
+          />
+        </div>
         {fullySignedOff && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#A6DAFF]/10 px-3 py-1 text-xs font-medium text-[#A6DAFF]">
-            Fully Validated
-          </span>
+          <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#A6DAFF]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#A6DAFF]" />
+            Fully validated — both parties signed
+          </div>
         )}
       </div>
 
-      {/* Sign-off buttons */}
-      {user && !fullySignedOff && (
-        <div className="flex gap-3">
-          {!run.customer_signoff_by && (
-            <button
-              onClick={() => onSignoff('customer')}
-              disabled={signingOff}
-              className="rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-medium text-black hover:bg-[#7CC4F5] disabled:opacity-50"
-            >
-              {signingOff ? 'Signing...' : 'Sign Off as Customer'}
-            </button>
-          )}
-          {!run.staff_signoff_by && (
-            <button
-              onClick={() => onSignoff('staff')}
-              disabled={signingOff}
-              className="rounded-lg border border-[#A6DAFF] px-4 py-2 text-sm font-medium text-[#A6DAFF] hover:bg-[#A6DAFF]/10 disabled:opacity-50"
-            >
-              {signingOff ? 'Signing...' : 'Sign Off as AI Identity Staff'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Check results by section */}
-      {SECTIONS.map((section) => {
-        const sectionChecks = grouped[section] || []
-        if (sectionChecks.length === 0) return null
-        const allPassed = sectionChecks.every((c) => c.passed)
-        return (
-          <div key={section}>
-            <div className="mb-2 flex items-center gap-2">
-              <h4 className="text-sm font-semibold text-gray-700 dark:text-[#a1a1aa]">{section}</h4>
-              <StatusBadge passed={allPassed} />
-            </div>
-            <div className="space-y-1 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-[#1a1a1d] dark:bg-[#10131C]">
-              {sectionChecks.map((check) => (
-                <CheckRow key={check.step} check={check} />
-              ))}
-            </div>
+      {/* Full check log (evidence) */}
+      <div>
+        <button
+          onClick={() => setShowLog((v) => !v)}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-[#a1a1aa] dark:hover:text-white"
+        >
+          <span>{showLog ? '▾' : '▸'}</span>
+          {showLog ? 'Hide' : 'View'} full check log ({checks.length} steps)
+        </button>
+        {showLog && (
+          <div className="mt-3 space-y-4">
+            {SECTIONS.map((section) => {
+              const sectionChecks = grouped[section] || []
+              if (sectionChecks.length === 0) return null
+              const allPassed = sectionChecks.every((c) => c.passed)
+              return (
+                <div key={section}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <h4 className="text-sm font-semibold text-gray-700 dark:text-[#a1a1aa]">
+                      {section}
+                    </h4>
+                    <StatusBadge passed={allPassed} />
+                  </div>
+                  <div className="space-y-1 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-[#1a1a1d] dark:bg-[#10131C]">
+                    {sectionChecks.map((check) => (
+                      <CheckRow key={check.step} check={check} />
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
-        )
-      })}
+        )}
+      </div>
     </div>
   )
 }
@@ -298,9 +455,11 @@ export function QAChecklistPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">QA Checklist</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Onboarding acceptance
+          </h1>
           <p className="text-sm text-gray-500 dark:text-[#71717a]">
-            15-step E2E production validation for design partner onboarding
+            15-step E2E validation, dual-signed by the customer and AI Identity
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -326,7 +485,7 @@ export function QAChecklistPage() {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                Simulating...
+                Running...
               </>
             ) : (
               <>
@@ -338,7 +497,7 @@ export function QAChecklistPage() {
                 >
                   <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
                 </svg>
-                Simulate Client Onboarding
+                Run onboarding acceptance
               </>
             )}
           </button>
@@ -363,7 +522,7 @@ export function QAChecklistPage() {
                     clipRule="evenodd"
                   />
                 </svg>
-                Admin Check
+                Admin check
               </>
             )}
           </button>
@@ -379,12 +538,12 @@ export function QAChecklistPage() {
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         {/* Run history sidebar */}
         <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-gray-600 dark:text-[#a1a1aa]">Run History</h2>
+          <h2 className="text-sm font-semibold text-gray-600 dark:text-[#a1a1aa]">Run history</h2>
           {loading ? (
             <p className="text-sm text-gray-400 dark:text-[#52525b]">Loading...</p>
           ) : runs.length === 0 ? (
             <p className="text-sm text-gray-400 dark:text-[#52525b]">
-              No runs yet. Click "Run QA Checklist" to start.
+              No runs yet. Run an onboarding acceptance to start.
             </p>
           ) : (
             <div className="space-y-1">
@@ -437,7 +596,7 @@ export function QAChecklistPage() {
             <RunDetail run={selectedRun} onSignoff={handleSignoff} signingOff={signingOff} />
           ) : (
             <div className="flex h-64 items-center justify-center text-gray-400 dark:text-[#52525b]">
-              <p>Run the QA checklist to see results here</p>
+              <p>Run an onboarding acceptance to see results here</p>
             </div>
           )}
         </div>

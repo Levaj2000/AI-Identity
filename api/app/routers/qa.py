@@ -1,10 +1,9 @@
 """QA Checklist endpoints — run, list, and sign off on E2E QA runs."""
 
 import logging
-import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import func as sa_func
 from sqlalchemy.orm import Session
@@ -20,6 +19,27 @@ router = APIRouter(prefix="/api/v1/qa", tags=["qa"])
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────
+
+
+def _caller_bearer_token(request: Request) -> str:
+    """Return the Clerk session JWT the caller authenticated with.
+
+    The QA runner replays this token on its outbound self-calls so the run
+    exercises the real production auth path (legacy email-as-key was removed,
+    Insight #89). The request reached this handler through ``get_current_user``,
+    so a valid Bearer token is normally present; we 400 if it is missing
+    (e.g. a non-Clerk caller) rather than fail opaquely deep in the runner.
+    """
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "QA runs require a Clerk session token (Authorization: Bearer). "
+                "The runner replays the caller's token against the API."
+            ),
+        )
+    return auth_header[7:]
 
 
 def _generate_run_id(db: Session) -> str:
@@ -80,6 +100,7 @@ class SignoffRequest(BaseModel):
     response_description="The completed QA run with all check results",
 )
 async def trigger_qa_run(
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -88,6 +109,7 @@ async def trigger_qa_run(
     Creates temporary test resources (agent, policy, keys) and cleans them up.
     Results are persisted for sign-off tracking.
     """
+    auth_token = _caller_bearer_token(request)
     api_url = settings.gateway_url.replace(":8002", ":8001")
     # In production, use the public URLs
     if settings.environment == "production":
@@ -97,7 +119,7 @@ async def trigger_qa_run(
         api_url = f"http://localhost:{settings.api_port}"
         gateway_url = settings.gateway_url
 
-    result = await run_qa_checks(api_url, gateway_url, user.email)
+    result = await run_qa_checks(api_url, gateway_url, auth_token)
 
     run_id = _generate_run_id(db)
     qa_run = QARun(
@@ -129,27 +151,34 @@ async def trigger_qa_run(
     return qa_run
 
 
-# ── POST /api/v1/qa/run/onboarding — simulate client onboarding ──────
+# ── POST /api/v1/qa/run/onboarding — onboarding acceptance run ──────
 
 
 @router.post(
     "/run/onboarding",
     response_model=QARunResponse,
     status_code=201,
-    summary="Simulate client onboarding",
-    response_description="QA run executed as a fresh test client",
+    summary="Run onboarding acceptance",
+    response_description="QA run executed under the caller's real account",
 )
 async def trigger_onboarding_run(
+    request: Request,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Simulate a full client onboarding flow.
+    """Run the onboarding acceptance checklist under the caller's real account.
 
-    Creates a temporary test user account, runs all 15 QA checks as
-    that user (fresh account, zero agents, zero history), then cleans
-    up the test account. This validates the exact experience a new
-    design partner will have.
+    Runs all 15 E2E checks as the logged-in user, using their live Clerk
+    session token (the same one that reached this endpoint). When a brand-new
+    design partner runs this from their own seat, their account *is* genuinely
+    zero-history, so this validates the real onboarding experience end-to-end —
+    no synthetic user, no backend session minting (which prod Clerk forbids).
+
+    The run becomes a two-party acceptance record: the partner signs off as
+    ``customer`` and AI Identity signs off as ``staff``.
     """
+    auth_token = _caller_bearer_token(request)
+
     # Determine environment URLs
     if settings.environment == "production":
         api_url = "https://api.ai-identity.co"
@@ -158,28 +187,7 @@ async def trigger_onboarding_run(
         api_url = f"http://localhost:{settings.api_port}"
         gateway_url = settings.gateway_url
 
-    # Create a temporary test user
-    test_email = f"qa-client-{uuid.uuid4().hex[:8]}@test.ai-identity.co"
-    test_user = User(
-        id=uuid.uuid4(),
-        email=test_email,
-        role="owner",
-        tier="free",
-    )
-    db.add(test_user)
-    db.commit()
-    db.refresh(test_user)
-
-    logger.info("Onboarding QA: created test user %s", test_email)
-
-    try:
-        result = await run_qa_checks(api_url, gateway_url, test_email)
-    finally:
-        # Clean up test user and any agents/resources they created
-        # (cascade delete handles agents, keys, policies, audit entries)
-        db.delete(test_user)
-        db.commit()
-        logger.info("Onboarding QA: cleaned up test user %s", test_email)
+    result = await run_qa_checks(api_url, gateway_url, auth_token)
 
     run_id = _generate_run_id(db)
     qa_run = QARun(
@@ -200,10 +208,9 @@ async def trigger_onboarding_run(
     db.refresh(qa_run)
 
     logger.info(
-        "Onboarding QA run %s by %s (as %s): %d/%d passed (%s)",
+        "Onboarding acceptance run %s by %s: %d/%d passed (%s)",
         qa_run.run_id,
         user.email,
-        test_email,
         result.passed,
         result.total,
         "PASS" if result.all_passed else "FAIL",
