@@ -66,15 +66,15 @@ function statusBadgeClasses(status: ComplianceExport['status']): string {
   const base = 'rounded-md px-2 py-0.5 text-xs font-medium'
   switch (status) {
     case 'ready':
-      return `${base} border border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300`
+      return `${base} border border-success bg-success-soft text-success`
     case 'building':
-      return `${base} border border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300`
+      return `${base} border border-brand bg-brand-soft text-brand`
     case 'queued':
-      return `${base} border border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300`
+      return `${base} border border-warning bg-warning-soft text-warning`
     case 'failed':
-      return `${base} border border-red-200 bg-red-100 text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300`
+      return `${base} border border-danger bg-danger-soft text-danger`
     default:
-      return `${base} border border-gray-200 bg-gray-100 text-gray-600 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#a1a1aa]`
+      return `${base} border border-line-strong bg-elevated text-muted`
   }
 }
 
@@ -203,10 +203,8 @@ export function ComplianceExportsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#e4e4e7]">
-          Compliance Exports
-        </h1>
-        <p className="mt-1 max-w-3xl text-sm text-gray-600 dark:text-[#a1a1aa]">
+        <h1 className="text-2xl font-semibold text-ink">Compliance Exports</h1>
+        <p className="mt-1 max-w-3xl text-sm text-muted">
           Request a signed, DSSE-chained ZIP bundle of your compliance evidence for a fixed audit
           period. Every artifact in the archive is hash-committed in a manifest signed with the same
           ECDSA P-256 key as forensic attestations — auditors can verify the bundle offline.
@@ -214,27 +212,19 @@ export function ComplianceExportsPage() {
       </div>
 
       {/* Request form */}
-      <form
-        onSubmit={handleSubmit}
-        className="rounded-xl border border-gray-200 bg-white p-5 dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl"
-      >
-        <h2 className="mb-3 text-lg font-medium text-gray-900 dark:text-[#e4e4e7]">
-          Request a new export
-        </h2>
+      <form onSubmit={handleSubmit} className="rounded-xl border border-line bg-surface p-5">
+        <h2 className="mb-3 text-lg font-medium text-ink">Request a new export</h2>
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label
-              htmlFor="export-profile"
-              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]"
-            >
+            <label htmlFor="export-profile" className="mb-1.5 block text-sm font-medium text-muted">
               Framework
             </label>
             <select
               id="export-profile"
               value={profile}
               onChange={(e) => setProfile(e.target.value as ExportProfile)}
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:border-[#A6DAFF] dark:border-[#2a2a2d] dark:bg-[#04070D] dark:text-[#e4e4e7] dark:focus:border-[#A6DAFF]"
+              className="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-brand"
             >
               {PROFILES.map((p) => (
                 <option key={p.value} value={p.value}>
@@ -242,7 +232,7 @@ export function ComplianceExportsPage() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-gray-500 dark:text-[#71717a]">
+            <p className="mt-1 text-xs text-subtle">
               {PROFILES.find((p) => p.value === profile)?.nature}
             </p>
           </div>
@@ -250,7 +240,7 @@ export function ComplianceExportsPage() {
           <div>
             <label
               htmlFor="export-period-start"
-              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]"
+              className="mb-1.5 block text-sm font-medium text-muted"
             >
               Period start (UTC)
             </label>
@@ -260,10 +250,10 @@ export function ComplianceExportsPage() {
               value={periodStart}
               onChange={(e) => setPeriodStart(e.target.value)}
               required
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors dark:bg-[#04070D] dark:text-[#e4e4e7] ${
+              className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors ${
                 fieldErrors.audit_period_start
-                  ? 'border-red-500 dark:border-red-500'
-                  : 'border-gray-300 focus:border-[#A6DAFF] dark:border-[#2a2a2d] dark:focus:border-[#A6DAFF]'
+                  ? 'border-danger'
+                  : 'border-line-strong focus:border-brand'
               }`}
             />
           </div>
@@ -271,7 +261,7 @@ export function ComplianceExportsPage() {
           <div>
             <label
               htmlFor="export-period-end"
-              className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-[#d4d4d8]"
+              className="mb-1.5 block text-sm font-medium text-muted"
             >
               Period end (UTC)
             </label>
@@ -281,16 +271,16 @@ export function ComplianceExportsPage() {
               value={periodEnd}
               onChange={(e) => setPeriodEnd(e.target.value)}
               required
-              className={`w-full rounded-lg border bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors dark:bg-[#04070D] dark:text-[#e4e4e7] ${
+              className={`w-full rounded-lg border bg-surface px-3 py-2 text-sm text-ink outline-none transition-colors ${
                 fieldErrors.audit_period_end
-                  ? 'border-red-500 dark:border-red-500'
-                  : 'border-gray-300 focus:border-[#A6DAFF] dark:border-[#2a2a2d] dark:focus:border-[#A6DAFF]'
+                  ? 'border-danger'
+                  : 'border-line-strong focus:border-brand'
               }`}
             />
           </div>
         </div>
 
-        <p className="mt-3 text-xs text-gray-500 dark:text-[#71717a]">
+        <p className="mt-3 text-xs text-subtle">
           Max period: 18 months. Exports are scoped to your org and cover every agent by default —
           narrower sampling plans are not yet exposed here.
         </p>
@@ -298,7 +288,7 @@ export function ComplianceExportsPage() {
         {formError && (
           <div
             role="alert"
-            className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+            className="mt-3 rounded-lg border border-danger bg-danger-soft px-3 py-2 text-sm text-danger"
           >
             {formError}
           </div>
@@ -308,14 +298,14 @@ export function ComplianceExportsPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-lg border border-[#A6DAFF] bg-[#A6DAFF] px-4 py-2 text-sm font-medium text-[#04070D] transition-colors hover:bg-[#A6DAFF]/90 disabled:opacity-50"
+            className="rounded-lg border border-brand bg-brand px-4 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-brand-hover disabled:opacity-50"
           >
             {submitting ? 'Queueing…' : 'Request export'}
           </button>
           <button
             type="button"
             onClick={() => void refresh()}
-            className="text-sm text-gray-600 underline-offset-4 transition-colors hover:text-gray-900 hover:underline dark:text-[#a1a1aa] dark:hover:text-[#e4e4e7]"
+            className="text-sm text-muted underline-offset-4 transition-colors hover:text-ink hover:underline"
           >
             Refresh list
           </button>
@@ -323,10 +313,10 @@ export function ComplianceExportsPage() {
       </form>
 
       {/* Past exports table */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3 dark:border-[#1a1a1d]">
-          <h2 className="text-lg font-medium text-gray-900 dark:text-[#e4e4e7]">Recent exports</h2>
-          <span className="text-xs text-gray-500 dark:text-[#71717a]">
+      <div className="overflow-hidden rounded-xl border border-line bg-surface">
+        <div className="flex items-center justify-between border-b border-line px-5 py-3">
+          <h2 className="text-lg font-medium text-ink">Recent exports</h2>
+          <span className="text-xs text-subtle">
             {exports.length} {exports.length === 1 ? 'export' : 'exports'}
           </span>
         </div>
@@ -334,71 +324,64 @@ export function ComplianceExportsPage() {
         {listError && (
           <div
             role="alert"
-            className="border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+            className="border-b border-danger bg-danger-soft px-5 py-3 text-sm text-danger"
           >
             {listError}
           </div>
         )}
 
         {listLoading && exports.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm text-gray-500 dark:text-[#71717a]">
-            Loading…
-          </div>
+          <div className="px-5 py-12 text-center text-sm text-subtle">Loading…</div>
         ) : exports.length === 0 ? (
-          <div className="px-5 py-12 text-center text-sm text-gray-500 dark:text-[#71717a]">
+          <div className="px-5 py-12 text-center text-sm text-subtle">
             No exports yet. Request your first one above.
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-200 dark:border-[#1a1a1d]">
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+              <tr className="border-b border-line">
+                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Framework
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Period
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Status
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Size
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Requested
                 </th>
-                <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+                <th className="px-5 py-3 text-right text-xs font-medium uppercase tracking-wider text-subtle">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-[#1a1a1d]/50">
+            <tbody className="divide-y divide-line">
               {exports.map((exp) => (
-                <tr
-                  key={exp.id}
-                  className="transition-colors hover:bg-gray-50 dark:hover:bg-[#1a1a1d]/50"
-                >
-                  <td className="px-5 py-3 text-gray-900 dark:text-[#e4e4e7]">
-                    {profileLabel(exp.profile)}
-                  </td>
-                  <td className="whitespace-nowrap px-5 py-3 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:text-[#a1a1aa]">
+                <tr key={exp.id} className="transition-colors hover:bg-elevated">
+                  <td className="px-5 py-3 text-ink">{profileLabel(exp.profile)}</td>
+                  <td className="whitespace-nowrap px-5 py-3 font-[JetBrains_Mono,monospace] text-xs text-muted">
                     {exp.audit_period_start.slice(0, 10)} → {exp.audit_period_end.slice(0, 10)}
                   </td>
                   <td className="px-5 py-3">
                     <span className={statusBadgeClasses(exp.status)}>{exp.status}</span>
                     {exp.error && (
                       <p
-                        className="mt-1 max-w-xs truncate text-xs text-red-600 dark:text-red-400"
+                        className="mt-1 max-w-xs truncate text-xs text-danger"
                         title={exp.error.message}
                       >
                         {exp.error.code}
                       </p>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:text-[#a1a1aa]">
+                  <td className="whitespace-nowrap px-5 py-3 font-[JetBrains_Mono,monospace] text-xs text-muted">
                     {formatBytes(exp.archive_bytes)}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3 text-xs text-gray-500 dark:text-[#71717a]">
+                  <td className="whitespace-nowrap px-5 py-3 text-xs text-subtle">
                     {relativeTime(exp.created_at)}
                   </td>
                   <td className="whitespace-nowrap px-5 py-3 text-right">
@@ -406,19 +389,19 @@ export function ComplianceExportsPage() {
                       <button
                         onClick={() => void handleDownload(exp.id)}
                         disabled={downloadingId === exp.id}
-                        className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#d4d4d8] dark:hover:bg-[#2a2a2d]"
+                        className="rounded-md border border-line-strong bg-surface px-2.5 py-1 text-xs font-medium text-muted transition-colors hover:bg-elevated disabled:opacity-50"
                       >
                         {downloadingId === exp.id ? 'Downloading…' : 'Download'}
                       </button>
                     ) : exp.status === 'queued' || exp.status === 'building' ? (
                       <button
                         onClick={() => setCancelTarget(exp)}
-                        className="rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50 dark:border-red-500/30 dark:bg-[#1a1a1d] dark:text-red-300 dark:hover:bg-red-500/10"
+                        className="rounded-md border border-danger bg-surface px-2.5 py-1 text-xs font-medium text-danger transition-colors hover:bg-danger-soft disabled:opacity-50"
                       >
                         Cancel
                       </button>
                     ) : (
-                      <span className="text-xs text-gray-400 dark:text-[#52525b]">—</span>
+                      <span className="text-xs text-faint">—</span>
                     )}
                   </td>
                 </tr>

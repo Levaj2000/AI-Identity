@@ -80,32 +80,32 @@ export function TicketDetailPage() {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+        return 'bg-danger-soft text-danger'
       case 'high':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400'
+        return 'bg-anomaly-soft text-anomaly'
       case 'medium':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+        return 'bg-warning-soft text-warning'
       case 'low':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+        return 'bg-success-soft text-success'
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+        return 'bg-elevated text-muted'
     }
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'open':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
+        return 'bg-brand-soft text-brand'
       case 'in_progress':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
+        return 'bg-ai-soft text-ai'
       case 'waiting_customer':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+        return 'bg-warning-soft text-warning'
       case 'resolved':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+        return 'bg-success-soft text-success'
       case 'closed':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+        return 'bg-elevated text-muted'
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+        return 'bg-elevated text-muted'
     }
   }
 
@@ -126,7 +126,7 @@ export function TicketDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-gray-600 dark:text-[#a1a1aa]">Loading ticket...</div>
+        <div className="text-muted">Loading ticket...</div>
       </div>
     )
   }
@@ -136,11 +136,11 @@ export function TicketDetailPage() {
       <div>
         <button
           onClick={() => navigate('/dashboard/support')}
-          className="mb-4 text-sm text-[#A6DAFF] hover:underline"
+          className="mb-4 text-sm text-brand hover:underline"
         >
           ← Back to tickets
         </button>
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-lg bg-danger-soft p-4 text-sm text-danger">
           {error || 'Ticket not found'}
         </div>
       </div>
@@ -154,7 +154,7 @@ export function TicketDetailPage() {
       {/* Back Button */}
       <button
         onClick={() => navigate('/dashboard/support')}
-        className="mb-4 text-sm text-[#A6DAFF] hover:underline"
+        className="mb-4 text-sm text-brand hover:underline"
       >
         ← Back to tickets
       </button>
@@ -163,13 +163,11 @@ export function TicketDetailPage() {
         {/* Main Content - Ticket Details & Comments */}
         <div className="lg:col-span-2 space-y-6">
           {/* Ticket Header */}
-          <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-[#27272a] dark:bg-[#09090b]">
+          <div className="rounded-lg border border-line bg-surface p-6">
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm font-mono text-gray-500 dark:text-[#71717a]">
-                    {ticket.ticket_number}
-                  </span>
+                  <span className="text-sm font-mono text-subtle">{ticket.ticket_number}</span>
                   <span
                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(ticket.status)}`}
                   >
@@ -181,19 +179,15 @@ export function TicketDetailPage() {
                     {ticket.priority.toUpperCase()}
                   </span>
                 </div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e4e4e7]">
-                  {ticket.subject}
-                </h1>
+                <h1 className="text-2xl font-bold text-ink">{ticket.subject}</h1>
               </div>
             </div>
 
             <div className="prose prose-sm dark:prose-invert max-w-none">
-              <p className="text-gray-700 dark:text-[#a1a1aa] whitespace-pre-wrap">
-                {ticket.description}
-              </p>
+              <p className="text-muted whitespace-pre-wrap">{ticket.description}</p>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-600 dark:text-[#a1a1aa]">
+            <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted">
               <div>
                 <span className="font-medium">Created:</span> {formatDate(ticket.created_at)}
               </div>
@@ -209,10 +203,8 @@ export function TicketDetailPage() {
 
             {/* Admin Status Controls */}
             {isAdmin && ticket.status !== 'closed' && (
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-[#27272a]">
-                <label className="block text-sm font-medium text-gray-700 dark:text-[#e4e4e7] mb-2">
-                  Update Status
-                </label>
+              <div className="mt-4 pt-4 border-t border-line">
+                <label className="block text-sm font-medium text-muted mb-2">Update Status</label>
                 <div className="flex flex-wrap gap-2">
                   {(
                     [
@@ -229,8 +221,8 @@ export function TicketDetailPage() {
                       disabled={isUpdatingStatus || ticket.status === status}
                       className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                         ticket.status === status
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed dark:bg-gray-800'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-[#27272a] dark:text-[#e4e4e7] dark:hover:bg-[#3a3a3d]'
+                          ? 'bg-elevated text-subtle cursor-not-allowed'
+                          : 'bg-elevated text-muted hover:bg-inset'
                       }`}
                     >
                       {formatStatus(status)}
@@ -242,45 +234,35 @@ export function TicketDetailPage() {
           </div>
 
           {/* Comments Section */}
-          <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-[#27272a] dark:bg-[#09090b]">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-[#e4e4e7] mb-4">
+          <div className="rounded-lg border border-line bg-surface p-6">
+            <h2 className="text-lg font-semibold text-ink mb-4">
               Comments ({ticket.comments.length})
             </h2>
 
             {/* Comments List */}
             <div className="space-y-4 mb-6">
               {ticket.comments.length === 0 ? (
-                <p className="text-sm text-gray-600 dark:text-[#a1a1aa]">
-                  No comments yet. Be the first to comment!
-                </p>
+                <p className="text-sm text-muted">No comments yet. Be the first to comment!</p>
               ) : (
                 ticket.comments.map((comment) => (
                   <div
                     key={comment.id}
                     className={`rounded-lg p-4 ${
-                      comment.is_internal
-                        ? 'bg-yellow-50 border border-yellow-200 dark:bg-yellow-900/10 dark:border-yellow-900/30'
-                        : 'bg-gray-50 dark:bg-[#1a1a1d]'
+                      comment.is_internal ? 'bg-warning-soft border border-warning' : 'bg-inset'
                     }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900 dark:text-[#e4e4e7]">
-                          {comment.user_email}
-                        </span>
+                        <span className="text-sm font-medium text-ink">{comment.user_email}</span>
                         {comment.is_internal && (
-                          <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+                          <span className="inline-flex items-center rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">
                             Internal
                           </span>
                         )}
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-[#71717a]">
-                        {formatDate(comment.created_at)}
-                      </span>
+                      <span className="text-xs text-subtle">{formatDate(comment.created_at)}</span>
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-[#a1a1aa] whitespace-pre-wrap">
-                      {comment.content}
-                    </p>
+                    <p className="text-sm text-muted whitespace-pre-wrap">{comment.content}</p>
                   </div>
                 ))
               )}
@@ -288,14 +270,8 @@ export function TicketDetailPage() {
 
             {/* Add Comment Form */}
             {ticket.status !== 'closed' && (
-              <form
-                onSubmit={handleAddComment}
-                className="border-t border-gray-200 pt-4 dark:border-[#27272a]"
-              >
-                <label
-                  htmlFor="comment"
-                  className="block text-sm font-medium text-gray-700 dark:text-[#e4e4e7] mb-2"
-                >
+              <form onSubmit={handleAddComment} className="border-t border-line pt-4">
+                <label htmlFor="comment" className="block text-sm font-medium text-muted mb-2">
                   Add Comment
                 </label>
                 <textarea
@@ -303,14 +279,14 @@ export function TicketDetailPage() {
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   rows={4}
-                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#A6DAFF] focus:outline-none focus:ring-1 focus:ring-[#A6DAFF] dark:border-[#27272a] dark:bg-[#09090b] dark:text-[#e4e4e7]"
+                  className="block w-full rounded-lg border border-line-strong bg-inset px-3 py-2 text-ink focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                   placeholder="Type your comment here..."
                 />
                 <div className="mt-3 flex justify-end">
                   <button
                     type="submit"
                     disabled={isSubmittingComment || !commentText.trim()}
-                    className="rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-medium text-gray-900 hover:bg-[#8fc7ff] disabled:opacity-50"
+                    className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-brand-ink hover:bg-brand-hover disabled:opacity-50"
                   >
                     {isSubmittingComment ? 'Posting...' : 'Post Comment'}
                   </button>
@@ -323,37 +299,29 @@ export function TicketDetailPage() {
         {/* Sidebar - Context & Metadata */}
         <div className="space-y-6">
           {/* Ticket Info */}
-          <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-[#27272a] dark:bg-[#09090b]">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-[#e4e4e7] mb-3">
-              Ticket Information
-            </h3>
+          <div className="rounded-lg border border-line bg-surface p-4">
+            <h3 className="text-sm font-semibold text-ink mb-3">Ticket Information</h3>
             <dl className="space-y-2 text-sm">
               <div>
-                <dt className="text-gray-600 dark:text-[#a1a1aa]">Category</dt>
-                <dd className="font-medium text-gray-900 dark:text-[#e4e4e7]">
+                <dt className="text-muted">Category</dt>
+                <dd className="font-medium text-ink">
                   {ticket.category ? ticket.category.replace(/_/g, ' ') : 'None'}
                 </dd>
               </div>
               <div>
-                <dt className="text-gray-600 dark:text-[#a1a1aa]">Created By</dt>
-                <dd className="font-medium text-gray-900 dark:text-[#e4e4e7]">
-                  {ticket.user_email}
-                </dd>
+                <dt className="text-muted">Created By</dt>
+                <dd className="font-medium text-ink">{ticket.user_email}</dd>
               </div>
               {ticket.org_name && (
                 <div>
-                  <dt className="text-gray-600 dark:text-[#a1a1aa]">Organization</dt>
-                  <dd className="font-medium text-gray-900 dark:text-[#e4e4e7]">
-                    {ticket.org_name}
-                  </dd>
+                  <dt className="text-muted">Organization</dt>
+                  <dd className="font-medium text-ink">{ticket.org_name}</dd>
                 </div>
               )}
               {ticket.assigned_to_email && (
                 <div>
-                  <dt className="text-gray-600 dark:text-[#a1a1aa]">Assigned To</dt>
-                  <dd className="font-medium text-gray-900 dark:text-[#e4e4e7]">
-                    {ticket.assigned_to_email}
-                  </dd>
+                  <dt className="text-muted">Assigned To</dt>
+                  <dd className="font-medium text-ink">{ticket.assigned_to_email}</dd>
                 </div>
               )}
             </dl>
@@ -361,22 +329,16 @@ export function TicketDetailPage() {
 
           {/* Related Agent */}
           {context?.related_agent && (
-            <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-[#27272a] dark:bg-[#09090b]">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-[#e4e4e7] mb-3">
-                Related Agent
-              </h3>
+            <div className="rounded-lg border border-line bg-surface p-4">
+              <h3 className="text-sm font-semibold text-ink mb-3">Related Agent</h3>
               <div className="space-y-2 text-sm">
                 <div>
-                  <span className="font-medium text-gray-900 dark:text-[#e4e4e7]">
-                    {context.related_agent.name}
-                  </span>
+                  <span className="font-medium text-ink">{context.related_agent.name}</span>
                 </div>
-                <div className="text-gray-600 dark:text-[#a1a1aa]">
-                  Status: {context.related_agent.status}
-                </div>
+                <div className="text-muted">Status: {context.related_agent.status}</div>
                 <button
                   onClick={() => navigate(`/dashboard/agents/${context.related_agent?.id}`)}
-                  className="text-[#A6DAFF] hover:underline text-sm"
+                  className="text-brand hover:underline text-sm"
                 >
                   View Agent →
                 </button>
@@ -386,19 +348,13 @@ export function TicketDetailPage() {
 
           {/* Recent Audit Logs */}
           {context?.recent_audit_logs && context.recent_audit_logs.length > 0 && (
-            <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-[#27272a] dark:bg-[#09090b]">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-[#e4e4e7] mb-3">
-                Related Audit Logs
-              </h3>
+            <div className="rounded-lg border border-line bg-surface p-4">
+              <h3 className="text-sm font-semibold text-ink mb-3">Related Audit Logs</h3>
               <div className="space-y-2">
                 {context.recent_audit_logs.slice(0, 5).map((log) => (
                   <div key={log.id} className="text-xs">
-                    <div className="font-medium text-gray-900 dark:text-[#e4e4e7]">
-                      {log.action}
-                    </div>
-                    <div className="text-gray-600 dark:text-[#a1a1aa]">
-                      {new Date(log.timestamp).toLocaleString()}
-                    </div>
+                    <div className="font-medium text-ink">{log.action}</div>
+                    <div className="text-muted">{new Date(log.timestamp).toLocaleString()}</div>
                   </div>
                 ))}
               </div>

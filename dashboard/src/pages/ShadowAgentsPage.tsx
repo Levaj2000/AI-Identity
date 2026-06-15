@@ -110,7 +110,7 @@ export function ShadowAgentsPage() {
   if (error) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-red-400">
+        <div className="bg-danger-soft border border-danger rounded-xl p-6 text-danger">
           <h3 className="font-semibold mb-1">Error</h3>
           <p className="text-sm">{error}</p>
         </div>
@@ -122,8 +122,8 @@ export function ShadowAgentsPage() {
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-white">Shadow Agents</h1>
-        <p className="text-gray-400 mt-1">
+        <h1 className="text-2xl font-semibold text-ink">Shadow Agents</h1>
+        <p className="text-muted mt-1">
           Detect unmanaged or unregistered agents hitting your gateway
         </p>
       </div>
@@ -149,13 +149,13 @@ export function ShadowAgentsPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl p-4 flex flex-wrap gap-4 items-end">
+      <div className="bg-surface border border-line rounded-xl p-4 flex flex-wrap gap-4 items-end">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Deny Reason</label>
+          <label className="block text-xs text-muted mb-1">Deny Reason</label>
           <select
             value={denyReasonFilter}
             onChange={(e) => handleDenyReasonFilter(e.target.value as DenyReasonFilter)}
-            className="px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white focus:outline-none focus:border-[#A6DAFF]/50"
+            className="px-3 py-1.5 bg-canvas border border-line rounded-lg text-sm text-ink focus:outline-none focus:border-brand"
           >
             <option value="">All</option>
             <option value="agent_not_found">Not Found</option>
@@ -164,34 +164,34 @@ export function ShadowAgentsPage() {
           </select>
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Min Hits</label>
+          <label className="block text-xs text-muted mb-1">Min Hits</label>
           <input
             type="number"
             min={1}
             value={minHits}
             onChange={(e) => setMinHits(Math.max(1, parseInt(e.target.value) || 1))}
             onBlur={() => loadData()}
-            className="px-3 py-1.5 bg-[#04070D] border border-[#1a1a1d] rounded-lg text-sm text-white focus:outline-none focus:border-[#A6DAFF]/50 w-20"
+            className="px-3 py-1.5 bg-canvas border border-line rounded-lg text-sm text-ink focus:outline-none focus:border-brand w-20"
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-[#a1a1aa]">
+        <label className="flex items-center gap-2 text-sm text-muted">
           <input
             type="checkbox"
             checked={showDismissed}
             onChange={(e) => setShowDismissed(e.target.checked)}
-            className="h-4 w-4 rounded border-[#3a3a3d] bg-[#1a1a1d] text-[#A6DAFF] focus:ring-[#A6DAFF]"
+            className="h-4 w-4 rounded border-line-strong bg-elevated text-brand focus:ring-brand"
           />
           Show dismissed
         </label>
-        <div className="text-xs text-gray-500">Last 7 days</div>
+        <div className="text-xs text-subtle">Last 7 days</div>
       </div>
 
       {/* Table */}
-      <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl overflow-hidden">
+      <div className="bg-surface border border-line rounded-xl overflow-hidden">
         {loading && !data ? (
-          <div className="px-5 py-12 text-center text-gray-500">Scanning for shadow agents...</div>
+          <div className="px-5 py-12 text-center text-subtle">Scanning for shadow agents...</div>
         ) : data?.items.length === 0 ? (
-          <div className="px-5 py-12 text-center text-gray-500">
+          <div className="px-5 py-12 text-center text-subtle">
             <div className="text-3xl mb-2">🛡️</div>
             <div>No shadow agents detected in the last 7 days</div>
             <div className="text-xs mt-1">All gateway traffic is from registered agents</div>
@@ -200,7 +200,7 @@ export function ShadowAgentsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-400 border-b border-[#1a1a1d]">
+                <tr className="text-left text-muted border-b border-line">
                   <th className="px-5 py-3 font-medium">Agent ID</th>
                   <th className="px-5 py-3 font-medium">Reason</th>
                   <th className="px-5 py-3 font-medium">Hits</th>
@@ -213,11 +213,11 @@ export function ShadowAgentsPage() {
                 {data?.items.map((agent) => (
                   <tr
                     key={`${agent.agent_id}-${agent.deny_reason}`}
-                    className="border-b border-[#1a1a1d]/50 hover:bg-[#1a1a1d]/30 transition-colors cursor-pointer"
+                    className="border-b border-line hover:bg-elevated transition-colors cursor-pointer"
                     onClick={() => handleSelectAgent(agent)}
                   >
                     <td className="px-5 py-3">
-                      <span className="font-mono text-xs text-white">
+                      <span className="font-mono text-xs text-ink">
                         {agent.agent_id.slice(0, 12)}...
                       </span>
                     </td>
@@ -225,12 +225,12 @@ export function ShadowAgentsPage() {
                       <div className="flex items-center gap-1.5">
                         <DenyReasonBadge reason={agent.deny_reason} />
                         {agent.is_blocked && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-400">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-ai bg-ai-soft px-2 py-0.5 text-xs font-medium text-ai">
                             Blocked
                           </span>
                         )}
                         {agent.is_dismissed && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-[#2a2a2d] bg-[#1a1a1d] px-2 py-0.5 text-xs font-medium text-[#71717a]">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-line-strong bg-elevated px-2 py-0.5 text-xs font-medium text-subtle">
                             Dismissed
                           </span>
                         )}
@@ -238,15 +238,15 @@ export function ShadowAgentsPage() {
                     </td>
                     <td className="px-5 py-3">
                       <span
-                        className={`font-medium ${agent.hit_count >= 10 ? 'text-red-400' : 'text-white'}`}
+                        className={`font-medium ${agent.hit_count >= 10 ? 'text-danger' : 'text-ink'}`}
                       >
                         {agent.hit_count.toLocaleString()}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-gray-400 whitespace-nowrap">
+                    <td className="px-5 py-3 text-muted whitespace-nowrap">
                       {formatDateTime(agent.first_seen)}
                     </td>
-                    <td className="px-5 py-3 text-gray-400 whitespace-nowrap">
+                    <td className="px-5 py-3 text-muted whitespace-nowrap">
                       {formatDateTime(agent.last_seen)}
                     </td>
                     <td className="px-5 py-3">
@@ -254,13 +254,13 @@ export function ShadowAgentsPage() {
                         {agent.top_endpoints.slice(0, 2).map((ep) => (
                           <span
                             key={ep}
-                            className="text-xs font-mono text-gray-400 bg-[#1a1a1d] px-1.5 py-0.5 rounded"
+                            className="text-xs font-mono text-muted bg-elevated px-1.5 py-0.5 rounded"
                           >
                             {ep}
                           </span>
                         ))}
                         {agent.top_endpoints.length > 2 && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-subtle">
                             +{agent.top_endpoints.length - 2}
                           </span>
                         )}
@@ -275,8 +275,8 @@ export function ShadowAgentsPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-3 border-t border-[#1a1a1d]">
-            <span className="text-sm text-gray-400">
+          <div className="flex items-center justify-between px-5 py-3 border-t border-line">
+            <span className="text-sm text-muted">
               Showing {page * pageSize + 1}–{Math.min((page + 1) * pageSize, data?.total || 0)} of{' '}
               {data?.total || 0}
             </span>
@@ -284,14 +284,14 @@ export function ShadowAgentsPage() {
               <button
                 onClick={() => handlePageChange(page - 1)}
                 disabled={page === 0}
-                className="px-3 py-1 text-sm rounded border border-[#1a1a1d] text-gray-300 hover:bg-[#1a1a1d] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1 text-sm rounded border border-line text-muted hover:bg-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 Previous
               </button>
               <button
                 onClick={() => handlePageChange(page + 1)}
                 disabled={page >= totalPages - 1}
-                className="px-3 py-1 text-sm rounded border border-[#1a1a1d] text-gray-300 hover:bg-[#1a1a1d] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="px-3 py-1 text-sm rounded border border-line text-muted hover:bg-elevated disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 Next
               </button>
@@ -312,7 +312,7 @@ export function ShadowAgentsPage() {
       {/* Loading overlay for detail fetch */}
       {loadingDetail && (
         <div className="fixed inset-0 bg-black/30 z-40 flex items-center justify-center">
-          <div className="text-gray-400 text-sm">Loading detail...</div>
+          <div className="text-muted text-sm">Loading detail...</div>
         </div>
       )}
     </div>
@@ -369,23 +369,23 @@ function ShadowDetailDrawer({
     <>
       <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
 
-      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#10131C] border-l border-[#1a1a1d] z-50 overflow-y-auto shadow-2xl flex flex-col">
+      <div className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-surface border-l border-line z-50 overflow-y-auto shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 bg-[#10131C]/95 backdrop-blur border-b border-[#1a1a1d] px-6 py-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-surface backdrop-blur border-b border-line px-6 py-4 flex items-center justify-between z-10">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-white">Shadow Agent</h2>
+              <h2 className="text-lg font-semibold text-ink">Shadow Agent</h2>
               {detail.is_blocked && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-400">
+                <span className="inline-flex items-center gap-1 rounded-full border border-ai bg-ai-soft px-2 py-0.5 text-xs font-medium text-ai">
                   Blocked
                 </span>
               )}
             </div>
-            <p className="text-xs text-gray-500 font-mono mt-0.5">{detail.agent_id}</p>
+            <p className="text-xs text-subtle font-mono mt-0.5">{detail.agent_id}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-white rounded transition-colors"
+            className="p-1.5 text-muted hover:text-ink rounded transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -403,14 +403,14 @@ function ShadowDetailDrawer({
           {/* Summary */}
           <div className="flex items-center gap-3">
             <DenyReasonBadge reason={detail.deny_reason} large />
-            <span className="text-white font-semibold text-lg">
+            <span className="text-ink font-semibold text-lg">
               {detail.hit_count.toLocaleString()} hits
             </span>
           </div>
 
           {/* Timeline */}
-          <div className="bg-[#04070D] border border-[#1a1a1d] rounded-xl p-4 space-y-3 text-sm">
-            <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider">
+          <div className="bg-inset border border-line rounded-xl p-4 space-y-3 text-sm">
+            <h3 className="text-muted font-medium text-xs uppercase tracking-wider">
               Activity Window
             </h3>
             <InfoRow label="First seen" value={formatDateTime(detail.first_seen)} />
@@ -418,12 +418,12 @@ function ShadowDetailDrawer({
           </div>
 
           {/* Top Endpoints */}
-          <div className="bg-[#04070D] border border-[#1a1a1d] rounded-xl p-4 space-y-3">
-            <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider">
+          <div className="bg-inset border border-line rounded-xl p-4 space-y-3">
+            <h3 className="text-muted font-medium text-xs uppercase tracking-wider">
               Endpoints Probed ({detail.top_endpoints.length})
             </h3>
             {detail.top_endpoints.length === 0 ? (
-              <p className="text-gray-500 text-sm">No endpoint data</p>
+              <p className="text-subtle text-sm">No endpoint data</p>
             ) : (
               <div className="space-y-2">
                 {detail.top_endpoints.map((ep) => (
@@ -433,9 +433,9 @@ function ShadowDetailDrawer({
                   >
                     <div className="flex items-center gap-2">
                       <MethodBadge method={ep.method} />
-                      <span className="font-mono text-xs text-gray-300">{ep.endpoint}</span>
+                      <span className="font-mono text-xs text-muted">{ep.endpoint}</span>
                     </div>
-                    <span className="text-gray-400 text-xs">{ep.count}x</span>
+                    <span className="text-muted text-xs">{ep.count}x</span>
                   </div>
                 ))}
               </div>
@@ -443,8 +443,8 @@ function ShadowDetailDrawer({
           </div>
 
           {/* Recent Events */}
-          <div className="bg-[#04070D] border border-[#1a1a1d] rounded-xl p-4 space-y-3">
-            <h3 className="text-gray-400 font-medium text-xs uppercase tracking-wider">
+          <div className="bg-inset border border-line rounded-xl p-4 space-y-3">
+            <h3 className="text-muted font-medium text-xs uppercase tracking-wider">
               Recent Events ({detail.recent_events.length})
             </h3>
             <div className="space-y-1 max-h-[480px] overflow-y-auto">
@@ -456,22 +456,22 @@ function ShadowDetailDrawer({
         </div>
 
         {/* Action Bar */}
-        <div className="border-t border-[#1a1a1d] p-4 flex gap-3">
+        <div className="border-t border-line p-4 flex gap-3">
           <button
             onClick={() => setShowRegisterModal(true)}
-            className="flex-1 rounded-lg bg-[#A6DAFF] px-4 py-2 text-sm font-semibold text-[#04070D] hover:bg-[#A6DAFF]/80 transition-colors"
+            className="flex-1 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-hover transition-colors"
           >
             Register Agent
           </button>
           <button
             onClick={() => setShowBlockConfirm(true)}
-            className="rounded-lg border border-red-500/30 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+            className="rounded-lg border border-danger px-4 py-2 text-sm font-medium text-danger hover:bg-danger-soft transition-colors"
           >
             {detail.is_blocked ? 'Unblock' : 'Block'}
           </button>
           <button
             onClick={() => setShowDismissConfirm(true)}
-            className="rounded-lg border border-[#2a2a2d] px-4 py-2 text-sm font-medium text-[#a1a1aa] hover:bg-[#1a1a1d] transition-colors"
+            className="rounded-lg border border-line-strong px-4 py-2 text-sm font-medium text-muted hover:bg-elevated transition-colors"
           >
             {detail.is_dismissed ? 'Un-dismiss' : 'Dismiss'}
           </button>
@@ -543,16 +543,16 @@ function StatCard({
 }) {
   const valueColor =
     color === 'red' && value > 0
-      ? 'text-red-400'
+      ? 'text-danger'
       : color === 'yellow' && value > 0
-        ? 'text-yellow-400'
-        : 'text-white'
+        ? 'text-warning'
+        : 'text-ink'
 
   return (
-    <div className="bg-[#10131C] border border-[#1a1a1d] rounded-xl p-5">
-      <p className="text-sm text-gray-400">{label}</p>
+    <div className="bg-surface border border-line rounded-xl p-5">
+      <p className="text-sm text-muted">{label}</p>
       <p className={`text-2xl font-semibold mt-1 ${valueColor}`}>{value.toLocaleString()}</p>
-      {sublabel && <p className="text-xs text-gray-500 mt-0.5">{sublabel}</p>}
+      {sublabel && <p className="text-xs text-subtle mt-0.5">{sublabel}</p>}
     </div>
   )
 }
@@ -561,12 +561,12 @@ function DenyReasonBadge({ reason, large }: { reason: string; large?: boolean })
   const isNotFound = reason === 'agent_not_found'
   const isBlocked = reason === 'agent_blocked'
   const bg = isNotFound
-    ? 'bg-red-500/10 border-red-500/20'
+    ? 'bg-danger-soft border-danger'
     : isBlocked
-      ? 'bg-purple-500/10 border-purple-500/20'
-      : 'bg-yellow-500/10 border-yellow-500/20'
-  const text = isNotFound ? 'text-red-400' : isBlocked ? 'text-purple-400' : 'text-yellow-400'
-  const dot = isNotFound ? 'bg-red-400' : isBlocked ? 'bg-purple-400' : 'bg-yellow-400'
+      ? 'bg-ai-soft border-ai'
+      : 'bg-warning-soft border-warning'
+  const text = isNotFound ? 'text-danger' : isBlocked ? 'text-ai' : 'text-warning'
+  const dot = isNotFound ? 'bg-danger' : isBlocked ? 'bg-ai' : 'bg-warning'
   const label = isNotFound ? 'Not Found' : isBlocked ? 'Blocked' : 'Inactive'
   const size = large ? 'px-3 py-1 text-sm' : 'px-2 py-0.5 text-xs'
 
@@ -582,14 +582,14 @@ function DenyReasonBadge({ reason, large }: { reason: string; large?: boolean })
 
 function MethodBadge({ method }: { method: string }) {
   const colors: Record<string, string> = {
-    GET: 'text-green-400',
-    POST: 'text-[#A6DAFF]',
-    PUT: 'text-yellow-400',
-    PATCH: 'text-yellow-400',
-    DELETE: 'text-red-400',
+    GET: 'text-success',
+    POST: 'text-brand',
+    PUT: 'text-warning',
+    PATCH: 'text-warning',
+    DELETE: 'text-danger',
   }
   return (
-    <span className={`font-mono text-xs font-medium ${colors[method] || 'text-gray-400'}`}>
+    <span className={`font-mono text-xs font-medium ${colors[method] || 'text-muted'}`}>
       {method}
     </span>
   )
@@ -598,8 +598,8 @@ function MethodBadge({ method }: { method: string }) {
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex justify-between text-sm">
-      <span className="text-gray-400">{label}</span>
-      <span className="text-white">{value}</span>
+      <span className="text-muted">{label}</span>
+      <span className="text-ink">{value}</span>
     </div>
   )
 }
@@ -640,19 +640,17 @@ function ExpandableEvent({ event }: { event: ShadowEvent }) {
   const extraEntries = Object.entries(meta).filter(([k]) => !knownKeys.has(k))
 
   return (
-    <div className="border-b border-[#1a1a1d]/50 last:border-0">
+    <div className="border-b border-line last:border-0">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between text-xs py-2 hover:bg-white/[0.02] transition-colors rounded px-1 -mx-1"
+        className="w-full flex items-center justify-between text-xs py-2 hover:bg-elevated transition-colors rounded px-1 -mx-1"
       >
         <div className="flex items-center gap-2">
           <MethodBadge method={event.method} />
-          <span className="font-mono text-gray-400">{event.endpoint}</span>
+          <span className="font-mono text-muted">{event.endpoint}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-gray-500 whitespace-nowrap">
-            {formatDateTime(event.created_at)}
-          </span>
+          <span className="text-subtle whitespace-nowrap">{formatDateTime(event.created_at)}</span>
           <svg
             width="12"
             height="12"
@@ -662,7 +660,7 @@ function ExpandableEvent({ event }: { event: ShadowEvent }) {
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={`text-gray-500 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            className={`text-subtle transition-transform ${expanded ? 'rotate-180' : ''}`}
           >
             <polyline points="6 9 12 15 18 9" />
           </svg>
@@ -671,46 +669,44 @@ function ExpandableEvent({ event }: { event: ShadowEvent }) {
 
       {expanded && (
         <div className="pb-3 pt-1 px-1 space-y-2">
-          <div className="bg-[#10131C] border border-[#1a1a1d] rounded-lg p-3 space-y-1.5 text-xs">
+          <div className="bg-surface border border-line rounded-lg p-3 space-y-1.5 text-xs">
             {ip && (
               <div className="flex justify-between">
-                <span className="text-gray-500">IP Address</span>
-                <span className="font-mono text-gray-300">{ip}</span>
+                <span className="text-subtle">IP Address</span>
+                <span className="font-mono text-muted">{ip}</span>
               </div>
             )}
             {statusCode && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Status Code</span>
-                <span className="font-mono text-gray-300">{statusCode}</span>
+                <span className="text-subtle">Status Code</span>
+                <span className="font-mono text-muted">{statusCode}</span>
               </div>
             )}
             {denyReason && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Deny Reason</span>
-                <span className="font-mono text-gray-300">{denyReason}</span>
+                <span className="text-subtle">Deny Reason</span>
+                <span className="font-mono text-muted">{denyReason}</span>
               </div>
             )}
             {keyType && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Key Type</span>
-                <span className="font-mono text-gray-300">{keyType}</span>
+                <span className="text-subtle">Key Type</span>
+                <span className="font-mono text-muted">{keyType}</span>
               </div>
             )}
             {userAgent && (
               <div className="flex justify-between items-start">
-                <span className="text-gray-500 shrink-0">User Agent</span>
-                <span className="font-mono text-gray-300 text-right ml-4 break-all">
-                  {userAgent}
-                </span>
+                <span className="text-subtle shrink-0">User Agent</span>
+                <span className="font-mono text-muted text-right ml-4 break-all">{userAgent}</span>
               </div>
             )}
             {extraEntries.length > 0 && (
               <>
-                <div className="border-t border-[#1a1a1d] my-1.5" />
+                <div className="border-t border-line my-1.5" />
                 {extraEntries.map(([key, value]) => (
                   <div key={key} className="flex justify-between items-start">
-                    <span className="text-gray-500 shrink-0">{key}</span>
-                    <span className="font-mono text-gray-300 text-right ml-4 break-all">
+                    <span className="text-subtle shrink-0">{key}</span>
+                    <span className="font-mono text-muted text-right ml-4 break-all">
                       {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                     </span>
                   </div>
@@ -723,7 +719,7 @@ function ExpandableEvent({ event }: { event: ShadowEvent }) {
               !keyType &&
               !userAgent &&
               extraEntries.length === 0 && (
-                <span className="text-gray-500">No metadata captured</span>
+                <span className="text-subtle">No metadata captured</span>
               )}
           </div>
         </div>
