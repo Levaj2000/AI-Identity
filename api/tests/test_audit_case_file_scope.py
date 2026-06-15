@@ -250,3 +250,7 @@ class TestBundleScope:
         assert len(zf.read("ai_identity_verify.py")) > 1000  # a real script, not a stub
         assert "README.md" in names
         assert any(n.startswith("case-file-") and n.endswith(".json") for n in names)
+        # Turnkey double-click verifier, shipped executable.
+        assert "verify.command" in names, f"verify.command missing: {names}"
+        mode = (zf.getinfo("verify.command").external_attr >> 16) & 0o777
+        assert mode & 0o100, f"verify.command not executable (mode={oct(mode)})"
