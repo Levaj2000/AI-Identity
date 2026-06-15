@@ -41,26 +41,26 @@ export function AgentTable({ agents, isAdmin, onAgentDeleted }: AgentTableProps)
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-[#A6DAFF]/10 dark:bg-[#10131C]/80 dark:backdrop-blur-xl">
+    <div className="overflow-hidden rounded-xl border border-line bg-surface">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-gray-200 dark:border-[#1a1a1d]">
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+          <tr className="border-b border-line">
+            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
               Name
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
               Status
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
               Capabilities
             </th>
             <th
-              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]"
+              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle"
               title="EU AI Act Annex III classification"
             >
               EU AI Act
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-[#a1a1aa]">
+            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
               Created
             </th>
             <th className="w-10 px-3 py-3">
@@ -68,7 +68,7 @@ export function AgentTable({ agents, isAdmin, onAgentDeleted }: AgentTableProps)
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100 dark:divide-[#1a1a1d]/50">
+        <tbody className="divide-y divide-line">
           {agents.map((agent) => (
             <tr
               key={agent.id}
@@ -78,18 +78,14 @@ export function AgentTable({ agents, isAdmin, onAgentDeleted }: AgentTableProps)
               }}
               role="link"
               tabIndex={0}
-              className="cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-[#1a1a1d]/50"
+              className="cursor-pointer transition-colors hover:bg-elevated"
             >
               {/* Name + description */}
               <td className="px-6 py-4">
                 <div className="max-w-xs">
-                  <p className="truncate font-medium text-gray-900 dark:text-[#e4e4e7]">
-                    {agent.name}
-                  </p>
+                  <p className="truncate font-medium text-ink">{agent.name}</p>
                   {agent.description && (
-                    <p className="truncate text-sm text-gray-500 dark:text-[#a1a1aa]">
-                      {agent.description}
-                    </p>
+                    <p className="truncate text-sm text-subtle">{agent.description}</p>
                   )}
                 </div>
               </td>
@@ -105,18 +101,18 @@ export function AgentTable({ agents, isAdmin, onAgentDeleted }: AgentTableProps)
                   {agent.capabilities.slice(0, 3).map((cap) => (
                     <span
                       key={cap}
-                      className="rounded-md bg-gray-100 px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:bg-[#1a1a1d] dark:text-[#a1a1aa]"
+                      className="rounded-md bg-elevated px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-muted"
                     >
                       {cap}
                     </span>
                   ))}
                   {agent.capabilities.length > 3 && (
-                    <span className="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-[#1a1a1d] dark:text-[#71717a]">
+                    <span className="rounded-md bg-elevated px-2 py-0.5 text-xs text-subtle">
                       +{agent.capabilities.length - 3}
                     </span>
                   )}
                   {agent.capabilities.length === 0 && (
-                    <span className="text-xs text-gray-400 dark:text-[#52525b]">&mdash;</span>
+                    <span className="text-xs text-faint">&mdash;</span>
                   )}
                 </div>
               </td>
@@ -126,10 +122,10 @@ export function AgentTable({ agents, isAdmin, onAgentDeleted }: AgentTableProps)
                 <span
                   className={`rounded-md px-2 py-0.5 text-xs ${
                     riskClassStatus(agent.eu_ai_act_risk_class) === 'in_scope'
-                      ? 'border border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300'
+                      ? 'border border-warning bg-warning-soft text-warning'
                       : riskClassStatus(agent.eu_ai_act_risk_class) === 'out_of_scope'
-                        ? 'border border-gray-200 bg-gray-100 text-gray-600 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#a1a1aa]'
-                        : 'border border-dashed border-gray-300 text-gray-500 dark:border-[#3f3f46] dark:text-[#71717a]'
+                        ? 'border border-line bg-elevated text-muted'
+                        : 'border border-dashed border-line-strong text-subtle'
                   }`}
                   title={riskClassLabel(agent.eu_ai_act_risk_class)}
                 >
@@ -138,7 +134,7 @@ export function AgentTable({ agents, isAdmin, onAgentDeleted }: AgentTableProps)
               </td>
 
               {/* Created date */}
-              <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-[#a1a1aa]">
+              <td className="whitespace-nowrap px-6 py-4 text-sm text-subtle">
                 {relativeTime(agent.created_at)}
               </td>
 
@@ -151,14 +147,14 @@ export function AgentTable({ agents, isAdmin, onAgentDeleted }: AgentTableProps)
                         <button
                           onClick={(e) => handleDelete(e, agent.id)}
                           disabled={deleting === agent.id}
-                          className="rounded px-2 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-500/10 disabled:opacity-50"
+                          className="rounded px-2 py-1 text-xs font-medium text-danger transition-colors hover:bg-danger-soft disabled:opacity-50"
                           title="Confirm delete"
                         >
                           {deleting === agent.id ? '...' : 'Delete'}
                         </button>
                         <button
                           onClick={cancelConfirm}
-                          className="rounded px-2 py-1 text-xs text-gray-400 transition-colors hover:bg-gray-500/10"
+                          className="rounded px-2 py-1 text-xs text-faint transition-colors hover:bg-elevated"
                           title="Cancel"
                         >
                           Cancel
@@ -167,7 +163,7 @@ export function AgentTable({ agents, isAdmin, onAgentDeleted }: AgentTableProps)
                     ) : (
                       <button
                         onClick={(e) => handleDelete(e, agent.id)}
-                        className="rounded p-1 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-500 dark:text-[#52525b] dark:hover:text-red-400"
+                        className="rounded p-1 text-faint transition-colors hover:bg-danger-soft hover:text-danger"
                         title="Delete permanently"
                       >
                         <svg
@@ -190,7 +186,7 @@ export function AgentTable({ agents, isAdmin, onAgentDeleted }: AgentTableProps)
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 20 20"
                     fill="currentColor"
-                    className="h-5 w-5 text-gray-400 dark:text-[#52525b]"
+                    className="h-5 w-5 text-faint"
                   >
                     <path
                       fillRule="evenodd"
