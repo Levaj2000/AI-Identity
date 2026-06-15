@@ -80,10 +80,14 @@ class TestOcsfApiActivityMapping:
         assert att["prev_entry_hash"] == "globalprev"
         assert "chain_uid" not in att
 
-    def test_unmapped_carries_producer_facts(self):
+    def test_latency_maps_to_duration(self):
+        ev = audit_log_to_ocsf(_row())
+        assert ev["duration"] == 90  # OCSF base duration (ms), not unmapped
+        assert "latency_ms" not in ev["unmapped"]
+
+    def test_unmapped_carries_homeless_producer_facts(self):
         um = audit_log_to_ocsf(_row())["unmapped"]
         assert um["policy_version"] == 36
-        assert um["latency_ms"] == 90
         assert um["org_chain_seq"] == 143
 
     def test_severity_elevated_on_deny(self):
