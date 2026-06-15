@@ -46,15 +46,13 @@ export function TagInput({
     }
   }
 
-  const borderColor = error
-    ? 'border-red-500 dark:border-red-500'
-    : 'border-gray-300 dark:border-[#2a2a2d] focus-within:border-[#A6DAFF] dark:focus-within:border-[#A6DAFF]'
+  const borderColor = error ? 'border-danger' : 'border-line-strong focus-within:border-brand'
 
   return (
     <div>
       {/* Container styled as a single input field */}
       <div
-        className={`flex min-h-[2.5rem] flex-wrap items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 transition-colors dark:bg-[#04070D] ${borderColor}`}
+        className={`flex min-h-[2.5rem] flex-wrap items-center gap-1.5 rounded-lg border bg-canvas px-3 py-1.5 transition-colors ${borderColor}`}
         onClick={() => inputRef.current?.focus()}
       >
         {/* Tags */}
@@ -63,7 +61,7 @@ export function TagInput({
             <span
               key={tag}
               role="listitem"
-              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-gray-100 px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-gray-600 dark:border-[#2a2a2d] dark:bg-[#1a1a1d] dark:text-[#a1a1aa]"
+              className="inline-flex items-center gap-1 rounded-md border border-line bg-elevated px-2 py-0.5 font-[JetBrains_Mono,monospace] text-xs text-muted"
             >
               {tag}
               <button
@@ -72,7 +70,7 @@ export function TagInput({
                   e.stopPropagation()
                   removeTag(i)
                 }}
-                className="ml-0.5 text-gray-400 transition-colors hover:text-red-500 dark:text-[#71717a] dark:hover:text-red-400"
+                className="ml-0.5 text-subtle transition-colors hover:text-danger"
                 aria-label={`Remove ${tag}`}
               >
                 <svg
@@ -97,13 +95,13 @@ export function TagInput({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={tags.length === 0 ? placeholder : ''}
-          className="min-w-[120px] flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400 dark:text-[#e4e4e7] dark:placeholder:text-[#52525b]"
+          className="min-w-[120px] flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-faint"
         />
       </div>
 
       {/* Error message */}
       {error && (
-        <p className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+        <p className="mt-1 text-sm text-danger" role="alert">
           {error}
         </p>
       )}
