@@ -1177,18 +1177,24 @@ This **Case File** is a self-contained evidence package: a signed forensic repor
 tool to verify it yourself, offline. Everything you need is in THIS folder — no internet,
 no other downloads.
 
-## Easiest: double-click `verify.command` (macOS)
+## Easiest: run the bundled verifier
 
 1. Copy your verification key from the dashboard: **Organization -> Forensics** (copy button).
-2. **Double-click `verify.command`** in this folder. A terminal opens.
+2. Open a terminal **in this folder** and run:
+
+       bash verify.command
+
 3. Paste the key when asked, press Return. You'll see **Chain INTACT** and **Signature: VALID**.
 
-Nothing to type — it finds the case file itself. (First time, macOS may ask you to confirm
-opening it: right-click -> Open -> Open.)
+`verify.command` finds the case file itself — nothing else to type.
 
-## Or run it by hand (any OS)
+> **Prefer double-clicking `verify.command`?** It runs the same thing, but because it was
+> downloaded, macOS blocks it the first time ("cannot verify..."). To allow it once:
+> **right-click `verify.command` -> Open -> Open**, or **System Settings -> Privacy & Security
+> -> Open Anyway**. After that, double-click works. (Running `bash verify.command` above skips
+> this entirely.)
 
-Open a terminal **in this folder** and run:
+## Or run the steps by hand (any OS)
 
     export AI_IDENTITY_HMAC_KEY="paste-your-key-here"
     python3 ai_identity_verify.py chain case-file-*.json      # -> Chain INTACT
