@@ -37,6 +37,7 @@ import {
   ForensicsAlertBanner,
   type ForensicsAlert,
 } from '../components/forensics/ForensicsAlertBanner'
+import { FilterSummaryBar, type FilterChip } from '../components/forensics/FilterSummaryBar'
 import { detectAnomalies } from '../components/forensics/anomalyDetection'
 import { HashChainView } from '../components/forensics/HashChainView'
 
@@ -56,6 +57,26 @@ function decisionBadge(d: string) {
   if (d === 'allow' || d === 'allowed') return 'bg-success-soft text-success border-success'
   if (d === 'deny' || d === 'denied') return 'bg-danger-soft text-danger border-danger'
   return 'bg-warning-soft text-warning border-warning'
+}
+
+/** Convert a Date to a datetime-local input value in *local* time. Used by
+ *  the alert drill-down so the narrowed window actually brackets the anchor.
+ *  (defaultStartDate/defaultEndDate use UTC wall-clock — a pre-existing quirk
+ *  we don't touch here.) */
+function toLocalDatetimeInput(d: Date): string {
+  const off = d.getTimezoneOffset() * 60000
+  return new Date(d.getTime() - off).toISOString().slice(0, 16)
+}
+
+/** Compact label for a datetime-local value (e.g. "Apr 9, 2:39 AM"). */
+function shortDateLabel(local: string): string {
+  if (!local) return '—'
+  return new Date(local).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 /** Default to last 7 days. */
@@ -79,6 +100,16 @@ export function ForensicsPage() {
   const [selectedAgent, setSelectedAgent] = useState<string>('')
   const [startDate, setStartDate] = useState(defaultStartDate())
   const [endDate, setEndDate] = useState(defaultEndDate())
+
+  // Initial (default) window, frozen once at mount. The drill-down narrows the
+  // window; comparing against this freeze lets the summary bar show a clearable
+  // "window" chip only when the analyst has moved off the default 7-day view.
+  const defaultWindow = useRef({ start: defaultStartDate(), end: defaultEndDate() })
+  const resetWindow = useCallback(() => {
+    setStartDate(defaultWindow.current.start)
+    setEndDate(defaultWindow.current.end)
+    setOffset(0)
+  }, [])
   const [filterDecision, setFilterDecision] = useState<string>('')
   const [filterEndpoint, setFilterEndpoint] = useState<string>('')
   const [filterActionType, setFilterActionType] = useState<string>('')
@@ -521,6 +552,23 @@ export function ForensicsPage() {
     [entries, runSummary],
   )
 
+  /** Drill into a deny cluster: narrow the table to the incident window, flip
+   *  the decision filter to denied, and pin the AI brief. The brief itself
+   *  re-gathers the exact ±60s denies from `entries`, so the window narrowing
+   *  here is purely the visual half of the drill-down. */
+  const handleInvestigateCluster = useCallback(
+    (anchor: AuditLogEntry) => {
+      const t = new Date(anchor.created_at).getTime()
+      const MARGIN = 120_000 // ±2 min: cluster spans 60s; show a little context
+      setStartDate(toLocalDatetimeInput(new Date(t - MARGIN)))
+      setEndDate(toLocalDatetimeInput(new Date(t + MARGIN)))
+      setFilterDecision('denied')
+      setOffset(0)
+      handleExplainAnomaly(anchor, 'deny_cluster')
+    },
+    [handleExplainAnomaly],
+  )
+
   /** Explain a single event from the EventDetailDrawer. */
   const handleExplainEvent = useCallback(
     (event: AuditLogEntry) => {
@@ -676,9 +724,9 @@ export function ForensicsPage() {
         severity: 'high',
         icon: '🚨',
         title: `Deny cluster detected — ${cnt} denies within 60s`,
-        description: `Anchor: ${new Date(anchorIso).toLocaleString()}. Click to ask the AI for the likely root cause and remediation.`,
+        description: `Anchor: ${new Date(anchorIso).toLocaleString()}. Narrows the table to this window and asks the AI for likely root cause + remediation.`,
         ctaLabel: 'Investigate cluster',
-        onCTA: () => handleExplainAnomaly(anchor, 'deny_cluster'),
+        onCTA: () => handleInvestigateCluster(anchor),
       })
     }
 
@@ -730,7 +778,7 @@ export function ForensicsPage() {
     chainValid,
     chainMessage,
     dismissedAlerts,
-    handleExplainAnomaly,
+    handleInvestigateCluster,
     handleSpotAnomalies,
   ])
 
@@ -740,6 +788,112 @@ export function ForensicsPage() {
    *  the lens menu in that case. Medium banners (perf anomalies) cover only
    *  one intent so the lens menu stays available. */
   const hasHighSeverityAlert = useMemo(() => alerts.some((a) => a.severity === 'high'), [alerts])
+
+  // ── Filter summary bar ────────────────────────────────────────
+
+  /** Window readout, always shown (e.g. "Apr 9, 2:39 AM → Jun 16, 2:39 AM"). */
+  const windowLabel = `${shortDateLabel(startDate)} → ${shortDateLabel(endDate)}`
+
+  /** Removable chips for every active (non-default) filter. The date window is
+   *  a chip only when narrowed off the frozen default — clearing it restores
+   *  the default 7-day view (so an alert drill-down is reversible). */
+  const filterChips = useMemo<FilterChip[]>(() => {
+    const out: FilterChip[] = []
+    const windowIsCustom =
+      startDate !== defaultWindow.current.start || endDate !== defaultWindow.current.end
+    if (windowIsCustom) {
+      out.push({ key: 'window', label: `Window: ${windowLabel}`, onClear: resetWindow })
+    }
+    if (selectedAgent) {
+      const a = agents.find((x) => x.id === selectedAgent)
+      out.push({
+        key: 'agent',
+        label: `Agent: ${a ? a.name : selectedAgent.slice(0, 8)}`,
+        onClear: () => {
+          setSelectedAgent('')
+          setOffset(0)
+        },
+      })
+    }
+    if (filterDecision) {
+      out.push({
+        key: 'decision',
+        label: `Decision: ${filterDecision}`,
+        onClear: () => {
+          setFilterDecision('')
+          setOffset(0)
+        },
+      })
+    }
+    if (filterEndpoint) {
+      out.push({
+        key: 'endpoint',
+        label: `Endpoint: ${filterEndpoint}`,
+        onClear: () => {
+          setFilterEndpoint('')
+          setOffset(0)
+        },
+      })
+    }
+    if (filterActionType) {
+      out.push({
+        key: 'action type',
+        label: `Action: ${filterActionType}`,
+        onClear: () => {
+          setFilterActionType('')
+          setOffset(0)
+        },
+      })
+    }
+    if (filterModel) {
+      out.push({
+        key: 'model',
+        label: `Model: ${filterModel}`,
+        onClear: () => {
+          setFilterModel('')
+          setOffset(0)
+        },
+      })
+    }
+    if (filterCostMin || filterCostMax) {
+      out.push({
+        key: 'cost',
+        label: `Cost: $${filterCostMin || '0'}–${filterCostMax ? `$${filterCostMax}` : '∞'}`,
+        onClear: () => {
+          setFilterCostMin('')
+          setFilterCostMax('')
+          setOffset(0)
+        },
+      })
+    }
+    return out
+  }, [
+    startDate,
+    endDate,
+    windowLabel,
+    resetWindow,
+    selectedAgent,
+    agents,
+    filterDecision,
+    filterEndpoint,
+    filterActionType,
+    filterModel,
+    filterCostMin,
+    filterCostMax,
+  ])
+
+  /** Reset every filter and restore the default 7-day window — returns the page
+   *  to its initial view in one click. */
+  const handleClearAllFilters = useCallback(() => {
+    setSelectedAgent('')
+    setFilterDecision('')
+    setFilterEndpoint('')
+    setFilterActionType('')
+    setFilterModel('')
+    setFilterCostMin('')
+    setFilterCostMax('')
+    resetWindow()
+  }, [resetWindow])
 
   // ── Render ────────────────────────────────────────────────────
 
@@ -971,6 +1125,14 @@ export function ForensicsPage() {
       {/* Proactive anomaly alerts */}
       <ForensicsAlertBanner alerts={alerts} onDismiss={handleDismissAlert} />
 
+      {/* Persistent filter-state summary — window is always visible */}
+      <FilterSummaryBar
+        total={total}
+        windowLabel={windowLabel}
+        chips={filterChips}
+        onClearAll={handleClearAllFilters}
+      />
+
       {/* Filters */}
       <div className="bg-surface border border-line rounded-xl p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -1197,11 +1359,8 @@ export function ForensicsPage() {
         </div>
       )}
 
-      {/* View Toggle + Results Count */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-subtle">
-          {total.toLocaleString()} event{total !== 1 ? 's' : ''} found
-        </div>
+      {/* View Toggle (results count now lives in the filter summary bar) */}
+      <div className="flex items-center justify-end">
         <div className="flex items-center gap-1 bg-elevated rounded-lg p-0.5 border border-line">
           <button
             onClick={() => setViewMode('timeline')}
