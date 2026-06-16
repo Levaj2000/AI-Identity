@@ -26,6 +26,7 @@ import {
   downloadVerifyBundle,
   verifyAuditChain,
 } from '../services/api/forensics'
+import { CaseFileVerifyPanel } from '../components/forensics/CaseFileVerifyPanel'
 import { ExportMenu } from '../components/forensics/ExportMenu'
 import { ForensicsTimeline } from '../components/forensics/ForensicsTimeline'
 import { IncidentReconstructModal } from '../components/forensics/IncidentReconstructModal'
@@ -744,6 +745,9 @@ export function ForensicsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Drag-and-drop verifier — drop a downloaded Case File, no CLI needed */}
+      <CaseFileVerifyPanel />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

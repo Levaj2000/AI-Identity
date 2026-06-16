@@ -130,6 +130,52 @@ class TestReportSignatureUsesOrgKey:
         assert expected == body["report_signature"]
 
 
+# ── Web verifier endpoint (drag-drop → server runs the real CLI) ─────
+
+
+class TestVerifyEndpoint:
+    """The endpoint runs the SAME cli/ai_identity_verify.py a customer runs
+    offline. The chain path can't be exercised under SQLite (it stores naive
+    datetimes, which the offline timestamp normalizer can't round-trip — a test
+    artifact, not an endpoint bug; production uses tz-aware timestamptz). So here
+    we prove the wiring + the org-key report-signature path; the chain INTACT
+    path is validated against real Postgres exports."""
+
+    def test_verify_endpoint_wiring_and_signature(self, client, db_session):
+        import json as _json
+
+        agent_a, _, _ = _seed(db_session)  # ORG_A has a forensic_verify_key
+        for i in range(3):
+            _entry(db_session, agent_a.id, f"/v1/{i}")
+
+        report = client.get(
+            f"/api/v1/audit/report?agent_id={agent_a.id}&{WINDOW}&format=json",
+            headers={"X-API-Key": OWNER_A},
+        ).json()
+
+        resp = client.post(
+            "/api/v1/audit/verify",
+            files={"file": ("case-file.json", _json.dumps(report).encode(), "application/json")},
+            headers={"X-API-Key": OWNER_A},
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        # The CLI actually ran and returned structured results for both commands.
+        assert body["chain"].get("result") in ("valid", "broken"), body
+        assert body["report"].get("result") in ("valid", "invalid"), body
+        # Report signature verifies with the org forensic key (the #325 fix).
+        assert body["signature_valid"] is True, body
+
+    def test_verify_rejects_non_json(self, client, db_session):
+        _seed(db_session)
+        resp = client.post(
+            "/api/v1/audit/verify",
+            files={"file": ("x.json", b"not json at all", "application/json")},
+            headers={"X-API-Key": OWNER_A},
+        )
+        assert resp.status_code == 400
+
+
 # ── Backward compatibility: agent scope unchanged ────────────────────
 
 
