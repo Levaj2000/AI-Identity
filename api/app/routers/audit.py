@@ -10,14 +10,18 @@ import csv
 import io
 import json
 import logging
+import os
 import pathlib
 import re
+import subprocess
+import sys
+import tempfile
 import uuid
 import zipfile
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -1354,6 +1358,80 @@ def audit_report_bundle(
         media_type="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{bundle_filename}"'},
     )
+
+
+def _run_verifier(tmp_path: str, command: str, org_key: str) -> dict:
+    """Run the bundled CLI verifier (cli/ai_identity_verify.py) as a subprocess
+    on a Case File and return its parsed --json result. Reusing the exact tool a
+    customer runs offline guarantees the web result can never drift from the CLI.
+    """
+    env = {"AI_IDENTITY_HMAC_KEY": org_key, "NO_COLOR": "1", "PATH": os.environ.get("PATH", "")}
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(_CLI_SCRIPT_PATH), "--json", command, tmp_path],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return {"result": "error", "error": "verification timed out"}
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        logger.warning("verifier %s produced non-JSON output: %s", command, proc.stderr[:300])
+        return {"result": "error", "error": (proc.stderr or "verifier error").strip()[:300]}
+
+
+@router.post(
+    "/verify",
+    summary="Verify an uploaded Case File (server-side, same tool as the offline CLI)",
+    tags=["forensics"],
+)
+async def verify_case_file(
+    file: UploadFile = File(..., description="A Case File report .json"),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Verify a Case File JSON the user drops in, using the **same**
+    `ai_identity_verify.py` a customer runs offline plus the caller's org
+    forensic key — so the dashboard shows an authoritative INTACT/TAMPERED with
+    no CLI, no key entry, and no chance of drift from the offline verifier.
+    """
+    if not _CLI_SCRIPT_PATH.exists():
+        raise HTTPException(status_code=500, detail="Verifier unavailable on the server.")
+
+    org_key = _resolve_org_hmac_key(db, user.org_id) if user.org_id else None
+    if not org_key:
+        raise HTTPException(
+            status_code=400,
+            detail="No organization forensic key is configured for verification.",
+        )
+
+    content = await file.read()
+    try:
+        json.loads(content)
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        raise HTTPException(
+            status_code=400, detail="That file is not a valid Case File (JSON)."
+        ) from None
+
+    with tempfile.NamedTemporaryFile("wb", suffix=".json") as tf:
+        tf.write(content)
+        tf.flush()
+        chain = _run_verifier(tf.name, "chain", org_key)
+        report = _run_verifier(tf.name, "report", org_key)
+
+    chain_ok = chain.get("result") == "valid"
+    report_ok = report.get("result") == "valid"
+    return {
+        "verified": chain_ok and report_ok,
+        "chain_intact": chain_ok,
+        "signature_valid": report_ok,
+        "filename": file.filename,
+        "chain": chain,
+        "report": report,
+    }
 
 
 # ── Chain Verification ──────────────────────────────────────────────
