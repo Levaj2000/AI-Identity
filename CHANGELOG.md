@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Drag-and-drop Case File verifier in the dashboard (Case File page): drop a downloaded Case File `.json` and it verifies server-side using the **same** `ai_identity_verify.py` an offline auditor runs, with your org key — a big VERIFIED / NOT VERIFIED result, no terminal, no key entry, no macOS Gatekeeper. (#332)
 - Case File bundle ships a double-click `verify.command` (macOS): it cd's to its own folder, auto-finds the case file, prompts only for the key, and runs both the chain and signature checks — so verifying is download → unzip → double-click → paste key, with no path, glob, or filename to type. (#328)
 
 ### Fixed
