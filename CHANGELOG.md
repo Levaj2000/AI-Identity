@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- **Case File page UX** — the filter state is now always legible and incidents are one click from investigation. A persistent summary bar shows the active window ("Showing N events · <range>") plus a removable chip per active filter and a "Clear all", so the screen is never ambiguously empty after a bad date range. The "Deny cluster detected" alert's **Investigate cluster** button now narrows the table to the cluster window (anchor ±2 min) and flips Decision→Denied before pinning the AI brief — and because both surface as clearable chips, the drill-down is reversible in one click.
 - Drag-and-drop Case File verifier in the dashboard (Case File page): drop a downloaded Case File `.json` and it verifies server-side using the **same** `ai_identity_verify.py` an offline auditor runs, with your org key — a big VERIFIED / NOT VERIFIED result, no terminal, no key entry, no macOS Gatekeeper. (#332)
 - Case File bundle ships a double-click `verify.command` (macOS): it cd's to its own folder, auto-finds the case file, prompts only for the key, and runs both the chain and signature checks — so verifying is download → unzip → double-click → paste key, with no path, glob, or filename to type. (#328)
 
