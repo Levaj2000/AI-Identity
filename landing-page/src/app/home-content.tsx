@@ -5,6 +5,7 @@ import Link from "next/link";
 import BadgeFramerComponent from "@/framer/elements/badge";
 import { GoogleForStartupsStrip } from "@/components/GoogleForStartupsBadge";
 import { MongoDBForStartupsStrip } from "@/components/MongoDBForStartupsBadge";
+import { StandardsStrip } from "@/components/StandardsBadge";
 import { pillars, PILLARS_HEADING, PILLARS_SUBHEADING } from "@/data/pillars";
 
 const steps = [
@@ -402,11 +403,15 @@ export default function HomeContent() {
                 Get early access, shape the v1.0 spec, and lock in preferred pricing.
               </p>
             </div>
-            <div className="mt-6 flex flex-wrap justify-center gap-6 text-xs uppercase tracking-wider font-medium">
-              <a href="/security" className="px-3 py-1.5 rounded-full border border-[rgba(166,218,255,0.15)] text-[rgba(213,219,230,0.6)] hover:text-[rgba(213,219,230,0.85)] hover:border-[rgba(166,218,255,0.3)] transition-all">SOC 2 Type II</a>
+            {/* Compliance posture — honest "aligned/ready" framing, not certification claims.
+                SOC 2 Type II audit + ISO 27001 cert are on the roadmap (see /about, /product),
+                so we don't badge them as held. Labels mirror the /security page statuses. */}
+            <p className="mt-8 mb-3 text-[10px] uppercase tracking-[0.2em] text-[rgba(213,219,230,0.4)]">Compliance posture</p>
+            <div className="flex flex-wrap justify-center gap-6 text-xs uppercase tracking-wider font-medium">
+              <a href="/security" className="px-3 py-1.5 rounded-full border border-[rgba(166,218,255,0.15)] text-[rgba(213,219,230,0.6)] hover:text-[rgba(213,219,230,0.85)] hover:border-[rgba(166,218,255,0.3)] transition-all">SOC 2 Aligned</a>
               <a href="/eu-ai-act-checklist" className="px-3 py-1.5 rounded-full border border-[rgba(166,218,255,0.15)] text-[rgba(213,219,230,0.6)] hover:text-[rgba(213,219,230,0.85)] hover:border-[rgba(166,218,255,0.3)] transition-all">EU AI Act Ready</a>
-              <a href="/privacy" className="px-3 py-1.5 rounded-full border border-[rgba(166,218,255,0.15)] text-[rgba(213,219,230,0.6)] hover:text-[rgba(213,219,230,0.85)] hover:border-[rgba(166,218,255,0.3)] transition-all">GDPR Compliant</a>
-              <a href="/security" className="px-3 py-1.5 rounded-full border border-[rgba(166,218,255,0.15)] text-[rgba(213,219,230,0.6)] hover:text-[rgba(213,219,230,0.85)] hover:border-[rgba(166,218,255,0.3)] transition-all">ISO 27001</a>
+              <a href="/security" className="px-3 py-1.5 rounded-full border border-[rgba(166,218,255,0.15)] text-[rgba(213,219,230,0.6)] hover:text-[rgba(213,219,230,0.85)] hover:border-[rgba(166,218,255,0.3)] transition-all">NIST AI RMF</a>
+              <a href="/privacy" className="px-3 py-1.5 rounded-full border border-[rgba(166,218,255,0.15)] text-[rgba(213,219,230,0.6)] hover:text-[rgba(213,219,230,0.85)] hover:border-[rgba(166,218,255,0.3)] transition-all">GDPR Ready</a>
             </div>
 
             {/* Scroll indicator — down chevron like Landio */}
@@ -418,6 +423,9 @@ export default function HomeContent() {
           </div>
         </div>
       </section>
+
+      {/* ── Built on open standards — OCSF + CoSAI WS4 (strongest, most differentiated trust signal) ── */}
+      <StandardsStrip />
 
       {/* ── Backed by — Google for Startups Cloud Program ── */}
       <GoogleForStartupsStrip />
