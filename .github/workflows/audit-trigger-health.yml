@@ -38,4 +38,6 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL_RO }}
           CEO_API_KEY: ${{ secrets.CEO_API_KEY }}
           CEO_API_URL: ${{ secrets.CEO_DASHBOARD_API }}
+          # Dogfood: X-Agent-Key for a "security"-role AI Identity agent (author == role).
+          CEO_AGENT_KEY: ${{ secrets.DASHBOARD_AGENT_KEY_SECURITY }}
         run: python scripts/check_audit_trigger.py
