@@ -47,6 +47,17 @@ def _api_key() -> str:
     return key
 
 
+def _headers() -> dict:
+    h = {"X-API-Key": _api_key(), "Content-Type": "application/json"}
+    # Dogfood enforcement (CEO Dashboard): a persona-authored briefing requires a
+    # verified X-Agent-Key whose AI Identity agent role matches the author ("ceo").
+    # Sent when CEO_AGENT_KEY is provisioned (CI secret); omitted locally (no-op).
+    agent_key = os.environ.get("CEO_AGENT_KEY")
+    if agent_key:
+        h["X-Agent-Key"] = agent_key
+    return h
+
+
 def _request(method: str, path: str, body: dict | None = None) -> Any:
     url = f"{API_BASE}{path}"
     data = dumps(body).encode() if body is not None else None
@@ -54,7 +65,7 @@ def _request(method: str, path: str, body: dict | None = None) -> Any:
         url,
         data=data,
         method=method,
-        headers={"X-API-Key": _api_key(), "Content-Type": "application/json"},
+        headers=_headers(),
     )
     try:
         with ureq.urlopen(req, timeout=20) as r:
