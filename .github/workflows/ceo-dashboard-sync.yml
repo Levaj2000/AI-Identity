@@ -34,6 +34,8 @@ jobs:
         env:
           CEO_API_KEY: ${{ secrets.CEO_API_KEY }}
           CEO_API_URL: ${{ secrets.CEO_DASHBOARD_API }}
+          # Dogfood: X-Agent-Key for a "ceo"-role AI Identity agent (author == role).
+          CEO_AGENT_KEY: ${{ secrets.DASHBOARD_AGENT_KEY_CEO }}
         run: python scripts/sync_calendar_from_dashboard.py
 
   pipeline:
@@ -54,6 +56,8 @@ jobs:
         env:
           CEO_API_KEY: ${{ secrets.CEO_API_KEY }}
           CEO_API_URL: ${{ secrets.CEO_DASHBOARD_API }}
+          # Dogfood: X-Agent-Key for a "sales"-role AI Identity agent (author == role).
+          CEO_AGENT_KEY: ${{ secrets.DASHBOARD_AGENT_KEY_SALES }}
         run: python scripts/export_pipeline_snapshot.py
       - name: Commit weekly CSV
         run: |
@@ -85,4 +89,6 @@ jobs:
         env:
           CEO_API_KEY: ${{ secrets.CEO_API_KEY }}
           CEO_API_URL: ${{ secrets.CEO_DASHBOARD_API }}
+          # Dogfood: X-Agent-Key for a "pm"-role AI Identity agent (author == role).
+          CEO_AGENT_KEY: ${{ secrets.DASHBOARD_AGENT_KEY_PM }}
         run: python scripts/sweep_stale_decisions.py
