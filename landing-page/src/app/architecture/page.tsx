@@ -3,7 +3,7 @@ import { generatePageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = generatePageMetadata({
   title: "AI Agent Security Architecture: Gateway & Zero Trust",
-  description: "Explore AI Identity's gateway architecture: per-agent credential vaults, JWT auth, AES-256 encryption, HMAC-SHA256 audit chains, and row-level tenant isolation.",
+  description: "Explore AI Identity's gateway architecture: per-agent credential vaults, JWT auth, AES-256 encryption, signed OCSF audit records you can verify independently, and row-level tenant isolation.",
   path: "/architecture",
 });
 
@@ -85,7 +85,9 @@ export default function Architecture() {
         <p className="text-sm text-gray-400 text-center mb-10 max-w-[560px] mx-auto">
           Every AI agent request flows through the AI Identity Gateway before
           reaching any LLM provider. The gateway enforces policy, manages
-          credentials, and writes an immutable audit record.
+          credentials, and writes a tamper-evident, OCSF-formatted audit
+          record — plus a signed attestation anyone can verify offline, with
+          nothing but a public key.
         </p>
 
         <div className="relative bg-white/[0.02] border border-white/10 rounded-2xl p-6 md:p-10 overflow-x-auto">
@@ -100,13 +102,19 @@ export default function Architecture() {
   │                  │       │         │                                                       │       └───────────────────┘
   └──────────────────┘       │         ▼                                                       │
                              │  ┌──────────────────────────────────────────────────────────┐   │       ┌───────────────────┐
-                             │  │                  Audit Trail (HMAC Chain)                 │   │       │                   │
-                             │  │   Every request → tamper-evident, cryptographically       │   │       │   Management      │
-                             │  │   linked record with HMAC-SHA256 chain integrity          │   │       │   Dashboard       │
+                             │  │             Audit Trail · OCSF Event Records              │   │       │                   │
+                             │  │    Every request → hash-linked, tamper-evident record     │   │       │   Management      │
+                             │  │       HMAC-SHA256 chain + ECDSA-signed attestation        │   │       │   Dashboard       │
                              │  └──────────────────────────────────────────────────────────┘   │       │                   │
                              │                                                                 │       │   Policies, Keys, │
-                             └─────────────────────────────────────────────────────────────────┘       │   Analytics       │
-                                                                                                       └───────────────────┘`}
+                             └────────────────────────────────┬────────────────────────────────┘       │   Analytics       │
+                                                              │                                        └───────────────────┘
+                                                              ▼
+                                    ┌─────────────────────────┴────────────────────────┐
+                                    │         Verifiable Evidence · Case File          │
+                                    │ Export a signed OCSF bundle anyone can verify —  │
+                                    │       no vendor, no trust in us required.        │
+                                    └──────────────────────────────────────────────────┘`}
           </div>
           <div className="md:hidden font-mono text-[11px] leading-[1.7] text-gray-300 whitespace-pre select-none">
 {`
@@ -136,7 +144,13 @@ export default function Architecture() {
 
   ┌──────────────────┐
   │  Audit Trail     │
-  │  (HMAC Chain)    │
+  │  (OCSF · chain)  │
+  └────────┬─────────┘
+           ▼
+  ┌──────────────────┐
+  │  Verifiable      │
+  │  Evidence ·      │
+  │  Case File       │
   └──────────────────┘
 
   ┌──────────────────┐
@@ -148,7 +162,14 @@ export default function Architecture() {
         <div className="mt-6 flex flex-wrap gap-6 justify-center text-xs text-gray-500">
           <span className="flex items-center gap-2"><span className="w-6 h-px bg-[rgb(166,218,255)]" /> Request flow</span>
           <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[rgb(166,218,255)]/60" /> Encrypted at rest & in transit</span>
-          <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-white/20" /> Immutable audit record</span>
+          <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-white/20" /> Signed OCSF evidence, verifiable offline</span>
+        </div>
+
+        <div className="mt-8 text-center">
+          <a href="/forensics" className="inline-flex items-center gap-2 text-sm font-semibold text-[rgb(166,218,255)] hover:gap-3 transition-all">
+            See a verifiable Case File
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+          </a>
         </div>
       </Section>
 
@@ -157,14 +178,17 @@ export default function Architecture() {
       {/* Key Architectural Properties */}
       <Section id="properties">
         <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 text-center">Key Architectural Properties</h2>
-        <p className="text-sm text-gray-400 text-center mb-12 max-w-[560px] mx-auto">The design decisions that make AI Identity suitable for enterprise-grade, compliance-sensitive environments.</p>
+        <p className="text-sm text-gray-400 text-center mb-12 max-w-[560px] mx-auto">The design decisions that make AI Identity enterprise-grade, compliance-sensitive, and forensically defensible — every agent action provable after the fact.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <Card icon={icons.alertTriangle} title="Fail-Closed Enforcement" description="Any error in the policy evaluation pipeline results in an automatic deny. Agents cannot bypass controls, even during partial outages." />
-          <Card icon={icons.link} title="Tamper-Evident Audit Trail" description="Every audit record is cryptographically chained using HMAC-SHA256. If any record is altered, the chain breaks — making tampering detectable and provable." />
-          <Card icon={icons.key} title="Zero-Trust Key Separation" description="Runtime keys used by agents are fully separated from administrative keys. Compromising one does not compromise the other." />
-          <Card icon={icons.lock} title="Credential Vault" description="LLM provider API keys are stored in an encrypted vault. Agents never see or handle raw credentials — the gateway injects them at request time." />
-          <Card icon={icons.users} title="Tenant Isolation" description="Row-level security ensures each tenant's data is completely isolated. One customer's agents, policies, and audit logs can never leak into another's." />
           <Card icon={icons.zap} title="Real-Time Policy Enforcement" description="Policy decisions are evaluated inline with less than 50ms of added latency. No queued evaluation, no eventual consistency — enforcement happens before the request proceeds." />
+          <Card icon={icons.lock} title="Credential Vault" description="LLM provider API keys are stored in an encrypted vault. Agents never see or handle raw credentials — the gateway injects them at request time." />
+          <Card icon={icons.key} title="Zero-Trust Key Separation" description="Runtime keys used by agents are fully separated from administrative keys. Compromising one does not compromise the other." />
+          <Card icon={icons.users} title="Tenant Isolation" description="Row-level security ensures each tenant's data is completely isolated. One customer's agents, policies, and audit logs can never leak into another's." />
+          <Card icon={icons.link} title="Tamper-Evident Audit Chain" description="Every event is cryptographically chained with HMAC-SHA256. Alter any record and the chain breaks — making tampering detectable and provable." />
+          <Card icon={icons.layers} title="OCSF-Native Records" description="Every audit event is emitted in the Open Cybersecurity Schema Framework — the open standard we contribute to upstream. Records drop straight into Splunk, your SIEM, or any OCSF tooling, no proprietary format to reverse-engineer." />
+          <Card icon={icons.check} title="Independently Verifiable Evidence" description="Each forensic export carries an ECDSA-signed DSSE attestation. Auditors verify it completely offline with nothing but a public key — no access to our systems, no trust in the vendor required." />
+          <Card icon={icons.file} title="Portable Case File Export" description="Package any incident into a self-contained Case File — signed OCSF records plus a drag-and-drop verifier. Hand it to counsel, an auditor, or a regulator and they can confirm integrity themselves." />
         </div>
       </Section>
 
@@ -173,7 +197,7 @@ export default function Architecture() {
       {/* Security Layers */}
       <Section id="security-layers">
         <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 text-center">Security Layers</h2>
-        <p className="text-sm text-gray-400 text-center mb-12 max-w-[560px] mx-auto">Defense in depth — multiple independent layers ensure no single failure compromises the system.</p>
+        <p className="text-sm text-gray-400 text-center mb-12 max-w-[560px] mx-auto">Defense in depth — multiple independent layers ensure no single failure compromises the system, from the first byte on the wire to the evidence an auditor verifies months later.</p>
         <div className="relative max-w-[700px] mx-auto">
           <div className="absolute left-5 top-0 bottom-0 w-px bg-gradient-to-b from-[rgb(166,218,255)]/40 via-[rgb(166,218,255)]/20 to-transparent hidden sm:block" />
           {[
@@ -182,7 +206,9 @@ export default function Architecture() {
             { icon: icons.clock, title: "Rate Limiting", desc: "Configurable per-agent and per-tenant rate limits prevent abuse and protect downstream LLM provider quotas." },
             { icon: icons.layers, title: "Policy Enforcement", desc: "Fine-grained rules control which agents can access which models, with what parameters, and under what conditions." },
             { icon: icons.database, title: "Encrypted Credential Storage", desc: "All sensitive credentials are encrypted at rest using AES-256. Decryption only occurs in-memory at request time." },
-            { icon: icons.file, title: "Immutable Audit Chain", desc: "HMAC-SHA256 chained records create a tamper-evident log. Any modification to historical records is cryptographically detectable." },
+            { icon: icons.file, title: "OCSF-Native Audit Events", desc: "Every action is recorded as an Open Cybersecurity Schema Framework event — a vendor-neutral standard your SIEM already understands, no proprietary log format to parse." },
+            { icon: icons.link, title: "Tamper-Evident Audit Chain", desc: "Audit events are sequentially chained with HMAC-SHA256. Any modification to a historical record breaks the chain and is cryptographically detectable." },
+            { icon: icons.check, title: "Signed Forensic Attestation", desc: "Forensic exports are sealed in an ECDSA-signed DSSE envelope. Anyone can verify integrity and provenance offline with a public key — no access to AI Identity required." },
           ].map((layer, i) => (
             <div key={i} className="relative flex items-start gap-5 mb-8 last:mb-0 sm:pl-14">
               <div className="absolute left-[13px] top-3 w-[14px] h-[14px] rounded-full border-2 border-[rgb(166,218,255)]/40 bg-[rgb(4,7,13)] hidden sm:block" />
@@ -207,9 +233,9 @@ export default function Architecture() {
         <p className="text-sm text-gray-400 text-center mb-12 max-w-[560px] mx-auto">Built from the ground up to satisfy the requirements your security and compliance teams care about most.</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {[
-            { icon: icons.check, title: "SOC 2", desc: "Architectural principles aligned with SOC 2 Trust Services Criteria.", items: ["Logical access controls with key separation", "Immutable, tamper-evident audit trail", "Encrypted data at rest and in transit", "Tenant isolation with row-level security"] },
-            { icon: icons.shield, title: "NIST AI RMF", desc: "Designed to support the NIST AI Risk Management Framework principles.", items: ["Complete observability of AI agent actions", "Policy-based governance and enforcement", "Cryptographic integrity for accountability", "Fail-closed design for reliability"] },
-            { icon: icons.globe, title: "EU AI Act Ready", desc: "Infrastructure controls that support EU AI Act obligations for high-risk AI systems.", items: ["Human-in-the-loop policy overrides", "Full audit log for traceability", "Transparent enforcement decisions", "Data residency-aware architecture"] },
+            { icon: icons.check, title: "SOC 2", desc: "Architectural principles aligned with SOC 2 Trust Services Criteria.", items: ["Logical access controls with key separation", "Tamper-evident, independently verifiable audit trail", "Encrypted data at rest and in transit", "Tenant isolation with row-level security"] },
+            { icon: icons.shield, title: "NIST AI RMF", desc: "Designed to support the NIST AI Risk Management Framework principles.", items: ["Complete observability of AI agent actions", "Policy-based governance and enforcement", "Signed, verifiable evidence for accountability", "Fail-closed design for reliability"] },
+            { icon: icons.globe, title: "EU AI Act Ready", desc: "Infrastructure controls that support EU AI Act obligations for high-risk AI systems.", items: ["Human-in-the-loop policy overrides", "OCSF audit log for end-to-end traceability", "Transparent enforcement decisions", "Data residency-aware architecture"] },
           ].map((comp) => (
             <div key={comp.title} className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 hover:border-[rgb(166,218,255)]/30 transition-all">
               <div className="flex items-center gap-3 mb-4">
@@ -236,11 +262,14 @@ export default function Architecture() {
       <Section>
         <div className="text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Ready to see it in action?</h2>
-          <p className="text-sm text-gray-400 max-w-[480px] mx-auto mb-8">We'd love to walk you through a live demo and discuss how AI Identity fits into your stack.</p>
+          <p className="text-sm text-gray-400 max-w-[480px] mx-auto mb-8">Walk through a live demo, or verify a signed Case File yourself — no account, no trust required.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="https://dashboard.ai-identity.co/demo" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
               Live Demo
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+            </a>
+            <a href="/forensics" className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-white/20 text-white font-semibold rounded-xl hover:border-[rgb(166,218,255)]/40 hover:bg-[rgb(166,218,255)]/[0.05] transition-all">
+              Explore AI Forensics
             </a>
             <a href="/contact" className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-white/20 text-white font-semibold rounded-xl hover:border-[rgb(166,218,255)]/40 hover:bg-[rgb(166,218,255)]/[0.05] transition-all">
               Schedule a Call

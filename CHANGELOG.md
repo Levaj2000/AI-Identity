@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **`/architecture` page refreshed to reflect the verifiable-evidence story.** The system diagram (desktop + mobile) now frames the audit trail as OCSF event records and adds a downstream "Verifiable Evidence · Case File" node; Key Architectural Properties grew from 6 to 9 cards (added OCSF-Native Records, Independently Verifiable Evidence, Portable Case File Export); Security Layers added OCSF-Native Audit Events and Signed Forensic Attestation; compliance and CTA copy updated, with new links to `/forensics`. Independent-verifiability claims are tied strictly to the ECDSA-signed DSSE attestation (offline, public-key) — not the HMAC chain, which needs the shared key. Mandate Service and PQC deliberately omitted (pre-launch).
 - Homepage hero compliance badges reframed from certification claims to posture, under a "Compliance posture" label: SOC 2 Type II → SOC 2 Aligned, GDPR Compliant → GDPR Ready, ISO 27001 → NIST AI RMF (EU AI Act Ready kept). Labels now mirror the honest statuses on `/security` and no longer contradict the SOC 2 / ISO cert roadmap items on `/about` and `/product`. (#334)
 
 ### Added
