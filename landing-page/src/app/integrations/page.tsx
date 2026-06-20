@@ -11,7 +11,7 @@ export const metadata: Metadata = generatePageMetadata({
 
 const providers = [
   { name: "OpenAI", models: "GPT-4o, GPT-4o-mini, o1, o3" },
-  { name: "Anthropic", models: "Claude Sonnet 4, Claude Opus, Claude Haiku" },
+  { name: "Anthropic", models: "Claude Opus 4, Claude Sonnet 4, Claude Haiku 4" },
   { name: "Google", models: "Gemini 2.5 Pro, Gemini 2.5 Flash" },
   { name: "Cohere", models: "Command R+, Command R" },
   { name: "Mistral", models: "Mistral Large, Mistral Medium" },

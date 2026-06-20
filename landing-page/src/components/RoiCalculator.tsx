@@ -58,8 +58,11 @@ export default function RoiCalculator() {
   const monthlyRunaway = (runawayRisk / 100) * runawayCost;
   const totalMonthly = monthlySpend + monthlyWaste + monthlyRunaway;
   const annualExposure = totalMonthly * 12;
-  const annualWasteSaved = monthlyWaste * 12;
-  const annualRunawaySaved = monthlyRunaway * 12;
+  // Conservative recovery factor — controls reduce, but don't fully eliminate,
+  // waste and runaway exposure. Keeps the estimate honest rather than implying 100%.
+  const RECOVERY_RATE = 0.7;
+  const annualWasteSaved = monthlyWaste * 12 * RECOVERY_RATE;
+  const annualRunawaySaved = monthlyRunaway * 12 * RECOVERY_RATE;
   const totalAnnualSavings = annualWasteSaved + annualRunawaySaved;
 
   return (
@@ -201,11 +204,11 @@ export default function RoiCalculator() {
                   With AI Identity Spending Controls
                 </h3>
                 <div className="space-y-3">
-                  <SavingsLine label="Waste eliminated annually" value={fmtDollars(annualWasteSaved)} />
-                  <SavingsLine label="Runaway incidents prevented" value={fmtDollars(annualRunawaySaved)} />
+                  <SavingsLine label="Est. waste recovered annually" value={fmtDollars(annualWasteSaved)} />
+                  <SavingsLine label="Est. runaway exposure avoided" value={fmtDollars(annualRunawaySaved)} />
                   <div className="border-t border-white/10 pt-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-white">Total annual savings</span>
+                      <span className="text-sm font-semibold text-white">Est. total annual savings</span>
                       <span className="text-2xl font-extrabold text-[rgb(34,197,94)]">{fmtDollars(totalAnnualSavings)}</span>
                     </div>
                   </div>

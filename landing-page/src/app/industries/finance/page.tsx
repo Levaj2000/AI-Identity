@@ -188,7 +188,7 @@ export default function IndustryFinance() {
       <section className="pb-24 px-6 md:px-12">
         <div className="max-w-[800px] mx-auto">
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
-            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready for examiner-proof financial AI?</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-3">Ready for examiner-ready financial AI?</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
               We&apos;re onboarding design partners in regulated finance. Get hands-on access to the forensic audit chain, shape the v1.0 spec, lock in preferred pricing.
             </p>

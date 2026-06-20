@@ -61,7 +61,7 @@ const differentiators = [
   {
     title: "Immutable Audit Trails",
     description:
-      "HMAC-SHA256 hash-chained logs where altering any record breaks the chain. Independently verifiable. Courtroom-grade evidence, not vendor-trust-dependent log entries.",
+      "HMAC-SHA256 hash-chained logs where altering any record breaks the chain — sealed with a DSSE-signed attestation any auditor verifies offline, not vendor-trust-dependent log entries.",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />

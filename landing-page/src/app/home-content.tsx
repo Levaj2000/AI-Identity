@@ -113,7 +113,7 @@ const REPLAY_EVENTS: ReplayEvent[] = [
   { t: "00:00.000", type: "auth", label: "auth.verify", detail: "agent_id=support-bot-7 · key=aid_sk_7f3x...m9k2", status: "ok", hash: "9c4f...8a1e" },
   { t: "00:00.012", type: "policy", label: "policy.evaluate", detail: "scope=customer.read, tools=[search, summarize]", status: "ok", hash: "b2d9...4e7c" },
   { t: "00:00.087", type: "tool", label: "tool.call → search_kb", detail: "query='refund policy 90-day'", status: "ok", hash: "31fa...c0d2" },
-  { t: "00:00.142", type: "tool", label: "tool.call → llm.generate", detail: "model=claude-opus-4-7 · tokens=1,847", status: "ok", hash: "5e88...91b3" },
+  { t: "00:00.142", type: "tool", label: "tool.call → llm.generate", detail: "model=claude-opus-4-8 · tokens=1,847", status: "ok", hash: "5e88...91b3" },
   { t: "00:00.203", type: "tool", label: "tool.call → send_email", detail: "to=customer@acme.co · template=refund_approval", status: "blocked", hash: "a743...d10f" },
   { t: "00:00.204", type: "block", label: "policy.deny", detail: "reason=human_approval_required · risk=financial", status: "blocked", hash: "f9c2...7b48" },
   { t: "00:00.210", type: "sign", label: "session.attest", detail: "DSSE + ECDSA-P256 · key=kms-prod-2 · chain_root verified", status: "ok", hash: "0d4b...3eaa" },
@@ -249,7 +249,7 @@ function IncidentReplayDemo() {
             <div className="text-[10px] uppercase tracking-wider text-[rgba(213,219,230,0.4)] mb-1">Verified</div>
             <div className="text-green-400/80 flex items-center gap-1.5">
               <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13.3 4.3L6 11.6 2.7 8.3" /></svg>
-              HMAC chain · offline
+              DSSE signed · offline
             </div>
           </div>
           <div className="pt-2 border-t border-[rgba(216,231,242,0.07)]">
@@ -762,7 +762,7 @@ export default function HomeContent() {
               </div>
               <h3 className="text-lg font-medium text-white mb-2">Forensic-Grade Audit Trails</h3>
               <p className="text-sm text-[rgba(213,219,230,0.55)] leading-relaxed">
-                HMAC-SHA256 hash-chained evidence for every agent action. Replay any session step-by-step. Produce tamper-evident timelines regulators can verify independently.
+                HMAC-SHA256 hash-chained evidence for every agent action. Replay any session step-by-step. Produce tamper-evident timelines, sealed with DSSE + ECDSA-signed attestations regulators can verify independently.
               </p>
             </div>
 
@@ -771,12 +771,12 @@ export default function HomeContent() {
               {/* Framework badges visual */}
               <div className="rounded-lg bg-[rgb(4,7,13)] border border-[rgba(216,231,242,0.07)] p-4 mb-6">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-[rgba(213,219,230,0.4)] text-xs font-medium">Compliance Status</span>
-                  <span className="text-green-400/70 text-xs">All Passing</span>
+                  <span className="text-[rgba(213,219,230,0.4)] text-xs font-medium">Compliance Readiness</span>
+                  <span className="text-green-400/70 text-xs">On Track</span>
                 </div>
                 <div className="space-y-2">
                   {[
-                    { name: "SOC 2 Type II", score: 95, checks: "28/30" },
+                    { name: "SOC 2 Aligned", score: 95, checks: "28/30" },
                     { name: "EU AI Act", score: 88, checks: "22/25" },
                     { name: "NIST AI RMF", score: 92, checks: "6/7" },
                     { name: "GDPR", score: 100, checks: "8/8" },
