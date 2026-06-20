@@ -483,7 +483,7 @@ export default function About() {
             <h3 className="text-xl font-bold text-white mb-3">Let's talk</h3>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
               Whether you're exploring agent governance or ready to deploy, we'd love to
-              hear from you. Design partner slots are open through Q2 2026.
+              hear from you. We're onboarding a limited cohort of design partners now.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <a

@@ -26,7 +26,7 @@ const faqSchema = {
       name: "Are AI agent decisions subject to SEC Rule 17a-4 records retention?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. SEC Rule 17a-4 imposes WORM-equivalent records retention on broker-dealer business records, which includes AI-assisted advisory, trading, and execution decisions. Compliant retention requires tamper-evident hash-chained audit logs, decision-by-decision attribution to a named agent identity, and a 6+ year retention horizon. Post-quantum migration matters here — signatures applied to 2026 records must remain verifiable through the retention window, which is why crypto-agile signature paths (ECDSA today, ML-DSA-87 in 2027) are part of a compliant design.",
+        text: "Yes. SEC Rule 17a-4 imposes WORM-equivalent records retention on broker-dealer business records, which includes AI-assisted advisory, trading, and execution decisions. Compliant retention requires tamper-evident hash-chained audit logs, decision-by-decision attribution to a named agent identity, and a 6+ year retention horizon. Long retention windows are why the signing path is crypto-agile — the signature algorithm is pluggable, so signatures applied today stay verifiable as cryptographic standards evolve over the retention window.",
       },
     },
     {

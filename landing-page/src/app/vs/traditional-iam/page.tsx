@@ -83,7 +83,7 @@ const differentiators = [
   {
     title: "AI-Native Compliance",
     description:
-      "Built-in dashboards for EU AI Act, SOC 2 Type II, and NIST AI RMF. Traditional IAM compliance covers human access controls, not autonomous agent behavior.",
+      "Built-in dashboards mapped to EU AI Act, SOC 2, and NIST AI RMF controls. Traditional IAM compliance covers human access controls, not autonomous agent behavior.",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="9 11 12 14 22 4" />

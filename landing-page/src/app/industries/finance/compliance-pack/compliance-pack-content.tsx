@@ -10,7 +10,7 @@ const profiles = [
   {
     code: "SEC Rule 17a-4",
     title: "Broker-Dealer Records Retention",
-    body: "WORM-equivalent retention through tamper-evident hash-chained audit logs. Decision-by-decision attribution to a named agent identity. 6+ year retention horizon validated against post-quantum migration plan (Q3 2027 PQ-native credentials, SLH-DSA audit chain).",
+    body: "WORM-equivalent retention through tamper-evident hash-chained audit logs. Decision-by-decision attribution to a named agent identity. 6+ year retention horizon, with a crypto-agile signing path — the signature algorithm is pluggable, so evidence stays verifiable as cryptographic standards evolve.",
   },
   {
     code: "MiFID II",
