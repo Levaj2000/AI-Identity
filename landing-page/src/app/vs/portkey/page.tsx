@@ -61,7 +61,7 @@ const differentiators = [
   {
     title: "Immutable Audit Trails",
     description:
-      "HMAC-SHA256 hash-chained logs that cannot be altered after the fact. Every action is cryptographically linked to the previous one, creating courtroom-grade evidence.",
+      "HMAC-SHA256 hash-chained logs that cannot be altered after the fact. Every action is cryptographically linked to the previous one and sealed with a signed attestation auditors verify offline.",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
@@ -72,7 +72,7 @@ const differentiators = [
   {
     title: "Built-In Compliance",
     description:
-      "One-click assessments for EU AI Act, SOC 2 Type II, and NIST AI RMF. Export audit-ready reports instead of building compliance tooling from scratch.",
+      "One-click, audit-ready reports mapped to EU AI Act, SOC 2, and NIST AI RMF controls. Export evidence instead of building compliance tooling from scratch.",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="9 11 12 14 22 4" />

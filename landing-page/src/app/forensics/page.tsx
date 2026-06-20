@@ -165,7 +165,7 @@ export default function Forensics() {
               <ul className="space-y-3 text-sm text-gray-300">
                 <li className="flex items-start gap-2"><span className="text-[rgb(166,218,255)] shrink-0 mt-0.5">✓</span>What exactly happened, provably?</li>
                 <li className="flex items-start gap-2"><span className="text-[rgb(166,218,255)] shrink-0 mt-0.5">✓</span>Cryptographic chain of evidence</li>
-                <li className="flex items-start gap-2"><span className="text-[rgb(166,218,255)] shrink-0 mt-0.5">✓</span>Tamper-evident, independently verifiable</li>
+                <li className="flex items-start gap-2"><span className="text-[rgb(166,218,255)] shrink-0 mt-0.5">✓</span>Tamper-evident chain + signed attestation, verifiable offline</li>
                 <li className="flex items-start gap-2"><span className="text-[rgb(166,218,255)] shrink-0 mt-0.5">✓</span>Reconstruct and replay any incident</li>
               </ul>
             </div>
