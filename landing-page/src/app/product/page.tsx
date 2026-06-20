@@ -65,7 +65,7 @@ const steps: Step[] = [
   {
     n: "04",
     title: "Map every control to a framework",
-    body: "The compliance view shows a live control map to EU AI Act, SOC 2, NIST AI RMF, GDPR, and HIPAA. Export an audit-ready evidence bundle in one click.",
+    body: "The compliance view shows a live control map to EU AI Act, SOC 2, and NIST AI RMF, with more frameworks (GDPR, HIPAA) in progress. Export an audit-ready evidence bundle in one click.",
     bullets: [
       "Live control-mapping dashboard per framework",
       "Auto-generated evidence per control from real gateway activity",

@@ -18,6 +18,19 @@ type ChangelogEntry = {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: "0.3.0",
+    date: "June 19, 2026",
+    type: "feature",
+    title: "Verifiable Evidence & Honest Trust Signals",
+    items: [
+      "Drag-and-drop Case File verifier: drop a downloaded forensic export and get a VERIFIED / NOT VERIFIED result — no terminal, no key entry, no install",
+      "Case File investigation UX: a persistent filter-state bar (active window + per-filter chips + Clear all) and one-click deny-cluster drill-down from the anomaly alert",
+      "'Built on open standards' trust band on the homepage — OCSF schema contributions and CoSAI WS4 membership, framed honestly ('Contributing to OCSF', not 'merged')",
+      "Honest compliance posture sitewide: certification-style claims reframed to posture (SOC 2 Aligned, GDPR Ready, NIST AI RMF, EU AI Act Ready)",
+      "Verifiable-evidence framing clarified everywhere: independent, offline verification is attributed to the signed DSSE + ECDSA attestation, with the HMAC-SHA256 chain described as tamper-evident",
+    ],
+  },
+  {
     version: "0.2.1",
     date: "April 25, 2026",
     type: "enhancement",

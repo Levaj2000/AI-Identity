@@ -78,7 +78,7 @@ curl -X POST https://gateway.ai-identity.co/v1/chat/completions \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -G \\
   -d "limit=10" \\
-  -d "since=2025-01-01T00:00:00Z"`,
+  -d "since=2026-01-01T00:00:00Z"`,
           },
         ],
       },
