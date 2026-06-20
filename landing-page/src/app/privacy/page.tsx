@@ -8,7 +8,7 @@ export const metadata: Metadata = generatePageMetadata({
   noIndex: true,
 });
 
-const lastUpdated = "March 21, 2026";
+const lastUpdated = "June 20, 2026";
 
 const sections = [
   {
@@ -29,7 +29,7 @@ const sections = [
   {
     title: "3. Data Storage and Security",
     content: [
-      "Your data is stored on secure servers hosted in the United States via our infrastructure providers (Neon for databases, Render for API services, Vercel for web applications).",
+      "Your data is stored on secure servers hosted in the United States. Our platform runs on Google Cloud Platform (Google Kubernetes Engine), with PostgreSQL databases on Neon and MongoDB on MongoDB Atlas; our dashboard and website are hosted on Vercel.",
       "We implement industry-standard security measures including encryption in transit (TLS), encryption at rest, and access controls. API keys and credentials are hashed and never stored in plaintext.",
       "We retain your account data for as long as your account is active. Upon account deletion, we remove your personal data within 30 days, except where retention is required by law.",
     ],
@@ -37,7 +37,7 @@ const sections = [
   {
     title: "4. Data Sharing",
     content: [
-      "We share data only with service providers necessary to operate the platform: payment processing (Stripe), error monitoring (Sentry), authentication (Clerk), and infrastructure hosting.",
+      "We share data only with service providers necessary to operate the platform: cloud infrastructure and key management (Google Cloud), database hosting (Neon, MongoDB Atlas), web application hosting (Vercel), payment processing (Stripe), transactional email (Resend), error monitoring (Sentry), and authentication (Clerk).",
       "We may disclose information if required by law, subpoena, or legal process, or to protect the rights, property, or safety of AI Identity, our users, or the public.",
       "We do not sell, rent, or trade your personal information to third parties for marketing purposes.",
     ],
