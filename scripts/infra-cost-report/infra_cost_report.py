@@ -115,18 +115,25 @@ def fetch_neon(cfg):
             out["projects"].append({"name": p.get("name"), "compute_hours": ch, "storage_mb": mb})
         out["total_compute_hours"] = round(comp_hours, 2)
         out["total_storage_mb"] = round(store_mb, 1)
-        # optimization flags — Free tier = 191.9 compute-hrs, 0.5 GB, <=10 projects
+        # Plan posture. We deliberately do NOT recommend downgrading Neon to Free:
+        # the Free tier's 191.9 compute-hr quota is a hard wall that took prod down
+        # on 2026-06-21 (DB connections rejected). Standing policy is to keep
+        # platform-essential compute over-provisioned. See compute_report.py.
         if out.get("plan") and out["plan"].lower() != "free":
-            if comp_hours < 191.9 and store_mb < 500 and len(proj) <= 10:
-                out["flags"].append(
-                    _flag(
-                        f"On paid '{out['plan']}' plan but usage ({comp_hours:.0f} compute-hrs, "
-                        f"{store_mb:.0f} MB, {len(proj)} projects) fits the FREE tier — "
-                        f"~$19/mo (~$228/yr) reclaimable by downgrading."
-                    )
+            out["flags"].append(
+                _ok(
+                    f"On paid '{out['plan']}' plan — keep it. Free tier's compute quota is a "
+                    f"hard wall that broke prod on 2026-06-21; do NOT downgrade while prod "
+                    f"depends on Neon."
                 )
+            )
         else:
-            out["flags"].append(_ok("On Free tier — no action."))
+            out["flags"].append(
+                _flag(
+                    "On Free tier — its 191.9 compute-hr quota is a hard wall that rejects DB "
+                    "connections when exhausted (took prod down 2026-06-21). Upgrade to a paid plan."
+                )
+            )
     except urllib.error.HTTPError as e:
         out["error"] = f"HTTP {e.code}: {e.read().decode()[:200]}"
     except Exception as e:
@@ -485,7 +492,7 @@ def send_email(cfg, subject, body_text, attachments=None):
     pw = (cfg.get("SMTP_APP_PASSWORD") or "").replace(
         " ", ""
     )  # Gmail shows it spaced; login wants 16 chars
-    to = cfg.get("REPORT_TO", "levaj2000@gmail.com")
+    to = cfg.get("REPORT_TO", "jeff@ai-identity.co")
     if not (user and pw):
         print("  [email] SMTP_USER/SMTP_APP_PASSWORD not set — skipping send.", file=sys.stderr)
         return False
