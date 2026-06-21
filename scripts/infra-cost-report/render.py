@@ -20,6 +20,15 @@ GREY = HexColor("#6B7280")
 LINE = HexColor("#E2E0EE")
 GREEN = HexColor("#1F9D55")
 AMBER = HexColor("#C77700")
+RED = HexColor("#D14343")
+
+# Status → pill colour for the weekly compute-headroom report.
+STATUS_COLOR = {
+    "CRITICAL": RED,
+    "WATCH": AMBER,
+    "OK": GREEN,
+    "PROTECTED": PURPLE_DEEP,
+}
 
 REG, BOLD, ITAL = "Helvetica", "Helvetica-Bold", "Helvetica-Oblique"
 PAGE_W, PAGE_H = letter  # 612 x 792 (portrait)
@@ -169,6 +178,114 @@ def build_pdf(label, generated, summary, flags, neon, atlas, gcp, sentry, path):
         LAVENDER,
     )
     _text(c, LEFT, PAGE_H - 20, label, REG, 8, LAVENDER, center_w=CW)
+    c.showPage()
+    c.save()
+    return path
+
+
+def build_compute_pdf(stamp, generated, assessments, cands_line, path):
+    """Branded executive PDF for the weekly compute-headroom report.
+
+    assessments: list of dicts with name/status/headline/dims (+ optional
+    conns_raw, mem_raw). cands_line: the down-adjust review sentence.
+    """
+    c = canvas.Canvas(str(path), pagesize=letter)
+
+    # ── header band ──
+    _rect(c, 0, 0, PAGE_W, 92, fill=PURPLE_DEEP)
+    _rect(c, 0, 92, PAGE_W, 4, fill=PURPLE_MID)
+    _text(c, LEFT, 20, "AI IDENTITY", BOLD, 11, LAVENDER)
+    _text(c, LEFT, 36, "Weekly Compute Headroom", BOLD, 22, WHITE)
+    _text(c, LEFT, 66, f"Week of {stamp}   ·   generated {generated}", REG, 10, LAVENDER)
+
+    order = {"CRITICAL": 0, "WATCH": 1, "OK": 2, "PROTECTED": 3}
+    ranked = sorted(assessments, key=lambda a: order.get(a["status"], 9))
+    n_crit = sum(1 for a in assessments if a["status"] == "CRITICAL")
+    n_watch = sum(1 for a in assessments if a["status"] == "WATCH")
+
+    y = 120
+
+    # ── executive summary band ──
+    _rect(c, LEFT, y, CW, 64, fill=LAVENDER, radius=6)
+    _text(c, LEFT + 16, y + 12, "EXECUTIVE SUMMARY", BOLD, 9, PURPLE_DEEP)
+    if n_crit:
+        verdict, vcol = f"{n_crit} CRITICAL · {n_watch} to watch", RED
+    elif n_watch:
+        verdict, vcol = f"All stable · {n_watch} to watch", AMBER
+    else:
+        verdict, vcol = "All clear — full headroom", GREEN
+    _text(c, LEFT + 16, y + 28, verdict, BOLD, 18, vcol)
+    _text(
+        c,
+        LEFT + 16,
+        y + 54,
+        "Policy: err toward too much capacity on platform-essential compute; "
+        "down-adjust only after 3 mo. sustained low use.",
+        REG,
+        8.5,
+        GREY,
+    )
+    y += 84
+
+    # ── down-adjust review ──
+    _text(c, LEFT, y, "Down-adjust review", BOLD, 13, PURPLE_DEEP)
+    y += 20
+    for ln in _wrap(cands_line, REG, 9.5, CW - 16):
+        _text(c, LEFT, y, ln, REG, 9.5, INK)
+        y += 13
+    y += 12
+
+    # ── per-resource cards ──
+    _text(c, LEFT, y, "Resource headroom", BOLD, 13, PURPLE_DEEP)
+    y += 22
+
+    for a in ranked:
+        status = a["status"]
+        col = STATUS_COLOR.get(status, GREY)
+        head_lines = _wrap(a.get("headline", ""), REG, 9.5, CW - 32)
+        dims = a.get("dims") or {}
+        util = None
+        if dims:
+            util = "Utilization:  " + "   ".join(f"{k} {v}%" for k, v in dims.items())
+        extra = []
+        if a.get("conns_raw"):
+            extra.append(f"Connections {a['conns_raw'][0]} / {a['conns_raw'][1]}")
+        if a.get("mem_raw"):
+            extra.append(f"Memory {a['mem_raw'][0]} / {a['mem_raw'][1]} MB")
+        rows = len(head_lines) + (1 if util else 0) + (1 if extra else 0)
+        h = 30 + rows * 13 + 8
+
+        _rect(c, LEFT, y, CW, h, fill=WHITE, stroke=LINE, sw=0.8, radius=6)
+        _rect(c, LEFT, y, 4, h, fill=col)
+        _text(c, LEFT + 16, y + 12, a["name"], BOLD, 12, PURPLE_DEEP)
+        # status pill, right-aligned
+        pill_w = 8 + stringWidth(status, BOLD, 8.5)
+        _rect(c, LEFT + CW - pill_w - 12, y + 9, pill_w, 15, fill=col, radius=7)
+        _text(c, LEFT + CW - pill_w - 12, y + 11.5, status, BOLD, 8.5, WHITE, center_w=pill_w)
+        ry = y + 30
+        for ln in head_lines:
+            _text(c, LEFT + 16, ry, ln, REG, 9.5, INK)
+            ry += 13
+        if util:
+            _text(c, LEFT + 16, ry, util, BOLD, 9, GREY)
+            ry += 13
+        if extra:
+            _text(c, LEFT + 16, ry, "   ·   ".join(extra), REG, 9, GREY)
+            ry += 13
+        y += h + 10
+
+    # footer
+    _rect(c, 0, PAGE_H - 26, PAGE_W, 26, fill=PURPLE_DEEP)
+    _text(
+        c,
+        LEFT,
+        PAGE_H - 20,
+        "AI Identity  ·  Weekly Compute Headroom  ·  Confidential",
+        REG,
+        8,
+        LAVENDER,
+    )
+    _text(c, LEFT, PAGE_H - 20, stamp, REG, 8, LAVENDER, center_w=CW)
     c.showPage()
     c.save()
     return path
