@@ -36,25 +36,33 @@ export default function ProbeEmailCapture({
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     setLoading(true);
+    setError(null);
     const source =
       typeof document !== "undefined" ? document.referrer || "direct" : "direct";
     try {
-      await fetch("/api/probe-signup", {
+      const res = await fetch("/api/probe-signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, probe, source }),
       });
-      // Whether the route returns 200 or 202 (fail-soft on backend
-      // misconfig), the user-facing experience is the same. The analytics
-      // event below is what powers the kill-criteria dashboards regardless.
-      trackEmailCapture(probe, { source });
-      setSubmitted(true);
-      setEmail("");
+
+      if (res.status === 200 || res.status === 202) {
+        trackEmailCapture(probe, { source });
+        setSubmitted(true);
+        setEmail("");
+      } else if (res.status === 400) {
+        setError("Please enter a valid email address.");
+      } else if (res.status === 429) {
+        setError("You're going a little fast — please try again in a moment.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     } catch {
       // Transport error (offline, blocked, etc). Still fire the conversion
       // event so probe signal isn't lost — the user retried and the email
@@ -77,27 +85,34 @@ export default function ProbeEmailCapture({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 max-w-md">
-      <label htmlFor={`probe-email-${probe}`} className="sr-only">
-        {label}
-      </label>
-      <input
-        id={`probe-email-${probe}`}
-        type="email"
-        required
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder={placeholder}
-        aria-label={label}
-        className="flex-1 px-4 py-2.5 rounded-lg bg-[rgb(16,19,28)] border border-[rgba(216,231,242,0.07)] text-sm text-white placeholder-[rgba(213,219,230,0.4)] focus:outline-none focus:border-[rgb(166,218,255)]/40"
-      />
-      <button
-        type="submit"
-        disabled={loading}
-        className="px-5 py-2.5 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 text-[rgb(166,218,255)] text-sm font-medium hover:bg-[rgb(166,218,255)]/20 transition-colors disabled:opacity-50"
-      >
-        {loading ? "..." : cta}
-      </button>
-    </form>
+    <div className="flex flex-col gap-1.5 w-full max-w-md">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 w-full">
+        <label htmlFor={`probe-email-${probe}`} className="sr-only">
+          {label}
+        </label>
+        <input
+          id={`probe-email-${probe}`}
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder={placeholder}
+          aria-label={label}
+          className="flex-1 px-4 py-2.5 rounded-lg bg-[rgb(16,19,28)] border border-[rgba(216,231,242,0.07)] text-sm text-white placeholder-[rgba(213,219,230,0.4)] focus:outline-none focus:border-[rgb(166,218,255)]/40"
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="px-5 py-2.5 rounded-lg bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 text-[rgb(166,218,255)] text-sm font-medium hover:bg-[rgb(166,218,255)]/20 transition-colors disabled:opacity-50"
+        >
+          {loading ? "..." : cta}
+        </button>
+      </form>
+      {error && (
+        <p className="text-xs text-red-400 font-medium pl-1" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

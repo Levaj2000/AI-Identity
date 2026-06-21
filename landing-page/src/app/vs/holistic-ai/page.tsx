@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { generatePageMetadata } from "@/lib/metadata";
 import Link from "next/link";
+import { Fragment } from "react";
 
 export const metadata: Metadata = generatePageMetadata({
   title: "AI Identity vs Holistic AI — AI Agent Governance Comparison",
@@ -152,7 +153,7 @@ export default function CompareHolisticAI() {
               <div className="px-3 py-4 border-b border-white/10 font-semibold text-gray-400 text-center">Holistic AI</div>
               {/* Rows */}
               {features.map((row, i) => (
-                <>
+                <Fragment key={`row-${i}`}>
                   <div key={`f-${i}`} className={`px-5 py-3.5 text-gray-300 ${i < features.length - 1 ? "border-b border-white/5" : ""}`}>
                     {row.feature}
                   </div>
@@ -162,7 +163,7 @@ export default function CompareHolisticAI() {
                   <div key={`c-${i}`} className={`px-3 py-3.5 flex justify-center ${i < features.length - 1 ? "border-b border-white/5" : ""}`}>
                     {row.competitor ? <CheckIcon /> : <XIcon />}
                   </div>
-                </>
+                </Fragment>
               ))}
             </div>
           </div>
