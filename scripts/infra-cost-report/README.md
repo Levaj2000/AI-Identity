@@ -51,8 +51,42 @@ job is preferred over cron — it catches up at next wake if the Mac was asleep:
   → StartCalendarInterval: { Day: 3, Hour: 9, Minute: 0 }
 ```
 
+## Weekly Compute Headroom Report (`compute_report.py`)
+
+The **inverse lens** of the cost report. The cost report asks *"where can we
+cut?"*; this one asks *"where could we run out and take production down?"*. It
+exists because on **2026-06-21** Neon's Free-tier compute-time quota ran out and
+rejected DB connections, taking prod down.
+
+**Standing policy (founder):** for compute essential to the platform running, err
+toward **too much** capacity. Only consider adjusting **down** after ~3 months
+(13 consecutive weekly reports) of sustained low utilization — and the report
+only *nominates* a candidate after that window; it never acts.
+
+Per resource it reports a headroom status — 🔴 CRITICAL / 🟡 WATCH / 🟢 OK /
+🛡️ PROTECTED — with live utilization:
+- **Neon** — paid plan = PROTECTED (no hard compute wall); Free tier = CRITICAL.
+- **Atlas** — live connections / CPU / RAM vs tier ceiling + auto-scaling config
+  (auto-scale on both axes = PROTECTED, the wall moves with demand).
+- **GKE Autopilot** — informational; nodes auto-provision per pod request.
+- **Sentry** — errors vs the free quota (a soft wall — over-quota drops events,
+  doesn't break prod).
+
+Reuses `infra_cost_report.py`'s collectors and `.env`; stdlib-only + fail-soft so
+launchd never breaks. A per-week snapshot accumulates in
+`out/compute/compute_history.json` to drive the 13-week down-adjust logic.
+
+```bash
+python3 compute_report.py            # writes out/compute/compute-headroom-YYYY-MM-DD.md
+python3 compute_report.py --email    # also emails the summary (SMTP, same path as the cost report)
+```
+
+Scheduled **weekly, Monday 9am** via
+`~/Library/LaunchAgents/co.ai-identity.compute-headroom-report.plist`.
+
 ## Files
 - `infra_cost_report.py` — collectors (fail-soft per provider) + email + orchestration
+- `compute_report.py` — weekly compute-headroom report (reuses the collectors)
 - `render.py` — branded PDF (AI Identity Purple) + .xlsx workbook (incl. month-over-month Trend tab)
 - `.env.example` — credential template (real `.env` is gitignored)
-- `out/` — generated reports + `history.json` trend store (gitignored)
+- `out/` — generated reports + `history.json` trend store (gitignored); `out/compute/` for the weekly report
