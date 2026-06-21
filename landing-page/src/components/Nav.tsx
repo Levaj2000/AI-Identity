@@ -118,6 +118,13 @@ export default function Nav() {
             className="relative"
             onMouseEnter={() => setSolutionsOpen(true)}
             onMouseLeave={() => setSolutionsOpen(false)}
+            onBlur={(e) => {
+              // Close when keyboard focus leaves the Solutions block entirely
+              // (tabbing past the last submenu link), not on focus moves within it.
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setSolutionsOpen(false);
+              }
+            }}
           >
             <button
               aria-haspopup="menu"

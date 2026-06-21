@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { Metadata } from "next";
 import { generatePageMetadata } from "@/lib/metadata";
 import Link from "next/link";
@@ -146,7 +147,7 @@ export default function CompareGenericIAM() {
               <div className="px-3 py-4 border-b border-white/10 font-semibold text-gray-400 text-center">Okta / Auth0</div>
               {/* Rows */}
               {features.map((row, i) => (
-                <>
+                <Fragment key={`row-${i}`}>
                   <div key={`f-${i}`} className={`px-5 py-3.5 text-gray-300 ${i < features.length - 1 ? "border-b border-white/5" : ""}`}>
                     {row.feature}
                   </div>
@@ -156,7 +157,7 @@ export default function CompareGenericIAM() {
                   <div key={`c-${i}`} className={`px-3 py-3.5 flex justify-center ${i < features.length - 1 ? "border-b border-white/5" : ""}`}>
                     {row.competitor ? <CheckIcon /> : <XIcon />}
                   </div>
-                </>
+                </Fragment>
               ))}
             </div>
           </div>
