@@ -31,7 +31,7 @@ const inThePack = [
 const why = [
   {
     label: "AI agents are now in-scope",
-    body: "Compliance teams that built controls for human traders are watching AI agents execute the same actions with no equivalent attribution. Examiners are starting to ask. NYDFS §500.11 third-party AI risk assessments and the SEC AI conduct rule landed in 2026.",
+    body: "Compliance teams that built controls for human traders are watching AI agents execute the same actions with no equivalent attribution. Examiners are starting to ask. New York's DFS cybersecurity rules — §500.11 third-party requirements and its AI guidance — are fully in effect, and AI-driven conflicts are a stated SEC exam priority for 2026.",
   },
   {
     label: "Shared API keys don't pass an exam",
