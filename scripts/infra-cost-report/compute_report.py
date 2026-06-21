@@ -426,29 +426,41 @@ def main():
     with open(hist_path, "w") as f:
         json.dump(history, f, indent=2)
 
+    # Keep the .md as a local working artifact; the EMAILED deliverable is the
+    # branded executive PDF (founder preference: PDF/slide, never markdown).
     md_path = os.path.join(outdir, f"compute-headroom-{stamp}.md")
     with open(md_path, "w") as f:
         f.write(report_md)
     print(f"  wrote {md_path}", file=sys.stderr)
     print("\n" + report_md)
 
+    # Down-adjust review line (used by both the PDF and the email body).
+    cands = [
+        (a["name"], sustained_low(history, a["name"]))
+        for a in assessments
+        if a["status"] != CRITICAL and sustained_low(history, a["name"]) >= SUSTAINED_LOW_WEEKS
+    ]
+    cands_text = (
+        "Down-adjust candidates: " + ", ".join(f"{n} ({w}wk low)" for n, w in cands)
+        if cands
+        else "None yet — holding capacity per policy. No resource has 13 straight "
+        "weeks of sustained low utilization."
+    )
+
+    # Branded executive PDF.
+    import render
+
+    generated = now.strftime("%Y-%m-%d %H:%M UTC")
+    pdf_path = os.path.join(outdir, f"AI-Identity-Compute-Headroom-{stamp}.pdf")
+    render.build_compute_pdf(stamp, generated, assessments, cands_text, pdf_path)
+    print(f"  wrote {pdf_path}", file=sys.stderr)
+
     if "--email" in args:
-        # Recompute the candidate line for the email body.
-        cands = [
-            (a["name"], sustained_low(history, a["name"]))
-            for a in assessments
-            if a["status"] != CRITICAL and sustained_low(history, a["name"]) >= SUSTAINED_LOW_WEEKS
-        ]
-        cands_text = (
-            "Down-adjust candidates: " + ", ".join(f"{n} ({w}wk low)" for n, w in cands)
-            if cands
-            else "Down-adjust candidates: none — holding capacity per policy."
-        )
         icr.send_email(
             cfg,
             f"AI Identity · Weekly Compute Headroom · {stamp}",
             email_body(assessments, cands_text),
-            [md_path],
+            [pdf_path],
         )
 
 
