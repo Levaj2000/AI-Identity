@@ -162,6 +162,31 @@ def run_export_job(
                 built_at=now,
             )
 
+        # --- Human-readable cover letter (PDF) ------------------------
+        # The examiner-facing "report cover letter" the export spec calls
+        # for. Written before seal() so its SHA-256 is in the signed
+        # manifest. Best-effort: a render failure must not sink an export
+        # whose machine-readable evidence is already complete and signed.
+        try:
+            from common.compliance.report_pdf import render_cover_letter_pdf
+
+            pdf_bytes = render_cover_letter_pdf(
+                profile=job.profile,
+                org_id=job.org_id,
+                export_id=job.id,
+                audit_period_start=period_start,
+                audit_period_end=period_end,
+                built_at=now,
+                signer_key_id=signer.key_id,
+                artifacts=bundle.list_artifacts(),
+            )
+            bundle.write_bytes("compliance_report.pdf", pdf_bytes)
+        except Exception:  # noqa: BLE001 — cover letter is non-essential
+            logger.exception(
+                "compliance cover-letter PDF render failed; sealing without it",
+                extra={"job_id": str(job.id), "profile": job.profile},
+            )
+
         bundle.seal(
             profile=job.profile,
             audit_period_start=period_start,

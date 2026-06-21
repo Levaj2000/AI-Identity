@@ -153,6 +153,17 @@ class ComplianceExportBundle:
         payload = json.dumps(obj, indent=2, sort_keys=True).encode("utf-8")
         self.write_bytes(path, payload, controls=controls)
 
+    def list_artifacts(self) -> list[dict]:
+        """Snapshot of artifacts written so far (path, controls, bytes).
+
+        Used to build the human-readable cover letter before ``seal()``
+        without reaching into the private entry list.
+        """
+        return [
+            {"path": e.path, "controls": list(e.controls), "bytes": e.size_bytes}
+            for e in self._entries
+        ]
+
     # ── Seal + sign ─────────────────────────────────────────────────
 
     def seal(
