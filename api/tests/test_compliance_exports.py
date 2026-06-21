@@ -595,6 +595,55 @@ class TestSoc2Profile:
         assert "SOC2-CC6.1" in access["controls"]
 
 
+# ── Cover-letter PDF (every profile) ─────────────────────────────────
+
+
+class TestCoverLetterPdf:
+    """Every export ships a human-readable compliance_report.pdf that is
+    itself covered by the DSSE-signed manifest."""
+
+    @pytest.mark.parametrize("profile", ["soc2_tsc_2017", "eu_ai_act_2024", "nist_ai_rmf_1_0"])
+    def test_cover_letter_present_valid_and_signed(
+        self, client, two_orgs, local_signer, archive_dir, profile
+    ):
+        resp = client.post(
+            "/api/v1/exports",
+            json=_valid_body(profile=profile),
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert resp.status_code == 202
+        export_id = resp.json()["id"]
+
+        dl = client.get(
+            f"/api/v1/exports/{export_id}/download",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        )
+        assert dl.status_code == 200
+        zf = zipfile.ZipFile(io.BytesIO(dl.content))
+
+        # Present and a real PDF.
+        assert "compliance_report.pdf" in zf.namelist()
+        pdf = zf.read("compliance_report.pdf")
+        assert pdf.startswith(b"%PDF-")
+        assert len(pdf) > 1000  # a non-trivial document
+
+        # Enumerated in the signed manifest → tamper-evident like any artifact.
+        got = client.get(
+            f"/api/v1/exports/{export_id}",
+            headers={"X-API-Key": OWNER_A_EMAIL},
+        ).json()
+        manifest = json.loads(base64.b64decode(got["manifest_envelope"]["payload"]))
+        entry = next(
+            (a for a in manifest["artifacts"] if a["path"] == "compliance_report.pdf"),
+            None,
+        )
+        assert entry is not None, "cover letter must be committed in the manifest"
+        # Manifest SHA-256 commits to the exact PDF bytes shipped.
+        import hashlib
+
+        assert entry["sha256"] == hashlib.sha256(pdf).hexdigest()
+
+
 # ── EU AI Act profile end-to-end ─────────────────────────────────────
 
 
