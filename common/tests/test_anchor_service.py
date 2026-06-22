@@ -91,6 +91,31 @@ def test_create_checkpoint_covers_rows_then_noops(db_session, org, test_agent):
     assert cp2.first_audit_id == cp.last_audit_id + 1
 
 
+def test_after_id_threads_drain_without_requerying_max(db_session, org, test_agent):
+    """Threading ``after_id`` drains a backlog into contiguous, gapless batches.
+
+    Mirrors the anchor_cron per-tick loop, which now passes the previous
+    checkpoint's ``last_audit_id`` forward instead of re-deriving the high-water
+    mark with a ``SELECT max(...)`` each batch (the N+1 on the endpoint).
+    """
+    ids = _add_rows(db_session, org.id, test_agent.id, 25)
+    signer, _ = _local_signer()
+
+    after_id = None
+    covered: list[int] = []
+    for _ in range(10):  # max_per_org guard, same as the cron
+        cp = anchor_service.create_checkpoint(
+            db_session, org.id, signer=signer, max_batch=10, after_id=after_id
+        )
+        if cp is None:
+            break
+        covered.extend(cp.audit_log_ids)
+        after_id = cp.last_audit_id
+
+    # Every row anchored exactly once, in order, with no gaps or overlaps.
+    assert covered == ids
+
+
 def test_inclusion_proof_verifies_offline_with_public_key(db_session, org, test_agent):
     ids = _add_rows(db_session, org.id, test_agent.id, 40)
     signer, pub_pem = _local_signer()
