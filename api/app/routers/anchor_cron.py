@@ -64,10 +64,15 @@ def emit_checkpoints(
     checkpoints_created = 0
     events_anchored = 0
     for org_id in org_ids:
+        # Thread the last anchored id forward across this org's drain so the
+        # high-water mark is read once, not re-derived with a SELECT max(...)
+        # on every batch (the N+1 Sentry flagged on this endpoint).
+        after_id: int | None = None
         for _ in range(max_per_org):
-            cp = create_checkpoint(db, org_id, signer=signer)
+            cp = create_checkpoint(db, org_id, signer=signer, after_id=after_id)
             if cp is None:
                 break
+            after_id = cp.last_audit_id
             checkpoints_created += 1
             events_anchored += cp.tree_size
 

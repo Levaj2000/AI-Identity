@@ -58,6 +58,7 @@ def create_checkpoint(
     signer: SignerHandle | None = None,
     max_batch: int = MAX_BATCH,
     now: datetime.datetime | None = None,
+    after_id: int | None = None,
 ) -> AuditCheckpoint | None:
     """Anchor the next contiguous batch of un-checkpointed rows for ``org_id``.
 
@@ -66,8 +67,16 @@ def create_checkpoint(
 
     ``signer`` defaults to the configured platform signer; tests pass a
     local-key handle. ``now`` is injectable for deterministic tests.
+
+    ``after_id`` lets a caller draining several contiguous batches for one org
+    thread the previous checkpoint's ``last_audit_id`` forward, so the high-water
+    mark is not re-derived with a ``SELECT max(...)`` every iteration (the N+1
+    the per-tick drain loop in ``anchor_cron`` otherwise triggers). When ``None``
+    the mark is read from the DB as before. The returned checkpoint's
+    ``last_audit_id`` is the value to pass as ``after_id`` on the next call —
+    correct on both the normal and the concurrent-winner path.
     """
-    last_id = _last_anchored_id(db, org_id)
+    last_id = after_id if after_id is not None else _last_anchored_id(db, org_id)
 
     rows = db.execute(
         select(AuditLog.id, AuditLog.entry_hash)
