@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 from api.app.auth import get_current_user
 from common.audit import generate_report_signature, verify_chain, verify_global_chain
 from common.audit.writer import _resolve_org_hmac_key
+from common.forensic.anchor_service import assemble_evidence
 from common.models import Agent, AuditLog, OrgMembership, Policy, User, get_db
 from common.ocsf import audit_log_to_ocsf
 from common.schemas.agent import (
@@ -1208,6 +1209,8 @@ Both checks use the **same key** from your dashboard. Run from this folder exact
 - `case-file-*.json` — the signed report, including the **Reliability Statement**
 - `verify.command` — double-click verifier (macOS)
 - `ai_identity_verify.py` — the standalone verifier (Python 3.9+, no dependencies)
+- `evidence-anchor/` — *if present:* signed Merkle checkpoint(s) + per-event inclusion
+  proofs for public-key verification (see below)
 - `README.md` — this file
 
 ## What it proves
@@ -1224,6 +1227,23 @@ FRE 702 / Daubert reliability showing and ISO/IEC 27037 acquisition documentatio
 the integrity method, what the signature attests, the timestamp source, how to verify, and —
 honestly — the current limit: verification uses the organization's symmetric forensic key (a
 key-holder can verify; it is not yet a publicly verifiable asymmetric proof).
+
+## Public, independent verification — Evidence Anchor
+
+If this bundle contains an `evidence-anchor/` folder, the listed events are committed to a
+signed Merkle checkpoint. You can prove any one event's inclusion using only our **public**
+key — no shared secret, no trust in our infrastructure:
+
+    # public key set, served publicly:
+    curl -o jwks.json https://www.ai-identity.co/.well-known/ai-identity-public-keys.json
+    python3 ai_identity_verify.py inclusion-proof \\
+        --checkpoints evidence-anchor/checkpoints.json \\
+        --proofs evidence-anchor/inclusion-proofs.json \\
+        --jwks jwks.json                                  # -> INCLUSION VERIFIED
+
+Unlike the chain/report checks above (which use your symmetric key), this is asymmetric: the
+public key can only *verify*, never forge. Any events not yet anchored are listed under
+`pending` in `inclusion-proofs.json`.
 
 ## Help
 
@@ -1341,6 +1361,29 @@ def audit_report_bundle(
         zf.write(_CLI_SCRIPT_PATH, "ai_identity_verify.py")
 
         zf.writestr("README.md", _BUNDLE_README)
+
+        # Evidence Anchor (#408): if any exported event is committed to a
+        # signed Merkle checkpoint, ship the checkpoint(s) + per-event
+        # inclusion proofs so a third party can verify inclusion with only
+        # our PUBLIC key (no shared secret), independent of the HMAC chain.
+        # Skipped when nothing in this export is anchored yet — we don't ship
+        # an empty folder. `pending` lists any exported events not yet
+        # checkpointed, so coverage is explicit rather than silently partial.
+        event_ids = [e.id for e in cf.events]
+        if event_ids:
+            anchor = assemble_evidence(db, cf.events[0].org_id, event_ids)
+            if anchor["checkpoints"]:
+                zf.writestr(
+                    "evidence-anchor/checkpoints.json",
+                    json.dumps(anchor["checkpoints"], indent=2),
+                )
+                zf.writestr(
+                    "evidence-anchor/inclusion-proofs.json",
+                    json.dumps(
+                        {"proofs": anchor["proofs"], "pending": anchor["pending"]},
+                        indent=2,
+                    ),
+                )
 
         # Turnkey, zero-typing verifier: double-click on macOS. It cd's to its
         # own folder, auto-finds the case-file, prompts for the key, and runs
