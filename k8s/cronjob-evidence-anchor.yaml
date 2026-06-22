@@ -1,0 +1,77 @@
+# Evidence Anchor checkpoint emitter (every 15 minutes).
+# #408 — folds each org's un-anchored audit_log rows into a signed Merkle
+# checkpoint so any single event's inclusion can be proven offline with our
+# public key alone. The cadence is the upper bound on how long an event stays
+# "pending" (unanchored) before it becomes publicly verifiable — tune the
+# schedule to the evidence-freshness you want; the job itself is a tiny curl
+# (the API pod does the signing, reusing the attestation KMS key).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: evidence-anchor-checkpoint
+  namespace: ai-identity
+spec:
+  schedule: "*/15 * * * *"
+  # Forbid overlap: checkpoint batches are guarded by a unique
+  # (org_id, first_audit_id), so a late-running tick must never race the next.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            # Targeted by NetworkPolicy `allow-cron-egress-to-api` and the
+            # gateway/cron clause of `allow-internal-to-api` — required to
+            # reach api-service:8001 under the namespace default-deny.
+            tier: cron
+        spec:
+          serviceAccountName: ai-identity-workload
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 100
+            runAsGroup: 101
+            fsGroup: 101
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: curl
+              # Pinned by digest — shared with the other crons so the image
+              # rotates once across all of them.
+              image: curlimages/curl@sha256:9a6f6a17667960e077f1b153009aaf18ac99a622221084e1938a45a06fff057a
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  curl -sf -X POST \
+                    -H "x-internal-key: $(cat /mnt/secrets/INTERNAL_SERVICE_KEY)" \
+                    "http://api-service.ai-identity.svc.cluster.local:8001/api/internal/evidence-anchor/checkpoint"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "64Mi"
+                limits:
+                  cpu: "100m"
+                  memory: "128Mi"
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+                - name: secrets-store
+                  mountPath: /mnt/secrets
+                  readOnly: true
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: secrets-store
+              csi:
+                driver: secrets-store-gke.csi.k8s.io
+                readOnly: true
+                volumeAttributes:
+                  secretProviderClass: ai-identity-cron-secrets
+          restartPolicy: OnFailure

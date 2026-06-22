@@ -1124,6 +1124,143 @@ def cmd_attestation(args: argparse.Namespace) -> int:
 # ── CLI argument parsing ────────────────────────────────────────────────
 
 
+# ── Evidence Anchor: Merkle inclusion-proof verification ───────────────
+#
+# Verifies that a single audit event is committed to a signed Merkle
+# checkpoint, using ONLY the public key + SHA-256 — no shared secret. The
+# checkpoint signature reuses the same DSSE/ECDSA-P256 path as `attestation`;
+# the Merkle math below is a byte-for-byte port of
+# ``common.forensic.merkle`` (RFC 6962 §2.1.1). Keep the two in lockstep.
+
+CHECKPOINT_PAYLOAD_TYPE = "application/vnd.ai-identity.anchor-checkpoint+json"
+
+
+def _merkle_leaf_hash(data: bytes) -> bytes:
+    return hashlib.sha256(b"\x00" + data).digest()
+
+
+def _merkle_node_hash(left: bytes, right: bytes) -> bytes:
+    return hashlib.sha256(b"\x01" + left + right).digest()
+
+
+def _merkle_verify_inclusion(
+    leaf_data: bytes, index: int, tree_size: int, proof: list[bytes], root: bytes
+) -> bool:
+    """RFC 6962 §2.1.1 inclusion-proof check. O(log N), stdlib only."""
+    if tree_size <= 0 or not 0 <= index < tree_size:
+        return False
+    fn = index
+    sn = tree_size - 1
+    r = _merkle_leaf_hash(leaf_data)
+    for p in proof:
+        if sn == 0:
+            return False
+        if (fn & 1) or fn == sn:
+            r = _merkle_node_hash(p, r)
+            if not (fn & 1):
+                while True:
+                    fn >>= 1
+                    sn >>= 1
+                    if (fn & 1) or fn == 0:
+                        break
+        else:
+            r = _merkle_node_hash(r, p)
+        fn >>= 1
+        sn >>= 1
+    return sn == 0 and hmac.compare_digest(r, root)
+
+
+def _verify_checkpoint_signature(args: argparse.Namespace, envelope: dict):
+    """Verify a checkpoint DSSE envelope's ECDSA-P256 signature.
+
+    Returns ``(ok, payload_dict)``. ``ok`` is False (with a printed reason)
+    on any structural or cryptographic failure.
+    """
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    if envelope.get("payloadType") != CHECKPOINT_PAYLOAD_TYPE:
+        print(_red(f"  ✗ unexpected payloadType: {envelope.get('payloadType')!r}"))
+        return False, {}
+    sigs = envelope.get("signatures") or []
+    if len(sigs) != 1:
+        print(_red(f"  ✗ expected exactly 1 signature, got {len(sigs)}"))
+        return False, {}
+
+    payload_bytes = _base64_decode(envelope.get("payload", ""), field="checkpoint payload")
+    signature_der = _base64_decode(sigs[0].get("sig", ""), field="checkpoint signature")
+    public_key = _load_public_key(args, sigs[0].get("keyid", ""))
+
+    signing_input = _dsse_pae(CHECKPOINT_PAYLOAD_TYPE, payload_bytes)
+    try:
+        public_key.verify(signature_der, signing_input, ec.ECDSA(hashes.SHA256()))
+    except InvalidSignature:
+        print(_red("  ✗ checkpoint signature verification failed"))
+        return False, {}
+    try:
+        payload = json.loads(payload_bytes)
+    except json.JSONDecodeError:
+        print(_red("  ✗ checkpoint payload is not valid JSON"))
+        return False, {}
+    return True, payload
+
+
+def cmd_inclusion_proof(args: argparse.Namespace) -> int:
+    """Verify Merkle inclusion proofs against signed checkpoints (public key only)."""
+    checkpoints = _load_json(args.checkpoints)
+    proofs_doc = _load_json(args.proofs)
+    proofs = proofs_doc.get("proofs", []) if isinstance(proofs_doc, dict) else proofs_doc
+    pending = proofs_doc.get("pending", []) if isinstance(proofs_doc, dict) else []
+
+    if not isinstance(checkpoints, list) or not proofs:
+        print(_red("Error: no checkpoints or proofs to verify."), file=sys.stderr)
+        return 2
+
+    # Verify each checkpoint's signature ONCE, and bind the signed root to the
+    # root the proofs reference (a signature over a different root is useless).
+    verified_roots: dict[str, bool] = {}
+    for cp in checkpoints:
+        root = cp.get("merkle_root", "")
+        print(_bold(f"Checkpoint {root[:16]}…"))
+        ok, payload = _verify_checkpoint_signature(args, cp.get("envelope", {}))
+        if ok and payload.get("merkle_root") != root:
+            print(_red("  ✗ signed root does not match the checkpoint's stated root"))
+            ok = False
+        if ok:
+            print(_green("  ✓ signature valid"))
+        verified_roots[root] = ok
+
+    all_ok = True
+    print()
+    for p in proofs:
+        root = p.get("merkle_root", "")
+        sig_ok = verified_roots.get(root, False)
+        incl_ok = sig_ok and _merkle_verify_inclusion(
+            bytes.fromhex(p["entry_hash"]),
+            p["index"],
+            p["tree_size"],
+            [bytes.fromhex(h) for h in p["proof"]],
+            bytes.fromhex(root),
+        )
+        label = f"event #{p.get('audit_id')} (entry {p['entry_hash'][:12]}…)"
+        print(f"  {_green('✓ VERIFIED') if incl_ok else _red('✗ NOT VERIFIED')}  {label}")
+        all_ok = all_ok and incl_ok
+
+    if pending:
+        print()
+        print(_dim(f"  note: {len(pending)} exported event(s) not yet anchored to a checkpoint."))
+
+    print()
+    if all_ok:
+        print(
+            _green(_bold("INCLUSION VERIFIED")) + f" — {len(proofs)} event(s) provably committed."
+        )
+        return 0
+    print(_red(_bold("INCLUSION NOT VERIFIED")) + " — one or more events failed.")
+    return 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ai_identity_verify",
@@ -1220,6 +1357,43 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    # inclusion-proof subcommand (Evidence Anchor)
+    incl_parser = subparsers.add_parser(
+        "inclusion-proof",
+        help="Verify Merkle inclusion proofs against signed checkpoints",
+        description=(
+            "Verify that exported audit events are committed to a signed "
+            "Merkle checkpoint, using only the public key — no shared secret. "
+            "Reads the evidence-anchor/ files from a Case File bundle. Requires "
+            "the `cryptography` package."
+        ),
+    )
+    incl_parser.add_argument(
+        "--checkpoints",
+        metavar="JSON",
+        required=True,
+        help="Path to evidence-anchor/checkpoints.json",
+    )
+    incl_parser.add_argument(
+        "--proofs",
+        metavar="JSON",
+        required=True,
+        help="Path to evidence-anchor/inclusion-proofs.json",
+    )
+    incl_parser.add_argument(
+        "--pubkey",
+        metavar="PEM",
+        help="Path to a PEM-encoded ECDSA P-256 public key. Mutually exclusive with --jwks.",
+    )
+    incl_parser.add_argument(
+        "--jwks",
+        metavar="JSON",
+        help=(
+            "Path to a JWKS file (/.well-known/ai-identity-public-keys.json). "
+            "The checkpoint keyid is matched against it. Mutually exclusive with --pubkey."
+        ),
+    )
+
     # chain subcommand
     chain_parser = subparsers.add_parser(
         "chain",
@@ -1277,6 +1451,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return cmd_chain(args)
     elif args.command == "attestation":
         return cmd_attestation(args)
+    elif args.command == "inclusion-proof":
+        return cmd_inclusion_proof(args)
     else:
         parser.print_help()
         return 2

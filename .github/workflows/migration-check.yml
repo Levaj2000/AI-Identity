@@ -58,10 +58,14 @@ jobs:
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
           echo "Created Neon branch: $BRANCH_NAME ($BRANCH_ID)"
 
-          # Get connection string for the new branch
+          # Get connection string for the new branch. Pin --role-name: the
+          # branch now has more than one role (neondb_owner + the
+          # audit_health_ro read-only role added during the Neon outage
+          # remediation), and neonctl errors on ambiguity without it.
           CONNSTR=$(neonctl connection-string "$BRANCH_NAME" \
             --project-id "$NEON_PROJECT_ID" \
-            --database-name neondb)
+            --database-name neondb \
+            --role-name neondb_owner)
           echo "connstr=$CONNSTR" >> $GITHUB_OUTPUT
 
       - name: Run alembic upgrade head
