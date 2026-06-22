@@ -5,6 +5,7 @@ from common.models.agent_assignment import AgentAssignment, AgentRole
 from common.models.agent_key import AgentKey, KeyStatus, KeyType
 from common.models.approval_request import ApprovalRequest, ApprovalStatus
 from common.models.attestation import ForensicAttestation
+from common.models.audit_checkpoint import AuditCheckpoint
 from common.models.audit_log import AuditLog
 from common.models.audit_outbox import AuditLogOutbox, OutboxStatus
 from common.models.audit_sink import AuditLogSink, SinkKind
@@ -52,6 +53,7 @@ __all__ = [
     "KeyType",
     "Policy",
     "AuditLog",
+    "AuditCheckpoint",
     "ForensicAttestation",
     "AuditLogOutbox",
     "OutboxStatus",
