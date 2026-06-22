@@ -240,6 +240,18 @@ jobs:
           kubectl apply -f k8s/api-deployment.yaml \
                         -f k8s/gateway-deployment.yaml \
                         -f k8s/mandate-deployment.yaml
+
+          # Schedule-driven CronJobs. Previously applied out-of-band, which
+          # left them unmanaged by the pipeline (a new cron, e.g. the
+          # evidence-anchor checkpoint worker, would never reach prod on
+          # merge). They run on a pinned curl image — not the API digest —
+          # so no `set image`; they call api-service over HTTP on schedule.
+          # Depends on secretproviderclass (cron secret) + network-policies,
+          # both applied earlier in this run. `kubectl apply` is idempotent.
+          kubectl apply -f k8s/cronjob-cleanup.yaml \
+                        -f k8s/cronjob-compliance-export-cleanup.yaml \
+                        -f k8s/cronjob-email.yaml \
+                        -f k8s/cronjob-evidence-anchor.yaml
           kubectl set image deployment/api \
             api=$REGISTRY/$PROJECT_ID/ai-identity/api@${{ steps.digests.outputs.api_digest }} \
             -n ai-identity
