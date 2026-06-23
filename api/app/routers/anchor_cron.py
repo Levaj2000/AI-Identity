@@ -21,13 +21,14 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session  # noqa: TC002 — runtime db.query
 
 from common.config.settings import settings
 from common.forensic.anchor_service import create_checkpoint
 from common.forensic.signer import ForensicSignerConfigError, get_forensic_signer
 from common.models import get_db
+from common.models.audit_checkpoint import AuditCheckpoint
 from common.models.audit_log import AuditLog
 
 logger = logging.getLogger("ai_identity.api.anchor_cron")
@@ -46,8 +47,8 @@ def emit_checkpoints(
 ) -> dict:
     """Emit signed Merkle checkpoints for every org with un-anchored rows.
 
-    Returns a structured summary: orgs scanned, checkpoints created, and the
-    total events anchored this tick.
+    Returns a structured summary: orgs with a backlog (those actually
+    processed), checkpoints created, and the total events anchored this tick.
     """
     if not settings.internal_service_key or x_internal_key != settings.internal_service_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -59,15 +60,40 @@ def emit_checkpoints(
     except ForensicSignerConfigError as exc:
         raise HTTPException(status_code=503, detail=f"signer not configured: {exc}") from None
 
-    org_ids = db.execute(select(AuditLog.org_id).distinct()).scalars().all()
+    # Select only orgs that actually have un-anchored rows, in one set-based
+    # query, instead of `SELECT DISTINCT org_id` over all of audit_log followed
+    # by a per-org probe. For each org we compare its highest audit_log.id
+    # against its checkpoint high-water mark (max(last_audit_id)) and keep only
+    # those where audit_log is ahead — so idle orgs are never visited and never
+    # spend create_checkpoint's max()-lookup + un-anchored fetch. The query also
+    # hands back each org's high-water mark, threaded straight into
+    # create_checkpoint as ``after_id`` so the drain skips that lookup too.
+    hwm = (
+        select(
+            AuditCheckpoint.org_id.label("org_id"),
+            func.max(AuditCheckpoint.last_audit_id).label("last_audit_id"),
+        )
+        .group_by(AuditCheckpoint.org_id)
+        .subquery()
+    )
+    candidates = db.execute(
+        select(
+            AuditLog.org_id,
+            func.coalesce(hwm.c.last_audit_id, 0),
+        )
+        .outerjoin(hwm, hwm.c.org_id == AuditLog.org_id)
+        .group_by(AuditLog.org_id, hwm.c.last_audit_id)
+        .having(func.max(AuditLog.id) > func.coalesce(hwm.c.last_audit_id, 0))
+    ).all()
 
     checkpoints_created = 0
     events_anchored = 0
-    for org_id in org_ids:
-        # Thread the last anchored id forward across this org's drain so the
-        # high-water mark is read once, not re-derived with a SELECT max(...)
-        # on every batch (the N+1 Sentry flagged on this endpoint).
-        after_id: int | None = None
+    for org_id, last_anchored_id in candidates:
+        # Seed the drain with the high-water mark from the candidate query, then
+        # thread each new checkpoint's last_audit_id forward. So the max()-lookup
+        # is never run separately — not once per batch (the N+1 Sentry flagged)
+        # and not even once per org; the candidate query already resolved it.
+        after_id = last_anchored_id
         for _ in range(max_per_org):
             cp = create_checkpoint(db, org_id, signer=signer, after_id=after_id)
             if cp is None:
@@ -79,7 +105,7 @@ def emit_checkpoints(
     logger.info(
         "evidence anchor checkpoint run",
         extra={
-            "orgs_scanned": len(org_ids),
+            "orgs_with_backlog": len(candidates),
             "checkpoints_created": checkpoints_created,
             "events_anchored": events_anchored,
         },
@@ -87,7 +113,7 @@ def emit_checkpoints(
 
     return {
         "status": "ok",
-        "orgs_scanned": len(org_ids),
+        "orgs_with_backlog": len(candidates),
         "checkpoints_created": checkpoints_created,
         "events_anchored": events_anchored,
     }
