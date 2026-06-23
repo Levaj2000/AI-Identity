@@ -12,7 +12,7 @@ from api.app.auth import get_current_user
 from api.app.quota import check_agent_quota
 from common.audit.request_context import extract_audit_context
 from common.audit.writer import create_audit_entry
-from common.auth.keys import generate_api_key, get_key_prefix, hash_key
+from common.auth.keys import generate_api_key, get_key_prefix, hash_key, key_expiry
 from common.capabilities import build_policy_rules_from_capabilities
 from common.models import Agent, AgentKey, AgentStatus, KeyStatus, KeyType, Policy, User, get_db
 from common.models.agent_assignment import AgentAssignment, AgentRole
@@ -159,6 +159,7 @@ def create_agent(
         key_prefix=get_key_prefix(plaintext_key),
         key_type=KeyType.runtime.value,
         status=KeyStatus.active.value,
+        expires_at=key_expiry(KeyType.runtime.value),
     )
     db.add(agent_key)
 
