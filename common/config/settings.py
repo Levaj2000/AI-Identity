@@ -17,6 +17,14 @@ class Settings(BaseSettings):
     api_key_prefix: str = "aid_sk_"
     admin_key_prefix: str = "aid_admin_"
     key_rotation_grace_hours: int = 24
+    # Runtime agent keys (aid_sk_) get a non-null expiry by default — a static
+    # bearer token is unsuitable even at low assurance tiers (Insight #101 / #413).
+    # Clients roll to a fresh key via POST /keys/rotate or /keys/refresh within the
+    # grace window. Admin keys (aid_admin_) are operator credentials and stay
+    # long-lived by default. A TTL of 0 means "no expiry" (static) for that type.
+    # Existing keys issued before this change keep expires_at=NULL and stay valid.
+    runtime_key_ttl_hours: int = 720  # 30 days
+    admin_key_ttl_hours: int = 0  # static — operator credential, rotate manually
     audit_hmac_key: str = "CHANGE-ME-IN-PRODUCTION"
 
     # Forensic attestation signer (see docs/forensics/attestation-format.md)
