@@ -79,15 +79,17 @@ def test_emits_checkpoint(client, db_session, test_user, mock_internal_service_k
     assert again.json()["checkpoints_created"] == 0
 
 
-def test_backlog_drain_queries_high_water_mark_once_per_org(
+def test_backlog_drain_never_reruns_high_water_mark_lookup(
     client, db_session, test_user, mock_internal_service_key, local_signer, monkeypatch
 ):
-    """A multi-batch drain must not re-run the max(last_audit_id) lookup per batch.
+    """A multi-batch drain must not re-run the max(last_audit_id) lookup.
 
-    Regression for the N+1 Sentry flagged on this endpoint: the high-water mark
-    is resolved once per org and then threaded forward across the drain.
+    Regression for the N+1 Sentry flagged on this endpoint. The candidate query
+    now resolves each org's high-water mark up front and threads it into the
+    drain, so ``_last_anchored_id`` is never called per batch — nor even once
+    per org.
     """
-    org = _org_with_rows(db_session, test_user, 12)
+    _org_with_rows(db_session, test_user, 12)
 
     # Force several batches out of a small org by shrinking the batch size.
     monkeypatch.setattr(
@@ -96,7 +98,7 @@ def test_backlog_drain_queries_high_water_mark_once_per_org(
         functools.partial(anchor_service.create_checkpoint, max_batch=5),
     )
 
-    # Spy on the high-water-mark lookup that create_checkpoint calls internally.
+    # Spy on the high-water-mark lookup that create_checkpoint falls back to.
     lookups: list = []
     real_last_anchored = anchor_service._last_anchored_id
 
@@ -113,5 +115,61 @@ def test_backlog_drain_queries_high_water_mark_once_per_org(
     # 12 rows / batch of 5 → three contiguous checkpoints, all 12 events anchored.
     assert body["checkpoints_created"] == 3
     assert body["events_anchored"] == 12
-    # The N+1 fix: one lookup for the org, not one per batch.
-    assert lookups == [org.id]
+    # The candidate query supplies the high-water mark, so the per-org fallback
+    # lookup never fires.
+    assert lookups == []
+
+
+def test_idle_orgs_are_not_processed(
+    client, db_session, test_user, mock_internal_service_key, local_signer, monkeypatch
+):
+    """An org with nothing new must not be visited at all — no checkpoint, no probe.
+
+    Once an org is fully anchored, a later tick must skip it entirely: it must
+    not appear in the candidate set and must never reach create_checkpoint (so
+    no per-org max()-lookup or un-anchored fetch is spent on it).
+    """
+    idle = _org_with_rows(db_session, test_user, 6)
+    active = _org_with_rows(db_session, test_user, 4)
+
+    # First tick anchors both orgs.
+    first = client.post(ENDPOINT, headers={"x-internal-key": "test-internal-key-xyz"})
+    assert first.json()["checkpoints_created"] == 2
+
+    # New rows land only for the active org.
+    for i in range(3):
+        db_session.add(
+            AuditLog(
+                agent_id=test_user.id,
+                org_id=active.id,
+                endpoint="/v1/chat",
+                method="POST",
+                decision="allow",
+                request_metadata={},
+                entry_hash=hashlib.sha256(f"new-{active.id}-{i}".encode()).hexdigest(),
+                prev_hash="x" * 64,
+            )
+        )
+    db_session.commit()
+
+    # Spy on create_checkpoint to prove the idle org is never visited.
+    visited: list = []
+    real_create = anchor_cron.create_checkpoint
+
+    def _spy_create(db, org_id, **kwargs):
+        visited.append(org_id)
+        return real_create(db, org_id, **kwargs)
+
+    monkeypatch.setattr(anchor_cron, "create_checkpoint", _spy_create)
+
+    second = client.post(ENDPOINT, headers={"x-internal-key": "test-internal-key-xyz"})
+    body = second.json()
+
+    # Only the active org is processed; the idle org is never even probed.
+    assert body["orgs_with_backlog"] == 1
+    assert body["checkpoints_created"] == 1
+    assert body["events_anchored"] == 3
+    assert idle.id not in visited
+    assert set(visited) == {active.id}
+    # The idle org gained no second checkpoint.
+    assert db_session.query(AuditCheckpoint).filter(AuditCheckpoint.org_id == idle.id).count() == 1
