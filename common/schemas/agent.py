@@ -271,6 +271,25 @@ class AgentKeyRotateResponse(BaseModel):
     )
 
 
+class AgentKeyRefreshResponse(BaseModel):
+    """Response for routine key refresh — roll a near-expiry key to a fresh one.
+
+    Same grace mechanics as rotation: the previous key stays valid
+    (status=rotated) for the grace window so the client can switch over without
+    downtime, and the new key carries a fresh TTL.
+    """
+
+    new_key: AgentKeyResponse = Field(description="The newly issued key")
+    api_key: str = Field(
+        ...,
+        description="Plaintext API key for the new key — shown only once",
+        examples=["aid_sk_f7e8d9c0b1a2f7e8d9c0b1a2f7e8d9c0b1a2f7e8d9c0b1a2f7e8d9c0b1a2f7e8"],
+    )
+    previous_key: AgentKeyResponse = Field(
+        description="The prior key, now status=rotated with a grace-period expiry",
+    )
+
+
 # ── Policy Schemas ───────────────────────────────────────────────────────
 
 

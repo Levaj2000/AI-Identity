@@ -392,6 +392,130 @@ class TestRotateKey:
         assert resp.status_code == 400
 
 
+# ── Runtime key TTL (#413 — no static-by-default keys) ───────────────────
+
+
+class TestKeyExpiry:
+    def test_created_runtime_key_has_expiry(self, client, auth_headers):
+        """A freshly created runtime key is non-static — expires_at is set."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        resp = client.post(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers)
+        assert resp.status_code == 201
+        assert resp.json()["key"]["expires_at"] is not None
+
+    def test_initial_agent_key_has_expiry(self, client, auth_headers):
+        """The key minted at agent creation is also non-static."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        resp = client.get(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers)
+        assert resp.json()["items"][0]["expires_at"] is not None
+
+    def test_rotated_new_key_has_expiry(self, client, auth_headers):
+        """The successor minted by rotation gets a fresh TTL — not static."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        resp = client.post(f"/api/v1/agents/{agent_id}/keys/rotate", headers=auth_headers)
+        assert resp.json()["new_key"]["expires_at"] is not None
+
+
+# ── POST /api/v1/agents/{id}/keys/refresh ────────────────────────────────
+
+
+class TestRefreshKey:
+    def test_refresh_success(self, client, auth_headers):
+        """Refresh returns 201 with a new active key and the previous key rotated."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        resp = client.post(f"/api/v1/agents/{agent_id}/keys/refresh", headers=auth_headers)
+        assert resp.status_code == 201
+        data = resp.json()
+
+        assert data["api_key"].startswith("aid_sk_")
+        assert data["new_key"]["status"] == "active"
+        assert data["new_key"]["expires_at"] is not None
+        assert data["previous_key"]["status"] == "rotated"
+        assert data["previous_key"]["expires_at"] is not None
+
+    def test_refresh_specific_key_id(self, client, auth_headers):
+        """Refreshing a named key rolls that key, not the oldest."""
+        agent_id, _ = _create_agent(client, auth_headers)
+        # Second key — now two active. The second is the newer one.
+        second_id = client.post(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers).json()[
+            "key"
+        ]["id"]
+
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/refresh?key_id={second_id}",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        assert resp.json()["previous_key"]["id"] == second_id
+
+    def test_refresh_defaults_to_oldest_active(self, client, auth_headers):
+        """With no key_id, refresh rolls the oldest active key (parity with rotate)."""
+        agent_id, _ = _create_agent(client, auth_headers)
+        oldest_id = client.get(
+            f"/api/v1/agents/{agent_id}/keys?status=active", headers=auth_headers
+        ).json()["items"][0]["id"]
+        client.post(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers)
+
+        resp = client.post(f"/api/v1/agents/{agent_id}/keys/refresh", headers=auth_headers)
+        assert resp.json()["previous_key"]["id"] == oldest_id
+
+    def test_refresh_grace_window(self, client, auth_headers, db_session):
+        """The previous key is rotated (not revoked) with a future expiry."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        resp = client.post(f"/api/v1/agents/{agent_id}/keys/refresh", headers=auth_headers)
+        prev_id = resp.json()["previous_key"]["id"]
+
+        rec = db_session.query(AgentKey).filter(AgentKey.id == prev_id).first()
+        assert rec.status == KeyStatus.rotated.value
+        now_naive = datetime.now(UTC).replace(tzinfo=None)
+        expires = rec.expires_at.replace(tzinfo=None) if rec.expires_at.tzinfo else rec.expires_at
+        assert expires > now_naive
+
+    def test_refresh_unknown_key_id(self, client, auth_headers):
+        """Refreshing a key_id that isn't an active key of this agent returns 404."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/refresh?key_id=99999",
+            headers=auth_headers,
+        )
+        assert resp.status_code == 404
+
+    def test_refresh_no_active_key(self, client, auth_headers):
+        """Refresh with no active keys returns 400."""
+        agent_id, _ = _create_agent(client, auth_headers)
+        key_id = client.get(f"/api/v1/agents/{agent_id}/keys", headers=auth_headers).json()[
+            "items"
+        ][0]["id"]
+        client.delete(f"/api/v1/agents/{agent_id}/keys/{key_id}", headers=auth_headers)
+
+        resp = client.post(f"/api/v1/agents/{agent_id}/keys/refresh", headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_refresh_revoked_agent(self, client, auth_headers):
+        """Cannot refresh keys for a revoked agent."""
+        agent_id, _ = _create_agent(client, auth_headers)
+        client.delete(f"/api/v1/agents/{agent_id}", headers=auth_headers)
+
+        resp = client.post(f"/api/v1/agents/{agent_id}/keys/refresh", headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_refresh_other_user(self, client, auth_headers, other_user):
+        """Cannot refresh keys on another user's agent."""
+        agent_id, _ = _create_agent(client, auth_headers)
+
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/refresh",
+            headers={"X-API-Key": "other-user-api-key-87654321"},
+        )
+        assert resp.status_code == 404
+
+
 # ── Change-log v2.1 enrichment ──────────────────────────────────────────
 
 
@@ -436,6 +560,18 @@ class TestKeyLifecycleAuditEnrichment:
         assert resp.status_code == 201
         entry = self._lifecycle_entry(db_session, agent_id, "key_rotated")
         assert entry.request_metadata["user_agent"] == "rotate-test/1.0"
+        assert entry.request_metadata["ip_address"]
+        assert entry.request_metadata["grace_hours"] == "24"
+
+    def test_refresh_key_records_ip_and_user_agent(self, client, auth_headers, db_session):
+        agent_id, _ = _create_agent(client, auth_headers)
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/keys/refresh",
+            headers={**auth_headers, "user-agent": "refresh-test/1.0"},
+        )
+        assert resp.status_code == 201
+        entry = self._lifecycle_entry(db_session, agent_id, "key_refreshed")
+        assert entry.request_metadata["user_agent"] == "refresh-test/1.0"
         assert entry.request_metadata["ip_address"]
         assert entry.request_metadata["grace_hours"] == "24"
 

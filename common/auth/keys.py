@@ -1,5 +1,6 @@
 """API key generation, hashing, and validation utilities."""
 
+import datetime
 import hashlib
 import secrets
 
@@ -17,6 +18,27 @@ def generate_api_key(key_type: str = "runtime") -> str:
     prefix = _prefix_for_type(key_type)
     random_part = secrets.token_urlsafe(32)
     return f"{prefix}{random_part}"
+
+
+def key_expiry(
+    key_type: str = "runtime", now: datetime.datetime | None = None
+) -> datetime.datetime | None:
+    """Return the expiry for a newly-issued key, or None for no expiry.
+
+    Runtime keys (aid_sk_) get a non-null TTL by default so agent credentials are
+    never static bearer tokens (Insight #101 / #413). Admin keys (aid_admin_) are
+    operator credentials and default to no expiry. A configured TTL of 0 (or less)
+    means "no expiry" for that type. Used at every key-issuance site — agent
+    creation, key creation, and rotation/refresh — so the policy can't drift.
+    """
+    ttl_hours = (
+        settings.admin_key_ttl_hours if key_type == "admin" else settings.runtime_key_ttl_hours
+    )
+    if ttl_hours <= 0:
+        return None
+    if now is None:
+        now = datetime.datetime.now(datetime.UTC)
+    return now + datetime.timedelta(hours=ttl_hours)
 
 
 def hash_key(plaintext_key: str) -> str:

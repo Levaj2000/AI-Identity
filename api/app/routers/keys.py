@@ -11,12 +11,13 @@ from api.app.auth import get_current_user
 from api.app.quota import check_key_quota
 from common.audit.request_context import extract_audit_context
 from common.audit.writer import create_audit_entry
-from common.auth.keys import generate_api_key, get_key_prefix, hash_key
+from common.auth.keys import generate_api_key, get_key_prefix, hash_key, key_expiry
 from common.models import AgentKey, AgentStatus, KeyStatus, KeyType, User, get_db
 from common.queries import get_user_agent
 from common.schemas.agent import (
     AgentKeyCreateResponse,
     AgentKeyListResponse,
+    AgentKeyRefreshResponse,
     AgentKeyResponse,
     AgentKeyRotateResponse,
 )
@@ -48,6 +49,32 @@ def _revoke_expired_keys(db: Session, agent_id: uuid.UUID) -> int:
         db.commit()
         logger.info("Auto-revoked %d expired key(s) for agent %s", count, agent_id)
     return count
+
+
+def _issue_successor(db: Session, old_key: AgentKey) -> tuple[AgentKey, str]:
+    """Roll `old_key` to a fresh successor, returning (new_key, plaintext).
+
+    The old key enters the rotation grace window (status=rotated, expires_at = now
+    + grace) so it stays valid while the client switches over. The new key inherits
+    the old key's type and gets a fresh TTL (key_expiry) — so a rolled key is never
+    static. Shared by rotate and refresh; the caller commits.
+    """
+    inherited_type = old_key.key_type if old_key.key_type else KeyType.runtime.value
+
+    old_key.status = KeyStatus.rotated.value
+    old_key.expires_at = datetime.now(UTC) + timedelta(hours=ROTATION_GRACE_HOURS)
+
+    plaintext_key = generate_api_key(key_type=inherited_type)
+    new_key = AgentKey(
+        agent_id=old_key.agent_id,
+        key_hash=hash_key(plaintext_key),
+        key_prefix=get_key_prefix(plaintext_key),
+        key_type=inherited_type,
+        status=KeyStatus.active.value,
+        expires_at=key_expiry(inherited_type),
+    )
+    db.add(new_key)
+    return new_key, plaintext_key
 
 
 # ── POST /api/v1/agents/{agent_id}/keys ──────────────────────────────────
@@ -107,6 +134,7 @@ def create_key(
         key_prefix=get_key_prefix(plaintext_key),
         key_type=key_type,
         status=KeyStatus.active.value,
+        expires_at=key_expiry(key_type),
     )
     db.add(agent_key)
     db.commit()
@@ -235,21 +263,9 @@ def rotate_key(
     if not old_key:
         raise HTTPException(status_code=400, detail="No active key to rotate")
 
-    # Rotate: old key → rotated with grace period
-    old_key.status = KeyStatus.rotated.value
-    old_key.expires_at = datetime.now(UTC) + timedelta(hours=ROTATION_GRACE_HOURS)
-
-    # Generate the new key — preserves the same key_type as the rotated key
-    inherited_type = old_key.key_type if old_key.key_type else KeyType.runtime.value
-    plaintext_key = generate_api_key(key_type=inherited_type)
-    new_key = AgentKey(
-        agent_id=agent.id,
-        key_hash=hash_key(plaintext_key),
-        key_prefix=get_key_prefix(plaintext_key),
-        key_type=inherited_type,
-        status=KeyStatus.active.value,
-    )
-    db.add(new_key)
+    # Old key → rotated (grace window); new key inherits type + gets a fresh TTL
+    new_key, plaintext_key = _issue_successor(db, old_key)
+    inherited_type = new_key.key_type
     db.commit()
     db.refresh(old_key)
     db.refresh(new_key)
@@ -283,6 +299,103 @@ def rotate_key(
         new_key=_key_to_response(new_key),
         api_key=plaintext_key,
         rotated_key=_key_to_response(old_key),
+    )
+
+
+# ── POST /api/v1/agents/{agent_id}/keys/refresh ─────────────────────────
+
+
+@router.post(
+    "/refresh",
+    response_model=AgentKeyRefreshResponse,
+    status_code=201,
+    summary="Refresh key",
+    response_description="New active key + previous key with grace period",
+    responses={
+        400: {"description": "Cannot refresh: agent is revoked or the key is not active"},
+        404: {"description": "Agent or key not found, or belongs to another user"},
+    },
+)
+def refresh_key(
+    agent_id: uuid.UUID,
+    request: Request,
+    key_id: int | None = Query(
+        None,
+        description="The active key to refresh. Omit to refresh the oldest active key.",
+    ),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Roll a near-expiry key to a fresh successor — the routine lifecycle call.
+
+    Runtime keys now expire by default, so a client holding a key approaching its
+    TTL calls this to obtain a successor *before* the old one lapses. Mechanically
+    identical to rotation: the previous key enters a **grace period**
+    (`status=rotated`, `expires_at` = now + grace) so both keys are valid while the
+    client switches over, and the new key carries a fresh TTL.
+
+    Unlike `/rotate` (which always rolls the *oldest* active key — the security
+    "replace it" operation), `refresh` lets the caller name the specific key they
+    hold via `key_id`. With no `key_id` it falls back to the oldest active key.
+
+    The response includes the new plaintext key — **store it immediately**.
+    """
+    agent = get_user_agent(db, user, agent_id)
+
+    if agent.status == AgentStatus.revoked.value:
+        raise HTTPException(status_code=400, detail="Cannot refresh key for a revoked agent")
+
+    # Clean up any already-expired rotated keys
+    _revoke_expired_keys(db, agent.id)
+
+    query = db.query(AgentKey).filter(
+        AgentKey.agent_id == agent.id,
+        AgentKey.status == KeyStatus.active.value,
+    )
+    if key_id is not None:
+        target = query.filter(AgentKey.id == key_id).first()
+        if not target:
+            raise HTTPException(status_code=404, detail="No active key with that id to refresh")
+    else:
+        target = query.order_by(AgentKey.created_at.asc()).first()
+        if not target:
+            raise HTTPException(status_code=400, detail="No active key to refresh")
+
+    new_key, plaintext_key = _issue_successor(db, target)
+    inherited_type = new_key.key_type
+    db.commit()
+    db.refresh(target)
+    db.refresh(new_key)
+
+    logger.info(
+        "Key refreshed for agent %s: prev_key=%d → rotated (expires %s), new_key=%d",
+        agent.id,
+        target.id,
+        target.expires_at,
+        new_key.id,
+    )
+
+    create_audit_entry(
+        db,
+        agent_id=agent.id,
+        endpoint=f"/api/v1/agents/{agent.id}/keys/refresh",
+        method="POST",
+        decision="allow",
+        user_id=user.id,
+        request_metadata={
+            "action_type": "key_refreshed",
+            "resource_type": "api_key",
+            "key_type": inherited_type,
+            "key_prefix": new_key.key_prefix,
+            "grace_hours": str(ROTATION_GRACE_HOURS),
+            **extract_audit_context(request),
+        },
+    )
+
+    return AgentKeyRefreshResponse(
+        new_key=_key_to_response(new_key),
+        api_key=plaintext_key,
+        previous_key=_key_to_response(target),
     )
 
 
