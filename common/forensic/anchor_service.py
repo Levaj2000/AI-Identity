@@ -58,6 +58,7 @@ def create_checkpoint(
     signer: SignerHandle | None = None,
     max_batch: int = MAX_BATCH,
     now: datetime.datetime | None = None,
+    last_id: int | None = None,
 ) -> AuditCheckpoint | None:
     """Anchor the next contiguous batch of un-checkpointed rows for ``org_id``.
 
@@ -66,8 +67,16 @@ def create_checkpoint(
 
     ``signer`` defaults to the configured platform signer; tests pass a
     local-key handle. ``now`` is injectable for deterministic tests.
+
+    ``last_id`` is the org's current high-water mark (highest already-anchored
+    ``audit_log.id``). When draining a backlog across several calls, the caller
+    threads the previous checkpoint's ``last_audit_id`` back in here so we skip
+    re-running the ``max(last_audit_id)`` lookup every iteration — that repeated
+    query is what Sentry flagged as an N+1 on the checkpoint cron. Defaults to a
+    one-time DB lookup when not supplied.
     """
-    last_id = _last_anchored_id(db, org_id)
+    if last_id is None:
+        last_id = _last_anchored_id(db, org_id)
 
     rows = db.execute(
         select(AuditLog.id, AuditLog.entry_hash)

@@ -64,10 +64,16 @@ def emit_checkpoints(
     checkpoints_created = 0
     events_anchored = 0
     for org_id in org_ids:
+        # Thread the high-water mark forward so a backlog drain runs the
+        # max(last_audit_id) lookup once per org, not once per batch (the N+1
+        # Sentry flagged on this endpoint). First call resolves it from the DB;
+        # each checkpoint then hands the caller the new mark to advance locally.
+        last_id: int | None = None
         for _ in range(max_per_org):
-            cp = create_checkpoint(db, org_id, signer=signer)
+            cp = create_checkpoint(db, org_id, signer=signer, last_id=last_id)
             if cp is None:
                 break
+            last_id = cp.last_audit_id
             checkpoints_created += 1
             events_anchored += cp.tree_size
 
