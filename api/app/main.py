@@ -27,7 +27,7 @@ def _filter_transactions(event, hint):
     """Drop health/root/internal-cron transactions — monitoring noise, not actionable."""
     url = event.get("request", {}).get("url", "")
     # Drop health/root endpoints and internal cron/background admin endpoints
-    if url.endswith(("/health", "/")) or "/api/internal/" in url:
+    if url.endswith(("/health", "/")) or "/api/internal/" in url or "/api/v1/cron/" in url:
         return None
     return event
 
