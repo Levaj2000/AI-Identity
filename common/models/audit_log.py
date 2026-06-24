@@ -128,6 +128,11 @@ class AuditLog(Base):
         Index("ix_audit_log_user_created", "user_id", "created_at"),
         # Primary enterprise query pattern: "all events in this org, newest first"
         Index("ix_audit_log_org_created", "org_id", "created_at"),
+        # Evidence Anchor checkpoint cron (#408): the candidate query groups by
+        # org_id and takes max(id) to find orgs with un-anchored rows. This
+        # (org_id, id) B-tree lets Postgres satisfy that grouped-max with an
+        # index scan instead of a full audit_log seq scan every tick.
+        Index("ix_audit_log_org_id_id", "org_id", "id"),
         # Per-org chain completeness guard. NULLs are distinct in both PG
         # and SQLite by default, so legacy unbackfilled rows don't collide;
         # populated rows enforce one-row-per-sequence per org.
