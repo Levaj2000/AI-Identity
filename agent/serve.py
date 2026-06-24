@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import subprocess
 from pathlib import Path
 
@@ -45,6 +46,24 @@ def _startup_sha() -> str:
 
 
 STARTUP_SHA = _startup_sha()
+
+
+def _maybe_init_weave() -> None:
+    """Opt-in W&B Weave tracing spike. Off by default.
+
+    Set ADA_WEAVE=1 to autopatch Gemini calls and emit traces. Must run before
+    the first model call. Optional ADA_WEAVE_PROJECT overrides the project name.
+    """
+    if os.environ.get("ADA_WEAVE") != "1":
+        return
+    try:
+        import weave
+    except ImportError:
+        logger.error("ADA_WEAVE=1 but 'weave' is not installed. Run: pip install weave")
+        return
+    project = os.environ.get("ADA_WEAVE_PROJECT", "ai-identity-ada")
+    weave.init(project)
+    logger.warning("W&B Weave tracing enabled (project=%s) — spike mode, do not ship.", project)
 
 
 def build_app(*, host: str, port: int):
@@ -109,6 +128,7 @@ def main():
     parser.add_argument("--reload", action="store_true")
     args = parser.parse_args()
 
+    _maybe_init_weave()
     app = build_app(host=args.host, port=args.port)
     uvicorn.run(app, host=args.host, port=args.port, reload=args.reload)
 
