@@ -1,0 +1,47 @@
+{
+  "checkpoints": [
+    {
+      "merkle_root": "d01437ad52b18e6584ce03f2d29d7597f8d31803f2160fb31c670a64af325417",
+      "envelope": {
+        "payloadType": "application/vnd.ai-identity.anchor-checkpoint+json",
+        "payload": "eyJmaXJzdF9hdWRpdF9pZCI6MTAwMCwibGFzdF9hdWRpdF9pZCI6MTAwNiwibWVya2xlX3Jvb3QiOiJkMDE0MzdhZDUyYjE4ZTY1ODRjZTAzZjJkMjlkNzU5N2Y4ZDMxODAzZjIxNjBmYjMxYzY3MGE2NGFmMzI1NDE3Iiwib3JnX2lkIjoiMTExMTExMTEtMTExMS0xMTExLTExMTEtMTExMTExMTExMTExIiwic2NoZW1hX3ZlcnNpb24iOjEsInNpZ25lZF9hdCI6IjIwMjYtMDYtMjVUMTI6MDA6MDBaIiwic2lnbmVyX2tleV9pZCI6ImxvY2FsOmZpeHR1cmUta2V5IiwidHJlZV9zaXplIjo3fQ==",
+        "signatures": [
+          {
+            "keyid": "local:fixture-key",
+            "sig": "MEUCIEjgxSfcdKRyb+6IYAgL5wSSANMXbPJpp6hO4POqSQFYAiEAjllNMImV7xwgoWftYxMwHkSMcdYAr+yRJ9ulr6ozu3U="
+          }
+        ]
+      }
+    }
+  ],
+  "inclusionProofs": {
+    "proofs": [
+      {
+        "audit_id": 1003,
+        "entry_hash": "1441ba5507f9658d9bea29b0d9567e6900468e0153fa990194e0f0f94699694b",
+        "index": 3,
+        "tree_size": 7,
+        "merkle_root": "d01437ad52b18e6584ce03f2d29d7597f8d31803f2160fb31c670a64af325417",
+        "proof": [
+          "d1c02dd09e1affe3ded8d8e59e915fbf19c7cac0156aa56ae7ddd646884144b5",
+          "6de3c59a3e329a98770e8c038c0ddc766ec1043d9f69b53330a6e20da76fe934",
+          "dcf3c9fe2bd92388af611bec2e7143308a6f42837cc3cdff7b74d634cb0b9aa3"
+        ]
+      }
+    ],
+    "pending": []
+  },
+  "jwks": {
+    "keys": [
+      {
+        "kty": "EC",
+        "crv": "P-256",
+        "x": "S1v7GRVEDm0Dvy4caORe8C9DM224DLrd9gid61pItQo",
+        "y": "H4NIWok-hOU1_-i3b5qbvs43aJ92nWJezyFK4hBkGNI",
+        "kid": "local:fixture-key",
+        "alg": "ES256",
+        "use": "sig"
+      }
+    ]
+  }
+}
