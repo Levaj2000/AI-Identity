@@ -9,6 +9,7 @@
 import { useCallback, useRef, useState } from 'react'
 
 import { API_BASE_URL } from '../../config/api'
+import { sniffCaseFile } from '../../lib/caseFileSniff'
 import { getAuthHeaders } from '../../services/api/client'
 
 interface VerifyResult {
@@ -33,6 +34,23 @@ export function CaseFileVerifyPanel() {
     setResult(null)
     setErrorMsg('')
     try {
+      // Catch wrong-file drops before uploading, so an evidence-anchor or JWKS
+      // file doesn't come back as a scary "Chain broken / Signature invalid".
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(await file.text())
+      } catch {
+        setErrorMsg(`${file.name} is not valid JSON — drop a Case File report (.json).`)
+        setState('error')
+        return
+      }
+      const sniff = sniffCaseFile(parsed)
+      if (!sniff.ok) {
+        setErrorMsg(sniff.hint)
+        setState('error')
+        return
+      }
+
       const fd = new FormData()
       fd.append('file', file)
       // getAuthHeaders returns Authorization / X-API-Key only — no Content-Type,
