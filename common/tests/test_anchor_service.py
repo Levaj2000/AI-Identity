@@ -24,7 +24,7 @@ from common.schemas.forensic_attestation import (
 )
 
 
-def _local_signer() -> tuple[SignerHandle, bytes]:
+def _local_signer(key_id: str = "local:anchor-test") -> tuple[SignerHandle, bytes]:
     priv = ec.generate_private_key(ec.SECP256R1())
     pub_pem = priv.public_key().public_bytes(
         encoding=serialization.Encoding.PEM,
@@ -34,7 +34,7 @@ def _local_signer() -> tuple[SignerHandle, bytes]:
     def _sign(message: bytes) -> bytes:
         return priv.sign(message, ec.ECDSA(hashes.SHA256()))
 
-    return SignerHandle(sign=_sign, key_id="local:anchor-test", backend="local"), pub_pem
+    return SignerHandle(sign=_sign, key_id=key_id, backend="local"), pub_pem
 
 
 @pytest.fixture
@@ -172,6 +172,53 @@ def test_assemble_evidence_reports_uncovered_events(db_session, org, test_agent)
     evidence = anchor_service.assemble_evidence(db_session, org.id, ids + later)
     assert set(evidence["pending"]) == set(later)
     assert len(evidence["proofs"]) == len(ids)
+
+
+def test_rotation_does_not_break_pre_rotation_checkpoint(db_session, org, test_agent):
+    """ADR-003 (b): version pinning is rotation-safe.
+
+    A checkpoint signed with key *v1* must keep verifying with v1's public key
+    after the signer rotates to *v2* — the checkpoint pins ``signer_key_id`` at
+    sign time, so a verifier never needs a key newer than the one named in the
+    checkpoint, and rotation never invalidates pre-rotation evidence.
+    """
+    ids = _add_rows(db_session, org.id, test_agent.id, 20)
+
+    # Checkpoint signed by v1.
+    signer_v1, pub_v1 = _local_signer(key_id="local:key-v1")
+    anchor_service.create_checkpoint(db_session, org.id, signer=signer_v1)
+
+    target = ids[9]
+    evidence = anchor_service.assemble_evidence(db_session, org.id, [target])
+    proof = evidence["proofs"][0]
+    envelope = DSSEEnvelope(**evidence["checkpoints"][0]["envelope"])
+
+    # The checkpoint pins the exact signing key version it was sealed with.
+    assert envelope.signatures[0].keyid == "local:key-v1"
+
+    # Operator rotates to v2 (new key, new public material). The v2 key is
+    # irrelevant to the old checkpoint — verification needs only v1's public key.
+    _signer_v2, pub_v2 = _local_signer(key_id="local:key-v2")
+    assert pub_v2 != pub_v1
+
+    checkpoint = verify_entry_inclusion(
+        entry_hash=proof["entry_hash"],
+        index=proof["index"],
+        envelope=envelope,
+        proof=[bytes.fromhex(h) for h in proof["proof"]],
+        public_key_pem=pub_v1,
+    )
+    assert checkpoint.org_id == org.id
+
+    # The rotated-in v2 key must NOT verify a v1-signed checkpoint.
+    with pytest.raises(AttestationVerificationError):
+        verify_entry_inclusion(
+            entry_hash=proof["entry_hash"],
+            index=proof["index"],
+            envelope=envelope,
+            proof=[bytes.fromhex(h) for h in proof["proof"]],
+            public_key_pem=pub_v2,
+        )
 
 
 def test_checkpoints_are_org_scoped(db_session, org, test_agent, test_user):

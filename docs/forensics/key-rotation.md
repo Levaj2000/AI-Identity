@@ -182,6 +182,27 @@ GCP defers actual destruction by 24 hours by default — that window is
 the last chance to reverse a mistake via `gcloud kms keys versions
 restore`.
 
+## Offline / air-gapped verification — pin a JWKS snapshot
+
+The JWKS endpoint (`/.well-known/ai-identity-public-keys.json`) is the
+live source of truth, but a verifier proving a Case File in a courtroom
+or air-gapped environment should **not** depend on a live fetch. The
+recommended posture (ADR-003 (c)):
+
+- Capture a local copy of the JWKS document **at or after** the
+  checkpoint's `signed_at`, and verify against that frozen snapshot.
+  This removes any network dependency and pins the exact key set used.
+- This is safe because rotation never silently drops an old version —
+  every non-destroyed `kid` stays published, so a snapshot taken later
+  still contains the key that signed an earlier checkpoint.
+- A `kid` that is absent from the snapshot (e.g. a destroyed version)
+  must **fail closed** — never treat "kid not found" as "trust anyway".
+
+The checkpoint pins `signer_key_id`, so the verifier looks up exactly
+one `kid`; it never needs a key newer than the one named in the
+checkpoint. Regression-guarded by
+`test_rotation_does_not_break_pre_rotation_checkpoint`.
+
 ## Rotation cadence
 
 There is currently **no scheduled rotation**. GCP's documented
