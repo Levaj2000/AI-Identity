@@ -15,9 +15,12 @@ The DB-facing layer over the pure crypto in ``common.forensic.merkle`` and
 
 Signing reuses the same single platform key + JWKS as the per-session
 attestation (``get_forensic_signer``); the ``org_id`` is carried inside the
-signed checkpoint payload. Per-org key isolation is deliberately deferred to
-#407 — this matches how attestations already work, so verifiers and key
-rotation have one story, not two.
+signed checkpoint payload. Per-org asymmetric key isolation stays unbuilt by
+decision (ADR-003, #407): forgery resistance already lives in the per-org HMAC
+layer, the asymmetric key only provides public verifiability, and the
+per-checkpoint ``signer_key_id`` keeps a future per-org-key path additive — so
+verifiers and key rotation have one story, not two. See
+``docs/ADR-003-evidence-anchor-key-directory.md`` for the trigger to revisit.
 """
 
 from __future__ import annotations
