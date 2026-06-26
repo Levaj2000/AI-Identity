@@ -39,6 +39,12 @@ vi.mock('../../components/forms/TagInput', () => ({
 vi.mock('../../components/forms/KeyValueEditor', () => ({
   KeyValueEditor: () => <div data-testid="kv-editor" />,
 }))
+// CapabilitySelect fetches the capability catalog via apiFetch on mount in
+// edit mode. Stub it like the other form children so the test doesn't need
+// the api/client module mocked beyond isApiError.
+vi.mock('../../components/forms/CapabilitySelect', () => ({
+  CapabilitySelect: () => <div data-testid="capability-select" />,
+}))
 vi.mock('../../components/modals/ConfirmModal', () => ({
   ConfirmModal: ({
     onConfirm,
