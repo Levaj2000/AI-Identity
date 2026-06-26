@@ -295,3 +295,79 @@ class TestCollectorsAreRegistered:
             "ai_identity_sinks_circuit_open",
         ):
             assert name in body, f"expected metric {name!r} in exposition output"
+
+
+# ── Sentry Transaction Filter Tests ──────────────────────────────────
+
+
+class TestSentryTransactionFilter:
+    def test_filter_transactions_allows_normal_endpoints(self):
+        from api.app.main import _filter_transactions
+
+        event = {
+            "type": "transaction",
+            "transaction": "GET /api/v1/agents",
+            "request": {"url": "https://api.ai-identity.co/api/v1/agents"},
+        }
+        res = _filter_transactions(event, {})
+        assert res is event
+
+    def test_filter_transactions_drops_health_and_root(self):
+        from api.app.main import _filter_transactions
+
+        for path in ("/health", "/"):
+            event = {
+                "type": "transaction",
+                "transaction": f"GET {path}",
+                "request": {"url": f"https://api.ai-identity.co{path}"},
+            }
+            assert _filter_transactions(event, {}) is None
+
+    def test_filter_transactions_drops_internal_cron(self):
+        from api.app.main import _filter_transactions
+
+        event = {
+            "type": "transaction",
+            "transaction": "POST /api/internal/evidence-anchor/checkpoint",
+            "request": {
+                "url": "https://api.ai-identity.co/api/internal/evidence-anchor/checkpoint"
+            },
+        }
+        assert _filter_transactions(event, {}) is None
+
+    def test_filter_transactions_drops_v1_cron(self):
+        from api.app.main import _filter_transactions
+
+        event = {
+            "type": "transaction",
+            "transaction": "POST /api/v1/cron/sla-escalation",
+            "request": {"url": "https://api.ai-identity.co/api/v1/cron/sla-escalation"},
+        }
+        assert _filter_transactions(event, {}) is None
+
+    def test_filter_transactions_robust_when_request_missing_or_none(self):
+        from api.app.main import _filter_transactions
+
+        # missing request key
+        event_missing = {
+            "type": "transaction",
+            "transaction": "POST /api/v1/cron/sla-escalation",
+        }
+        assert _filter_transactions(event_missing, {}) is None
+
+        # request value is None
+        event_none = {
+            "type": "transaction",
+            "transaction": "POST /api/v1/cron/sla-escalation",
+            "request": None,
+        }
+        assert _filter_transactions(event_none, {}) is None
+
+        # normal transaction with request as None should not raise AttributeError and should be allowed
+        event_normal_none = {
+            "type": "transaction",
+            "transaction": "GET /api/v1/agents",
+            "request": None,
+        }
+        res = _filter_transactions(event_normal_none, {})
+        assert res is event_normal_none

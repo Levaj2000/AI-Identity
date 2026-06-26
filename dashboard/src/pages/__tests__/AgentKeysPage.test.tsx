@@ -325,7 +325,7 @@ describe('AgentKeysPage', () => {
     })
     renderPage()
 
-    expect(screen.getByText(/This agent has been revoked/)).toBeInTheDocument()
+    expect(screen.getByText(/This agent has been permanently revoked/)).toBeInTheDocument()
 
     const createBtn = screen.getByText('Create Key').closest('button')
     const rotateBtn = screen.getByText('Rotate').closest('button')
