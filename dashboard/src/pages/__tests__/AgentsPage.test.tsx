@@ -11,6 +11,17 @@ vi.mock('../../hooks/useAgentsList', () => ({
   useAgentsList: (...args: unknown[]) => mockUseAgentsList(...args),
 }))
 
+// AgentsPage reads the current user via useAuth (for the admin-only purge
+// control). Stub it so tests don't need a real AuthProvider/Clerk session.
+vi.mock('../../hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: { id: 'user-1', email: 'dev@example.com', role: 'member' },
+    loading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+  }),
+}))
+
 // ── Mock child components to keep tests focused on AgentsPage logic ──
 
 vi.mock('../../components/agents/AgentFilters', () => ({
