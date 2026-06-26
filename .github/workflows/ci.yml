@@ -72,6 +72,9 @@ jobs:
       - name: TypeScript type check
         run: tsc -b --noEmit
 
+      - name: Vitest
+        run: npm test
+
       - name: Build
         run: npm run build
         env:

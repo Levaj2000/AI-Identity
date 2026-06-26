@@ -25,9 +25,22 @@ from common.config.settings import settings
 
 def _filter_transactions(event, hint):
     """Drop health/root/internal-cron transactions — monitoring noise, not actionable."""
-    url = event.get("request", {}).get("url", "")
+    # Safely get transaction name
+    transaction = event.get("transaction") or ""
+
+    # Safely get request URL (defensive against request being None/missing)
+    request = event.get("request") or {}
+    url = request.get("url") or ""
+
     # Drop health/root endpoints and internal cron/background admin endpoints
-    if url.endswith(("/health", "/")) or "/api/internal/" in url or "/api/v1/cron/" in url:
+    if (
+        url.endswith(("/health", "/"))
+        or "/api/internal/" in url
+        or "/api/v1/cron/" in url
+        or transaction.endswith(("/health", "/"))
+        or "/api/internal/" in transaction
+        or "/api/v1/cron/" in transaction
+    ):
         return None
     return event
 
