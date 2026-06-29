@@ -7,21 +7,30 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # psycopg2-binary needs libpq; motor is pure Python.
-# liboqs (Open Quantum Safe) backs the ML-DSA-87 PQC verify path. We build the
-# shared lib at image-build time so liboqs-python loads it directly — otherwise
-# it would try to clone+build liboqs on first import inside the container.
-# Pinned to match liboqs-python 0.15.0 in mandate/requirements.txt.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc libpq-dev cmake ninja-build git ca-certificates \
-    && git clone --depth 1 --branch 0.15.0 https://github.com/open-quantum-safe/liboqs /tmp/liboqs \
-    && cmake -S /tmp/liboqs -B /tmp/liboqs/build -GNinja \
-         -DBUILD_SHARED_LIBS=ON -DOQS_BUILD_ONLY_LIB=ON -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build /tmp/liboqs/build --parallel \
-    && cmake --install /tmp/liboqs/build \
-    && ldconfig \
-    && rm -rf /tmp/liboqs \
-    && apt-get purge -y cmake ninja-build git && apt-get autoremove -y \
+    && apt-get install -y --no-install-recommends gcc libpq-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# PQC NOTE: the ML-DSA-87 verify path (liboqs / liboqs-python) is OPT-IN and
+# inert in production — verify_signature returns None before importing `oqs`
+# unless FORENSIC_MLDSA_PUBLIC_KEY is configured (see mandate/app/signing.py).
+# So the native liboqs lib is intentionally NOT built into this image: doing so
+# added minutes + a from-source github build to every deploy for a capability
+# that's off in prod (and broke the GKE build — bare `gcc` on debian-slim can't
+# link; needs build-essential). The liboqs-python *wheel* still installs from
+# requirements (harmless loader). To ENABLE PQC verification in a deployment,
+# build liboqs here first — corrected recipe (build-essential, not gcc):
+#
+#   RUN apt-get update \
+#       && apt-get install -y --no-install-recommends build-essential libpq-dev \
+#            cmake ninja-build git ca-certificates \
+#       && git clone --depth 1 --branch 0.15.0 \
+#            https://github.com/open-quantum-safe/liboqs /tmp/liboqs \
+#       && cmake -S /tmp/liboqs -B /tmp/liboqs/build -GNinja \
+#            -DBUILD_SHARED_LIBS=ON -DOQS_BUILD_ONLY_LIB=ON -DCMAKE_BUILD_TYPE=Release \
+#       && cmake --build /tmp/liboqs/build --parallel \
+#       && cmake --install /tmp/liboqs/build && ldconfig \
+#       && rm -rf /tmp/liboqs && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -m -u 1000 appuser
 
