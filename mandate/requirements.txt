@@ -23,8 +23,10 @@ rfc8785==0.1.4
 google-cloud-kms==3.12.0
 PyJWT==2.10.1
 # PQC verify path (ML-DSA-87, FIPS 204) — verify only, no issuance.
-# Wheel is a thin wrapper; liboqs native lib must be built in the image
-# (needs cmake + a C compiler). See Dockerfile / docs/forensics.
+# Wheel is a thin loader; the native liboqs lib is NOT built into the image by
+# default (the verify path is opt-in/inert in prod and the from-source build
+# broke deploys). `import oqs` is lazy and only runs when a trusted PQC key is
+# configured. To enable PQC, build liboqs in Dockerfile.mandate (see note there).
 liboqs-python==0.15.0
 
 # Observability
