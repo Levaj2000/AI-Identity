@@ -47,6 +47,13 @@ ALLOWED_METADATA_KEYS: frozenset[str] = frozenset(
         "action_type",
         "resource_type",
         "agent_name",
+        # Hardware attestation at registration (#423) — flat scalars only
+        # (nested record is denormalized onto the agent). Workload-identity
+        # binding, NOT record integrity (kept distinct per OCSF gap Issue 5).
+        "attestation_type",
+        "attestation_verified",
+        "attestation_subject",
+        "attestation_pubkey_sha256",
         "old_status",
         "new_status",
         "key_prefix",
