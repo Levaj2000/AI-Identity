@@ -10,10 +10,12 @@ from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
 from api.app.quota import check_agent_quota
+from common.attestation import verify_attestation
 from common.audit.request_context import extract_audit_context
 from common.audit.writer import create_audit_entry
 from common.auth.keys import generate_api_key, get_key_prefix, hash_key, key_expiry
 from common.capabilities import build_policy_rules_from_capabilities
+from common.config.settings import settings
 from common.models import Agent, AgentKey, AgentStatus, KeyStatus, KeyType, Policy, User, get_db
 from common.models.agent_assignment import AgentAssignment, AgentRole
 from common.queries import get_user_agent
@@ -127,6 +129,19 @@ def create_agent(
     # Enforce tier quota on agent creation
     check_agent_quota(db, user)
 
+    # Verify an optional hardware attestation before creating the agent, so the
+    # binding (and its verification result) is established at registration time.
+    attestation_result = None
+    agent_metadata = dict(body.metadata)
+    if body.hardware_attestation is not None:
+        attestation_result = verify_attestation(
+            body.hardware_attestation,
+            trusted_ca_pem=settings.attestation_trusted_ca_pem or None,
+        )
+        # Denormalize the full record onto the agent (server-managed key).
+        # The authoritative, tamper-evident record is the audit entry below.
+        agent_metadata["_hardware_attestation"] = attestation_result.model_dump(mode="json")
+
     agent = Agent(
         id=uuid.uuid4(),
         user_id=user.id,
@@ -134,7 +149,7 @@ def create_agent(
         description=body.description,
         status=AgentStatus.active.value,
         capabilities=body.capabilities,
-        metadata_=body.metadata,
+        metadata_=agent_metadata,
         eu_ai_act_risk_class=body.eu_ai_act_risk_class,
     )
     # If user belongs to an org, assign agent to that org
@@ -172,6 +187,19 @@ def create_agent(
 
     logger.info("Agent created: %s (%s) by user %s", agent.name, agent.id, user.id)
 
+    audit_metadata = {
+        "action_type": "agent_created",
+        "resource_type": "agent",
+        "agent_name": agent.name,
+        **extract_audit_context(request),
+    }
+    # Record the attestation binding as a tamper-evident evidence-chain event
+    # (flat scalars — the nested record lives on the agent). Workload-identity
+    # binding, distinct from the record-integrity hash chain.
+    if attestation_result is not None:
+        audit_metadata["action_type"] = "agent_created_with_attestation"
+        audit_metadata.update(attestation_result.audit_scalars())
+
     create_audit_entry(
         db,
         agent_id=agent.id,
@@ -179,17 +207,13 @@ def create_agent(
         method="POST",
         decision="allow",
         user_id=user.id,
-        request_metadata={
-            "action_type": "agent_created",
-            "resource_type": "agent",
-            "agent_name": agent.name,
-            **extract_audit_context(request),
-        },
+        request_metadata=audit_metadata,
     )
 
     return AgentCreateResponse(
         agent=_agent_to_response(agent),
         api_key=plaintext_key,
+        hardware_attestation=attestation_result,
     )
 
 
