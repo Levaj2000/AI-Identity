@@ -1,0 +1,491 @@
+{
+  "bomFormat": "CycloneDX",
+  "components": [
+    {
+      "bom-ref": "lib/cryptography",
+      "description": "ECDSA P-256 sign/verify, EC key handling, Fernet AEAD.",
+      "name": "cryptography",
+      "purl": "pkg:pypi/cryptography@46.0.5",
+      "type": "library",
+      "version": "46.0.5"
+    },
+    {
+      "bom-ref": "lib/google-cloud-kms",
+      "description": "GCP Cloud KMS asymmetric signing (ECDSA P-256) + public-key fetch.",
+      "name": "google-cloud-kms",
+      "purl": "pkg:pypi/google-cloud-kms@3.12.0",
+      "type": "library",
+      "version": "3.12.0"
+    },
+    {
+      "bom-ref": "lib/liboqs-python",
+      "description": "Open Quantum Safe binding; ML-DSA-87 verify path (verify only).",
+      "name": "liboqs-python",
+      "purl": "pkg:pypi/liboqs-python@0.15.0",
+      "type": "library",
+      "version": "0.15.0"
+    },
+    {
+      "bom-ref": "lib/pyjwt",
+      "description": "RS256 verification of Clerk user-session JWTs (not agent auth).",
+      "name": "PyJWT",
+      "purl": "pkg:pypi/pyjwt@2.10.1",
+      "type": "library",
+      "version": "2.10.1"
+    },
+    {
+      "bom-ref": "lib/rfc8785",
+      "description": "RFC 8785 JSON Canonicalization Scheme \u2014 deterministic signature pre-image.",
+      "name": "rfc8785",
+      "purl": "pkg:pypi/rfc8785@0.1.4",
+      "type": "library",
+      "version": "0.1.4"
+    },
+    {
+      "bom-ref": "crypto/ecdsa-p256-sha256",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 128,
+          "cryptoFunctions": [
+            "sign",
+            "verify"
+          ],
+          "curve": "P-256",
+          "nistQuantumSecurityLevel": 0,
+          "primitive": "signature"
+        },
+        "assetType": "algorithm"
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "mandate/app/signing.py:162"
+          },
+          {
+            "location": "mandate/app/signing.py:303"
+          },
+          {
+            "location": "common/forensic/signer.py:190"
+          },
+          {
+            "location": "common/forensic/anchor_checkpoint.py:154"
+          }
+        ]
+      },
+      "name": "ECDSA P-256 with SHA-256",
+      "properties": [
+        {
+          "name": "ai-identity:encoding",
+          "value": "IEEE P1363 (mandate) / DER (checkpoint); RFC 8785 canonical pre-image"
+        },
+        {
+          "name": "ai-identity:implementation",
+          "value": "cryptography 46.0.5; google-cloud-kms 3.12.0"
+        },
+        {
+          "name": "ai-identity:keyCustody",
+          "value": "GCP Cloud KMS (HSM-backed) in production; local PEM in dev/test"
+        },
+        {
+          "name": "ai-identity:purpose",
+          "value": "Sign/verify mandates and signed Merkle checkpoints (DSSE envelopes)"
+        },
+        {
+          "name": "ai-identity:status",
+          "value": "live"
+        },
+        {
+          "name": "ai-identity:surface",
+          "value": "Mandate signing; Evidence Anchor checkpoint signing"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/ml-dsa-87",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 256,
+          "cryptoFunctions": [
+            "verify"
+          ],
+          "nistQuantumSecurityLevel": 5,
+          "parameterSetIdentifier": "ML-DSA-87",
+          "primitive": "signature"
+        },
+        "assetType": "algorithm"
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "mandate/app/signing.py:259"
+          }
+        ]
+      },
+      "name": "ML-DSA-87 (FIPS 204)",
+      "properties": [
+        {
+          "name": "ai-identity:encoding",
+          "value": "raw message signing (no prehash); RFC 8785 canonical pre-image"
+        },
+        {
+          "name": "ai-identity:implementation",
+          "value": "liboqs-python 0.15.0 (liboqs / Open Quantum Safe)"
+        },
+        {
+          "name": "ai-identity:keyCustody",
+          "value": "settings.forensic_mldsa_public_key (trusted public key; verify only)"
+        },
+        {
+          "name": "ai-identity:purpose",
+          "value": "Verify ML-DSA-87 signatures on hybrid or PQC-only mandates"
+        },
+        {
+          "name": "ai-identity:status",
+          "value": "verify-only, opt-in (inert until a trusted PQC key is configured); no issuance"
+        },
+        {
+          "name": "ai-identity:surface",
+          "value": "Mandate verification (post-quantum slot)"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/hmac-sha256",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 256,
+          "cryptoFunctions": [
+            "tag",
+            "verify"
+          ],
+          "primitive": "mac"
+        },
+        "assetType": "algorithm"
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "common/audit/writer.py:111"
+          },
+          {
+            "location": "common/auth/internal.py:146"
+          }
+        ]
+      },
+      "name": "HMAC-SHA256",
+      "properties": [
+        {
+          "name": "ai-identity:implementation",
+          "value": "Python standard library (hashlib / hmac / secrets)"
+        },
+        {
+          "name": "ai-identity:keyCustody",
+          "value": "settings.audit_hmac_key (global) or org.forensic_verify_key (per-org); settings.internal_service_key (service auth)"
+        },
+        {
+          "name": "ai-identity:purpose",
+          "value": "Tamper-evident audit chaining; mutual API<->Gateway authentication"
+        },
+        {
+          "name": "ai-identity:status",
+          "value": "live"
+        },
+        {
+          "name": "ai-identity:surface",
+          "value": "Audit log integrity chain (global + per-org); internal service auth"
+        },
+        {
+          "name": "ai-identity:verification",
+          "value": "secret-dependent \u2014 verifier needs the HMAC key (unlike the ECDSA/Merkle public-verifiability path)"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/sha-256",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 128,
+          "cryptoFunctions": [
+            "digest"
+          ],
+          "primitive": "hash"
+        },
+        "assetType": "algorithm"
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "mandate/app/signing.py:133"
+          },
+          {
+            "location": "common/auth/keys.py:46"
+          },
+          {
+            "location": "common/forensic/merkle.py:38"
+          }
+        ]
+      },
+      "name": "SHA-256",
+      "properties": [
+        {
+          "name": "ai-identity:implementation",
+          "value": "Python standard library (hashlib / hmac / secrets)"
+        },
+        {
+          "name": "ai-identity:purpose",
+          "value": "Pre-image digest, key fingerprinting, content-addressed integrity"
+        },
+        {
+          "name": "ai-identity:status",
+          "value": "live"
+        },
+        {
+          "name": "ai-identity:surface",
+          "value": "ECDSA payload digest; agent-key storage hash; Merkle tree; HMAC input"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/merkle-rfc6962",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 128,
+          "cryptoFunctions": [
+            "digest"
+          ],
+          "primitive": "hash"
+        },
+        "assetType": "algorithm"
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "common/forensic/merkle.py:38"
+          },
+          {
+            "location": "common/forensic/merkle.py:43"
+          }
+        ]
+      },
+      "name": "RFC 6962 Merkle tree (domain-separated SHA-256)",
+      "properties": [
+        {
+          "name": "ai-identity:construction",
+          "value": "leaf=SHA-256(0x00||data); node=SHA-256(0x01||left||right)"
+        },
+        {
+          "name": "ai-identity:implementation",
+          "value": "Python standard library (hashlib / hmac / secrets)"
+        },
+        {
+          "name": "ai-identity:purpose",
+          "value": "Public-key-free inclusion proofs over checkpointed audit events"
+        },
+        {
+          "name": "ai-identity:status",
+          "value": "live"
+        },
+        {
+          "name": "ai-identity:surface",
+          "value": "Evidence Anchor inclusion proofs"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/rs256",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "cryptoFunctions": [
+            "verify"
+          ],
+          "nistQuantumSecurityLevel": 0,
+          "primitive": "signature"
+        },
+        "assetType": "algorithm"
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "api/app/auth.py:59"
+          }
+        ]
+      },
+      "name": "RSASSA-PKCS1-v1_5 with SHA-256 (RS256)",
+      "properties": [
+        {
+          "name": "ai-identity:implementation",
+          "value": "PyJWT 2.10.1"
+        },
+        {
+          "name": "ai-identity:keyCustody",
+          "value": "Clerk JWKS (rotated by Clerk; key size set by issuer)"
+        },
+        {
+          "name": "ai-identity:purpose",
+          "value": "Verify Clerk-issued user login tokens \u2014 NOT agent/runtime key auth"
+        },
+        {
+          "name": "ai-identity:status",
+          "value": "live"
+        },
+        {
+          "name": "ai-identity:surface",
+          "value": "User-session authentication (Clerk JWTs)"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/fernet-aes128-cbc-hmac",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 128,
+          "cryptoFunctions": [
+            "encrypt",
+            "decrypt"
+          ],
+          "primitive": "ae"
+        },
+        "assetType": "algorithm"
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "common/crypto/fernet.py:44"
+          }
+        ]
+      },
+      "name": "Fernet (AES-128-CBC + HMAC-SHA256)",
+      "properties": [
+        {
+          "name": "ai-identity:implementation",
+          "value": "cryptography 46.0.5 (cryptography.fernet)"
+        },
+        {
+          "name": "ai-identity:keyCustody",
+          "value": "settings.credential_encryption_key (Fernet key; base64 32 bytes)"
+        },
+        {
+          "name": "ai-identity:purpose",
+          "value": "Authenticated encryption of stored upstream API keys"
+        },
+        {
+          "name": "ai-identity:status",
+          "value": "live"
+        },
+        {
+          "name": "ai-identity:surface",
+          "value": "Upstream credential encryption at rest"
+        }
+      ],
+      "type": "cryptographic-asset"
+    },
+    {
+      "bom-ref": "crypto/csprng-token",
+      "cryptoProperties": {
+        "algorithmProperties": {
+          "classicalSecurityLevel": 256,
+          "cryptoFunctions": [
+            "keygen"
+          ],
+          "primitive": "drbg"
+        },
+        "assetType": "algorithm"
+      },
+      "evidence": {
+        "occurrences": [
+          {
+            "location": "common/auth/keys.py:19"
+          }
+        ]
+      },
+      "name": "CSPRNG token generation (secrets.token_urlsafe)",
+      "properties": [
+        {
+          "name": "ai-identity:implementation",
+          "value": "Python standard library (hashlib / hmac / secrets)"
+        },
+        {
+          "name": "ai-identity:purpose",
+          "value": "Generate high-entropy bearer keys; only the SHA-256 hash is stored"
+        },
+        {
+          "name": "ai-identity:status",
+          "value": "live"
+        },
+        {
+          "name": "ai-identity:surface",
+          "value": "Agent API key generation (aid_sk_ runtime / aid_admin_ admin)"
+        }
+      ],
+      "type": "cryptographic-asset"
+    }
+  ],
+  "dependencies": [
+    {
+      "dependsOn": [
+        "lib/cryptography",
+        "lib/google-cloud-kms",
+        "lib/rfc8785"
+      ],
+      "ref": "crypto/ecdsa-p256-sha256"
+    },
+    {
+      "dependsOn": [
+        "lib/liboqs-python",
+        "lib/rfc8785"
+      ],
+      "ref": "crypto/ml-dsa-87"
+    },
+    {
+      "dependsOn": [
+        "lib/pyjwt"
+      ],
+      "ref": "crypto/rs256"
+    },
+    {
+      "dependsOn": [
+        "lib/cryptography"
+      ],
+      "ref": "crypto/fernet-aes128-cbc-hmac"
+    }
+  ],
+  "metadata": {
+    "component": {
+      "bom-ref": "app/ai-identity",
+      "description": "Verifiable identity, governance, and forensics for AI agents.",
+      "name": "ai-identity",
+      "type": "application"
+    },
+    "properties": [
+      {
+        "name": "ai-identity:scope",
+        "value": "Cryptographic algorithms, key material, and implementing libraries across mandate, Evidence Anchor, gateway/agent-key, audit chain, and credential-encryption surfaces."
+      },
+      {
+        "name": "ai-identity:exclusions",
+        "value": "base64/base64url (encoding) are not crypto assets; RFC 8785 (JCS) is recorded as a dependency of signature assets, not a crypto asset."
+      },
+      {
+        "name": "ai-identity:determinism",
+        "value": "No timestamp/serialNumber by design; regenerate via python -m common.cbom.generator. Drift-guarded by common/tests/test_cbom.py."
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "description": "common/cbom/generator.py \u2014 curated, code-grounded CBOM.",
+          "name": "ai-identity-cbom-generator",
+          "type": "application"
+        }
+      ]
+    }
+  },
+  "specVersion": "1.6",
+  "version": 1
+}
