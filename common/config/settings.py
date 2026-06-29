@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     forensic_signing_key_id: str = ""
     forensic_signing_key_pem: str = ""
 
+    # Trusted CA for mTLS hardware attestation at agent registration (#423).
+    # PEM-encoded CA certificate. When set, an mTLS client cert presented at
+    # registration is marked verified only if it chains to this CA and is in
+    # its validity window. When empty, attestations are recorded but never
+    # marked verified (no trust anchor). VERIFY ONLY — we don't issue certs.
+    attestation_trusted_ca_pem: str = ""
+
     # Trusted ML-DSA-87 (PQC) verification key — VERIFY ONLY, no issuance yet.
     # Base64-encoded raw ML-DSA-87 public key bytes (2592 bytes when decoded).
     # When empty, ml-dsa-87 signatures are treated as "not verifiable by this

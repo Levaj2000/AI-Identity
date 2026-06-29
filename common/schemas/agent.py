@@ -5,6 +5,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from common.attestation.schemas import AttestationResult, HardwareAttestation
 from common.validation.eu_ai_act import validate_risk_class
 
 # ── User Schemas ─────────────────────────────────────────────────────────
@@ -72,6 +73,15 @@ class AgentCreate(BaseModel):
             "classified yet. Consumed by the compliance export builder."
         ),
         examples=["4(b)", "not_in_scope"],
+    )
+    hardware_attestation: HardwareAttestation | None = Field(
+        None,
+        description=(
+            "Optional hardware attestation binding this agent to a hardware "
+            "root of trust at registration (mTLS client cert supported; "
+            "TPM/enclave reserved). Verified and recorded as an evidence-chain "
+            "event; never required."
+        ),
     )
 
     @field_validator("eu_ai_act_risk_class")
@@ -189,6 +199,14 @@ class AgentCreateResponse(BaseModel):
         ...,
         description="Plaintext API key (aid_sk_…) — shown only once at creation time",
         examples=["aid_sk_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"],
+    )
+    hardware_attestation: AttestationResult | None = Field(
+        None,
+        description=(
+            "Verification result if a hardware attestation was presented at "
+            "registration. `verified=false` means recorded but not trusted "
+            "(see `reason`). Absent if no attestation was provided."
+        ),
     )
 
 

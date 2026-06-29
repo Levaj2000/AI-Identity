@@ -111,6 +111,22 @@ def audit_log_to_ocsf(row: Any) -> dict[str, Any]:
     md = row.request_metadata if isinstance(row.request_metadata, dict) else {}
     if "policy_version" in md:
         unmapped["policy_version"] = md["policy_version"]
+
+    # Workload attestation (#423) — agent identity bound to a hardware root of
+    # trust (mTLS cert first). This is the OCSF workload-attestation gap
+    # (issues draft #5): no native OCSF home yet, so it rides ``unmapped``
+    # honestly. Deliberately SEPARATE from the ``attestation`` object above,
+    # which is record integrity (the hash chain) — different signals.
+    if "attestation_type" in md:
+        wa: dict[str, Any] = {"attestation_type": md["attestation_type"]}
+        if "attestation_verified" in md:
+            wa["verified"] = md["attestation_verified"]
+        if md.get("attestation_subject"):
+            wa["subject"] = md["attestation_subject"]
+        if md.get("attestation_pubkey_sha256"):
+            wa["public_key_sha256"] = md["attestation_pubkey_sha256"]
+        unmapped["workload_attestation"] = wa
+
     if unmapped:
         event["unmapped"] = unmapped
 
