@@ -14,6 +14,7 @@ older pytest are problematic here).
 """
 
 import asyncio
+import base64
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -32,7 +33,13 @@ from mandate.app.schemas import (
     SignatureAlgorithm,
     VerifyMandateRequest,
 )
-from mandate.app.signing import sign_mandate, verify_signature
+from mandate.app.signing import (
+    _b64url,
+    _build_signable_payload,
+    _mldsa_key_id,
+    sign_mandate,
+    verify_signature,
+)
 
 
 @pytest.fixture
@@ -67,6 +74,138 @@ def _make_mandate(signatures: list[MandateSignature] | None = None) -> MandateDo
 
 def _to_response(m: MandateDocument) -> MandateResponse:
     return MandateResponse(**m.model_dump())
+
+
+@pytest.fixture
+def fresh_mldsa_key(monkeypatch):
+    """Configure a fresh trusted ML-DSA-87 public key; yield the live signer.
+
+    Skips if liboqs isn't available in the environment (e.g. the native lib
+    wasn't built) so the rest of the suite still runs.
+    """
+    oqs = pytest.importorskip("oqs")
+
+    signer = oqs.Signature("ML-DSA-87")
+    pub = signer.generate_keypair()
+    monkeypatch.setattr(
+        settings, "forensic_mldsa_public_key", base64.b64encode(pub).decode(), raising=False
+    )
+    try:
+        yield signer, pub
+    finally:
+        signer.free()
+
+
+def _mldsa_sign(mandate: MandateDocument, signer, pub: bytes) -> MandateSignature:
+    """Produce a valid ml-dsa-87 MandateSignature over the canonical payload."""
+    raw = signer.sign(_build_signable_payload(mandate))
+    return MandateSignature(
+        algorithm=SignatureAlgorithm.ml_dsa_87,
+        key_id=_mldsa_key_id(pub),
+        signature=_b64url(raw),
+    )
+
+
+def test_mldsa_sign_then_verify_round_trip(fresh_mldsa_key):
+    signer, pub = fresh_mldsa_key
+
+    async def run():
+        mandate = _make_mandate()
+        sig = _mldsa_sign(mandate, signer, pub)
+        mandate.signatures = [sig]
+        return await verify_signature(mandate, sig)
+
+    assert asyncio.run(run()) is True
+
+
+def test_mldsa_tampered_signature_fails(fresh_mldsa_key):
+    signer, pub = fresh_mldsa_key
+
+    async def run():
+        mandate = _make_mandate()
+        sig = _mldsa_sign(mandate, signer, pub)
+        raw = bytearray(base64.urlsafe_b64decode(sig.signature + "=="))
+        raw[100] ^= 0x01  # flip a bit in the middle of the signature
+        sig.signature = _b64url(bytes(raw))
+        mandate.signatures = [sig]
+        return await verify_signature(mandate, sig)
+
+    assert asyncio.run(run()) is False
+
+
+def test_mldsa_tampered_payload_fails(fresh_mldsa_key):
+    signer, pub = fresh_mldsa_key
+
+    async def run():
+        mandate = _make_mandate()
+        sig = _mldsa_sign(mandate, signer, pub)
+        mandate.signatures = [sig]
+        mandate.scope = ["write:everything"]  # mutate after signing
+        return await verify_signature(mandate, sig)
+
+    assert asyncio.run(run()) is False
+
+
+def test_mldsa_untrusted_key_rejected(fresh_mldsa_key):
+    """A valid ml-dsa signature from a key this deployment doesn't trust
+    (its fingerprint isn't the configured one) must verify=False, not None."""
+    signer, pub = fresh_mldsa_key
+    oqs = pytest.importorskip("oqs")
+
+    async def run():
+        mandate = _make_mandate()
+        # Sign with a DIFFERENT keypair; key_id derives from the foreign pubkey.
+        with oqs.Signature("ML-DSA-87") as attacker:
+            foreign_pub = attacker.generate_keypair()
+            raw = attacker.sign(_build_signable_payload(mandate))
+        sig = MandateSignature(
+            algorithm=SignatureAlgorithm.ml_dsa_87,
+            key_id=_mldsa_key_id(foreign_pub),
+            signature=_b64url(raw),
+        )
+        mandate.signatures = [sig]
+        return await verify_signature(mandate, sig)
+
+    assert asyncio.run(run()) is False
+
+
+def test_verify_route_accepts_mldsa_only(fresh_mldsa_key):
+    """With a trusted PQC key configured, a mandate carrying ONLY a valid
+    ml-dsa-87 signature must verify=True (the slot is now real)."""
+    signer, pub = fresh_mldsa_key
+
+    async def run():
+        mandate = _make_mandate()
+        sig = _mldsa_sign(mandate, signer, pub)
+        mandate.signatures = [sig]
+        return await verify_mandate(
+            VerifyMandateRequest(mandate=_to_response(mandate)), required_scope=None
+        )
+
+    result = asyncio.run(run())
+    assert result.valid is True
+    assert result.checks["signatures_valid"] is True
+
+
+def test_verify_route_accepts_hybrid_ecdsa_plus_mldsa(fresh_local_key, fresh_mldsa_key):
+    """Hybrid mandate with BOTH a valid classical and a valid PQC signature
+    verifies, and each signature verifies on its own."""
+    signer, pub = fresh_mldsa_key
+
+    async def run():
+        mandate = _make_mandate()
+        classical = await sign_mandate(mandate)
+        pqc = _mldsa_sign(mandate, signer, pub)
+        mandate.signatures = [classical, pqc]
+        assert await verify_signature(mandate, classical) is True
+        assert await verify_signature(mandate, pqc) is True
+        return await verify_mandate(
+            VerifyMandateRequest(mandate=_to_response(mandate)), required_scope=None
+        )
+
+    result = asyncio.run(run())
+    assert result.valid is True
+    assert result.checks["signatures_valid"] is True
 
 
 def test_sign_then_verify_round_trip(fresh_local_key):

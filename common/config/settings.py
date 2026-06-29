@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     forensic_signing_key_id: str = ""
     forensic_signing_key_pem: str = ""
 
+    # Trusted ML-DSA-87 (PQC) verification key — VERIFY ONLY, no issuance yet.
+    # Base64-encoded raw ML-DSA-87 public key bytes (2592 bytes when decoded).
+    # When empty, ml-dsa-87 signatures are treated as "not verifiable by this
+    # deployment" (verify_signature returns None) and the reserved slot is inert.
+    # When set, the verifier trusts exactly this one PQC key, keyed by the
+    # "mldsa-local:<fingerprint>" key_id scheme (see mandate/app/signing.py).
+    forensic_mldsa_public_key: str = ""
+
     # Upstream credential encryption (Fernet)
     credential_encryption_key: str = ""
 

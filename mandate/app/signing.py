@@ -8,8 +8,11 @@ Signing flow:
   4. Return a MandateSignature with base64url-encoded signature.
 
 Crypto agility: the signable payload includes schema_version so future
-algorithm upgrades can be detected by the verifier. The ML-DSA-87 slot
-will be wired here when the PQC library is integrated (H2 milestone).
+algorithm upgrades can be detected by the verifier. The ML-DSA-87 (PQC)
+verify path is wired below via liboqs (Open Quantum Safe) — VERIFY ONLY,
+no PQC issuance yet. A deployment opts in by configuring a single trusted
+ML-DSA public key (settings.forensic_mldsa_public_key); when unset, the
+slot stays inert and verify_signature returns None for ml-dsa-87.
 """
 
 import asyncio
@@ -31,6 +34,11 @@ from common.config.settings import settings
 from mandate.app.schemas import MandateDocument, MandateSignature, SignatureAlgorithm
 
 logger = logging.getLogger("ai_identity.mandate.signing")
+
+# liboqs mechanism name for the reserved PQC slot. ML-DSA-87 == FIPS 204
+# Level-5 (Dilithium5). Public key is 2592 bytes; signature is 4627 bytes.
+_MLDSA_ALG = "ML-DSA-87"
+_MLDSA_PUBKEY_LEN = 2592
 
 # Cache of KMS key_id -> EC public key. Populated on first verify call per key.
 # A single mandate service trusts a single signing key (settings.forensic_signing_key_id),
@@ -54,6 +62,60 @@ def _build_signable_payload(mandate: MandateDocument) -> bytes:
 
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+
+def _b64url_decode(s: str) -> bytes:
+    """Decode unpadded base64url (the format _b64url emits)."""
+    return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+
+
+def _trusted_mldsa_pubkey() -> bytes | None:
+    """Return the deployment's single trusted ML-DSA-87 public key, or None.
+
+    Source is settings.forensic_mldsa_public_key (base64 of the raw 2592-byte
+    public key). Returns None when unset or malformed — callers treat that as
+    "this deployment cannot verify PQC signatures" rather than a hard failure,
+    keeping the reserved slot inert until an operator opts in.
+    """
+    raw = settings.forensic_mldsa_public_key
+    if not raw:
+        return None
+    try:
+        # Accept standard or url-safe base64, padded or not.
+        pub = base64.b64decode(raw + "=" * (-len(raw) % 4), altchars=b"-_")
+    except Exception:
+        logger.warning("forensic_mldsa_public_key is not valid base64; ignoring")
+        return None
+    if len(pub) != _MLDSA_PUBKEY_LEN:
+        logger.warning(
+            "forensic_mldsa_public_key is %d bytes, expected %d; ignoring",
+            len(pub),
+            _MLDSA_PUBKEY_LEN,
+        )
+        return None
+    return pub
+
+
+def _mldsa_key_id(pub_bytes: bytes) -> str:
+    """Derive the trust key_id for an ML-DSA public key.
+
+    Mirrors the local-ECDSA scheme: a stable fingerprint of the public key.
+    A future PQC signer derives the same id from the same public key.
+    """
+    return f"mldsa-local:{hashlib.sha256(pub_bytes).hexdigest()[:16]}"
+
+
+def _verify_mldsa(payload: bytes, signature: bytes, pub_bytes: bytes) -> bool:
+    """Cryptographically verify an ML-DSA-87 signature over payload.
+
+    liboqs is imported lazily so the module loads in environments where the
+    native library isn't installed (only the PQC verify path needs it).
+    Unlike the ECDSA path, ML-DSA signs the message directly — no prehash.
+    """
+    import oqs
+
+    with oqs.Signature(_MLDSA_ALG) as verifier:
+        return bool(verifier.verify(payload, signature, pub_bytes))
 
 
 def _sign_local(payload: bytes) -> tuple[str, str]:
@@ -153,6 +215,13 @@ def _is_trusted_key_id(key_id: str) -> bool:
     For now we trust exactly one key: the one this service is configured to sign with.
     Future: extend to a cross-org trust list when we federate.
     """
+    if key_id.startswith("mldsa-local:"):
+        # PQC trust: fingerprint must match the configured ML-DSA public key.
+        pub = _trusted_mldsa_pubkey()
+        if pub is None:
+            return False
+        return key_id == _mldsa_key_id(pub)
+
     if key_id.startswith("local:"):
         # Local-mode trust: fingerprint must match the configured PEM
         pem = settings.forensic_signing_key_pem
@@ -181,14 +250,32 @@ async def verify_signature(mandate: MandateDocument, sig: MandateSignature) -> b
     Returns:
         True  — signature is valid and trusted
         False — signature is invalid OR key is not trusted by this verifier
-        None  — algorithm is not verifiable by this version (e.g. ml-dsa-87 slot
-                reserved but signer not yet implemented). The route uses this to
-                require at least one verifiable signature without failing hybrid
-                mandates that carry a future-algo slot alongside a classical one.
+        None  — algorithm is not verifiable by this deployment (the ml-dsa-87
+                verifier is wired, but no trusted PQC key is configured here).
+                The route uses this to require at least one verifiable signature
+                without failing hybrid mandates that carry a future-algo slot
+                alongside a classical one.
     """
     if sig.algorithm == SignatureAlgorithm.ml_dsa_87:
-        logger.debug("ML-DSA-87 verification not yet implemented")
-        return None
+        pub = _trusted_mldsa_pubkey()
+        if pub is None:
+            # No PQC trust key configured: the slot is reserved but inert here.
+            # Returning None (not False) keeps hybrid mandates verifiable via
+            # their classical signature on deployments without a PQC key.
+            logger.debug("ml-dsa-87 signature present but no trusted PQC key configured")
+            return None
+
+        if not _is_trusted_key_id(sig.key_id):
+            logger.warning("ml-dsa-87 signature uses untrusted key_id: %s", sig.key_id)
+            return False
+
+        payload = _build_signable_payload(mandate)
+        try:
+            sig_bytes = _b64url_decode(sig.signature)
+            return _verify_mldsa(payload, sig_bytes, pub)
+        except Exception as e:
+            logger.warning("ml-dsa-87 verification error: %s", e)
+            return False
 
     if not _is_trusted_key_id(sig.key_id):
         logger.warning("Signature uses untrusted key_id: %s", sig.key_id)
