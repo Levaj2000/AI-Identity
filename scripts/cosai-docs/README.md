@@ -37,6 +37,22 @@ scripts/cosai-docs/sync.sh ~/Downloads/<exported>.docx docs/<path>/<target>.md
 git add docs/<path>/<target>.md && git commit
 ```
 
+The sync script has two preflight guardrails:
+
+- The target must be a markdown snapshot path ending in `.md`.
+- The target must not be an internal notes path ending in `.notes.md`.
+
+For a collaborator-safe sync, review before committing:
+
+1. Confirm the destination is one of the two Git snapshot paths in the table
+   above, not a sibling `*.notes.md`.
+2. Run `git --no-pager diff -- docs/<path>/<target>.md`.
+3. Scan the diff for internal reviewer notes, private relationship context,
+   speculative strategy, or anything that should not be visible to the Google
+   Doc collaborators.
+4. Commit only the intended snapshot `.md`. Keep sibling `*.notes.md` files out
+   of the sync commit unless the commit is explicitly internal-only.
+
 The snapshot `.md` is a faithful archive — readable and diffable, but not
 pixel-perfect markdown. Polish (heading levels, fenced JSON, clean tables)
 happens only when a section is filed as a GitHub issue, not on every sync.

@@ -139,6 +139,7 @@ def _reset_rate_limiter():
 @pytest.fixture
 def client(db_session):
     """FastAPI TestClient with DB override."""
+    from gateway.app import main as gateway_main
     from gateway.app.main import app
 
     def _override_get_db():
@@ -148,6 +149,19 @@ def client(db_session):
             pass
 
     app.dependency_overrides[get_db] = _override_get_db
+
+    # The /health probe opens its own session via the module-global
+    # SessionLocal (bound to the real engine), which bypasses the get_db
+    # dependency override. Point it at the in-memory test DB so health
+    # checks don't try to reach the production database, and clear the
+    # 10s probe cache so a prior failure doesn't leak in.
+    original_session_local = gateway_main.SessionLocal
+    gateway_main.SessionLocal = TestSessionLocal
+    gateway_main._db_probe_cache.update({"ok": False, "error": None, "ts": 0.0})
+
     with TestClient(app) as c:
         yield c
+
+    gateway_main.SessionLocal = original_session_local
+    gateway_main._db_probe_cache.update({"ok": False, "error": None, "ts": 0.0})
     app.dependency_overrides.clear()
