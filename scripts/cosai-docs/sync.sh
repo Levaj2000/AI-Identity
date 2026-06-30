@@ -12,11 +12,27 @@ fi
 
 src="$1"
 dst="$2"
+dst_name="$(basename "$dst")"
 
 if [ ! -f "$src" ]; then
   echo "error: source not found: $src" >&2
   exit 1
 fi
+
+case "$dst_name" in
+  *.notes.md)
+    echo "error: refusing to sync into internal notes target: $dst" >&2
+    echo "       choose the collaborator-safe snapshot .md listed in scripts/cosai-docs/README.md" >&2
+    exit 1
+    ;;
+  *.md)
+    ;;
+  *)
+    echo "error: target must be a markdown snapshot (*.md): $dst" >&2
+    exit 1
+    ;;
+esac
+
 command -v pandoc >/dev/null || { echo "error: pandoc not installed" >&2; exit 1; }
 
 pandoc -f docx -t gfm "$src" -o "$dst"
