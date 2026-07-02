@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useSession, useUser } from '@clerk/react'
 
 const API_BASE = 'https://api.ai-identity.co'
 const GATEWAY_BASE = 'https://gateway.ai-identity.co'
@@ -36,9 +37,21 @@ export function DemoPage() {
   const [loading, setLoading] = useState(false)
   const [agent, setAgent] = useState<DemoAgent | null>(null)
   const [apiKey, setApiKey] = useState<DemoKey | null>(null)
-  const [userKey, setUserKey] = useState('')
-  const [showKeyInput, setShowKeyInput] = useState(true)
+  const { session } = useSession()
+  const { user: clerkUser } = useUser()
   const terminalRef = useRef<HTMLDivElement>(null)
+
+  // Fresh short-lived Clerk JWT per call (the SDK caches/refreshes internally).
+  const authHeaders = async (): Promise<Record<string, string> | null> => {
+    if (!session) return null
+    const token = await session.getToken()
+    return token ? { Authorization: `Bearer ${token}` } : null
+  }
+
+  const notSignedInError: TerminalLine = {
+    type: 'error',
+    text: '✗ Please sign in first — the demo authenticates with your dashboard session',
+  }
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -83,20 +96,16 @@ export function DemoPage() {
 
   // Step 2: Create agent
   const runCreateAgent = async () => {
-    if (!userKey) {
-      addLines([
-        {
-          type: 'error',
-          text: '✗ Please enter your API key above first',
-        },
-      ])
+    const headers = await authHeaders()
+    if (!headers) {
+      addLines([notSignedInError])
       return
     }
     setLoading(true)
     const agentName = `demo-agent-${Date.now().toString(36)}`
     typeCommand(
       `curl -X POST ${API_BASE}/api/v1/agents \\
-  -H "X-API-Key: ${userKey.slice(0, 8)}..." \\
+  -H "Authorization: Bearer <session-token>" \\
   -H "Content-Type: application/json" \\
   -d '{"name": "${agentName}", "capabilities": ["chat"]}'`,
     )
@@ -104,7 +113,7 @@ export function DemoPage() {
       const res = await fetch(`${API_BASE}/api/v1/agents`, {
         method: 'POST',
         headers: {
-          'X-API-Key': userKey,
+          ...headers,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -155,21 +164,26 @@ export function DemoPage() {
         ])
       }
     } catch {
-      addLines([{ type: 'error', text: '✗ Network error — check your API key' }])
+      addLines([{ type: 'error', text: '✗ Network error — check your connection' }])
     }
     setLoading(false)
   }
 
   // Step 3: List agents
   const runListAgents = async () => {
+    const headers = await authHeaders()
+    if (!headers) {
+      addLines([notSignedInError])
+      return
+    }
     setLoading(true)
     typeCommand(
       `curl ${API_BASE}/api/v1/agents?limit=5 \\
-  -H "X-API-Key: ${userKey.slice(0, 8)}..."`,
+  -H "Authorization: Bearer <session-token>"`,
     )
     try {
       const res = await fetch(`${API_BASE}/api/v1/agents?limit=5`, {
-        headers: { 'X-API-Key': userKey },
+        headers,
       })
       const data = await res.json()
       if (res.ok) {
@@ -272,17 +286,22 @@ export function DemoPage() {
 
   // Step 5: View audit log
   const runAuditLog = async () => {
+    const headers = await authHeaders()
+    if (!headers) {
+      addLines([notSignedInError])
+      return
+    }
     setLoading(true)
     const url = agent
       ? `${API_BASE}/api/v1/audit?agent_id=${agent.id}&limit=10`
       : `${API_BASE}/api/v1/audit?limit=10`
     typeCommand(
-      `curl "${url.replace(API_BASE, API_BASE)}" \\
-  -H "X-API-Key: ${userKey.slice(0, 8)}..."`,
+      `curl "${url}" \\
+  -H "Authorization: Bearer <session-token>"`,
     )
     try {
       const res = await fetch(url, {
-        headers: { 'X-API-Key': userKey },
+        headers,
       })
       const data = await res.json()
       if (res.ok) {
@@ -309,14 +328,19 @@ export function DemoPage() {
 
   // Step 6: Verify audit chain
   const runVerifyChain = async () => {
+    const headers = await authHeaders()
+    if (!headers) {
+      addLines([notSignedInError])
+      return
+    }
     setLoading(true)
     typeCommand(
       `curl ${API_BASE}/api/v1/audit/verify \\
-  -H "X-API-Key: ${userKey.slice(0, 8)}..."`,
+  -H "Authorization: Bearer <session-token>"`,
     )
     try {
       const res = await fetch(`${API_BASE}/api/v1/audit/verify`, {
-        headers: { 'X-API-Key': userKey },
+        headers,
       })
       const data = await res.json()
       if (res.ok) {
@@ -354,15 +378,20 @@ export function DemoPage() {
   // Cleanup: delete demo agent
   const runCleanup = async () => {
     if (!agent) return
+    const headers = await authHeaders()
+    if (!headers) {
+      addLines([notSignedInError])
+      return
+    }
     setLoading(true)
     typeCommand(
       `curl -X DELETE ${API_BASE}/api/v1/agents/${agent.id} \\
-  -H "X-API-Key: ${userKey.slice(0, 8)}..."`,
+  -H "Authorization: Bearer <session-token>"`,
     )
     try {
       const res = await fetch(`${API_BASE}/api/v1/agents/${agent.id}`, {
         method: 'DELETE',
-        headers: { 'X-API-Key': userKey },
+        headers,
       })
       const data = await res.json()
       if (res.ok) {
@@ -481,33 +510,31 @@ export function DemoPage() {
           </p>
         </div>
 
-        {/* API Key Input */}
-        {showKeyInput && (
-          <div className="mx-auto mb-8 max-w-xl rounded-xl border border-line bg-surface/80 p-6">
-            <label className="mb-2 block text-sm font-medium text-muted">Your API Key</label>
-            <p className="mb-3 text-xs text-subtle">
-              Enter your user API key to make authenticated requests. Don't have one?{' '}
-              <a href="/login" className="text-brand hover:underline">
-                Sign up free
-              </a>
+        {/* Auth status — the demo authenticates with the signed-in Clerk session */}
+        {session ? (
+          <div className="mx-auto mb-8 max-w-xl rounded-xl border border-success/30 bg-success-soft px-4 py-3 text-center">
+            <p className="text-sm text-success">
+              Signed in
+              {clerkUser?.primaryEmailAddress
+                ? ` as ${clerkUser.primaryEmailAddress.emailAddress}`
+                : ''}{' '}
+              — authenticated requests enabled
             </p>
-            <div className="flex gap-2">
-              <input
-                type="password"
-                value={userKey}
-                onChange={(e) => setUserKey(e.target.value)}
-                placeholder="your-api-key-here"
-                className="flex-1 rounded-lg border border-line bg-canvas px-4 py-2.5 text-sm text-ink placeholder:text-faint focus:border-brand/50 focus:outline-none"
-              />
-              <button
-                onClick={() => {
-                  if (userKey) setShowKeyInput(false)
-                }}
-                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-ink hover:bg-brand-hover transition-colors"
-              >
-                Save
-              </button>
-            </div>
+          </div>
+        ) : (
+          <div className="mx-auto mb-8 max-w-xl rounded-xl border border-line bg-surface/80 p-6 text-center">
+            <p className="text-sm text-muted">
+              The demo runs real API calls using your dashboard session.
+            </p>
+            <a
+              href="/login"
+              className="mt-3 inline-block rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-brand-ink hover:bg-brand-hover transition-colors"
+            >
+              Sign in to run the demo
+            </a>
+            <p className="mt-2 text-xs text-subtle">
+              Free — no credit card. Step 1 (health check) works without signing in.
+            </p>
           </div>
         )}
 
