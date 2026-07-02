@@ -1,5 +1,10 @@
 """OCSF (Open Cybersecurity Schema Framework) mapping for AI Identity events."""
 
-from common.ocsf.api_activity import OCSF_VERSION, audit_log_to_ocsf
+from common.ocsf.api_activity import (
+    OCSF_VERSION,
+    EntrySignature,
+    audit_log_to_ocsf,
+    select_chain,
+)
 
-__all__ = ["audit_log_to_ocsf", "OCSF_VERSION"]
+__all__ = ["OCSF_VERSION", "EntrySignature", "audit_log_to_ocsf", "select_chain"]
