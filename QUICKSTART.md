@@ -9,7 +9,15 @@
 ## Prerequisites
 
 - A terminal with `curl` (or Python 3.8+)
-- An AI Identity API key — sign up at [dashboard.ai-identity.co](https://dashboard.ai-identity.co) or use the dev key below for local development
+- An AI Identity account — sign up free at [dashboard.ai-identity.co](https://dashboard.ai-identity.co)
+
+> **Auth note:** the management API authenticates with short-lived session tokens
+> (`Authorization: Bearer <token>`) issued by your signed-in dashboard session. The
+> easiest way to run these steps is the [Interactive Demo](https://dashboard.ai-identity.co/demo),
+> which uses your session automatically — no token handling needed. Long-lived personal
+> access tokens for CLI/CI use are on the roadmap. Agent *runtime* keys (`aid_sk_…`,
+> issued in Step 2) are separate — they authenticate agents at the gateway, not
+> management calls.
 
 ## Base URLs
 
@@ -18,20 +26,20 @@
 | Production  | `https://api.ai-identity.co` | `https://gateway.ai-identity.co` |
 | Local dev   | `http://localhost:8001` | `http://localhost:8002` |
 
-Set your base URL and API key for the examples below:
+Set your base URL and session token for the examples below:
 
 ```bash
 export AI_API=https://api.ai-identity.co
 export AI_GW=https://gateway.ai-identity.co
-export API_KEY=your-api-key-here   # or test-dev-key-12345678 for local dev
+export TOKEN=your-session-token-here   # see the Auth note above
 ```
 
 ---
 
-## Step 1: Sign Up & Get Your API Key (~2 min)
+## Step 1: Sign Up (~2 min)
 
-**Option A — Dashboard:**
-Go to [dashboard.ai-identity.co](https://dashboard.ai-identity.co), sign in, and copy your API key from the overview page.
+**Option A — Interactive Demo (recommended):**
+Go to [dashboard.ai-identity.co/demo](https://dashboard.ai-identity.co/demo), sign in, and click through these same steps in the browser — it authenticates with your session automatically.
 
 **Option B — Health check first:**
 Verify the API is reachable before you start:
@@ -55,8 +63,8 @@ import requests
 
 API = "https://api.ai-identity.co"
 GW  = "https://gateway.ai-identity.co"
-API_KEY = "your-api-key-here"
-headers = {"X-API-Key": API_KEY}
+TOKEN = "your-session-token-here"  # see the Auth note above
+headers = {"Authorization": f"Bearer {TOKEN}"}
 
 r = requests.get(f"{API}/health")
 print(r.json())  # {"status": "ok", ...}
@@ -71,7 +79,7 @@ Register your first agent with a name, description, and capabilities:
 
 ```bash
 curl -s -X POST $AI_API/api/v1/agents \
-  -H "X-API-Key: $API_KEY" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Support Bot",
@@ -129,7 +137,7 @@ Store your upstream provider key (e.g., OpenAI) in the encrypted credential vaul
 
 ```bash
 curl -s -X POST $AI_API/api/v1/agents/$AGENT_ID/credentials \
-  -H "X-API-Key: $API_KEY" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "provider": "openai",
@@ -178,7 +186,7 @@ Without a policy, the gateway denies every request (fail-closed). Attach a polic
 
 ```bash
 curl -s -X POST $AI_API/api/v1/agents/$AGENT_ID/policies \
-  -H "X-API-Key: $API_KEY" \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "rules": {
@@ -301,7 +309,7 @@ Every gateway decision is recorded in a tamper-proof, HMAC-chained audit log:
 
 ```bash
 curl -s "$AI_API/api/v1/audit?agent_id=$AGENT_ID&limit=5" \
-  -H "X-API-Key: $API_KEY" | jq
+  -H "Authorization: Bearer $TOKEN" | jq
 ```
 
 ```json
@@ -340,7 +348,7 @@ Each entry's `prev_hash` links to the previous entry's `entry_hash`, forming an 
 
 ```bash
 curl -s "$AI_API/api/v1/audit/verify?agent_id=$AGENT_ID" \
-  -H "X-API-Key: $API_KEY" | jq
+  -H "Authorization: Bearer $TOKEN" | jq
 ```
 
 ```json
@@ -412,7 +420,7 @@ Issues a new key and gives the old one a 24-hour grace period:
 
 ```bash
 curl -s -X POST $AI_API/api/v1/agents/$AGENT_ID/keys/rotate \
-  -H "X-API-Key: $API_KEY" | jq
+  -H "Authorization: Bearer $TOKEN" | jq
 ```
 
 Both keys work for 24 hours. Deploy the new key, and the old one auto-revokes.
@@ -421,7 +429,7 @@ Both keys work for 24 hours. Deploy the new key, and the old one auto-revokes.
 
 ```bash
 curl -s -X DELETE $AI_API/api/v1/agents/$AGENT_ID/keys/{key_id} \
-  -H "X-API-Key: $API_KEY"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ---
@@ -429,7 +437,8 @@ curl -s -X DELETE $AI_API/api/v1/agents/$AGENT_ID/keys/{key_id} \
 ## Troubleshooting
 
 ### `401 Unauthorized`
-- **Check your API key** — is `X-API-Key` header set correctly?
+- **Check your token** — is the `Authorization: Bearer <token>` header set? Session tokens are short-lived; grab a fresh one (see the Auth note at the top).
+- **Legacy `X-API-Key` header?** — email-based API keys were removed; the API now fails closed with a migration message.
 - **Key revoked?** — rotated keys expire after 24 hours. Check key status: `GET /api/v1/agents/{id}/keys`
 - **Wrong environment?** — production keys don't work on localhost and vice versa
 
@@ -513,7 +522,4 @@ uvicorn gateway.app.main:app --reload --port 8002
 
 # Run tests
 python -m pytest api/tests/ -v
-
-# Use the dev key for local testing
-export API_KEY=test-dev-key-12345678
 ```
