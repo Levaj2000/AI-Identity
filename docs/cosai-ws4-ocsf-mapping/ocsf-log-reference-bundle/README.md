@@ -17,7 +17,7 @@ This revision tracks the **final OCSF PR #1661 attestation shape** (as merged in
 | File | What it is | Use |
 |---|---|---|
 | `production-ocsf-excerpt.ocsf.ndjson` | **7-event annotated slice** (`org_chain_seq` 16–22), a single agent's lifecycle | Start here — read top to bottom with the walkthrough below |
-| `production-ocsf-full-export.ocsf.ndjson` | <!-- REGEN:STATS --> *(regenerate.py fills this from the fresh export)* <!-- /REGEN:STATS --> | The real raw export from the `format=ocsf` endpoint |
+| `production-ocsf-full-export.ocsf.ndjson` | <!-- REGEN:STATS --> **Full org chain**, 174 events, seq 1→174, 32 agents (104 allowed / 70 denied) <!-- /REGEN:STATS --> | The real raw export from the `format=ocsf` endpoint |
 | `regenerate.py` | Rebuilds this bundle from a fresh `format=ocsf` download: validates the final #1661 shape, verifies the chain, verifies every ECDSA signature against the public JWKS, refreshes this README | `python3 regenerate.py <fresh-export.ndjson>` |
 
 > **Retired:** `signed-chain-ecdsa-example.json` (the hand-built ECDSA/JCS worked example from the 2026-06-16 bundle). It existed to show the *target* asymmetric shape while production only had the HMAC chain. Production now emits real per-event ECDSA signatures in the export itself (`attestation.signatures` + `unmapped.signature_b64`), so the mock was redundant — and it carried draft-era fields (`sequence`, singular `signature`) that no longer exist in #1661.
@@ -45,7 +45,78 @@ One agent (`QA-eae97318`, uid `32928870…`), seven consecutive gateway events. 
 ### Anatomy of one event (the allowed inference)
 
 <!-- REGEN:ANATOMY -->
-*(regenerate.py fills this block from the fresh export — run it before sharing)*
+```json
+{
+  "activity_id": 1,
+  "category_uid": 6,
+  "class_uid": 6003,
+  "type_uid": 600301,
+  "severity_id": 1,
+  "time": 1776094414825,
+  "metadata": {
+    "version": "1.9.0-dev",
+    "profiles": [
+      "ai_operation",
+      "record_integrity"
+    ]
+  },
+  "action": "Allowed",
+  "action_id": 1,
+  "api": {
+    "operation": "/v1/chat/completions"
+  },
+  "http_request": {
+    "http_method": "POST",
+    "url": {
+      "path": "/v1/chat/completions"
+    }
+  },
+  "ai_agent": {
+    "uid": "32928870-56a1-4518-be76-7e99bfcdeac4",
+    "name": "QA-eae97318"
+  },
+  "duration": 182,
+  "actor": {
+    "user": {
+      "uid": "a33fb1e9…",
+      "type_id": 1
+    }
+  },
+  "attestation": {
+    "uid": "99",
+    "entry_hash": {
+      "algorithm_id": 99,
+      "algorithm": "HMAC-SHA-256",
+      "value": "1d9548729d942e30…"
+    },
+    "prev_entry_hash": {
+      "algorithm_id": 99,
+      "algorithm": "HMAC-SHA-256",
+      "value": "90ba42f3b92586ff…"
+    },
+    "chain_uid": "f3576cf6-87ff-4c07-b446-e6ac526236a5",
+    "signatures": [
+      {
+        "algorithm_id": 3,
+        "algorithm": "ECDSA-P256-SHA256",
+        "created_time": 1783086535444,
+        "digest": {
+          "algorithm_id": 99,
+          "algorithm": "HMAC-SHA-256",
+          "value": "1d9548729d942e30…"
+        }
+      }
+    ]
+  },
+  "unmapped": {
+    "signature_b64": "MEQCIBxyRnz3NKoOOjJGpJGh…",
+    "signature_key_id": "projects/…/cryptoKeys/session-attestation/cryptoKeyVersions/1",
+    "org_chain_seq": 18,
+    "policy_version": 10
+  }
+}
+```
+*(long hex/base64 values truncated for display — the ndjson files carry full values; seq 18)*
 <!-- /REGEN:ANATOMY -->
 
 Field notes:
@@ -95,6 +166,7 @@ This export is the evidence behind the gap list — every gap below is something
 - **Signatures are export-time.** `signatures[0].created_time` stamps when the export was generated, not when the event occurred; event time is `time`, and the write-time integrity is the chain hash.
 - **Demo data.** Throwaway org; volumes/agent names are synthetic.
 - **`correlation_uid` / delegation** are present in the schema path but not exercised in this slice.
+- **Genesis sentinel.** The chain's first event (seq 1) carries the literal string `GENESIS` in `prev_entry_hash.value` — the stored chain-start sentinel passed through verbatim. Strictly, a fingerprint object's `value` should be a hash; we're flagging this openly rather than editing the export. The likely producer fix is to omit `prev_entry_hash` on the genesis row (it has no predecessor to point at) — and it's a useful WG data point: sentinel values inside `fingerprint` are an anti-pattern the spec text could warn about.
 
 ---
 

@@ -97,10 +97,11 @@ def validate_event_shape(ev: dict, line_no: int) -> list[str]:
     if not att.get("uid"):
         problems.append(f"{ctx}: attestation.uid missing")
 
+    org_chain_seq = ev.get("unmapped", {}).get("org_chain_seq")
     for fp_name in ("entry_hash", "prev_entry_hash"):
         fp = att.get(fp_name)
         if fp is None:
-            continue  # prev_entry_hash is absent on the genesis event
+            continue  # prev_entry_hash may be absent on the genesis event
         if not isinstance(fp, dict):
             problems.append(f"{ctx}: {fp_name} is not a fingerprint object")
             continue
@@ -109,7 +110,13 @@ def validate_event_shape(ev: dict, line_no: int) -> list[str]:
                 f"{ctx}: {fp_name} must be algorithm_id 99 / HMAC-SHA-256, "
                 f"got {fp.get('algorithm_id')}/{fp.get('algorithm')}"
             )
-        if not _HEX64.match(fp.get("value", "")):
+        value = fp.get("value", "")
+        # The chain's first row stores the literal sentinel "GENESIS" as its
+        # prev hash, and the emitter passes it through — accept it there only
+        # (a mid-chain sentinel would also break linkage verification).
+        if fp_name == "prev_entry_hash" and value == "GENESIS" and org_chain_seq == 1:
+            continue
+        if not _HEX64.match(value):
             problems.append(f"{ctx}: {fp_name}.value is not 64-char lowercase hex")
 
     sigs = att.get("signatures")
