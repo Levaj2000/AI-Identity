@@ -4,7 +4,7 @@ Reference logs from the **AI Identity gateway**, emitted as **OCSF API Activity 
 
 The point of this bundle: the OCSF agentic spec isn't theoretical here — it's the wire format of a running system. These are real exports, not hand-written examples.
 
-This revision tracks the **final OCSF PR #1661 attestation shape** (as merged in review, schema commit `fa4003ad`): fingerprint-object hashes, a required `signatures` array, `attestation.uid`, and the `record_integrity` profile. The earlier draft shape (string `entry_hash`, singular `signature`, a `sequence` field) that the 2026-06-16 version of this bundle used is gone from both the schema and production.
+This revision tracks the **final OCSF PR #1661 attestation shape** (the shape as finalized during review, schema commit `fa4003ad` — the PR itself is still open upstream at the time of writing): fingerprint-object hashes, a required `signatures` array, `attestation.uid`, and the `record_integrity` profile. The earlier draft shape (string `entry_hash`, singular `signature`, a `sequence` field) that the 2026-06-16 version of this bundle used is gone from both the schema and production.
 
 > **Scope / disclosure (please read):** This is a **demo/QA org** (`org_id f3576cf6…`, agents named `demo-agent-*` / `QA-*`, one synthetic user). No customer data, PII, or secrets. Identifiers are opaque UUIDs. Two integrity mechanisms appear in each event, and they are different on purpose:
 > - the **hash chain** is **HMAC-SHA-256 (keyed)** — values are real and internally consistent, but *recomputing* them requires the org's key (key-holder verifiable);
