@@ -112,8 +112,11 @@ def validate_event_shape(ev: dict, line_no: int) -> list[str]:
             )
         value = fp.get("value", "")
         # The chain's first row stores the literal sentinel "GENESIS" as its
-        # prev hash, and the emitter passes it through — accept it there only
-        # (a mid-chain sentinel would also break linkage verification).
+        # prev hash. The emitter now omits prev_entry_hash on the genesis
+        # event (the `fp is None` skip above covers that); this allowance is
+        # kept for backward compatibility with the bundle revision exported
+        # before that fix — accept it on seq 1 only (a mid-chain sentinel
+        # would also break linkage verification).
         if fp_name == "prev_entry_hash" and value == "GENESIS" and org_chain_seq == 1:
             continue
         if not _HEX64.match(value):
