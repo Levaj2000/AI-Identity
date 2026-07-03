@@ -150,6 +150,7 @@ def test_audit_scalars_are_flat_and_safe(ca):
 
 def _row(**md):
     return SimpleNamespace(
+        id=7,
         method="POST",
         decision="allow",
         created_at=_NOW,
@@ -184,7 +185,7 @@ def test_ocsf_surfaces_workload_attestation_separate_from_integrity():
     assert wa["subject"] == "spiffe://example.org/ns/prod/sa/billing"
     assert wa["public_key_sha256"] == "deadbeef"
     # Precision trap: record-integrity attestation is a SEPARATE object.
-    assert event["attestation"]["entry_hash"] == "abc123"
+    assert event["attestation"]["entry_hash"]["value"] == "abc123"
     assert "workload_attestation" not in event["attestation"]
 
 
