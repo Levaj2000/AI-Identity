@@ -103,6 +103,22 @@ class TestOcsfApiActivityMapping:
         assert att["prev_entry_hash"]["value"] == _GLOBAL_PREV
         assert "chain_uid" not in att
 
+    def test_genesis_sentinel_omits_prev_entry_hash(self):
+        # The org chain's first row stores the literal "GENESIS" sentinel as
+        # prev_hash_org. That's a missing predecessor, not a hash — the genesis
+        # event must omit prev_entry_hash, never emit a fingerprint whose
+        # value is "GENESIS".
+        att = audit_log_to_ocsf(_row(prev_hash_org="GENESIS", org_chain_seq=1))["attestation"]
+        assert att["entry_hash"]["value"] == _ORG_HASH
+        assert "prev_entry_hash" not in att
+
+    def test_genesis_sentinel_on_global_chain_also_omitted(self):
+        att = audit_log_to_ocsf(_row(entry_hash_org=None, prev_hash_org=None, prev_hash="GENESIS"))[
+            "attestation"
+        ]
+        assert att["entry_hash"]["value"] == _GLOBAL_HASH
+        assert "prev_entry_hash" not in att
+
     def test_select_chain_matches_attestation(self):
         # The export signer uses select_chain; it must pick the same hash the
         # emitter displays, or the signature covers the wrong bytes.
@@ -113,6 +129,9 @@ class TestOcsfApiActivityMapping:
         )
         assert select_chain(_row(entry_hash_org=None)) == (_GLOBAL_HASH, _GLOBAL_PREV, None)
         assert select_chain(_row(entry_hash_org=None, entry_hash=None)) == (None, None, None)
+        # GENESIS sentinel → no predecessor, on either chain.
+        assert select_chain(_row(prev_hash_org="GENESIS"))[1] is None
+        assert select_chain(_row(entry_hash_org=None, prev_hash="GENESIS"))[1] is None
 
     def test_signed_event_carries_signature_and_verifies(self):
         key = ec.generate_private_key(ec.SECP256R1())
