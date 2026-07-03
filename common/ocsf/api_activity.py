@@ -16,7 +16,8 @@ Attestation shape notes (tracking #1661 @ fa4003ad):
 - ``entry_hash`` / ``prev_entry_hash`` are OCSF ``fingerprint`` objects. The
   chain hashes are **HMAC-SHA-256** (keyed), so ``algorithm_id`` is 99 (Other)
   with the ``algorithm`` sibling naming it — claiming plain SHA-256 (id 3)
-  would misstate the construction.
+  would misstate the construction. The chain's genesis row (stored sentinel
+  ``"GENESIS"``) has no predecessor, so its event omits ``prev_entry_hash``.
 - ``signatures`` (required by the schema) carries an ECDSA-P256-SHA256
   signature computed over ``bytes.fromhex(entry_hash)`` — the same message
   convention Evidence Anchor's Merkle leaves use, so one verifier story
@@ -36,6 +37,18 @@ from typing import Any
 OCSF_VERSION = "1.9.0-dev"
 
 _HMAC_FINGERPRINT = {"algorithm_id": 99, "algorithm": "HMAC-SHA-256"}
+
+# The chain writer (common/audit/writer.py) stores this literal sentinel as
+# prev_hash / prev_hash_org on a chain's first row. In OCSF terms that is a
+# missing predecessor, not a hash — passing it through would emit a
+# fingerprint whose value isn't a hash, so the genesis event omits
+# ``prev_entry_hash`` instead. (Not imported from the writer: this module
+# stays free of ORM/settings dependencies.)
+_GENESIS = "GENESIS"
+
+
+def _prev_or_none(value: Any) -> str | None:
+    return None if not value or value == _GENESIS else value
 
 
 @dataclass(frozen=True)
@@ -58,12 +71,15 @@ def select_chain(row: Any) -> tuple[str | None, str | None, str | None]:
     Prefers the per-org chain; falls back to the global chain. Single source
     of truth for both the emitter and the export signer, so the hash that is
     signed is always the hash that is displayed.
+
+    The GENESIS sentinel on a chain's first row maps to ``None`` — the genesis
+    event has no predecessor to reference.
     """
     if getattr(row, "entry_hash_org", None):
-        prev = getattr(row, "prev_hash_org", None) or None
+        prev = _prev_or_none(getattr(row, "prev_hash_org", None))
         return row.entry_hash_org, prev, str(row.org_id)
     if row.entry_hash:
-        return row.entry_hash, row.prev_hash or None, None
+        return row.entry_hash, _prev_or_none(row.prev_hash), None
     return None, None, None
 
 
