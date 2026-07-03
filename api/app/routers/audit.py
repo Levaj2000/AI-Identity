@@ -6,6 +6,7 @@ verification for SOC 2 compliance, and forensics features for incident
 reconstruction and reporting.
 """
 
+import base64
 import csv
 import io
 import json
@@ -18,6 +19,7 @@ import sys
 import tempfile
 import uuid
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -30,8 +32,9 @@ from api.app.auth import get_current_user
 from common.audit import generate_report_signature, verify_chain, verify_global_chain
 from common.audit.writer import _resolve_org_hmac_key
 from common.forensic.anchor_service import assemble_evidence
+from common.forensic.signer import ForensicSignerConfigError, get_forensic_signer
 from common.models import Agent, AuditLog, OrgMembership, Policy, User, get_db
-from common.ocsf import audit_log_to_ocsf
+from common.ocsf import EntrySignature, audit_log_to_ocsf, select_chain
 from common.schemas.agent import (
     AuditChainVerifyResponse,
     AuditLogListResponse,
@@ -1037,6 +1040,42 @@ def _build_case_file(
     return _CaseFile(report=report, events=events, file_label=file_label, short_token=short_token)
 
 
+def _sign_export_entries(events: list[AuditLog]) -> dict[int, EntrySignature]:
+    """Sign each event's chain entry hash for the OCSF export (#1661 signatures).
+
+    Returns a map of audit row id → EntrySignature. Empty when no forensic
+    signer is configured (dev without keys) — the export then omits
+    ``attestation.signatures`` rather than failing the download.
+
+    The message signed is ``bytes.fromhex(entry_hash)`` — the same convention
+    Evidence Anchor's Merkle leaves use, so one public key + one message rule
+    covers both verification paths. KMS signing is a network RPC per event and
+    is parallelized; local-PEM signing is in-process and runs inline.
+    """
+    try:
+        signer = get_forensic_signer()
+    except ForensicSignerConfigError as exc:
+        logger.warning("OCSF export unsigned — forensic signer not configured: %s", exc)
+        return {}
+
+    signed_time_ms = int(datetime.now(UTC).timestamp() * 1000)
+    to_sign = [(e.id, h) for e in events if (h := select_chain(e)[0])]
+
+    def _sign_one(item: tuple[int, str]) -> tuple[int, EntrySignature]:
+        row_id, entry_hash = item
+        sig = signer.sign(bytes.fromhex(entry_hash))
+        return row_id, EntrySignature(
+            signature_b64=base64.b64encode(sig).decode("ascii"),
+            key_id=signer.key_id,
+            signed_time_ms=signed_time_ms,
+        )
+
+    if signer.backend == "kms" and len(to_sign) > 1:
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            return dict(pool.map(_sign_one, to_sign))
+    return dict(map(_sign_one, to_sign))
+
+
 @router.get(
     "/report",
     summary="Generate Case File (forensics report)",
@@ -1151,10 +1190,15 @@ def audit_report(
         )
 
     if format == "ocsf":
-        # OCSF API Activity (class_uid 6003) events with the ai_operation profile,
-        # emitted as NDJSON — one event per line, the de-facto SIEM ingestion
-        # format (Splunk HEC, etc.). Streams cleanly; no megabyte-long single line.
-        ndjson = "".join(json.dumps(audit_log_to_ocsf(e), default=str) + "\n" for e in cf.events)
+        # OCSF API Activity (class_uid 6003) events with the ai_operation +
+        # record_integrity profiles (#1661 final shape), emitted as NDJSON —
+        # one event per line, the de-facto SIEM ingestion format (Splunk HEC,
+        # etc.). Streams cleanly; no megabyte-long single line.
+        signatures = _sign_export_entries(cf.events)
+        ndjson = "".join(
+            json.dumps(audit_log_to_ocsf(e, signatures.get(e.id)), default=str) + "\n"
+            for e in cf.events
+        )
         filename = (
             f"case-file-{cf.file_label}-{_date_token(start_date)}-"
             f"{_date_token(end_date)}.ocsf.ndjson"
