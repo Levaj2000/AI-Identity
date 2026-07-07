@@ -62,3 +62,36 @@ ai-identity-creds.env.local
 *.numbers
 *.key
 marketing/linkedin/*.pdf
+
+# IBM/CoSAI collaboration — private review materials + internal prep. NEVER COMMIT:
+# this repo is PUBLIC; these contain unreleased IBM CPEX dev-branch internals
+# (Teryl's review docs), or Jeff's internal meeting/demo prep and candid notes.
+docs/cosai-ws4-ocsf-mapping/ocsf-gaps-cmf-redline.md
+docs/cosai-ws4-ocsf-mapping/cmf-ocsf-mapping-review.md
+docs/cosai-ws4-ocsf-mapping/OCSF-Issues-Working-Draft.docx
+docs/cosai-ws4-ocsf-mapping/TERYL-PREP-*.md
+docs/cosai-ws4-ocsf-mapping/reply-to-teryl-*.md
+docs/cosai-ws4-ocsf-mapping/ibm-cpex-ocsf-package-REVIEW-NOTE.md
+docs/cosai-ws4-ocsf-mapping/ibm-cpex-ocsf-package*/
+docs/cosai-ws4-ocsf-mapping/ai-identity-cpex-ocsf-refimpl-*.zip
+docs/cosai-ws4-ocsf-mapping/IBM-*.pdf
+docs/cosai-ws4-ocsf-mapping/AI-Identity-Agent-Evidence-for-IBM-*.pdf
+docs/cosai-ws4-ocsf-mapping/CMF-OCSF-BRIEF-FOR-IBM-*.pdf
+docs/cosai-ws4-ocsf-mapping/CMF-OCSF-CROSSMAP.*
+docs/cosai-ws4-ocsf-mapping/CMF-OCSF-FIELD-MAP.md
+docs/cosai-ws4-ocsf-mapping/build_ibm_*.py
+docs/cosai-ws4-ocsf-mapping/build_teryl_*.py
+docs/cosai-ws4-ocsf-mapping/build_cmf_ocsf_crossmap_pdf.py
+docs/strategy/ibm-relationship-read-and-triggers.md
+# Internal strategy/prep — candid reads, competitor comparisons, grant answers
+docs/strategy/trustgraph-vs-ai-identity-comparison-*.pdf
+docs/strategy/build_trustgraph_vs_ai_identity_comparison_pdf.py
+docs/strategy/ceo-weekly-review-*.pdf
+docs/strategy/nsf-sbir-*.md
+docs/strategy/ocsf-general-call-prep-*.md
+docs/strategy/ocsf-sig-prep-*.md
+docs/strategy/ocsf-1661-naming-call-talking-points-*.pdf
+docs/strategy/trust-graph-telemetry-call-prep-*.pdf
+docs/strategy/cosai-ws4-adlc-sig-notes-*.md
+docs/strategy/cosai-ws4-adlc-delegation-escalation-workshop-note.md
+docs/strategy/cosai-ws4-trust-graph-kickoff-*.md
