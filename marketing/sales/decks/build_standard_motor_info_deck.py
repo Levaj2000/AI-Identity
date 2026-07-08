@@ -1396,7 +1396,7 @@ add_text(
 verify_items = [
     (
         "Public JWKS endpoint",
-        "ai-identity.co/.well-known/ai-identity-public-keys.json — every non-destroyed forensic signing key version, fetchable without an account.",
+        "api.ai-identity.co/.well-known/ai-identity-public-keys.json — every non-destroyed forensic signing key version, fetchable without an account.",
     ),
     (
         "Open-source verification CLI",

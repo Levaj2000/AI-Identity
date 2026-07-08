@@ -1283,7 +1283,7 @@ signed Merkle checkpoint. You can prove any one event's inclusion using only our
 key — no shared secret, no trust in our infrastructure:
 
     # public key set, served publicly:
-    curl -o jwks.json https://www.ai-identity.co/.well-known/ai-identity-public-keys.json
+    curl -o jwks.json https://api.ai-identity.co/.well-known/ai-identity-public-keys.json
     python3 ai_identity_verify.py inclusion-proof \\
         --checkpoints evidence-anchor/checkpoints.json \\
         --proofs evidence-anchor/inclusion-proofs.json \\
