@@ -1486,3 +1486,87 @@ class TestAttestationVerification(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ── Test: Agent-scoped slice verification (scope-aware per-org chain) ──
+
+
+def _agent_slice_report(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    """Wrap entries in a report envelope declaring agent scope."""
+    return {
+        "report_id": "fr-agent-slice-test",
+        "scope": {"type": "agent", "agent_id": TEST_AGENT_ID, "org_id": "org-test"},
+        "events": entries,
+    }
+
+
+class TestAgentScopedSliceVerification(unittest.TestCase):
+    """Agent-scoped exports are sparse slices of the org chain: sequence
+    gaps are re-anchored (other agents own those rows), per-row hashes and
+    intra-run linkage still verify, and tampering is still caught."""
+
+    def _sparse_slice(self) -> list[dict[str, Any]]:
+        # One org chain of 8 rows; the "agent" owns seq 1-3 and 6-8.
+        full = _build_org_chain(8)
+        return full[0:3] + full[5:8]
+
+    def test_agent_slice_with_gap_verifies(self):
+        path = _write_json(_agent_slice_report(self._sparse_slice()))
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 0)
+            self.assertIn("CHAIN INTACT", out)
+            self.assertIn("Agent slice", out)
+            self.assertIn("re-anchored", out)
+        finally:
+            os.unlink(path)
+
+    def test_agent_slice_json_mode_and_gap_count(self):
+        path = _write_json(_agent_slice_report(self._sparse_slice()))
+        try:
+            code, out, _ = _run_cmd(["--json", "chain", path])
+            self.assertEqual(code, 0)
+            result = json.loads(out)
+            self.assertEqual(result["details"]["mode"], "per-org-agent-slice")
+            self.assertEqual(result["details"]["gaps_reanchored"], 1)
+            self.assertEqual(result["details"]["entries_verified"], 6)
+        finally:
+            os.unlink(path)
+
+    def test_agent_slice_tamper_after_gap_detected(self):
+        entries = self._sparse_slice()
+        entries[4]["request_metadata"] = {"status_code": 200, "model": "tampered"}
+        path = _write_json(_agent_slice_report(entries))
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 1)
+            self.assertIn("CHAIN BROKEN", out)
+            self.assertIn("hash mismatch", out)
+        finally:
+            os.unlink(path)
+
+    def test_agent_slice_intra_run_linkage_still_enforced(self):
+        # Break the prev linkage between two CONSECUTIVE-seq rows — the
+        # relaxed gap rule must not relax adjacent linkage.
+        entries = self._sparse_slice()
+        entries[1]["prev_hash_org"] = "e" * 64
+        path = _write_json(_agent_slice_report(entries))
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 1)
+            self.assertIn("CHAIN BROKEN", out)
+        finally:
+            os.unlink(path)
+
+    def test_org_scope_report_gap_still_breaks(self):
+        # Same sparse slice, but the report claims ORG scope → the gap is
+        # treated as a deletion, exactly as before.
+        report = _agent_slice_report(self._sparse_slice())
+        report["scope"] = {"type": "org", "org_id": "org-test"}
+        path = _write_json(report)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 1)
+            self.assertIn("sequence gap", out)
+        finally:
+            os.unlink(path)
