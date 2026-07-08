@@ -244,3 +244,59 @@ class TestSignExportEntries:
 
         rows = [_row(id=1, entry_hash_org=None, prev_hash_org=None, entry_hash=None)]
         assert audit_router._sign_export_entries(rows) == {}
+
+
+class TestMandateUnmappedBlock:
+    """Mandate lifecycle events surface as one coherent unmapped.mandate block."""
+
+    _SPEND_META = {
+        "action_type": "mandate_limit_exceeded",
+        "resource_type": "mandate",
+        "mandate_id": "mnd_cafef00d",
+        "spend_amount_cents": 40_500,
+        "spend_currency": "USD",
+        "spend_settlement": True,
+        "mandate_spent_cents": 50_000,
+        "mandate_limit_cents": 10_000,
+        "spend_reference": "ord_1042",
+        "deny_reason": "spend_limit_exceeded",
+    }
+
+    def test_breach_event_maps_full_block(self):
+        ev = audit_log_to_ocsf(_row(decision="deny", request_metadata=dict(self._SPEND_META)))
+        block = ev["unmapped"]["mandate"]
+        assert block == {
+            "mandate_id": "mnd_cafef00d",
+            "action": "mandate_limit_exceeded",
+            "amount_cents": 40_500,
+            "currency": "USD",
+            "settlement": True,
+            "spent_cents": 50_000,
+            "limit_cents": 10_000,
+            "reference": "ord_1042",
+            "deny_reason": "spend_limit_exceeded",
+        }
+        # and the event itself reads as a denial to a SOC
+        assert ev["action"] == "Denied"
+        assert ev["severity_id"] == 3
+
+    def test_issue_event_maps_minimal_block(self):
+        ev = audit_log_to_ocsf(
+            _row(
+                request_metadata={
+                    "action_type": "mandate_issued",
+                    "resource_type": "mandate",
+                    "mandate_id": "mnd_cafef00d",
+                    "mandate_limit_cents": 10_000,
+                    "spend_currency": "USD",
+                }
+            )
+        )
+        block = ev["unmapped"]["mandate"]
+        assert block["action"] == "mandate_issued"
+        assert block["limit_cents"] == 10_000
+        assert "amount_cents" not in block
+
+    def test_non_mandate_metadata_emits_no_block(self):
+        ev = audit_log_to_ocsf(_row(request_metadata={"policy_version": 36}))
+        assert "mandate" not in ev.get("unmapped", {})
