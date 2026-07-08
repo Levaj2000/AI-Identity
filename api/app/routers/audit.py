@@ -1261,6 +1261,10 @@ Both checks use the **same key** from your dashboard. Run from this folder exact
 
 - **Chain INTACT** — every audit entry links cryptographically to the previous one; no entry
   was inserted, deleted, or altered, and the sequence is gap-free.
+  *Scope note:* an **agent-scoped** export is a sparse slice of the organization's chain —
+  other agents legitimately own the sequence numbers in between, so the verifier reports it
+  as an *Agent slice* (row integrity + linkage within consecutive rows). The gap-free
+  **completeness** proof comes from an org-scope export.
 - **Signature VALID** — the report header (id, time, counts, chain result) is authentic and
   unmodified since export.
 

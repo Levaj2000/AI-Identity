@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 TOOL_NAME = "ai-identity-verify"
 GENESIS = "GENESIS"
 
@@ -324,20 +324,28 @@ def cmd_report(args: argparse.Namespace) -> int:
 # ── Chain verification ──────────────────────────────────────────────────
 
 
-def _load_chain_entries(path: str) -> list[dict[str, Any]]:
-    """Load audit chain entries from a JSON file.
+def _load_chain_entries(path: str) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Load audit chain entries (and the export's scope, when present).
 
     Accepts either:
-      - A JSON array of entry objects  (bare export)
+      - A JSON array of entry objects  (bare export; no scope available)
       - A JSON object with an "events" key containing the array
-        (ForensicsReportResponse shape)
+        (ForensicsReportResponse shape; may carry a "scope" object)
+
+    Returns (entries, scope). The scope matters for chain verification: an
+    agent-scoped export is a sparse slice of the org's chain (other agents
+    own the intervening sequence numbers), so gap/linkage rules differ.
     """
     data = _load_json(path)
+    scope: dict[str, Any] | None = None
 
     if isinstance(data, list):
         entries = data
     elif isinstance(data, dict):
         entries = data.get("events", data.get("entries", []))
+        raw_scope = data.get("scope")
+        if isinstance(raw_scope, dict):
+            scope = raw_scope
         if not isinstance(entries, list):
             print(
                 "Error: Could not find an array of audit entries in the JSON file.\n"
@@ -352,7 +360,7 @@ def _load_chain_entries(path: str) -> list[dict[str, Any]]:
     if len(entries) == 0:
         print("Warning: File contains zero audit entries.", file=sys.stderr)
 
-    return entries
+    return entries, scope
 
 
 def _cmd_chain_full(
@@ -645,20 +653,33 @@ def _cmd_chain_partial(
 
 
 def _cmd_chain_org(
-    args: argparse.Namespace, key: bytes, entries: list[dict[str, Any]], total: int
+    args: argparse.Namespace,
+    key: bytes,
+    entries: list[dict[str, Any]],
+    total: int,
+    agent_scoped: bool = False,
 ) -> int:
     """Verify the per-org HMAC chain from an exported report.
 
-    The export is a time-windowed slice of one org's chain, so the
-    starting ``org_chain_seq`` may not be 1 — but within the slice the
+    Org-scoped export: a time-windowed slice of one org's chain — the
+    starting ``org_chain_seq`` may not be 1, but within the slice the
     sequence must be contiguous (no gaps = no deletions) and the chain
     linkage must hold via ``prev_hash_org``/``entry_hash_org``.
+
+    Agent-scoped export (``agent_scoped=True``): a *sparse* slice — other
+    agents legitimately own the intervening sequence numbers, so a gap is
+    NOT evidence of deletion. Mirrors the server-side rule
+    (common/audit/writer.py verify_chain): per-row hash recomputation
+    always runs; linkage is enforced only across consecutive sequence
+    numbers, and each gap re-anchors the window. Completeness (no deleted
+    rows) can only be proven by an org-scope export.
 
     Sorts by ``org_chain_seq`` defensively in case the export ordering
     differs.
     """
     entries = sorted(entries, key=lambda e: e["org_chain_seq"])
     verified = 0
+    gaps_reanchored = 0
     break_info: dict[str, Any] | None = None
     expected_seq: int | None = None
     expected_prev_hash: str | None = None
@@ -674,14 +695,20 @@ def _cmd_chain_org(
             expected_prev_hash = entry_prev
         else:
             if seq != expected_seq:
-                break_info = {
-                    "index": i,
-                    "entry_id": entry.get("id", "?"),
-                    "reason": "sequence gap (rows deleted from this org's history)",
-                    "expected_seq": expected_seq,
-                    "got_seq": seq,
-                }
-                break
+                if agent_scoped:
+                    # Rows in between belong to other agents in the org —
+                    # re-anchor the window at this entry.
+                    gaps_reanchored += 1
+                    expected_prev_hash = entry_prev
+                else:
+                    break_info = {
+                        "index": i,
+                        "entry_id": entry.get("id", "?"),
+                        "reason": "sequence gap (rows deleted from this org's history)",
+                        "expected_seq": expected_seq,
+                        "got_seq": seq,
+                    }
+                    break
             if entry_prev != expected_prev_hash:
                 break_info = {
                     "index": i,
@@ -718,11 +745,13 @@ def _cmd_chain_org(
             "total_entries": total,
             "entries_verified": verified,
             "chain_intact": intact,
-            "mode": "per-org",
+            "mode": "per-org-agent-slice" if agent_scoped else "per-org",
             "seq_range": (
                 [entries[0]["org_chain_seq"], entries[-1]["org_chain_seq"]] if entries else None
             ),
         }
+        if agent_scoped:
+            details["gaps_reanchored"] = gaps_reanchored
         if break_info:
             details["break_at"] = break_info
         result = {
@@ -742,7 +771,16 @@ def _cmd_chain_org(
         print(f"  Entries:      {total}")
         if entries:
             print(f"  Seq range:    {entries[0]['org_chain_seq']} → {entries[-1]['org_chain_seq']}")
-        print("  Mode:         Per-org (tenant-scoped completeness proof)")
+        if agent_scoped:
+            print("  Mode:         Agent slice (row integrity + intra-run linkage;")
+            print("                completeness proof requires an org-scope export)")
+            if gaps_reanchored:
+                print(
+                    f"  Note:         {gaps_reanchored} sequence gap(s) re-anchored — "
+                    "other agents own those rows"
+                )
+        else:
+            print("  Mode:         Per-org (tenant-scoped completeness proof)")
         print()
         if intact:
             print(f"  Result:       {_green('CHAIN INTACT ✓')}")
@@ -760,8 +798,9 @@ def _cmd_chain_org(
 def cmd_chain(args: argparse.Namespace) -> int:
     """Verify the HMAC audit chain (per-org, full, or partial)."""
     key = _get_hmac_key()
-    entries = _load_chain_entries(args.file)
+    entries, scope = _load_chain_entries(args.file)
     total = len(entries)
+    agent_scoped = isinstance(scope, dict) and scope.get("type") == "agent"
 
     if total == 0:
         if args.json:
@@ -796,7 +835,7 @@ def cmd_chain(args: argparse.Namespace) -> int:
     # tenant-scoped completeness proof. Older exports without the
     # org-chain fields fall through to the legacy global path.
     if not getattr(args, "global_chain", False) and _entries_have_org_chain(entries):
-        return _cmd_chain_org(args, key, entries, total)
+        return _cmd_chain_org(args, key, entries, total, agent_scoped=agent_scoped)
 
     # Legacy / fallback: global chain. Detect partial export (first
     # entry's prev_hash is not GENESIS) → use partial verify.
