@@ -835,7 +835,7 @@
   <section id="pipeline">
     <div class="section-label">Section 1</div>
     <div class="section-title">From Request to Evidence (Gateway → Audit Chain)</div>
-    <div class="section-desc">Every agent request flows through the gateway and becomes a cryptographically chained, tamper-proof evidence record. Click any stage to see what data is captured at that point in the pipeline.</div>
+    <div class="section-desc">Every agent request flows through the gateway and becomes a cryptographically chained, tamper-evident evidence record. Click any stage to see what data is captured at that point in the pipeline.</div>
 
     <div class="pipeline-wrapper">
       <!-- Main horizontal flow -->
@@ -911,8 +911,8 @@
           <div class="branch-line" id="line-chain"></div>
           <div class="pipe-node chain-node" id="node-hmac" onclick="activateNode('hmac')">
             <span class="node-icon">🔐</span>
-            <div class="node-label">HMAC Chain</div>
-            <div class="node-sub">entry_hash = HMAC-SHA256</div>
+            <div class="node-label">HMAC Chains ×2</div>
+            <div class="node-sub">platform + per-org</div>
             <div class="node-hint">click to inspect</div>
           </div>
         </div>
@@ -924,6 +924,17 @@
             <span class="node-icon">🚫</span>
             <div class="node-label">Decision</div>
             <div class="node-sub">DENY / ERROR</div>
+            <div class="node-hint">click to inspect</div>
+          </div>
+        </div>
+
+        <!-- Mandate Service — spend authority (audits into the same chain) -->
+        <div style="display:flex; flex-direction:column; align-items:center; margin-left: 64px;">
+          <div class="branch-line"></div>
+          <div class="pipe-node allow-node" id="node-mandate" onclick="activateNode('mandate')">
+            <span class="node-icon">🪪</span>
+            <div class="node-label">Mandate Service</div>
+            <div class="node-sub">signed spend limits</div>
             <div class="node-hint">click to inspect</div>
           </div>
         </div>
@@ -948,9 +959,68 @@
 
   <div class="divider"></div>
 
-  <!-- ═══════════════════════════════════════════════════════ SECTION 2 -->
-  <section id="audit-fields">
+  <!-- ═══════════════════════════════════════════════════════ SECTION 2 — THREE LAYERS -->
+  <section id="layers">
     <div class="section-label">Section 2</div>
+    <div class="section-title">Three Layers of Integrity (Write → Export → Anchor)</div>
+    <div class="section-desc">Each layer answers a different question with a different verifier. Layer 1 makes tampering evident to the organization holding the verification key; Layers 2 and 3 make the evidence <strong>publicly</strong> verifiable — no shared secret, no trust in our infrastructure. This layered evidence model is what we've proposed to OCSF (<a href="https://github.com/ocsf/ocsf-schema/pull/1661" target="_blank" style="color:var(--cyan);text-decoration:none;">PR #1661</a>, in review) — and it runs in production here today. Click a layer to inspect it.</div>
+
+    <div class="pipeline-wrapper">
+      <div class="pipeline-row" style="min-width:860px;">
+        <div class="pipe-node chain-node" id="node-layer1" onclick="activateLayer('layer1')" style="flex:1;">
+          <span class="node-icon">🔗</span>
+          <div class="node-label">Layer 1 — Write-time</div>
+          <div class="node-sub">dual keyed HMAC chains</div>
+          <div class="node-hint">every event · verifier: org key-holder</div>
+        </div>
+
+        <div class="pipe-arrow">
+          <svg viewBox="0 0 32 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="0" y1="8" x2="26" y2="8" stroke="#2a3347" stroke-width="1.5"/>
+            <polyline points="22,4 28,8 22,12" stroke="#2a3347" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+
+        <div class="pipe-node" id="node-layer2" onclick="activateLayer('layer2')" style="flex:1;">
+          <span class="node-icon">✒️</span>
+          <div class="node-label">Layer 2 — Export-time</div>
+          <div class="node-sub">ECDSA-P256 per event</div>
+          <div class="node-hint">every export · verifier: anyone (JWKS)</div>
+        </div>
+
+        <div class="pipe-arrow">
+          <svg viewBox="0 0 32 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="0" y1="8" x2="26" y2="8" stroke="#2a3347" stroke-width="1.5"/>
+            <polyline points="22,4 28,8 22,12" stroke="#2a3347" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+
+        <div class="pipe-node db-node" id="node-layer3" onclick="activateLayer('layer3')" style="flex:1;">
+          <span class="node-icon">🌲</span>
+          <div class="node-label">Layer 3 — Evidence Anchor</div>
+          <div class="node-sub">signed Merkle checkpoints</div>
+          <div class="node-hint">every ~15 min · verifier: anyone (JWKS)</div>
+        </div>
+      </div>
+
+      <!-- Layer info panel -->
+      <div class="info-panel" id="layer-panel">
+        <h3 id="layer-title">&#x2139;&#xfe0f; Select a layer above to inspect it</h3>
+        <p id="layer-desc" style="font-size:12px;color:var(--text-dim);margin-bottom:12px;line-height:1.6;display:none;"></p>
+        <div class="data-fields" id="layer-fields">
+          <div class="data-chip">write-time: HMAC chains</div>
+          <div class="data-chip">export-time: per-event signatures</div>
+          <div class="data-chip">anchor: Merkle inclusion proofs</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════════════════════════════ SECTION 3 -->
+  <section id="audit-fields">
+    <div class="section-label">Section 3</div>
     <div class="section-title">AuditLog Schema — Evidence Record</div>
     <div class="section-desc">Each row is a forensic evidence record used for incident reconstruction and regulatory response. Every field below is captured on every enforcement decision — allow, deny, or error.</div>
 
@@ -1137,6 +1207,33 @@
             <div class="field-example hash">d84e1fa...</div>
           </div>
         </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">entry_hash_org</div>
+            <div class="field-type">text · per-org chain</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example hash">f21c8ad...</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">prev_hash_org</div>
+            <div class="field-type">text · per-org chain</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example hash">6b90e3c...</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <div class="field-name">org_chain_seq</div>
+            <div class="field-type">int · gap-free 1..N per org</div>
+          </div>
+          <div class="field-right">
+            <div class="field-example">1042</div>
+          </div>
+        </div>
       </div>
 
       <!-- Policy -->
@@ -1170,11 +1267,11 @@
 
   <div class="divider"></div>
 
-  <!-- ═══════════════════════════════════════════════════════ SECTION 3 -->
+  <!-- ═══════════════════════════════════════════════════════ SECTION 4 -->
   <section id="chain">
-    <div class="section-label">Section 3</div>
+    <div class="section-label">Section 4</div>
     <div class="section-title">Chain Integrity Verification (How Auditors Prove No Tampering)</div>
-    <div class="section-desc">Each audit entry includes its own HMAC-SHA256 hash computed over the full payload plus the previous entry's hash — forming an immutable linked chain. Tampering with any entry breaks all subsequent hashes. Any auditor can independently recompute the chain and confirm it has not been altered.</div>
+    <div class="section-desc">Each audit entry includes an HMAC-SHA256 hash computed over the full payload plus the previous entry's hash — forming a linked chain. Tampering with any entry breaks all subsequent hashes, and the per-org sequence numbers (org_chain_seq 1..N) make any deleted row show up as a gap. An auditor holding the organization's forensic verification key can independently recompute the chain and confirm it has not been altered; for verification <em>without</em> the key, use the per-event export signatures and Evidence Anchor inclusion proofs from Section 2.</div>
 
     <div class="chain-wrapper">
       <div class="chain-row" id="chain-row">
@@ -1182,15 +1279,15 @@
         <!-- Entry 1 — GENESIS -->
         <div class="chain-block genesis" id="cb-1">
           <div class="chain-block-header">
-            <span class="chain-entry-id">#001</span>
+            <span class="chain-entry-id">seq 1</span>
             <span class="chain-decision-badge badge-genesis">GENESIS</span>
           </div>
           <div class="chain-field">
-            <div class="chain-field-label">prev_hash</div>
-            <div class="chain-field-value prev">0000000000000000</div>
+            <div class="chain-field-label">prev_hash_org</div>
+            <div class="chain-field-value prev">GENESIS</div>
           </div>
           <div class="chain-field">
-            <div class="chain-field-label">entry_hash</div>
+            <div class="chain-field-label">entry_hash_org</div>
             <div class="chain-field-value">a3f9b2c4d1e8...</div>
           </div>
         </div>
@@ -1200,15 +1297,15 @@
         <!-- Entry 2 -->
         <div class="chain-block" id="cb-2">
           <div class="chain-block-header">
-            <span class="chain-entry-id">#002</span>
+            <span class="chain-entry-id">seq 2</span>
             <span class="chain-decision-badge badge-allow">ALLOW</span>
           </div>
           <div class="chain-field">
-            <div class="chain-field-label">prev_hash</div>
+            <div class="chain-field-label">prev_hash_org</div>
             <div class="chain-field-value prev">a3f9b2c4d1e8...</div>
           </div>
           <div class="chain-field">
-            <div class="chain-field-label">entry_hash</div>
+            <div class="chain-field-label">entry_hash_org</div>
             <div class="chain-field-value">d84e1fa7b5c2...</div>
           </div>
         </div>
@@ -1218,15 +1315,15 @@
         <!-- Entry 3 -->
         <div class="chain-block" id="cb-3">
           <div class="chain-block-header">
-            <span class="chain-entry-id">#003</span>
+            <span class="chain-entry-id">seq 3</span>
             <span class="chain-decision-badge badge-deny">DENY</span>
           </div>
           <div class="chain-field">
-            <div class="chain-field-label">prev_hash</div>
+            <div class="chain-field-label">prev_hash_org</div>
             <div class="chain-field-value prev">d84e1fa7b5c2...</div>
           </div>
           <div class="chain-field">
-            <div class="chain-field-label">entry_hash</div>
+            <div class="chain-field-label">entry_hash_org</div>
             <div class="chain-field-value">9e2c6f3a8b41...</div>
           </div>
         </div>
@@ -1236,15 +1333,15 @@
         <!-- Entry 4 -->
         <div class="chain-block" id="cb-4">
           <div class="chain-block-header">
-            <span class="chain-entry-id">#004</span>
+            <span class="chain-entry-id">seq 4</span>
             <span class="chain-decision-badge badge-allow">ALLOW</span>
           </div>
           <div class="chain-field">
-            <div class="chain-field-label">prev_hash</div>
+            <div class="chain-field-label">prev_hash_org</div>
             <div class="chain-field-value prev">9e2c6f3a8b41...</div>
           </div>
           <div class="chain-field">
-            <div class="chain-field-label">entry_hash</div>
+            <div class="chain-field-label">entry_hash_org</div>
             <div class="chain-field-value">c17d4e9f2a5b...</div>
           </div>
         </div>
@@ -1254,15 +1351,15 @@
         <!-- Entry 5 -->
         <div class="chain-block" id="cb-5">
           <div class="chain-block-header">
-            <span class="chain-entry-id">#005</span>
+            <span class="chain-entry-id">seq 5</span>
             <span class="chain-decision-badge badge-allow">ALLOW</span>
           </div>
           <div class="chain-field">
-            <div class="chain-field-label">prev_hash</div>
+            <div class="chain-field-label">prev_hash_org</div>
             <div class="chain-field-value prev">c17d4e9f2a5b...</div>
           </div>
           <div class="chain-field">
-            <div class="chain-field-label">entry_hash</div>
+            <div class="chain-field-label">entry_hash_org</div>
             <div class="chain-field-value">7b3a8f1d9c6e...</div>
           </div>
         </div>
@@ -1280,7 +1377,7 @@
     <!-- Chain-of-Custody Certificate -->
     <div class="cert-box">
       <div class="cert-title">&#128196; Chain-of-Custody Certificate</div>
-      <p class="cert-body">Every exported report (JSON and CSV) includes a chain-of-custody certificate that proves the forensic data came from AI Identity and has not been altered after export. The gateway signs a compact summary — report ID, generation timestamp, chain verification status, and entry counts — with the same HMAC key used for the audit chain, producing a <code>report_signature</code> that travels with the export. Any recipient can independently recompute that summary and verify the signature, confirming both the integrity of the underlying hash chain and the authenticity of the export itself.</p>
+      <p class="cert-body">Every exported Case File (JSON and CSV) includes a chain-of-custody certificate that shows the forensic data came from AI Identity and has not been altered after export. The platform signs a compact summary — report ID, generation timestamp, chain verification status, and entry counts — with the same key the audit chain verified under, producing a <code>report_signature</code> that travels with the export. Any recipient holding the organization's forensic verification key can recompute that summary and verify the signature, confirming both the integrity of the underlying hash chain and the authenticity of the export itself. This certificate is the key-holder layer; for verification <em>without</em> the org key, the OCSF export carries per-event ECDSA-P256 signatures and the Case File bundle carries Evidence Anchor inclusion proofs — both check out against our public JWKS at <code>api.ai-identity.co/.well-known/ai-identity-public-keys.json</code>.</p>
       <div class="cert-code"><pre><span class="code-comment"># Verify a forensics report export hasn't been tampered with</span>
 <span class="code-keyword">import</span> hmac, hashlib, json
 
@@ -1308,9 +1405,9 @@
 
   <div class="divider"></div>
 
-  <!-- ═══════════════════════════════════════════════════════ SECTION 4 -->
+  <!-- ═══════════════════════════════════════════════════════ SECTION 5 -->
   <section id="competitive">
-    <div class="section-label">Section 4</div>
+    <div class="section-label">Section 5</div>
     <div class="section-title">Competitive Comparison — Forensics Capabilities</div>
     <div class="section-desc">Most IAM and AI governance tools stop at "logs." AI Identity adds cryptographic identity, tamper-evident chains, and signed chain-of-custody exports — capabilities no competing platform ships today.</div>
 
@@ -1375,6 +1472,20 @@
             <td><span class="cell-no">✗</span></td>
             <td><span class="cell-no">✗</span></td>
           </tr>
+          <tr>
+            <td class="cap-name">Publicly verifiable evidence (per-event signatures + Merkle inclusion proofs)</td>
+            <td class="ai-identity-col"><span class="cell-yes">✅</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+          </tr>
+          <tr>
+            <td class="cap-name">Signed spend-limit mandates for agent commerce</td>
+            <td class="ai-identity-col"><span class="cell-yes">✅</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+            <td><span class="cell-no">✗</span></td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -1385,7 +1496,7 @@
   <!-- ═══════════════════════════════════════════════════════ CTA -->
   <section class="cta-section">
     <div class="cta-title">See it live in under 5 minutes</div>
-    <div class="cta-subtitle">Sign up, register an agent, and watch every decision appear in your tamper-proof audit trail — free tier included.</div>
+    <div class="cta-subtitle">Sign up, register an agent, and watch every decision appear in your tamper-evident audit trail — free tier included.</div>
 
     <div class="cta-steps">
       <div class="cta-step">
@@ -1420,11 +1531,11 @@
 </main>
 
 <footer>
-  <div>AI Identity — Forensics Pipeline · Technical Sales Asset · April 2026</div>
+  <div>AI Identity — Forensics Pipeline · Technical Architecture · July 2026</div>
   <div style="display:flex;gap:20px;">
-    <a href="https://ai-identity.io" target="_blank">ai-identity.io</a>
+    <a href="https://www.ai-identity.co" target="_blank">www.ai-identity.co</a>
     <span style="color:var(--border)">|</span>
-    <span>Confidential — Design Partner Preview</span>
+    <span>Evidence format proposed to OCSF (PR #1661, in review)</span>
   </div>
 </footer>
 
@@ -1481,12 +1592,13 @@
     },
     writer: {
       title: "✍️ Audit Writer — Async Persistence",
-      desc: "An async worker dequeues the audit event, computes the HMAC-SHA256 chain hash (using the payload and prev_hash from the last entry), and inserts the record into PostgreSQL. The write is append-only — no UPDATE or DELETE permissions exist.",
+      desc: "An async worker dequeues the audit event and computes TWO HMAC-SHA256 chain hashes over the canonical payload: one linking to the previous entry platform-wide (entry_hash), and one linking to the previous entry for the same organization (entry_hash_org, with a gap-free per-org sequence number). Then it inserts the record into PostgreSQL. The write is append-only — no UPDATE or DELETE permissions exist.",
       chips: [
-        { label:"reads prev_hash", cls:"highlight" },
+        { label:"reads prev_hash + prev_hash_org", cls:"highlight" },
         { label:"HMAC-SHA256(payload + prev_hash)", cls:"highlight" },
-        { label:"entry_hash computed", cls:"highlight" },
-        { label:"INSERT audit_log", cls:"highlight" },
+        { label:"entry_hash + entry_hash_org", cls:"highlight" },
+        { label:"org_chain_seq = 1..N", cls:"highlight" },
+        { label:"INSERT audit_log" },
         { label:"no UPDATE / DELETE" },
       ]
     },
@@ -1503,15 +1615,27 @@
       ]
     },
     hmac: {
-      title: "🔐 HMAC Chain — Tamper Evidence",
-      desc: "entry_hash = HMAC-SHA256(canonical_payload || prev_hash). Any modification to a historical entry produces a different hash, breaking the chain from that point forward. The chain can be independently verified by any party with the HMAC secret.",
+      title: "🔐 HMAC Chains ×2 — Tamper Evidence + Completeness",
+      desc: "entry_hash = HMAC-SHA256(canonical_payload || prev_hash). Every entry is linked into two chains: a platform-wide chain (entry_hash / prev_hash) across all tenants, and a per-org chain (entry_hash_org / prev_hash_org) with a gap-free sequence number (org_chain_seq) that proves your org's history is complete — nothing deleted, inserted, or reordered. Any modification breaks the chain from that point forward. Verification uses the org's forensic verification key (symmetric) — a key-holder proof; public verification is added at export time and by the Evidence Anchor (see Three Layers of Integrity below).",
       chips: [
-        { label:"HMAC-SHA256", cls:"highlight" },
-        { label:"canonical JSON payload" },
-        { label:"prev_hash as salt", cls:"highlight" },
-        { label:"entry_hash stored", cls:"highlight" },
-        { label:"independently verifiable" },
-        { label:"Genesis: prev=0x000..." },
+        { label:"HMAC-SHA256, keyed", cls:"highlight" },
+        { label:"platform chain: entry_hash / prev_hash", cls:"highlight" },
+        { label:"per-org chain: entry_hash_org / prev_hash_org", cls:"highlight" },
+        { label:"org_chain_seq — gap-free completeness", cls:"highlight" },
+        { label:"verifier: org key-holder" },
+        { label:"Genesis: prev = GENESIS" },
+      ]
+    },
+    mandate: {
+      title: "🪪 Mandate Service — Signed Spend Authority",
+      desc: "A companion service for agent commerce: organizations issue mandates — signed spend-limit grants (RFC 8785 canonical JSON, ECDSA P-256) — to agents. Spends are evaluated in enforce mode (a spend that would cross the limit is denied and not recorded) or settlement mode (the money already moved, so the spend is recorded and a crossing flips the mandate to a terminal 'exceeded' state). Every lifecycle event — issue, spend, deny, revoke — is written into the same tamper-evident audit chain shown above.",
+      chips: [
+        { label:"signed grant: ECDSA-P256 over RFC 8785", cls:"highlight" },
+        { label:"spend_limit + running total", cls:"highlight" },
+        { label:"enforce: deny before crossing" },
+        { label:"settlement: record + mark exceeded" },
+        { label:"lifecycle events → same audit chain", cls:"highlight" },
+        { label:"PQC: ML-DSA-87 verify slot (no PQC issuance yet)" },
       ]
     },
     deny: {
@@ -1527,6 +1651,80 @@
       ]
     },
   };
+
+  /* ── Three Layers of Integrity ───────────────────────── */
+  const layerData = {
+    layer1: {
+      title: "🔗 Layer 1 — Write-time HMAC Chaining (tamper evidence + completeness)",
+      desc: "Every audit entry is HMAC-SHA256 hashed into two linked chains the moment it is written: a platform-wide chain (entry_hash / prev_hash) across all tenants, and a per-org chain (entry_hash_org / prev_hash_org) with a gap-free sequence number (org_chain_seq = 1..N) that proves the org's history is complete — nothing deleted, inserted, or reordered. Verification recomputes every hash with the org's forensic verification key: a symmetric, key-holder proof. Code: common/audit/writer.py.",
+      chips: [
+        { label:"entry_hash / prev_hash — platform-wide", cls:"highlight" },
+        { label:"entry_hash_org / prev_hash_org — per-org", cls:"highlight" },
+        { label:"org_chain_seq 1..N — gap-free", cls:"highlight" },
+        { label:"HMAC-SHA256 over canonical JSON" },
+        { label:"verifier: org key-holder" },
+        { label:"common/audit/writer.py" },
+      ]
+    },
+    layer2: {
+      title: "✒️ Layer 2 — Export-time Per-Event Signatures (publicly verifiable)",
+      desc: "When a Case File is exported in OCSF format, each event's entry_hash is individually signed with ECDSA P-256 (platform key held in Cloud KMS — key material never leaves KMS). Each event ships with its signature, key id, and signing time. Anyone can verify these against the published public key set — no shared secret required: https://api.ai-identity.co/.well-known/ai-identity-public-keys.json. This per-event signature shape is part of what's proposed to OCSF (PR #1661, in review).",
+      chips: [
+        { label:"ECDSA P-256 · Cloud KMS", cls:"highlight" },
+        { label:"signs each event's entry_hash", cls:"highlight" },
+        { label:"signature + key_id + signed_time per event" },
+        { label:"public JWKS: api.ai-identity.co/.well-known/…", cls:"highlight" },
+        { label:"verifier: anyone" },
+        { label:"api/app/routers/audit.py" },
+      ]
+    },
+    layer3: {
+      title: "🌲 Layer 3 — Evidence Anchor (Merkle checkpoints, offline-provable)",
+      desc: "A checkpoint job runs every 15 minutes: it folds each org's newest audit entries into a Merkle tree, signs the root with ECDSA P-256 inside a DSSE envelope, and stores the checkpoint. Any single event's inclusion in a checkpoint is then provable with an O(log N) proof plus the public key — offline with the bundled verifier script, or in-browser on the dashboard Case File page. Events not yet anchored are listed as 'pending' rather than silently dropped. Code: common/forensic/.",
+      chips: [
+        { label:"checkpoint cron: every 15 min", cls:"highlight" },
+        { label:"Merkle tree over entry_hash leaves", cls:"highlight" },
+        { label:"DSSE envelope · ECDSA-P256", cls:"highlight" },
+        { label:"O(log N) inclusion proof per event" },
+        { label:"verify offline or in-browser (Case File page)" },
+        { label:"common/forensic/" },
+      ]
+    },
+  };
+
+  let activeLayer = null;
+
+  function activateLayer(id) {
+    if (activeLayer) {
+      const prev = document.getElementById('node-' + activeLayer);
+      if (prev) prev.classList.remove('active');
+    }
+    activeLayer = id;
+    const el = document.getElementById('node-' + id);
+    if (el) el.classList.add('active');
+
+    const data = layerData[id];
+    if (!data) return;
+
+    const panel = document.getElementById('layer-panel');
+    panel.style.animation = 'none';
+    panel.offsetHeight; // reflow
+    panel.style.animation = 'panel-in .2s ease';
+
+    document.getElementById('layer-title').innerHTML = data.title;
+    const descEl = document.getElementById('layer-desc');
+    descEl.textContent = data.desc;
+    descEl.style.display = 'block';
+
+    const fieldsEl = document.getElementById('layer-fields');
+    fieldsEl.innerHTML = '';
+    data.chips.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'data-chip' + (c.cls ? ' ' + c.cls : '');
+      div.textContent = c.label;
+      fieldsEl.appendChild(div);
+    });
+  }
 
   let activeNode = null;
 
@@ -1593,12 +1791,12 @@
     status.className = 'verify-status running';
 
     const messages = [
-      'Checking entry #001 (GENESIS)...',
-      'Checking entry #002 → prev_hash matches...',
-      'Checking entry #003 → prev_hash matches...',
-      'Checking entry #004 → prev_hash matches...',
-      'Checking entry #005 → prev_hash matches...',
-      '✓ Chain integrity verified — 5/5 entries valid'
+      'seq 1 (GENESIS): entry_hash_org recomputes...',
+      'seq 2: no gap → prev_hash_org matches...',
+      'seq 3: no gap → prev_hash_org matches...',
+      'seq 4: no gap → prev_hash_org matches...',
+      'seq 5: no gap → prev_hash_org matches...',
+      '✓ Chain intact — 5/5 entries valid, sequence 1..5 gap-free'
     ];
 
     let step = 0;
