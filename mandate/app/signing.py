@@ -48,14 +48,42 @@ _kms_pubkey_cache: dict[str, ec.EllipticCurvePublicKey] = {}
 _kms_pubkey_lock = asyncio.Lock()
 
 
+# Runtime-state fields excluded from the signable payload as of schema 1.1.
+# The signature covers the GRANT (issuer, subject, scope, conditions,
+# spend_limit, validity window); lifecycle state mutates after issuance and
+# must not invalidate the issuance signature. Schema 1.0 signed the full
+# document (minus signatures/updated_at) — which meant revoking a 1.0
+# mandate changed `status`/`revocation` and broke its own signature
+# verification. 1.0 documents keep the old rule (their signatures were
+# computed that way); everything issued at >= 1.1 gets the fix.
+_RUNTIME_STATE_FIELDS = ("status", "revocation", "spent_cents", "exceedance")
+
+# Fields added after schema 1.0. A 1.0 document was signed before these
+# existed, so when re-serializing a 1.0 doc through the current model the
+# defaults (spend_limit=None, spent_cents=0, …) must be stripped or the
+# canonical bytes would differ from what was signed.
+_POST_1_0_FIELDS = ("spend_limit", "spent_cents", "exceedance")
+
+
 def _build_signable_payload(mandate: MandateDocument) -> bytes:
     """Extract the signable fields and canonicalize with RFC 8785.
 
-    Excluded: signatures (would be circular), updated_at (mutable metadata).
+    Always excluded: signatures (would be circular), updated_at (mutable
+    metadata). For schema_version >= 1.1, runtime lifecycle state is also
+    excluded — see _RUNTIME_STATE_FIELDS. For 1.0 documents, fields that
+    postdate 1.0 are stripped so old signatures still verify byte-for-byte.
+    schema_version itself is inside the signed payload, so a verifier
+    always knows which rule applied.
     """
     d = mandate.model_dump(mode="json")
     d.pop("signatures", None)
     d.pop("updated_at", None)
+    if mandate.schema_version == "1.0":
+        for field in _POST_1_0_FIELDS:
+            d.pop(field, None)
+    else:
+        for field in _RUNTIME_STATE_FIELDS:
+            d.pop(field, None)
     # Convert datetime objects to ISO strings if model_dump left them as objects
     return rfc8785.dumps(d)
 

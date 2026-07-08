@@ -7,10 +7,11 @@ runs all validity checks without needing to re-query MongoDB. Useful for:
   - Cross-org verification: a recipient org verifying a presented mandate
 
 Checks performed:
-  1. signatures_valid   — all classical signatures verify against payload
-  2. status_active      — status == "active"
-  3. not_expired        — valid_until is None OR now < valid_until
-  4. scope_sufficient   — if required_scope provided, mandate.scope is a superset
+  1. signatures_valid    — all classical signatures verify against payload
+  2. status_active       — status == "active"
+  3. not_expired         — valid_until is None OR now < valid_until
+  4. within_spend_limit  — spent_cents <= spend_limit.limit_cents (when a limit exists)
+  5. scope_sufficient    — if required_scope provided, mandate.scope is a superset
 """
 
 import logging
@@ -95,7 +96,20 @@ async def verify_mandate(
         if not checks["not_expired"]:
             errors.append(f"Mandate expired at {vu.isoformat()}")
 
-    # 4. Scope check (only if caller specified required_scope)
+    # 4. Spend-limit check — a mandate whose recorded spend crossed its
+    # limit fails verification even if its status field was tampered back
+    # to "active" (spent/limit are compared directly, not trusted via status).
+    if mandate.spend_limit is not None:
+        checks["within_spend_limit"] = mandate.spent_cents <= mandate.spend_limit.limit_cents
+        if not checks["within_spend_limit"]:
+            errors.append(
+                f"Spend limit exceeded: spent {mandate.spent_cents} of "
+                f"{mandate.spend_limit.limit_cents} {mandate.spend_limit.currency} cents"
+            )
+    else:
+        checks["within_spend_limit"] = True
+
+    # 5. Scope check (only if caller specified required_scope)
     if required_scope:
         mandate_scope_set = set(mandate.scope)
         required_set = set(required_scope)
