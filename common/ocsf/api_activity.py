@@ -215,6 +215,28 @@ def audit_log_to_ocsf(row: Any, entry_signature: EntrySignature | None = None) -
             wa["public_key_sha256"] = md["attestation_pubkey_sha256"]
         unmapped["workload_attestation"] = wa
 
+    # Mandate lifecycle (issue / spend / exceed / revoke) — the monetary-
+    # authority story: which signed grant this event acted under, the amount,
+    # and the cumulative spend vs limit. This is delegated-authority context
+    # (issues draft #6 territory); no native OCSF home yet, so it rides
+    # ``unmapped`` as one coherent block. Amounts are integer cents.
+    if md.get("resource_type") == "mandate" and md.get("mandate_id"):
+        mandate_block: dict[str, Any] = {"mandate_id": md["mandate_id"]}
+        if md.get("action_type"):
+            mandate_block["action"] = md["action_type"]
+        for src, dst in (
+            ("spend_amount_cents", "amount_cents"),
+            ("spend_currency", "currency"),
+            ("mandate_spent_cents", "spent_cents"),
+            ("mandate_limit_cents", "limit_cents"),
+            ("spend_settlement", "settlement"),
+            ("spend_reference", "reference"),
+            ("deny_reason", "deny_reason"),
+        ):
+            if md.get(src) is not None:
+                mandate_block[dst] = md[src]
+        unmapped["mandate"] = mandate_block
+
     if unmapped:
         event["unmapped"] = unmapped
 

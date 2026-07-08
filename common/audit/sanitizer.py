@@ -59,6 +59,17 @@ ALLOWED_METADATA_KEYS: frozenset[str] = frozenset(
         "key_prefix",
         "keys_revoked",
         "grace_hours",
+        # Mandate lifecycle (issue / spend / exceed / revoke) — flat scalars
+        # written by the Mandate Service so grant → spend → breach is
+        # walkable in the same chained envelope as gateway traffic.
+        # Amounts are integer cents.
+        "mandate_id",
+        "mandate_limit_cents",
+        "mandate_spent_cents",
+        "spend_amount_cents",
+        "spend_currency",
+        "spend_settlement",
+        "spend_reference",
         # Change-log v2.1 source context. SOC 2 CC7.2 and HIPAA
         # §164.312(b) both expect source IP and user agent on audit
         # records — their absence is a reviewer finding. Writers are
