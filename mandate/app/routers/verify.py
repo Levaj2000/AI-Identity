@@ -103,8 +103,8 @@ async def verify_mandate(
         checks["within_spend_limit"] = mandate.spent_cents <= mandate.spend_limit.limit_cents
         if not checks["within_spend_limit"]:
             errors.append(
-                f"Spend limit exceeded: spent {mandate.spent_cents} of "
-                f"{mandate.spend_limit.limit_cents} {mandate.spend_limit.currency} cents"
+                f"Spend limit exceeded: spent {mandate.spent_cents / 100:,.2f} of "
+                f"{mandate.spend_limit.limit_cents / 100:,.2f} {mandate.spend_limit.currency}"
             )
     else:
         checks["within_spend_limit"] = True
