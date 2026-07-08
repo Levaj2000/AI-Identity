@@ -31,7 +31,7 @@ from mandate.app.schemas import (
     RevokeMandateRequest,
 )
 from mandate.app.signing import sign_mandate
-from mandate.app.spend import evaluate_spend
+from mandate.app.spend import DENY_LIMIT_EXCEEDED, evaluate_spend
 
 logger = logging.getLogger("ai_identity.mandate.router")
 
@@ -379,10 +379,14 @@ async def record_spend(
     )
 
     # The chained, exportable record — denials included, that's the point.
+    if outcome.deny_reason == DENY_LIMIT_EXCEEDED:
+        spend_action = "mandate_limit_exceeded"
+    elif outcome.deny_reason:
+        spend_action = "mandate_spend_denied"  # inactive mandate, currency mismatch, …
+    else:
+        spend_action = "mandate_spend_recorded"
     spend_meta: dict = {
-        "action_type": (
-            "mandate_limit_exceeded" if outcome.deny_reason else "mandate_spend_recorded"
-        ),
+        "action_type": spend_action,
         "resource_type": "mandate",
         "mandate_id": mandate_id,
         "spend_amount_cents": body.amount_cents,
