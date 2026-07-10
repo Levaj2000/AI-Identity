@@ -109,7 +109,7 @@ chmod +x /usr/local/bin/ai_identity_verify
 **Requirements:**
 
 - **`report` and `chain` commands:** Python 3.9+, stdlib only — no `pip install` needed.
-- **`attestation` command:** additionally requires the [`cryptography`](https://cryptography.io) package for ECDSA verification. Install with `pip install cryptography`. The other two commands continue to work without it.
+- **`attestation` and `inclusion-proof` commands:** additionally require the [`cryptography`](https://cryptography.io) package for ECDSA verification. Install with `pip install cryptography`. `report` and `chain` continue to work without it.
 
 ## Quick Start
 

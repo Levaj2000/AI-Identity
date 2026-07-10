@@ -31,7 +31,7 @@ ai-identity-verify --version
 Dependencies:
 
 - `report` and `chain` use only the Python 3.9+ standard library.
-- `attestation` additionally requires the `cryptography` package:
+- `attestation` and `inclusion-proof` additionally require the `cryptography` package:
   ```bash
   pip install cryptography
   ```
