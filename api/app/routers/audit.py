@@ -1252,7 +1252,9 @@ Both checks use the **same key** from your dashboard. Run from this folder exact
 
 - `case-file-*.json` — the signed report, including the **Reliability Statement**
 - `verify.command` — double-click verifier (macOS)
-- `ai_identity_verify.py` — the standalone verifier (Python 3.9+, no dependencies)
+- `ai_identity_verify.py` — the standalone verifier (Python 3.9+; the chain/report
+  checks need no packages — only the optional `inclusion-proof` check below needs
+  `pip install cryptography`)
 - `evidence-anchor/` — *if present:* signed Merkle checkpoint(s) + per-event inclusion
   proofs for public-key verification (see below)
 - `README.md` — this file
@@ -1280,7 +1282,10 @@ key-holder can verify; it is not yet a publicly verifiable asymmetric proof).
 
 If this bundle contains an `evidence-anchor/` folder, the listed events are committed to a
 signed Merkle checkpoint. You can prove any one event's inclusion using only our **public**
-key — no shared secret, no trust in our infrastructure:
+key — no shared secret, no trust in our infrastructure.
+
+This is the one check that needs a Python package (for the ECDSA signature math):
+`pip install cryptography`. The chain/report checks above stay dependency-free.
 
     # public key set, served publicly:
     curl -o jwks.json https://api.ai-identity.co/.well-known/ai-identity-public-keys.json

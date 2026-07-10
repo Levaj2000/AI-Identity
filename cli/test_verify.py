@@ -1216,6 +1216,63 @@ def _have_cryptography() -> bool:
     return True
 
 
+class TestMissingCryptographyGuard(unittest.TestCase):
+    """The public-key commands must exit cleanly — not traceback — when the
+    `cryptography` package is absent (stdlib-only installs, e.g. macOS
+    system python3).
+
+    We simulate absence by masking every cached cryptography module with
+    None in sys.modules, which makes any `import cryptography...` raise
+    ImportError regardless of whether the package is installed.
+    """
+
+    def _blocked_modules(self) -> dict[str, None]:
+        blocked: dict[str, None] = {"cryptography": None}
+        for name in list(sys.modules):
+            if name == "cryptography" or name.startswith("cryptography."):
+                blocked[name] = None
+        return blocked
+
+    def test_inclusion_proof_exits_cleanly_without_cryptography(self):
+        checkpoints_path = _write_json([{"merkle_root": "ab" * 32, "envelope": {}}])
+        proofs_path = _write_json({"proofs": [], "pending": []})
+        try:
+            with patch.dict(sys.modules, self._blocked_modules()):
+                code, out, err = _run_cmd(
+                    [
+                        "--no-color",
+                        "inclusion-proof",
+                        "--checkpoints",
+                        checkpoints_path,
+                        "--proofs",
+                        proofs_path,
+                        "--jwks",
+                        proofs_path,
+                    ]
+                )
+            self.assertEqual(code, 2)
+            self.assertIn("`inclusion-proof` command requires the `cryptography` package", err)
+            self.assertIn("pip install cryptography", err)
+            self.assertNotIn("Traceback", out + err)
+        finally:
+            os.unlink(checkpoints_path)
+            os.unlink(proofs_path)
+
+    def test_attestation_exits_cleanly_without_cryptography(self):
+        envelope_path = _write_json({"payloadType": "x", "signatures": []})
+        try:
+            with patch.dict(sys.modules, self._blocked_modules()):
+                code, out, err = _run_cmd(
+                    ["--no-color", "attestation", envelope_path, "--pubkey", envelope_path]
+                )
+            self.assertEqual(code, 2)
+            self.assertIn("`attestation` command requires the `cryptography` package", err)
+            self.assertIn("pip install cryptography", err)
+            self.assertNotIn("Traceback", out + err)
+        finally:
+            os.unlink(envelope_path)
+
+
 @unittest.skipUnless(_have_cryptography(), "cryptography package not installed")
 class TestAttestationVerification(unittest.TestCase):
     """End-to-end tests for the `attestation` subcommand.

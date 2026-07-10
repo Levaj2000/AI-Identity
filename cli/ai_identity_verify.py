@@ -4,17 +4,18 @@
 Standalone tool for auditors to verify AI Identity forensic exports
 completely offline — no database, no API, no network.
 
-Three verification modes:
-  report       — verify the HMAC chain-of-custody certificate on an exported report
-  chain        — verify the full sequential HMAC audit chain from exported entries
-  attestation  — verify an ECDSA-signed forensic attestation DSSE envelope
+Four verification modes:
+  report           — verify the HMAC chain-of-custody certificate on an exported report
+  chain            — verify the full sequential HMAC audit chain from exported entries
+  attestation      — verify an ECDSA-signed forensic attestation DSSE envelope
+  inclusion-proof  — verify Merkle inclusion proofs against signed checkpoints
 
 Requires: Python 3.9+ for `report` and `chain` (stdlib only). The
-`attestation` command additionally requires the `cryptography` package
-(`pip install cryptography`) for ECDSA verification.
+`attestation` and `inclusion-proof` commands additionally require the
+`cryptography` package (`pip install cryptography`) for ECDSA verification.
 
 HMAC key (report/chain): set AI_IDENTITY_HMAC_KEY environment variable.
-Public key (attestation): provide via --pubkey <pem> or --jwks <file>.
+Public key (attestation/inclusion-proof): provide via --pubkey <pem> or --jwks <file>.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 TOOL_NAME = "ai-identity-verify"
 GENESIS = "GENESIS"
 
@@ -847,10 +848,37 @@ def cmd_chain(args: argparse.Namespace) -> int:
 
 # ── Attestation verification (DSSE + ECDSA P-256) ──────────────────────
 #
-# Unlike the HMAC-only `report` and `chain` commands, attestation verify
-# needs asymmetric crypto. We rely on the `cryptography` package for
-# ECDSA verification — importing it lazily inside the command so that
-# `report` and `chain` continue to work with a stdlib-only install.
+# Unlike the HMAC-only `report` and `chain` commands, the public-key
+# commands (`attestation`, `inclusion-proof`) need asymmetric crypto. We
+# rely on the `cryptography` package for ECDSA verification — importing
+# it lazily inside those commands so that `report` and `chain` continue
+# to work with a stdlib-only install.
+
+
+def _require_cryptography(command: str) -> None:
+    """Exit(2) with an install hint if the `cryptography` package is missing.
+
+    Must be called at the top of every command that touches ECDSA, before
+    any bare `from cryptography...` import on its path — otherwise a
+    stdlib-only install gets a raw ModuleNotFoundError traceback instead
+    of this message.
+    """
+    try:
+        from cryptography.hazmat.primitives.asymmetric import ec  # noqa: F401
+    except ImportError:
+        print(
+            f"Error: The `{command}` command requires the `cryptography` "
+            "package.\n"
+            "\n"
+            "Install it with:\n"
+            "\n"
+            "  pip install cryptography\n"
+            "\n"
+            "(The `report` and `chain` commands are stdlib-only and work "
+            "without this dependency.)",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
 
 def _base64_decode(value: str, field: str) -> bytes:
@@ -909,23 +937,9 @@ def _load_public_key(args: argparse.Namespace, envelope_kid: str):
     any configuration error so the caller never needs to guard against
     ``None``.
     """
-    try:
-        from cryptography.hazmat.primitives import serialization
-        from cryptography.hazmat.primitives.asymmetric import ec
-    except ImportError:
-        print(
-            "Error: The `attestation` command requires the `cryptography` "
-            "package.\n"
-            "\n"
-            "Install it with:\n"
-            "\n"
-            "  pip install cryptography\n"
-            "\n"
-            "(The `report` and `chain` commands are stdlib-only and work "
-            "without this dependency.)",
-            file=sys.stderr,
-        )
-        sys.exit(2)
+    _require_cryptography(getattr(args, "command", None) or "attestation")
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
 
     if args.pubkey and args.jwks:
         print(
@@ -1003,6 +1017,7 @@ def _load_public_key(args: argparse.Namespace, envelope_kid: str):
 
 def cmd_attestation(args: argparse.Namespace) -> int:
     """Verify a forensic attestation DSSE envelope."""
+    _require_cryptography("attestation")
     envelope = _load_json(args.file)
 
     # Shape check — fail fast with a precise message rather than a
@@ -1247,6 +1262,7 @@ def _verify_checkpoint_signature(args: argparse.Namespace, envelope: dict):
 
 def cmd_inclusion_proof(args: argparse.Namespace) -> int:
     """Verify Merkle inclusion proofs against signed checkpoints (public key only)."""
+    _require_cryptography("inclusion-proof")
     checkpoints = _load_json(args.checkpoints)
     proofs_doc = _load_json(args.proofs)
     proofs = proofs_doc.get("proofs", []) if isinstance(proofs_doc, dict) else proofs_doc
