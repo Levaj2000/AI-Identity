@@ -52,6 +52,19 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  async rewrites() {
+    return [
+      // Case File bundles exported before #379 tell recipients to curl the
+      // JWKS from this host (without -L, so a redirect would save the wrong
+      // body). Proxy the live key set so those bundles keep verifying.
+      {
+        source: "/.well-known/ai-identity-public-keys.json",
+        destination:
+          "https://api.ai-identity.co/.well-known/ai-identity-public-keys.json",
+      },
+    ];
+  },
+
   async headers() {
     return [
       {
