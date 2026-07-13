@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__version__ = "1.2.1"
+__version__ = "1.3.0"
 TOOL_NAME = "ai-identity-verify"
 GENESIS = "GENESIS"
 
@@ -1025,6 +1025,17 @@ def cmd_attestation(args: argparse.Namespace) -> int:
     if not isinstance(envelope, dict):
         print("Error: Envelope must be a JSON object.", file=sys.stderr)
         sys.exit(2)
+
+    # GET /api/v1/sessions/{id}/attestation returns the envelope wrapped
+    # in an AttestationResponse ({id, org_id, ..., envelope: {...}}).
+    # Accept that shape directly so a saved API response verifies as-is.
+    unwrapped = False
+    if "payloadType" not in envelope and isinstance(envelope.get("envelope"), dict):
+        inner = envelope["envelope"]
+        if "payloadType" in inner and "payload" in inner:
+            envelope = inner
+            unwrapped = True
+
     if envelope.get("payloadType") != ATTESTATION_PAYLOAD_TYPE:
         print(
             f"Error: Unexpected payloadType: {envelope.get('payloadType')!r} "
@@ -1126,6 +1137,8 @@ def cmd_attestation(args: argparse.Namespace) -> int:
         "signed_at": payload.get("signed_at"),
         "signature_valid": sig_valid,
     }
+    if unwrapped:
+        details["unwrapped_envelope"] = True
     if sig_error:
         details["signature_error"] = sig_error
 
@@ -1144,6 +1157,12 @@ def cmd_attestation(args: argparse.Namespace) -> int:
         print(f"\n{title}")
         print("\u2550" * 41)
         print(f"  File:         {details['file']}")
+        if unwrapped:
+            print(
+                _dim(
+                    "                (API response detected \u2014 verifying its `envelope` field)"
+                )
+            )
         print(f"  Schema:       v{schema_version}")
         print(f"  Key ID:       {details['signer_key_id']}")
         print(f"  Session:      {details['session_id']}")
@@ -1391,7 +1410,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     attestation_parser.add_argument(
         "file",
-        help="Path to a DSSE envelope JSON file (as returned by GET /api/v1/sessions/{id}/attestation)",
+        help=(
+            "Path to a JSON file containing either a bare DSSE envelope or the "
+            "full response of GET /api/v1/sessions/{id}/attestation (the "
+            "envelope is unwrapped from its `envelope` field automatically)"
+        ),
     )
     attestation_parser.add_argument(
         "--pubkey",

@@ -1406,6 +1406,65 @@ class TestAttestationVerification(unittest.TestCase):
             os.unlink(envelope_path)
             os.unlink(jwks_path)
 
+    def test_api_response_wrapper_unwraps_and_verifies(self):
+        """The full GET /api/v1/sessions/{id}/attestation response body
+        (AttestationResponse — envelope nested under `envelope`) verifies
+        as-is, and the output mentions the unwrap."""
+        envelope = self._build_envelope()
+        wrapper = {
+            "id": 42,
+            "org_id": "f1e2d3c4-b5a6-4798-8877-66554433abcd",
+            "session_id": "b8f2c1a0-4e6d-4e2a-9f1a-3c2b0d4e8f7a",
+            "first_audit_id": 104821,
+            "last_audit_id": 104827,
+            "event_count": 7,
+            "signer_key_id": self._kid,
+            "envelope": envelope,
+        }
+        wrapper_path = _write_json(wrapper)
+        pub_path = self._write_pem(self._pub_pem)
+        try:
+            code, out, err = _run_cmd(
+                ["--no-color", "attestation", wrapper_path, "--pubkey", pub_path]
+            )
+            self.assertEqual(code, 0, msg=err)
+            self.assertIn("VALID", out)
+            self.assertIn("API response detected", out)
+
+            # JSON mode carries the unwrap flag in details.
+            code, out, err = _run_cmd(
+                ["--no-color", "--json", "attestation", wrapper_path, "--pubkey", pub_path]
+            )
+            self.assertEqual(code, 0, msg=err)
+            parsed = json.loads(out)
+            self.assertEqual(parsed["result"], "valid")
+            self.assertIs(parsed["details"]["unwrapped_envelope"], True)
+        finally:
+            os.unlink(wrapper_path)
+            os.unlink(pub_path)
+
+    def test_bare_envelope_does_not_mention_unwrap(self):
+        """A bare DSSE envelope keeps working with no unwrap note or flag."""
+        envelope_path = _write_json(self._build_envelope())
+        pub_path = self._write_pem(self._pub_pem)
+        try:
+            code, out, err = _run_cmd(
+                ["--no-color", "attestation", envelope_path, "--pubkey", pub_path]
+            )
+            self.assertEqual(code, 0, msg=err)
+            self.assertIn("VALID", out)
+            self.assertNotIn("API response detected", out)
+
+            code, out, err = _run_cmd(
+                ["--no-color", "--json", "attestation", envelope_path, "--pubkey", pub_path]
+            )
+            self.assertEqual(code, 0, msg=err)
+            parsed = json.loads(out)
+            self.assertNotIn("unwrapped_envelope", parsed["details"])
+        finally:
+            os.unlink(envelope_path)
+            os.unlink(pub_path)
+
     def test_tampered_payload_fails(self):
         """Re-encode the payload with a changed field but keep the original
         signature → signature check must reject it.

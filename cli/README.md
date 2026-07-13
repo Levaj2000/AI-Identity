@@ -134,8 +134,10 @@ python ai_identity_verify.py report forensics_report.json --json
 
 ### `attestation` — Verify a Forensic Attestation Envelope
 
-Verifies the ECDSA-P256 signature on a DSSE envelope returned by
-`GET /api/v1/sessions/{session_id}/attestation`. This is the
+Verifies the ECDSA-P256 signature on a forensic attestation DSSE
+envelope. Accepts either the bare envelope or the full response body of
+`GET /api/v1/sessions/{session_id}/attestation` saved to a file (the
+envelope is unwrapped from its `envelope` field automatically). This is the
 crypto-signed equivalent of the HMAC `report` certificate — it proves
 AI Identity signed a specific statement about a specific audit range,
 verifiable offline with only the public key.
