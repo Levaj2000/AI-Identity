@@ -225,7 +225,7 @@ Verifies a forensic attestation DSSE (Dead Simple Signing Envelope). The envelop
 
 | Flag | Type | Required | Description |
 |---|---|---|---|
-| `file` | string | yes | Path to the DSSE envelope JSON file |
+| `file` | string | yes | Path to a JSON file: either a bare DSSE envelope or the full `GET /api/v1/sessions/{id}/attestation` response (unwrapped automatically) |
 | `--pubkey` | string | one of | Path to a PEM-encoded ECDSA public key |
 | `--jwks` | string | one of | Path to a JWKS file; the key is matched via the `kid` in the envelope |
 | `--verbose` | flag | no | Show detailed info including payload bytes and signature encoding |
