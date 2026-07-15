@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
         destination: "/forensics",
         permanent: true,
       },
+      // Near-duplicate of /industries/finance consolidated there (SEC/FINRA/
+      // MiFID II content merged into the industry page). 301 keeps backlinks
+      // and indexed URLs alive.
+      {
+        source: "/use-cases/financial-compliance",
+        destination: "/industries/finance",
+        permanent: true,
+      },
       // non-www → www
       {
         source: "/:path*",

@@ -13,20 +13,37 @@ const navLinks = [
   { label: "About", path: "/about" },
 ];
 
-const solutionLinks = [
-  { label: "Customer Support Agents", path: "/use-cases/customer-support" },
-  { label: "Coding Assistants", path: "/use-cases/coding-assistant" },
-  { label: "Financial Compliance", path: "/use-cases/financial-compliance" },
-  { label: "divider", path: "" },
-  { label: "Healthcare", path: "/industries/healthcare" },
-  { label: "Finance", path: "/industries/finance" },
-  { label: "divider", path: "" },
-  { label: "EU AI Act Checklist", path: "/eu-ai-act-checklist" },
-  { label: "ROI Calculator", path: "/roi-calculator" },
-  { label: "divider", path: "" },
-  { label: "vs Opal Security", path: "/vs/opal" },
-  { label: "vs Valence Security", path: "/vs/valence" },
-  { label: "vs Holistic AI", path: "/vs/holistic-ai" },
+const solutionSections = [
+  {
+    label: "Use cases",
+    items: [
+      { label: "Customer Support Agents", path: "/use-cases/customer-support" },
+      { label: "Coding Assistants", path: "/use-cases/coding-assistant" },
+    ],
+  },
+  {
+    label: "Industries",
+    items: [
+      { label: "Healthcare", path: "/industries/healthcare" },
+      { label: "Finance", path: "/industries/finance" },
+      { label: "Legal", path: "/industries/legal" },
+    ],
+  },
+  {
+    label: "Tools",
+    items: [
+      { label: "EU AI Act Checklist", path: "/eu-ai-act-checklist" },
+      { label: "ROI Calculator", path: "/roi-calculator" },
+    ],
+  },
+  {
+    label: "Compare",
+    items: [
+      { label: "vs Opal Security", path: "/vs/opal" },
+      { label: "vs Valence Security", path: "/vs/valence" },
+      { label: "vs Holistic AI", path: "/vs/holistic-ai" },
+    ],
+  },
 ];
 
 export default function Nav() {
@@ -135,7 +152,7 @@ export default function Nav() {
                 if (e.key === "Escape") setSolutionsOpen(false);
               }}
               className={`text-sm transition-colors flex items-center gap-1 ${
-                pathname.startsWith("/use-cases") || pathname === "/eu-ai-act-checklist"
+                pathname.startsWith("/use-cases") || pathname.startsWith("/industries") || pathname.startsWith("/vs/") || pathname === "/eu-ai-act-checklist" || pathname === "/roi-calculator"
                   ? "text-white"
                   : "text-[rgba(213,219,230,0.7)] hover:text-white"
               }`}
@@ -154,27 +171,31 @@ export default function Nav() {
               }`}
             >
               <div className="bg-[rgb(16,19,28)] border border-white/10 rounded-xl py-2 min-w-[220px] shadow-xl shadow-black/40">
-                {solutionLinks.map((link, i) =>
-                  link.label === "divider" ? (
-                    <div key={`divider-${i}`} className="my-1 border-t border-white/5" role="separator" />
-                  ) : (
-                    <Link
-                      key={link.path}
-                      href={link.path}
-                      role="menuitem"
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") setSolutionsOpen(false);
-                      }}
-                      className={`block px-4 py-2.5 text-sm transition-colors ${
-                        pathname === link.path
-                          ? "text-[rgb(166,218,255)] bg-[rgb(166,218,255)]/5"
-                          : "text-[rgba(213,219,230,0.7)] hover:text-white hover:bg-white/[0.03]"
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                  )
-                )}
+                {solutionSections.map((section, i) => (
+                  <div key={section.label} role="group" aria-label={section.label}>
+                    {i > 0 && <div className="my-1 border-t border-white/5" role="separator" />}
+                    <div className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[rgba(213,219,230,0.4)]">
+                      {section.label}
+                    </div>
+                    {section.items.map((link) => (
+                      <Link
+                        key={link.path}
+                        href={link.path}
+                        role="menuitem"
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") setSolutionsOpen(false);
+                        }}
+                        className={`block px-4 py-2.5 text-sm transition-colors ${
+                          pathname === link.path
+                            ? "text-[rgb(166,218,255)] bg-[rgb(166,218,255)]/5"
+                            : "text-[rgba(213,219,230,0.7)] hover:text-white hover:bg-white/[0.03]"
+                        }`}
+                      >
+                        {link.label}
+                      </Link>
+                    ))}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -238,23 +259,27 @@ export default function Nav() {
           <div className="py-2">
             <span className="text-sm text-white font-medium">Solutions</span>
             <div className="mt-1 ml-3 space-y-1">
-              {solutionLinks.map((link, i) =>
-                link.label === "divider" ? (
-                  <div key={`divider-${i}`} className="my-1 border-t border-white/5" />
-                ) : (
-                  <Link
-                    key={link.path}
-                    href={link.path}
-                    className={`block text-sm py-1.5 ${
-                      pathname === link.path
-                        ? "text-[rgb(166,218,255)]"
-                        : "text-[rgba(213,219,230,0.5)]"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                )
-              )}
+              {solutionSections.map((section, i) => (
+                <div key={section.label}>
+                  {i > 0 && <div className="my-1 border-t border-white/5" />}
+                  <div className="pt-1.5 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-[rgba(213,219,230,0.4)]">
+                    {section.label}
+                  </div>
+                  {section.items.map((link) => (
+                    <Link
+                      key={link.path}
+                      href={link.path}
+                      className={`block text-sm py-1.5 ${
+                        pathname === link.path
+                          ? "text-[rgb(166,218,255)]"
+                          : "text-[rgba(213,219,230,0.5)]"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
           <a
