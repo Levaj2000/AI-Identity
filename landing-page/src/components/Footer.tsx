@@ -21,7 +21,9 @@ const productLinks = [
 const solutionLinks = [
   { label: "Customer Support Agents", path: "/use-cases/customer-support" },
   { label: "Coding Assistants", path: "/use-cases/coding-assistant" },
-  { label: "Financial Compliance", path: "/use-cases/financial-compliance" },
+  { label: "Healthcare", path: "/industries/healthcare" },
+  { label: "Finance", path: "/industries/finance" },
+  { label: "Legal", path: "/industries/legal" },
   { label: "Finance Compliance Pack", path: "/industries/finance/compliance-pack" },
 ];
 
