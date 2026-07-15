@@ -23,11 +23,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Use cases
     { url: `${BASE_URL}/use-cases/customer-support`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/use-cases/coding-assistant`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
-    { url: `${BASE_URL}/use-cases/financial-compliance`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     // Industries
     { url: `${BASE_URL}/industries/finance`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/industries/finance/compliance-pack`, lastModified: now, changeFrequency: "monthly", priority: 0.85 },
     { url: `${BASE_URL}/industries/healthcare`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${BASE_URL}/industries/legal`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     // Comparisons
     { url: `${BASE_URL}/vs/opal`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${BASE_URL}/vs/valence`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
