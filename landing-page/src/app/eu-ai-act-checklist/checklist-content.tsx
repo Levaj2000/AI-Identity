@@ -110,7 +110,7 @@ const sections: ChecklistSection[] = [
       { id: "p1", question: "Can your system detect unusual or anomalous agent behavior automatically?", helper: "Anomaly detection is the first line of defense for post-deployment monitoring." },
       { id: "p2", question: "Does your incident response plan include AI agent-specific scenarios?", helper: "Generic IR plans often miss agent-specific failure modes like hallucination loops." },
       { id: "p3", question: "Can you forensically replay and reconstruct any agent incident after the fact?", helper: "Post-incident reconstruction is essential for root cause analysis and evidence." },
-      { id: "p4", question: "Can you report serious incidents to authorities with tamper-proof evidence within 72 hours?", helper: "The Act requires timely incident reporting with supporting documentation." },
+      { id: "p4", question: "Can you report serious incidents to authorities with tamper-evident evidence within 72 hours?", helper: "The Act requires timely incident reporting with supporting documentation." },
     ],
   },
 ];

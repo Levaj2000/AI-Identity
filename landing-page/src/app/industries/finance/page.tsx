@@ -49,7 +49,7 @@ const solutions = [
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>,
   },
   {
-    title: "Tamper-Proof Audit Trails",
+    title: "Tamper-Evident Audit Trails",
     description: "HMAC-SHA256 chained logs for every agent action. Any modification breaks the chain and is immediately detectable — satisfying financial regulators' evidence requirements.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>,
   },
@@ -69,7 +69,7 @@ const complianceMapping = [
   { framework: "EU AI Act (Annex III)", requirement: "Risk management system for high-risk AI", capability: "Automated risk assessments with per-agent scoring and policy enforcement" },
   { framework: "EU AI Act (Annex III)", requirement: "Human oversight of credit scoring AI", capability: "Human-in-the-loop approval gates for credit decisions above threshold" },
   { framework: "SOC 2 Type II", requirement: "Logical access controls and monitoring", capability: "Per-agent credentials with scoped permissions and real-time monitoring" },
-  { framework: "SOC 2 Type II", requirement: "Audit logging and change detection", capability: "HMAC-chained tamper-proof audit trail with integrity verification" },
+  { framework: "SOC 2 Type II", requirement: "Audit logging and change detection", capability: "HMAC-chained tamper-evident audit trail with integrity verification" },
   { framework: "PCI-DSS", requirement: "Unique ID for each person with computer access", capability: "Unique cryptographic identity per agent with individual API keys" },
   { framework: "PCI-DSS", requirement: "Track and monitor all access to cardholder data", capability: "Complete audit trail of every agent request touching payment data" },
   { framework: "NYDFS 23 NYCRR 500", requirement: "Access privileges and audit trail", capability: "Least-privilege agent permissions with immutable activity logs" },
