@@ -6,7 +6,7 @@ import { Fragment } from "react";
 export const metadata: Metadata = generatePageMetadata({
   title: "AI Identity vs Portkey — AI Agent Identity & Governance Comparison",
   description:
-    "Compare AI Identity and Portkey for AI agent management. See why teams choose AI Identity for per-agent identity, tamper-proof audit trails, and compliance dashboards over Portkey's LLM gateway.",
+    "Compare AI Identity and Portkey for AI agent management. See why teams choose AI Identity for per-agent identity, tamper-evident audit trails, and compliance dashboards over Portkey's LLM gateway.",
   path: "/vs/portkey",
 });
 
@@ -15,7 +15,7 @@ const features = [
   { feature: "LLM Gateway / Proxy", aiIdentity: true, competitor: true },
   { feature: "Multi-Provider Routing (1,600+ LLMs)", aiIdentity: false, competitor: true },
   { feature: "RBAC & Budget Limits", aiIdentity: true, competitor: true },
-  { feature: "HMAC-SHA256 Tamper-Proof Audit Trails", aiIdentity: true, competitor: false },
+  { feature: "HMAC-SHA256 Tamper-Evident Audit Trails", aiIdentity: true, competitor: false },
   { feature: "Chain-of-Thought Forensic Replay", aiIdentity: true, competitor: false },
   { feature: "EU AI Act Compliance Dashboard", aiIdentity: true, competitor: false },
   { feature: "SOC 2 / NIST AI RMF Reports", aiIdentity: true, competitor: false },
@@ -32,7 +32,7 @@ const shortcomings = [
       "Portkey uses team-level API keys shared across agents. When one key leaks, every agent is compromised. You cannot revoke access for a single agent without rotating keys for the entire fleet.",
   },
   {
-    title: "No Tamper-Proof Audit Chain",
+    title: "No Tamper-Evident Audit Chain",
     description:
       "Portkey logs requests but does not cryptographically chain them. Logs can be altered without detection, making them inadmissible for compliance audits or legal disputes.",
   },
@@ -127,7 +127,7 @@ export default function ComparePortkey() {
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
             Portkey is a powerful LLM gateway for routing and observability.
             AI Identity adds what Portkey is missing: per-agent identity,
-            tamper-proof audit trails, and compliance-ready governance.
+            tamper-evident audit trails, and compliance-ready governance.
           </p>
         </div>
       </section>

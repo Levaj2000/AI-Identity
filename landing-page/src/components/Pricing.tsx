@@ -102,7 +102,7 @@ const comparisonRows: ComparisonRow[] = [
   { feature: "Requests / month", free: "2,000", pro: "75,000", business: "500,000", enterprise: "Unlimited" },
   { feature: "Upstream credentials", free: "1", pro: "10", business: "50", enterprise: "Unlimited" },
   { feature: "Audit log retention", free: "30 days", pro: "90 days", business: "1 year", enterprise: "Unlimited" },
-  { feature: "Tamper-proof audit chain", free: true, pro: true, business: true, enterprise: true },
+  { feature: "Tamper-evident audit chain", free: true, pro: true, business: true, enterprise: true },
   { feature: "Key rotation (zero-downtime)", free: false, pro: true, business: true, enterprise: true },
   { feature: "Gateway policy enforcement", free: false, pro: true, business: true, enterprise: true },
   { feature: "Custom policies", free: false, pro: false, business: true, enterprise: true },
@@ -391,7 +391,7 @@ export default function Pricing() {
           </h2>
           <p className="mt-4 text-lg text-[rgba(213,219,230,0.7)] max-w-2xl mx-auto">
             Start free. Scale securely as your agents go into production. Every
-            plan includes the tamper-proof audit chain and deny-by-default
+            plan includes the tamper-evident audit chain and deny-by-default
             gateway.
           </p>
 

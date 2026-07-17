@@ -251,7 +251,7 @@ export default function Forensics() {
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
             <h2 className="text-xl md:text-2xl font-bold text-white mb-3">If it didn't go through AI Identity, you can't prove what your agent did.</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-[500px] mx-auto">
-              Start with the free tier — 5 agents, tamper-proof audit trails, and chain verification included.
+              Start with the free tier — 5 agents, tamper-evident audit trails, and chain verification included.
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <Link href="https://dashboard.ai-identity.co" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">

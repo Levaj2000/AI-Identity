@@ -15,7 +15,7 @@ const features = [
   { feature: "Human User Authentication (SSO, MFA)", aiIdentity: false, competitor: true },
   { feature: "Agent Lifecycle Management", aiIdentity: true, competitor: false },
   { feature: "LLM-Specific Policy Enforcement", aiIdentity: true, competitor: false },
-  { feature: "HMAC-SHA256 Tamper-Proof Audit Trails", aiIdentity: true, competitor: false },
+  { feature: "HMAC-SHA256 Tamper-Evident Audit Trails", aiIdentity: true, competitor: false },
   { feature: "Chain-of-Thought Forensic Replay", aiIdentity: true, competitor: false },
   { feature: "Token Budget & Rate Limiting per Agent", aiIdentity: true, competitor: false },
   { feature: "EU AI Act Compliance Dashboard", aiIdentity: true, competitor: false },
@@ -71,7 +71,7 @@ const differentiators = [
     ),
   },
   {
-    title: "Tamper-Proof Forensics",
+    title: "Tamper-Evident Forensics",
     description:
       "HMAC-SHA256 hash-chained audit trails capture every agent action with cryptographic integrity. Replay chain-of-thought reasoning for any incident investigation.",
     icon: (
@@ -127,7 +127,7 @@ export default function CompareGenericIAM() {
           <p className="text-lg text-gray-400 max-w-[640px] mx-auto leading-relaxed">
             Okta and Auth0 secure human users. AI agents are not human.
             They need purpose-built identity infrastructure with LLM-aware policies,
-            agent lifecycle management, and tamper-proof forensics.
+            agent lifecycle management, and tamper-evident forensics.
           </p>
         </div>
       </section>

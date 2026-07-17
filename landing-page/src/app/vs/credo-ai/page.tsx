@@ -15,7 +15,7 @@ const features = [
   { feature: "Runtime LLM Gateway", aiIdentity: true, competitor: false },
   { feature: "AI Governance & Risk Assessment", aiIdentity: true, competitor: true },
   { feature: "Policy-as-Code Enforcement", aiIdentity: true, competitor: true },
-  { feature: "HMAC-SHA256 Tamper-Proof Audit Trails", aiIdentity: true, competitor: false },
+  { feature: "HMAC-SHA256 Tamper-Evident Audit Trails", aiIdentity: true, competitor: false },
   { feature: "Chain-of-Thought Forensic Replay", aiIdentity: true, competitor: false },
   { feature: "EU AI Act Compliance Dashboard", aiIdentity: true, competitor: true },
   { feature: "SOC 2 / NIST AI RMF Reports", aiIdentity: true, competitor: true },
