@@ -73,7 +73,7 @@ curl -X POST https://gateway.ai-identity.co/v1/chat/completions \\
           {
             title: "4. Explore Forensics",
             description:
-              "Every request through the gateway is logged with a tamper-proof audit trail. Query the forensics API to see what your agents have been doing.",
+              "Every request through the gateway is logged with a tamper-evident audit trail. Query the forensics API to see what your agents have been doing.",
             code: `curl https://gateway.ai-identity.co/v1/agents/ag_abc123/logs \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -G \\

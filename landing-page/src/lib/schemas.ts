@@ -57,7 +57,7 @@ export const softwareApplicationSchema = {
   ],
   featureList: [
     "Per-agent API keys with scoped permissions",
-    "HMAC-SHA256 tamper-proof audit trails",
+    "HMAC-SHA256 tamper-evident audit trails",
     "Policy-as-code enforcement",
     "EU AI Act compliance dashboard",
     "SOC 2 Type II alignment",
@@ -74,7 +74,7 @@ export const websiteSchema = {
   name: "AI Identity",
   url: BASE_URL,
   description:
-    "Identity infrastructure for autonomous AI agents. Per-agent API keys, scoped permissions, and tamper-proof audit trails.",
+    "Identity infrastructure for autonomous AI agents. Per-agent API keys, scoped permissions, and tamper-evident audit trails.",
   potentialAction: {
     "@type": "SearchAction",
     target: `${BASE_URL}/blog?q={search_term_string}`,
@@ -153,7 +153,7 @@ export function makeHowToSchema() {
         "@type": "HowToStep",
         position: 4,
         name: "Monitor and Audit",
-        text: "Every request is logged with a tamper-proof, HMAC-SHA256 hash-chained audit trail. View real-time dashboards, run compliance assessments, and export forensic evidence.",
+        text: "Every request is logged with a tamper-evident, HMAC-SHA256 hash-chained audit trail. View real-time dashboards, run compliance assessments, and export forensic evidence.",
         url: `${BASE_URL}/how-it-works#audit`,
       },
     ],

@@ -13,7 +13,7 @@ export const metadata: Metadata = generatePageMetadata({
 const features = [
   { feature: "Cryptographic Per-Agent Identity (aid_sk_ keys)", aiIdentity: true, competitor: false },
   { feature: "Fail-Closed Enforcement Gateway", aiIdentity: true, competitor: false },
-  { feature: "HMAC-SHA256 Tamper-Proof Audit Trails", aiIdentity: true, competitor: false },
+  { feature: "HMAC-SHA256 Tamper-Evident Audit Trails", aiIdentity: true, competitor: false },
   { feature: "Decision-Level Forensic Replay", aiIdentity: true, competitor: false },
   { feature: "Granular Spending Limits Per Agent", aiIdentity: true, competitor: false },
   { feature: "Human IAM + Agent Governance", aiIdentity: false, competitor: true },

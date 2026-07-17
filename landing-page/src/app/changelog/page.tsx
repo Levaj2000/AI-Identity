@@ -64,7 +64,7 @@ const changelog: ChangelogEntry[] = [
     title: "Foundation Release",
     items: [
       "Per-agent identity with scoped API keys and lifecycle management",
-      "HMAC-SHA256 tamper-proof audit trail with chain verification",
+      "HMAC-SHA256 tamper-evident audit trail with chain verification",
       "Deny-by-default gateway with fail-closed policy enforcement",
       "Interactive API Playground for live demo",
       "Admin dashboard with user management, agent overview, and system health",

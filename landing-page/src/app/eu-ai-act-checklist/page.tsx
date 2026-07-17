@@ -58,7 +58,7 @@ const faqSchema = {
       name: "What is the fastest way to prepare AI agents for EU AI Act compliance?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Start by classifying each agent by risk tier, then implement per-agent identity with scoped permissions, set up tamper-proof audit logging, design human oversight controls, and establish continuous risk management. Tools like AI Identity can provide this infrastructure in a 15-minute integration.",
+        text: "Start by classifying each agent by risk tier, then implement per-agent identity with scoped permissions, set up tamper-evident audit logging, design human oversight controls, and establish continuous risk management. Tools like AI Identity can provide this infrastructure in a 15-minute integration.",
       },
     },
   ],
