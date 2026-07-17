@@ -963,7 +963,7 @@
   <section id="layers">
     <div class="section-label">Section 2</div>
     <div class="section-title">Three Layers of Integrity (Write → Export → Anchor)</div>
-    <div class="section-desc">Each layer answers a different question with a different verifier. Layer 1 makes tampering evident to the organization holding the verification key; Layers 2 and 3 make the evidence <strong>publicly</strong> verifiable — no shared secret, no trust in our infrastructure. This layered evidence model is what we've proposed to OCSF (<a href="https://github.com/ocsf/ocsf-schema/pull/1661" target="_blank" style="color:var(--cyan);text-decoration:none;">PR #1661</a>, in review) — and it runs in production here today. Click a layer to inspect it.</div>
+    <div class="section-desc">Each layer answers a different question with a different verifier. Layer 1 makes tampering evident to the organization holding the verification key; Layers 2 and 3 make the evidence <strong>publicly</strong> verifiable — no shared secret, no trust in our infrastructure. This layered evidence model is now part of the OCSF standard (<a href="https://github.com/ocsf/ocsf-schema/pull/1661" target="_blank" style="color:var(--cyan);text-decoration:none;">PR #1661</a>, merged into OCSF 1.9) — and it runs in production here today. Click a layer to inspect it.</div>
 
     <div class="pipeline-wrapper">
       <div class="pipeline-row" style="min-width:860px;">
@@ -1535,7 +1535,7 @@
   <div style="display:flex;gap:20px;">
     <a href="https://www.ai-identity.co" target="_blank">www.ai-identity.co</a>
     <span style="color:var(--border)">|</span>
-    <span>Evidence format proposed to OCSF (PR #1661, in review)</span>
+    <span>Evidence format merged into OCSF 1.9 (PR #1661)</span>
   </div>
 </footer>
 
@@ -1668,7 +1668,7 @@
     },
     layer2: {
       title: "✒️ Layer 2 — Export-time Per-Event Signatures (publicly verifiable)",
-      desc: "When a Case File is exported in OCSF format, each event's entry_hash is individually signed with ECDSA P-256 (platform key held in Cloud KMS — key material never leaves KMS). Each event ships with its signature, key id, and signing time. Anyone can verify these against the published public key set — no shared secret required: https://api.ai-identity.co/.well-known/ai-identity-public-keys.json. This per-event signature shape is part of what's proposed to OCSF (PR #1661, in review).",
+      desc: "When a Case File is exported in OCSF format, each event's entry_hash is individually signed with ECDSA P-256 (platform key held in Cloud KMS — key material never leaves KMS). Each event ships with its signature, key id, and signing time. Anyone can verify these against the published public key set — no shared secret required: https://api.ai-identity.co/.well-known/ai-identity-public-keys.json. This per-event signature shape is part of what's now merged into OCSF 1.9 (PR #1661).",
       chips: [
         { label:"ECDSA P-256 · Cloud KMS", cls:"highlight" },
         { label:"signs each event's entry_hash", cls:"highlight" },
