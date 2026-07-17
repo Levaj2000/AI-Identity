@@ -962,7 +962,7 @@ export default function HomeContent() {
               <ul className="space-y-4">
                 {[
                   "Per-agent keys with deny-by-default gateway",
-                  "Tamper-proof audit chain — cryptographically verifiable",
+                  "Tamper-evident audit chain — cryptographically verifiable",
                   "One API call to register, rotate, or revoke",
                   "Built-in compliance engine (SOC 2, EU AI Act, NIST)",
                   "Forensic replay of any agent session",
@@ -990,7 +990,7 @@ export default function HomeContent() {
               <ul className="space-y-4">
                 {[
                   "Shared API keys or manual token management",
-                  "Mutable logs with no tamper-proof guarantees",
+                  "Mutable logs with no tamper-evident guarantees",
                   "No chain-of-thought capture or forensic replay",
                   "Human IAM tools retrofitted for agent workflows",
                   "Enterprise-first pricing and 6-month sales cycles",

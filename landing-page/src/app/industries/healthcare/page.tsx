@@ -24,7 +24,7 @@ const challenges = [
   },
   {
     title: "No Audit Trail of AI-Assisted Diagnoses",
-    description: "When a diagnostic AI agent contributes to a clinical decision, there's no tamper-proof record of what data it accessed, what model it used, or what reasoning it provided.",
+    description: "When a diagnostic AI agent contributes to a clinical decision, there's no tamper-evident record of what data it accessed, what model it used, or what reasoning it provided.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>,
   },
   {
@@ -47,7 +47,7 @@ const solutions = [
   },
   {
     title: "HIPAA-Ready Audit Trails",
-    description: "HMAC-SHA256 chained logs capture every agent action with full provenance. Tamper-proof records satisfy HIPAA audit requirements and HITECH breach investigation needs.",
+    description: "HMAC-SHA256 chained logs capture every agent action with full provenance. Tamper-evident records satisfy HIPAA audit requirements and HITECH breach investigation needs.",
     icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>,
   },
   {
@@ -66,7 +66,7 @@ const complianceMapping = [
   { framework: "EU AI Act (High-Risk)", requirement: "Risk management for clinical AI systems", capability: "Automated risk assessments with per-agent scoring and continuous monitoring" },
   { framework: "EU AI Act (High-Risk)", requirement: "Human oversight of diagnostic AI", capability: "Mandatory human-in-the-loop approval gates for clinical decision agents" },
   { framework: "HIPAA Privacy Rule", requirement: "Minimum necessary access to PHI", capability: "Per-agent credentials scoped to exactly the patient data each agent needs" },
-  { framework: "HIPAA Security Rule", requirement: "Audit controls and activity logging", capability: "HMAC-chained tamper-proof audit trail of every PHI access event" },
+  { framework: "HIPAA Security Rule", requirement: "Audit controls and activity logging", capability: "HMAC-chained tamper-evident audit trail of every PHI access event" },
   { framework: "HIPAA Security Rule", requirement: "Access controls and authentication", capability: "Unique cryptographic identity per agent with role-based permissions" },
   { framework: "HITECH Act", requirement: "Breach notification and investigation", capability: "Forensic replay and evidence export for breach investigation and reporting" },
   { framework: "FDA AI/ML Guidance", requirement: "Real-world performance monitoring", capability: "Continuous agent monitoring with anomaly detection and policy enforcement" },

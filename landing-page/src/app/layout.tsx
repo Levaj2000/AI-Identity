@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s | AI Identity",
   },
   description:
-    "Per-agent API keys, scoped permissions, and tamper-proof audit trails for autonomous AI agents. Deploy in 15 minutes.",
+    "Per-agent API keys, scoped permissions, and tamper-evident audit trails for autonomous AI agents. Deploy in 15 minutes.",
   verification: {
     google: "ff7e4cc223c9fc7c",
   },
