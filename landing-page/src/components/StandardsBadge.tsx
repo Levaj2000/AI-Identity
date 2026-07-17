@@ -5,9 +5,12 @@ import Link from "next/link";
  * most differentiated credibility asset the company has.
  *
  * Honesty guardrails (do not loosen without checking the actual schema state):
- *  - Say "Contributing to OCSF", NOT "merged into". Only `serialization_id`
- *    (PR #1662) is merged upstream; `ai_agent` (#1641) and `attestation`
- *    (#1661) are still in review. "Contributing to" stays true regardless.
+ *  - "Merged into OCSF 1.9" is verified as of 2026-07-17: Jeff's own PRs
+ *    #1661 (attestation + record_integrity), #1662 (serialization_id), and
+ *    #1684 (fingerprint encoding_id) are all MERGED. The count "3" is HIS
+ *    authored PRs only — #1641 (ai_agent) is Ania's; never fold it into
+ *    our count. If a future claim outruns the schema state, downgrade the
+ *    copy, not the guardrail.
  *  - CoSAI WS4 = Coalition for Secure AI, Agentic IAM workstream (OASIS).
  *    Jeff participates; framing is "member", not "co-lead".
  *
@@ -42,10 +45,10 @@ export function StandardsStrip({ className = "" }: { className?: string }) {
             className="group flex items-center gap-3 text-center sm:text-left"
           >
             <span className="text-base sm:text-lg font-medium text-[rgba(213,219,230,0.9)] group-hover:text-white transition-colors whitespace-nowrap">
-              Contributing to OCSF
+              Merged into OCSF 1.9
             </span>
             <span className="hidden sm:inline text-sm text-[rgba(213,219,230,0.5)]">
-              the open schema for security telemetry
+              3 schema PRs: attestation, record integrity &amp; signature serialization
             </span>
           </Link>
 
@@ -80,7 +83,7 @@ export function StandardsCompact({ className = "" }: { className?: string }) {
       rel="noopener noreferrer"
       className={`inline-flex items-center text-xs text-[rgba(213,219,230,0.55)] hover:text-white transition-colors ${className}`}
     >
-      Contributing to OCSF &amp; CoSAI WS4
+      Merged into OCSF 1.9 &amp; CoSAI WS4 member
     </Link>
   );
 }
