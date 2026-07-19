@@ -13,7 +13,11 @@ from sqlalchemy.orm import Session
 
 from common.config.settings import settings
 from common.models import User, get_db
-from common.queries.user_cleanup import PROTECTED_EMAILS, delete_users_with_cascade
+from common.queries.user_cleanup import (
+    PROTECTED_EMAILS,
+    delete_users_with_cascade,
+    owners_with_audit_history,
+)
 
 logger = logging.getLogger("ai_identity.api.cleanup_cron")
 
@@ -34,6 +38,8 @@ def cleanup_inactive_users(
     - role is "admin"
     - has a stripe_customer_id or stripe_subscription_id
     - email is in the protected allowlist
+    - their org still holds audit_log rows (evidence retention — the
+      owner cascade would hit fk_audit_log_org_id; see user_cleanup.py)
     """
     if not settings.internal_service_key or x_internal_key != settings.internal_service_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -55,20 +61,23 @@ def cleanup_inactive_users(
     )
 
     if dry_run:
+        retained_ids = owners_with_audit_history(db, eligible)
         return {
             "status": "dry_run",
             "eligible": len(eligible),
             "deleted": 0,
             "dry_run": True,
             "eligible_emails": [u.email for u in eligible],
+            "retained_for_evidence": [u.email for u in eligible if u.id in retained_ids],
             "inactivity_days": inactivity_days,
         }
 
     result = delete_users_with_cascade(db, eligible)
 
     logger.info(
-        "Inactive user cleanup: deleted %d users (inactivity_days=%d)",
+        "Inactive user cleanup: deleted %d users, retained %d for evidence (inactivity_days=%d)",
         result["deleted_count"],
+        len(result["retained_for_evidence"]),
         inactivity_days,
     )
 
@@ -78,6 +87,7 @@ def cleanup_inactive_users(
         "deleted": result["deleted_count"],
         "dry_run": False,
         "deleted_emails": result["emails"],
+        "retained_for_evidence": result["retained_for_evidence"],
         "agents_removed": result["agents_removed"],
         "inactivity_days": inactivity_days,
     }
