@@ -2,17 +2,25 @@
 
 Used by both the one-time purge script and the automated cleanup cron.
 Preserves audit_log rows (soft FK) and denormalizes agent_name before deletion.
+
+Evidence retention: a user whose organization still holds audit_log rows is
+never deleted. organizations.owner_id cascades on user delete, but
+audit_log.org_id is the tamper-evident chain's partition key (NOT NULL,
+fk_audit_log_org_id, no cascade) — the database refuses the cascade by
+design. Retention beats hygiene; purging evidence is a deliberate
+retention-workflow action, not a cleanup side effect.
 """
 
 import contextlib
 import logging
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import exists, text
 from sqlalchemy.orm import Session
 
 from common.models import Agent, User
 from common.models.audit_log import AuditLog
+from common.models.organization import Organization
 
 logger = logging.getLogger("ai_identity.user_cleanup")
 
@@ -21,6 +29,26 @@ PROTECTED_EMAILS = {
     "bisteroleg@gmail.com",
     "levaj2000@gmail.com",
 }
+
+
+def owners_with_audit_history(db: Session, users: list[User]) -> set:
+    """Return the ids of users who own an org that still holds audit_log rows.
+
+    These users must not be deleted: the owner_id cascade would try to drop
+    the org, and audit_log.org_id (chain partition key) blocks it at the DB.
+    """
+    if not users:
+        return set()
+    rows = (
+        db.query(Organization.owner_id)
+        .filter(
+            Organization.owner_id.in_([u.id for u in users]),
+            exists().where(AuditLog.org_id == Organization.id),
+        )
+        .distinct()
+        .all()
+    )
+    return {row[0] for row in rows}
 
 
 def delete_users_with_cascade(
@@ -42,12 +70,29 @@ def delete_users_with_cascade(
         approval_requests     — deleted (soft FK, orphan rows useless)
     """
     if not users:
-        return {"deleted_count": 0, "emails": [], "agents_removed": 0}
+        return {"deleted_count": 0, "emails": [], "agents_removed": 0, "retained_for_evidence": []}
 
     # Filter out protected users as a safety net
     users = [u for u in users if u.email not in PROTECTED_EMAILS]
+
+    # Evidence retention: skip users whose org still holds audit history
+    # (owner_id cascade would hit fk_audit_log_org_id and abort the whole run).
+    retained_ids = owners_with_audit_history(db, users)
+    retained_emails = [u.email for u in users if u.id in retained_ids]
+    users = [u for u in users if u.id not in retained_ids]
+    if retained_emails:
+        logger.info(
+            "Evidence retention: skipping %d user(s) whose org holds audit history: %s",
+            len(retained_emails),
+            ", ".join(retained_emails),
+        )
     if not users:
-        return {"deleted_count": 0, "emails": [], "agents_removed": 0}
+        return {
+            "deleted_count": 0,
+            "emails": [],
+            "agents_removed": 0,
+            "retained_for_evidence": retained_emails,
+        }
 
     user_ids = [str(u.id) for u in users]
     emails = [u.email for u in users]
@@ -109,4 +154,5 @@ def delete_users_with_cascade(
         "deleted_count": len(emails),
         "emails": emails,
         "agents_removed": agent_count,
+        "retained_for_evidence": retained_emails,
     }
