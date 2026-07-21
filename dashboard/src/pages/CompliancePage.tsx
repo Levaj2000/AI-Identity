@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { apiFetch, toQueryString } from '../services/api/client'
 import type { AuditLogEntry } from '../types/api'
 import { EventDetailDrawer } from '../components/forensics/EventDetailDrawer'
-import { verifyAuditChain } from '../services/api/forensics'
+import { fetchAuditStats, verifyAuditChain } from '../services/api/forensics'
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -113,25 +113,18 @@ export function CompliancePage() {
   }, [offset, filterDecision, filterAgent])
 
   // ── Fetch stats on mount ─────────────────────────────────────
-  // Count both "deny" and "denied" (and "allow"/"allowed") variants
-  // to avoid showing 0 when backend uses a different form.
+  // Single aggregate call — /audit/stats already sums the "allow"/"allowed"
+  // and "deny"/"denied" variants server-side, so no per-decision probes.
 
   useEffect(() => {
     async function loadStats() {
       try {
-        const [all, allows, allowsAlt, denies, deniesAlt, errors] = await Promise.all([
-          apiFetch<AuditListResponse>('/api/v1/audit?limit=1'),
-          apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=allowed'),
-          apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=allow'),
-          apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=denied'),
-          apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=deny'),
-          apiFetch<AuditListResponse>('/api/v1/audit?limit=1&decision=error'),
-        ])
+        const s = await fetchAuditStats({})
         setStats({
-          totalEntries: all.total,
-          allowCount: allows.total + allowsAlt.total,
-          denyCount: denies.total + deniesAlt.total,
-          errorCount: errors.total,
+          totalEntries: s.total_events,
+          allowCount: s.allowed_count,
+          denyCount: s.denied_count,
+          errorCount: s.error_count,
         })
       } catch {
         // Stats failed — non-critical
