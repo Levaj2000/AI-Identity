@@ -7,15 +7,18 @@ Input: the NDJSON file downloaded from
 bearer token.
 
 What it does:
-1. Validates every event is on the FINAL #1661 attestation shape
-   (record_integrity profile, fingerprint hashes, ``signatures`` array,
-   ``attestation.uid``) and rejects the old draft shape (string
-   ``entry_hash``, singular ``signature``, ``sequence`` field).
-2. Verifies the org hash chain end-to-end (``prev_entry_hash`` linkage in
-   ``org_chain_seq`` order).
+1. Validates every event is on the MERGED #1661 shape (``attestation_list``
+   array on the ``record_integrity`` profile, ``fingerprint`` objects,
+   ``prev_event`` predecessor refs, ``signatures`` array, ``metadata.uid``)
+   and rejects both prior shapes (singular ``attestation`` object, string
+   or object ``entry_hash``/``prev_entry_hash``, singular ``signature``,
+   ``sequence`` field).
+2. Verifies the org hash chain end-to-end (``prev_event.fingerprint``
+   linkage in ``org_chain_seq`` order, plus ``prev_event.uid`` against the
+   predecessor's ``metadata.uid``).
 3. Verifies each per-event ECDSA-P256-SHA256 signature against the public
    JWKS (https://api.ai-identity.co/.well-known/ai-identity-public-keys.json)
-   — DER signature over ``bytes.fromhex(entry_hash.value)``. Requires the
+   — DER signature over ``bytes.fromhex(fingerprint.value)``. Requires the
    ``cryptography`` package; skipped with a warning if unavailable.
 4. Writes ``production-ocsf-full-export.ocsf.ndjson`` (verbatim copy) and
    ``production-ocsf-excerpt.ocsf.ndjson`` (default: org_chain_seq 16-22,
@@ -77,18 +80,29 @@ def validate_event_shape(ev: dict, line_no: int) -> list[str]:
     if "ai_operation" not in profiles:
         problems.append(f"{ctx}: ai_operation profile missing")
 
-    att = ev.get("attestation")
-    if att is None:
-        # Legal (row without chain data) but unexpected for this org.
-        problems.append(f"{ctx}: no attestation object")
+    # Prior-shape tripwires (what this regeneration exists to replace).
+    if "attestation" in ev:
+        problems.append(
+            f"{ctx}: OLD SHAPE — singular 'attestation' (merged shape is attestation_list)"
+        )
         return problems
 
-    if "record_integrity" not in profiles:
-        problems.append(f"{ctx}: attestation present but record_integrity profile not declared")
+    alist = ev.get("attestation_list")
+    if not isinstance(alist, list) or not alist:
+        # Legal (row without chain data) but unexpected for this org.
+        problems.append(f"{ctx}: no attestation_list")
+        return problems
+    att = alist[0]
 
-    # Old-draft-shape tripwires (what this regeneration exists to replace).
-    if isinstance(att.get("entry_hash"), str):
-        problems.append(f"{ctx}: OLD SHAPE — entry_hash is a string, not a fingerprint object")
+    if "record_integrity" not in profiles:
+        problems.append(
+            f"{ctx}: attestation_list present but record_integrity profile not declared"
+        )
+
+    if "entry_hash" in att or "prev_entry_hash" in att:
+        problems.append(
+            f"{ctx}: OLD SHAPE — entry_hash/prev_entry_hash (merged shape is fingerprint/prev_event)"
+        )
     if "signature" in att:
         problems.append(f"{ctx}: OLD SHAPE — singular 'signature' field")
     if "sequence" in att:
@@ -96,30 +110,29 @@ def validate_event_shape(ev: dict, line_no: int) -> list[str]:
 
     if not att.get("uid"):
         problems.append(f"{ctx}: attestation.uid missing")
+    if not ev.get("metadata", {}).get("uid"):
+        problems.append(f"{ctx}: metadata.uid missing (required — prev_event refs point at it)")
 
-    org_chain_seq = ev.get("unmapped", {}).get("org_chain_seq")
-    for fp_name in ("entry_hash", "prev_entry_hash"):
-        fp = att.get(fp_name)
-        if fp is None:
-            continue  # prev_entry_hash may be absent on the genesis event
-        if not isinstance(fp, dict):
-            problems.append(f"{ctx}: {fp_name} is not a fingerprint object")
+    prev = att.get("prev_event")  # may be absent on the genesis event
+    fps = [("fingerprint", att.get("fingerprint"))]
+    if prev is not None:
+        if not isinstance(prev, dict):
+            problems.append(f"{ctx}: prev_event is not an object")
+            prev = None
+        elif not prev.get("uid"):
+            problems.append(f"{ctx}: prev_event.uid missing (schema-required)")
+        if prev is not None:
+            fps.append(("prev_event.fingerprint", prev.get("fingerprint")))
+    for fp_name, fp in fps:
+        if fp is None or not isinstance(fp, dict):
+            problems.append(f"{ctx}: {fp_name} missing or not a fingerprint object")
             continue
         if fp.get("algorithm_id") != 99 or fp.get("algorithm") != "HMAC-SHA-256":
             problems.append(
                 f"{ctx}: {fp_name} must be algorithm_id 99 / HMAC-SHA-256, "
                 f"got {fp.get('algorithm_id')}/{fp.get('algorithm')}"
             )
-        value = fp.get("value", "")
-        # The chain's first row stores the literal sentinel "GENESIS" as its
-        # prev hash. The emitter now omits prev_entry_hash on the genesis
-        # event (the `fp is None` skip above covers that); this allowance is
-        # kept for backward compatibility with the bundle revision exported
-        # before that fix — accept it on seq 1 only (a mid-chain sentinel
-        # would also break linkage verification).
-        if fp_name == "prev_entry_hash" and value == "GENESIS" and org_chain_seq == 1:
-            continue
-        if not _HEX64.match(value):
+        if not _HEX64.match(fp.get("value", "")):
             problems.append(f"{ctx}: {fp_name}.value is not 64-char lowercase hex")
 
     sigs = att.get("signatures")
@@ -130,8 +143,8 @@ def validate_event_shape(ev: dict, line_no: int) -> list[str]:
         if sig.get("algorithm_id") != 3 or sig.get("algorithm") != "ECDSA-P256-SHA256":
             problems.append(f"{ctx}: signatures[0] is not algorithm_id 3 / ECDSA-P256-SHA256")
         digest = sig.get("digest", {})
-        if digest.get("value") != att.get("entry_hash", {}).get("value"):
-            problems.append(f"{ctx}: signatures[0].digest does not match entry_hash")
+        if digest.get("value") != (att.get("fingerprint") or {}).get("value"):
+            problems.append(f"{ctx}: signatures[0].digest does not match fingerprint")
 
     unmapped = ev.get("unmapped", {})
     if not unmapped.get("signature_b64"):
@@ -164,11 +177,17 @@ def verify_chain(events: list[dict]) -> tuple[int, int]:
 
     links = 0
     for (_, prev_ev), (seq, ev) in zip(seqd, seqd[1:], strict=False):
-        prev_hash = prev_ev["attestation"]["entry_hash"]["value"]
-        claimed = ev["attestation"].get("prev_entry_hash", {}).get("value")
-        if claimed != prev_hash:
+        prev_hash = prev_ev["attestation_list"][0]["fingerprint"]["value"]
+        prev_ref = ev["attestation_list"][0].get("prev_event", {})
+        if prev_ref.get("fingerprint", {}).get("value") != prev_hash:
             fail(
-                f"chain BROKEN at org_chain_seq {seq}: prev_entry_hash != seq {seq - 1} entry_hash"
+                f"chain BROKEN at org_chain_seq {seq}: prev_event.fingerprint != seq {seq - 1} fingerprint"
+            )
+        prev_uid = prev_ev.get("metadata", {}).get("uid")
+        if prev_ref.get("uid") != prev_uid:
+            fail(
+                f"chain BROKEN at org_chain_seq {seq}: prev_event.uid {prev_ref.get('uid')!r} "
+                f"!= predecessor metadata.uid {prev_uid!r}"
             )
         links += 1
     return links, seqs[0]
@@ -216,7 +235,7 @@ def verify_signatures(events: list[dict], jwks: dict) -> int:
         if pub is None:
             fail(f"seq {seq}: signature_key_id not present in JWKS: {key_id}")
         sig = base64.b64decode(ev["unmapped"]["signature_b64"])
-        message = bytes.fromhex(ev["attestation"]["entry_hash"]["value"])
+        message = bytes.fromhex(ev["attestation_list"][0]["fingerprint"]["value"])
         try:
             pub.verify(sig, message, ec.ECDSA(hashes.SHA256()))
         except InvalidSignature:
@@ -235,10 +254,11 @@ def truncate_for_display(ev: dict) -> dict:
     def trunc(s: str, keep: int = 16) -> str:
         return s[:keep] + "…" if isinstance(s, str) and len(s) > keep + 1 else s
 
-    att = disp.get("attestation", {})
-    for fp_name in ("entry_hash", "prev_entry_hash"):
-        if fp_name in att:
-            att[fp_name]["value"] = trunc(att[fp_name]["value"])
+    att = (disp.get("attestation_list") or [{}])[0]
+    if "fingerprint" in att:
+        att["fingerprint"]["value"] = trunc(att["fingerprint"]["value"])
+    if "prev_event" in att and "fingerprint" in att["prev_event"]:
+        att["prev_event"]["fingerprint"]["value"] = trunc(att["prev_event"]["fingerprint"]["value"])
     for sig in att.get("signatures", []):
         if "digest" in sig:
             sig["digest"]["value"] = trunc(sig["digest"]["value"])
