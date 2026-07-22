@@ -17,7 +17,7 @@ This revision tracks the **final OCSF PR #1661 attestation shape** (as merged in
 | File | What it is | Use |
 |---|---|---|
 | `production-ocsf-excerpt.ocsf.ndjson` | **7-event annotated slice** (`org_chain_seq` 16–22), a single agent's lifecycle | Start here — read top to bottom with the walkthrough below |
-| `production-ocsf-full-export.ocsf.ndjson` | <!-- REGEN:STATS --> **Full org chain**, 174 events, seq 1→174, 32 agents (104 allowed / 70 denied) <!-- /REGEN:STATS --> | The real raw export from the `format=ocsf` endpoint |
+| `production-ocsf-full-export.ocsf.ndjson` | <!-- REGEN:STATS --> **Full org chain**, 193 events, seq 1→193, 34 agents (115 allowed / 78 denied) <!-- /REGEN:STATS --> | The real raw export from the `format=ocsf` endpoint |
 | `regenerate.py` | Rebuilds this bundle from a fresh `format=ocsf` download: validates the final #1661 shape, verifies the chain, verifies every ECDSA signature against the public JWKS, refreshes this README | `python3 regenerate.py <fresh-export.ndjson>` |
 
 > **Retired:** `signed-chain-ecdsa-example.json` (the hand-built ECDSA/JCS worked example from the 2026-06-16 bundle). It existed to show the *target* asymmetric shape while production only had the HMAC chain. Production now emits real per-event ECDSA signatures in the export itself (`attestation.signatures` + `unmapped.signature_b64`), so the mock was redundant — and it carried draft-era fields (`sequence`, singular `signature`) that no longer exist in #1661.
@@ -54,6 +54,7 @@ One agent (`QA-eae97318`, uid `32928870…`), seven consecutive gateway events. 
   "severity_id": 1,
   "time": 1776094414825,
   "metadata": {
+    "uid": "99",
     "version": "1.9.0-dev",
     "profiles": [
       "ai_operation",
@@ -82,34 +83,51 @@ One agent (`QA-eae97318`, uid `32928870…`), seven consecutive gateway events. 
       "type_id": 1
     }
   },
-  "attestation": {
-    "uid": "99",
-    "entry_hash": {
-      "algorithm_id": 99,
-      "algorithm": "HMAC-SHA-256",
-      "value": "1d9548729d942e30…"
-    },
-    "prev_entry_hash": {
-      "algorithm_id": 99,
-      "algorithm": "HMAC-SHA-256",
-      "value": "90ba42f3b92586ff…"
-    },
-    "chain_uid": "f3576cf6-87ff-4c07-b446-e6ac526236a5",
-    "signatures": [
-      {
-        "algorithm_id": 3,
-        "algorithm": "ECDSA-P256-SHA256",
-        "created_time": 1783086535444,
-        "digest": {
+  "attestation_list": [
+    {
+      "uid": "99",
+      "fingerprint": {
+        "algorithm_id": 99,
+        "algorithm": "HMAC-SHA-256",
+        "encoding_id": 1,
+        "serialization_id": 99,
+        "serialization": "AI-Identity audit chain v1 (sorted-compact JSON + prev hash)",
+        "value": "1d9548729d942e30…"
+      },
+      "prev_event": {
+        "uid": "98",
+        "type_uid": 600301,
+        "fingerprint": {
           "algorithm_id": 99,
           "algorithm": "HMAC-SHA-256",
-          "value": "1d9548729d942e30…"
+          "encoding_id": 1,
+          "serialization_id": 99,
+          "serialization": "AI-Identity audit chain v1 (sorted-compact JSON + prev hash)",
+          "value": "90ba42f3b92586ff…"
         }
-      }
-    ]
-  },
+      },
+      "chain_uid": "f3576cf6-87ff-4c07-b446-e6ac526236a5",
+      "signatures": [
+        {
+          "algorithm_id": 3,
+          "algorithm": "ECDSA-P256-SHA256",
+          "serialization_id": 1,
+          "serialization": "Flat",
+          "created_time": 1784755487529,
+          "digest": {
+            "algorithm_id": 99,
+            "algorithm": "HMAC-SHA-256",
+            "encoding_id": 1,
+            "serialization_id": 99,
+            "serialization": "AI-Identity audit chain v1 (sorted-compact JSON + prev hash)",
+            "value": "1d9548729d942e30…"
+          }
+        }
+      ]
+    }
+  ],
   "unmapped": {
-    "signature_b64": "MEQCIBxyRnz3NKoOOjJGpJGh…",
+    "signature_b64": "MEUCIE7U6pS4ADjqn71SwQH6…",
     "signature_key_id": "projects/…/cryptoKeys/session-attestation/cryptoKeyVersions/1",
     "org_chain_seq": 18,
     "policy_version": 10
