@@ -1,9 +1,10 @@
 """Tests for the OCSF API Activity mapping (audit_log → class_uid 6003).
 
 Grounds the export against AI Identity's OCSF contributions: API Activity +
-ai_operation profile (#1641), the attestation object in its final #1661 shape
-(record_integrity profile, fingerprint hashes, required signatures), and
-honest ``unmapped`` placement for producer facts with no native home.
+ai_operation profile (#1641), and the attestation object in its MERGED #1661
+shape (record_integrity profile carrying ``attestation_list``, ``fingerprint``
++ ``prev_event`` chain linkage, Flat-serialized signatures), with honest
+``unmapped`` placement for producer facts with no native home.
 """
 
 import base64
@@ -13,12 +14,31 @@ import types
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from common.ocsf import OCSF_VERSION, EntrySignature, audit_log_to_ocsf, select_chain
+from common.ocsf import (
+    OCSF_VERSION,
+    EntrySignature,
+    PrevEventRef,
+    audit_log_to_ocsf,
+    event_type_uid,
+    select_chain,
+)
 
 _ORG_HASH = "aa" * 32
 _ORG_PREV = "bb" * 32
 _GLOBAL_HASH = "cc" * 32
 _GLOBAL_PREV = "dd" * 32
+
+# The chain-fingerprint envelope every hash value rides in: keyed HMAC
+# (algorithm Other + sibling), hex encoding, producer-named serialization.
+_FP_META = {
+    "algorithm_id": 99,
+    "algorithm": "HMAC-SHA-256",
+    "encoding_id": 1,
+    "serialization_id": 99,
+    "serialization": "AI-Identity audit chain v1 (sorted-compact JSON + prev hash)",
+}
+
+_PREV_REF = PrevEventRef(uid="230", type_uid=600301)
 
 
 def _row(**overrides):
@@ -46,6 +66,13 @@ def _row(**overrides):
     return types.SimpleNamespace(**base)
 
 
+def _att(ev):
+    """The single attestation the gateway emits (one attester → one entry)."""
+    lst = ev["attestation_list"]
+    assert isinstance(lst, list) and len(lst) == 1
+    return lst[0]
+
+
 class TestOcsfApiActivityMapping:
     def test_core_api_activity_fields(self):
         ev = audit_log_to_ocsf(_row())
@@ -57,10 +84,15 @@ class TestOcsfApiActivityMapping:
         assert ev["metadata"]["version"] == OCSF_VERSION
         assert ev["metadata"]["correlation_uid"] == "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
 
+    def test_metadata_uid_is_the_row_id(self):
+        # Every event carries metadata.uid so prev_event.uid references
+        # resolve — required by the merged prev_event object.
+        assert audit_log_to_ocsf(_row())["metadata"]["uid"] == "231"
+
     def test_record_integrity_profile_only_with_attestation(self):
         ev = audit_log_to_ocsf(_row(entry_hash_org=None, prev_hash_org=None, entry_hash=None))
         assert ev["metadata"]["profiles"] == ["ai_operation"]
-        assert "attestation" not in ev
+        assert "attestation_list" not in ev
 
     def test_decision_maps_to_action_id(self):
         assert audit_log_to_ocsf(_row(decision="allow"))["action_id"] == 1
@@ -75,6 +107,13 @@ class TestOcsfApiActivityMapping:
         # type_uid tracks activity_id
         assert audit_log_to_ocsf(_row(method="DELETE"))["type_uid"] == 600304
 
+    def test_event_type_uid_helper_matches_event(self):
+        # prev_event.type_uid must be derived the same way as the event's own.
+        assert event_type_uid("POST") == 600301
+        assert event_type_uid("delete") == 600304
+        assert event_type_uid(None) == 600300
+        assert event_type_uid("POST") == audit_log_to_ocsf(_row(method="POST"))["type_uid"]
+
     def test_ai_agent_and_actor(self):
         ev = audit_log_to_ocsf(_row())
         assert ev["ai_agent"]["uid"] == "a9c3e7d1-2b4f-4e6a-9c8d-3f5a7b1e2c4d"
@@ -84,40 +123,56 @@ class TestOcsfApiActivityMapping:
         assert ev["http_request"]["url"]["path"] == "/ada/tools/read_file"
 
     def test_attestation_prefers_org_chain(self):
-        att = audit_log_to_ocsf(_row())["attestation"]
+        att = _att(audit_log_to_ocsf(_row(), prev_event_ref=_PREV_REF))
         assert att["uid"] == "231"
-        # HMAC chain hashes are fingerprint objects: 99/Other + algorithm sibling,
-        # NOT algorithm_id 3 (plain SHA-256) — the chain is keyed.
-        assert att["entry_hash"] == {
-            "algorithm_id": 99,
-            "algorithm": "HMAC-SHA-256",
-            "value": _ORG_HASH,
-        }
-        assert att["prev_entry_hash"]["value"] == _ORG_PREV
+        # HMAC chain hashes are fingerprint objects: 99/Other + algorithm
+        # sibling (NOT algorithm_id 3 — the chain is keyed), hex encoding_id,
+        # and a producer-named serialization (NOT JCS — sorted-compact JSON).
+        assert att["fingerprint"] == {**_FP_META, "value": _ORG_HASH}
         assert att["chain_uid"] == "00000000-0000-0000-0000-000000000100"
         assert "signatures" not in att  # unsigned unless the export path signs
 
+    def test_prev_event_carries_locator_and_fingerprint(self):
+        att = _att(audit_log_to_ocsf(_row(), prev_event_ref=_PREV_REF))
+        # Merged prev_event object: uid (required), type_uid (recommended),
+        # fingerprint binding the reference to the predecessor's content.
+        assert att["prev_event"] == {
+            "uid": "230",
+            "type_uid": 600301,
+            "fingerprint": {**_FP_META, "value": _ORG_PREV},
+        }
+
+    def test_prev_hash_without_locator_rides_unmapped(self):
+        # prev_event.uid is required — with no resolvable predecessor the
+        # object is omitted and the bare hash is kept honestly in unmapped.
+        ev = audit_log_to_ocsf(_row())  # no prev_event_ref supplied
+        assert "prev_event" not in _att(ev)
+        assert ev["unmapped"]["prev_entry_hash"] == _ORG_PREV
+
     def test_attestation_falls_back_to_global_chain(self):
-        att = audit_log_to_ocsf(_row(entry_hash_org=None, prev_hash_org=None))["attestation"]
-        assert att["entry_hash"]["value"] == _GLOBAL_HASH
-        assert att["prev_entry_hash"]["value"] == _GLOBAL_PREV
+        ev = audit_log_to_ocsf(
+            _row(entry_hash_org=None, prev_hash_org=None), prev_event_ref=_PREV_REF
+        )
+        att = _att(ev)
+        assert att["fingerprint"]["value"] == _GLOBAL_HASH
+        assert att["prev_event"]["fingerprint"]["value"] == _GLOBAL_PREV
         assert "chain_uid" not in att
 
-    def test_genesis_sentinel_omits_prev_entry_hash(self):
+    def test_genesis_sentinel_omits_prev_event(self):
         # The org chain's first row stores the literal "GENESIS" sentinel as
-        # prev_hash_org. That's a missing predecessor, not a hash — the genesis
-        # event must omit prev_entry_hash, never emit a fingerprint whose
+        # prev_hash_org. That's a missing predecessor, not a hash — the
+        # genesis event must omit prev_event, never emit a fingerprint whose
         # value is "GENESIS".
-        att = audit_log_to_ocsf(_row(prev_hash_org="GENESIS", org_chain_seq=1))["attestation"]
-        assert att["entry_hash"]["value"] == _ORG_HASH
-        assert "prev_entry_hash" not in att
+        att = _att(audit_log_to_ocsf(_row(prev_hash_org="GENESIS", org_chain_seq=1)))
+        assert att["fingerprint"]["value"] == _ORG_HASH
+        assert "prev_event" not in att
 
     def test_genesis_sentinel_on_global_chain_also_omitted(self):
-        att = audit_log_to_ocsf(_row(entry_hash_org=None, prev_hash_org=None, prev_hash="GENESIS"))[
-            "attestation"
-        ]
-        assert att["entry_hash"]["value"] == _GLOBAL_HASH
-        assert "prev_entry_hash" not in att
+        att = _att(
+            audit_log_to_ocsf(_row(entry_hash_org=None, prev_hash_org=None, prev_hash="GENESIS"))
+        )
+        assert att["fingerprint"]["value"] == _GLOBAL_HASH
+        assert "prev_event" not in att
 
     def test_select_chain_matches_attestation(self):
         # The export signer uses select_chain; it must pick the same hash the
@@ -147,13 +202,18 @@ class TestOcsfApiActivityMapping:
             ),
         )
 
-        sigs = ev["attestation"]["signatures"]
+        att = _att(ev)
+        sigs = att["signatures"]
         assert len(sigs) == 1
         assert sigs[0]["algorithm_id"] == 3  # ECDSA
         assert sigs[0]["algorithm"] == "ECDSA-P256-SHA256"
+        # The signature is over raw hash bytes — Flat (1), per the merged
+        # digital_signature serialization enum (JCS renumbered to 2).
+        assert sigs[0]["serialization_id"] == 1
+        assert sigs[0]["serialization"] == "Flat"
         assert sigs[0]["created_time"] == 1_780_000_000_000
-        # digest restates the entry_hash fingerprint — what the signature covers
-        assert sigs[0]["digest"] == ev["attestation"]["entry_hash"]
+        # digest restates the chain fingerprint — what the signature covers
+        assert sigs[0]["digest"] == att["fingerprint"]
 
         # Signature bytes + key id have no digital_signature field — unmapped.
         assert ev["unmapped"]["signature_key_id"] == "local:testkey"
@@ -165,7 +225,7 @@ class TestOcsfApiActivityMapping:
             _row(entry_hash_org=None, prev_hash_org=None, entry_hash=None),
             EntrySignature(signature_b64="ZmFrZQ==", key_id="local:x", signed_time_ms=0),
         )
-        assert "attestation" not in ev
+        assert "attestation_list" not in ev
         assert "signature_b64" not in ev.get("unmapped", {})
 
     def test_latency_maps_to_duration(self):
@@ -193,6 +253,62 @@ class TestOcsfApiActivityMapping:
         assert ev["action_id"] == 0
         assert ev["action"] == "Unknown"
         assert ev["severity_id"] == 1  # don't alarm on vocabulary we didn't classify
+
+
+class TestResolvePrevEventRefs:
+    """The export-path locator resolver behind ``prev_event.uid`` (required)."""
+
+    @staticmethod
+    def _fail_db():
+        class _Boom:
+            def query(self, *a, **k):  # pragma: no cover - failure branch
+                raise AssertionError("DB fallback must not be used for in-set predecessors")
+
+        return _Boom()
+
+    @staticmethod
+    def _fake_db(prev_row):
+        class _Q:
+            def filter(self, *a, **k):
+                return self
+
+            def first(self):
+                return prev_row
+
+        class _Db:
+            def query(self, *a, **k):
+                return _Q()
+
+        return _Db()
+
+    def test_in_set_predecessor_resolves_without_db(self):
+        from api.app.routers.audit import _resolve_prev_event_refs
+
+        first = _row(id=230, entry_hash_org=_ORG_PREV, prev_hash_org="GENESIS", method="POST")
+        second = _row(id=231)  # prev_hash_org == _ORG_PREV → first
+        refs = _resolve_prev_event_refs(self._fail_db(), [first, second])
+        assert refs == {231: PrevEventRef(uid="230", type_uid=600301)}
+
+    def test_out_of_set_predecessor_falls_back_to_db(self):
+        from api.app.routers.audit import _resolve_prev_event_refs
+
+        prev_row = _row(id=229, method="GET")
+        refs = _resolve_prev_event_refs(self._fake_db(prev_row), [_row(id=231)])
+        assert refs == {231: PrevEventRef(uid="229", type_uid=600302)}
+
+    def test_missing_predecessor_yields_no_ref(self):
+        from api.app.routers.audit import _resolve_prev_event_refs
+
+        refs = _resolve_prev_event_refs(self._fake_db(None), [_row(id=231)])
+        assert refs == {}
+
+    def test_genesis_and_unchained_rows_skipped(self):
+        from api.app.routers.audit import _resolve_prev_event_refs
+
+        genesis = _row(id=1, prev_hash_org="GENESIS")
+        unchained = _row(id=2, entry_hash_org=None, prev_hash_org=None, entry_hash=None)
+        refs = _resolve_prev_event_refs(self._fail_db(), [genesis, unchained])
+        assert refs == {}
 
 
 class TestSignExportEntries:
