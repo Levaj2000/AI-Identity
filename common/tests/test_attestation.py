@@ -184,9 +184,11 @@ def test_ocsf_surfaces_workload_attestation_separate_from_integrity():
     assert wa["verified"] is True
     assert wa["subject"] == "spiffe://example.org/ns/prod/sa/billing"
     assert wa["public_key_sha256"] == "deadbeef"
-    # Precision trap: record-integrity attestation is a SEPARATE object.
-    assert event["attestation"]["entry_hash"]["value"] == "abc123"
-    assert "workload_attestation" not in event["attestation"]
+    # Precision trap: record-integrity attestation is a SEPARATE object
+    # (a one-element attestation_list per the merged #1661 shape).
+    record_att = event["attestation_list"][0]
+    assert record_att["fingerprint"]["value"] == "abc123"
+    assert "workload_attestation" not in record_att
 
 
 def test_ocsf_no_workload_attestation_when_absent():
