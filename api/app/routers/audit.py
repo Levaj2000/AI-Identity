@@ -34,7 +34,13 @@ from common.audit.writer import _resolve_org_hmac_key
 from common.forensic.anchor_service import assemble_evidence
 from common.forensic.signer import ForensicSignerConfigError, get_forensic_signer
 from common.models import Agent, AuditLog, OrgMembership, Policy, User, get_db
-from common.ocsf import EntrySignature, audit_log_to_ocsf, select_chain
+from common.ocsf import (
+    EntrySignature,
+    PrevEventRef,
+    audit_log_to_ocsf,
+    event_type_uid,
+    select_chain,
+)
 from common.schemas.agent import (
     AuditChainVerifyResponse,
     AuditLogListResponse,
@@ -1076,6 +1082,37 @@ def _sign_export_entries(events: list[AuditLog]) -> dict[int, EntrySignature]:
     return dict(map(_sign_one, to_sign))
 
 
+def _resolve_prev_event_refs(db: Session, events: list[AuditLog]) -> dict[int, PrevEventRef]:
+    """Map audit row id → locator of its chain predecessor (#1661 ``prev_event``).
+
+    The merged ``prev_event`` object requires ``uid`` (the predecessor's
+    ``metadata.uid``); a row only stores its predecessor's *hash*, so the
+    locator is resolved here: first against the export set itself (covers
+    org-wide exports and contiguous slices), then by a per-miss DB lookup on
+    the predecessor's stored hash (covers agent-scoped slices whose chain
+    predecessor lies outside the slice — the same boundary PR #377 taught the
+    verifier about). A predecessor that no longer exists (beyond retention)
+    yields no ref, and the emitter omits ``prev_event`` for that row, keeping
+    the bare hash in ``unmapped`` instead.
+    """
+    by_org_hash = {e.entry_hash_org: e for e in events if getattr(e, "entry_hash_org", None)}
+    by_global_hash = {e.entry_hash: e for e in events if e.entry_hash}
+    refs: dict[int, PrevEventRef] = {}
+    for e in events:
+        entry_hash, prev, _chain = select_chain(e)
+        if not entry_hash or not prev:
+            continue  # unchained row, or the chain's genesis event
+        org_selected = bool(getattr(e, "entry_hash_org", None))
+        prev_row = (by_org_hash if org_selected else by_global_hash).get(prev)
+        if prev_row is None:
+            col = AuditLog.entry_hash_org if org_selected else AuditLog.entry_hash
+            prev_row = db.query(AuditLog).filter(col == prev).first()
+        if prev_row is None:
+            continue
+        refs[e.id] = PrevEventRef(uid=str(prev_row.id), type_uid=event_type_uid(prev_row.method))
+    return refs
+
+
 @router.get(
     "/report",
     summary="Generate Case File (forensics report)",
@@ -1195,8 +1232,10 @@ def audit_report(
         # one event per line, the de-facto SIEM ingestion format (Splunk HEC,
         # etc.). Streams cleanly; no megabyte-long single line.
         signatures = _sign_export_entries(cf.events)
+        prev_refs = _resolve_prev_event_refs(db, cf.events)
         ndjson = "".join(
-            json.dumps(audit_log_to_ocsf(e, signatures.get(e.id)), default=str) + "\n"
+            json.dumps(audit_log_to_ocsf(e, signatures.get(e.id), prev_refs.get(e.id)), default=str)
+            + "\n"
             for e in cf.events
         )
         filename = (
