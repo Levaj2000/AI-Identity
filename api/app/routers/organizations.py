@@ -3,11 +3,13 @@
 import logging
 import secrets
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
+from common.audit.writer import key_fingerprint
 from common.models import Agent, User, get_db
 from common.models.org_membership import OrgMembership, OrgRole
 from common.models.organization import Organization
@@ -195,7 +197,9 @@ def get_forensic_verify_key(
     """Return the organization's HMAC signing key for audit chain verification.
 
     Requires owner or admin role. This key is used by customers to verify
-    audit exports with the CLI verifier.
+    audit exports with the CLI verifier. Retired keys (from regeneration)
+    are returned too — audit rows written under an earlier key epoch verify
+    only with the key of that epoch.
     """
     _require_membership(db, user, OrgRole.owner.value, OrgRole.admin.value)
 
@@ -203,13 +207,37 @@ def get_forensic_verify_key(
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
 
-    # Auto-provision key if org was created before this feature shipped
+    # Auto-provision key if org was created before this feature shipped.
+    # Rows written before this moment were hashed under the platform key —
+    # they belong to an earlier key epoch the new key cannot verify.
+    minted_now = False
     if not org.forensic_verify_key:
         org.forensic_verify_key = secrets.token_hex(32)
+        minted_now = True
         db.commit()
         db.refresh(org)
+        logger.info("forensic_verify_key auto-provisioned for org %s", org.id)
 
-    return {"forensic_verify_key": org.forensic_verify_key}
+    response = {
+        "forensic_verify_key": org.forensic_verify_key,
+        "key_fingerprint": key_fingerprint(org.forensic_verify_key),
+        "retired_keys": [
+            {
+                "key": entry.get("key"),
+                "key_fingerprint": entry.get("key_fingerprint"),
+                "retired_at": entry.get("retired_at"),
+            }
+            for entry in (org.forensic_key_history or [])
+        ],
+    }
+    if minted_now:
+        response["warning"] = (
+            "This key was just created. Audit events recorded before now were "
+            "signed under an AI Identity platform key: the offline verifier "
+            "will report them as an earlier key epoch (they remain verifiable "
+            "via evidence-anchor public proofs or by AI Identity)."
+        )
+    return response
 
 
 # ── POST /api/v1/orgs/me/forensic-verify-key/regenerate ─────────────
@@ -225,8 +253,9 @@ def regenerate_forensic_verify_key(
 ):
     """Generate a new HMAC signing key for this organization.
 
-    Requires owner or admin role. The old key is discarded — exports signed
-    before this change must be verified using the previous key.
+    Requires owner or admin role. The old key is RETAINED in the org's key
+    history (not discarded): audit rows already written were hashed under
+    it and verify only with it. New rows are hashed under the new key.
     """
     _require_membership(db, user, OrgRole.owner.value, OrgRole.admin.value)
 
@@ -234,15 +263,41 @@ def regenerate_forensic_verify_key(
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
 
+    old_key = org.forensic_verify_key
+    old_fingerprint = key_fingerprint(old_key) if old_key else None
+    if old_key:
+        # Reassign (don't mutate) — SQLAlchemy change tracking on JSON
+        # columns only sees assignment.
+        org.forensic_key_history = [
+            *(org.forensic_key_history or []),
+            {
+                "key": old_key,
+                "key_fingerprint": old_fingerprint,
+                "retired_at": datetime.now(UTC).isoformat(),
+            },
+        ]
+
     org.forensic_verify_key = secrets.token_hex(32)
     db.commit()
     db.refresh(org)
 
-    logger.info("forensic_verify_key regenerated for org %s by user %s", org.id, user.id)
+    logger.info(
+        "forensic_verify_key regenerated for org %s by user %s (retired epoch %s)",
+        org.id,
+        user.id,
+        old_fingerprint,
+    )
 
     return {
         "forensic_verify_key": org.forensic_verify_key,
-        "warning": ("Old exports signed with the previous key must be verified using that key."),
+        "key_fingerprint": key_fingerprint(org.forensic_verify_key),
+        "retired_key_fingerprint": old_fingerprint,
+        "warning": (
+            "Exports and audit events from before this rotation verify only with "
+            "the previous key. It has been retained under your organization's "
+            "retired keys — pass it to the offline verifier with --key to cover "
+            "the earlier epoch."
+        ),
     }
 
 

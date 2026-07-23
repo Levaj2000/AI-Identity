@@ -35,6 +35,26 @@ from common.schemas.audit_metadata import (
 
 GENESIS = "GENESIS"
 
+# Length of a key fingerprint — first 16 hex chars of SHA-256(key).
+KEY_FINGERPRINT_LEN = 16
+
+
+def key_fingerprint(key: str | None) -> str:
+    """One-way fingerprint of an HMAC key: SHA-256 hex, truncated to 16 chars.
+
+    Stamped on each audit row at write time (``audit_log.key_fingerprint``)
+    so verifiers can tell WHICH key epoch a row belongs to — an org's chain
+    can span the pre-org-key era (global platform key), the current org key,
+    and any retired keys from regeneration. The fingerprint is derived
+    metadata: safe to expose in exports (one-way), never part of the hashed
+    payload. ``None`` fingerprints the global platform key.
+
+    The CLI verifier (cli/ai_identity_verify.py) mirrors this — keep the two
+    in lockstep.
+    """
+    material = key if key is not None else settings.audit_hmac_key
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()[:KEY_FINGERPRINT_LEN]
+
 
 def _ensure_utc(dt: datetime) -> datetime:
     """Ensure a datetime is timezone-aware (UTC).
@@ -374,6 +394,11 @@ def create_audit_entry(
     now = datetime.now(UTC)
     prev_hash = _get_last_hash(db)
 
+    # Record which key epoch this row is hashed under (org key or, when the
+    # org has none yet, the global platform key) so verifiers never confuse
+    # a key boundary with tampering.
+    row_key_fingerprint = key_fingerprint(org_hmac_key)
+
     entry_hash = compute_entry_hash(
         agent_id=agent_id,
         endpoint=endpoint,
@@ -428,6 +453,7 @@ def create_audit_entry(
         prev_hash_org=prev_hash_org,
         entry_hash_org=entry_hash_org,
         org_chain_seq=org_chain_seq,
+        key_fingerprint=row_key_fingerprint,
     )
     db.add(entry)
     db.flush()  # assign entry.id before enqueuing outbox rows
@@ -550,6 +576,12 @@ class ChainVerificationResult:
     entries_verified: int
     first_broken_id: int | None = None
     message: str = ""
+    # Rows that verified under an earlier key epoch (the global platform key
+    # from before the org's forensic_verify_key existed, or a retired org key
+    # from a regeneration). Integrity holds; they just aren't covered by the
+    # org's CURRENT key — surfaced so exports can explain what an offline
+    # verifier holding only the current key will see.
+    legacy_key_entries: int = 0
 
 
 def _resolve_org_hmac_key(db: Session, org_id: uuid.UUID) -> str | None:
@@ -564,6 +596,32 @@ def _resolve_org_hmac_key(db: Session, org_id: uuid.UUID) -> str | None:
     if org and org.forensic_verify_key:
         return org.forensic_verify_key
     return None
+
+
+def _org_key_candidates(db: Session, org_id: uuid.UUID) -> list[tuple[str, str | None]]:
+    """Ordered (fingerprint, key) candidates for verifying one org's rows.
+
+    Order reflects likelihood: the org's current key first, then retired
+    keys from ``forensic_key_history`` (newest first), then the global
+    platform key (``None`` — the compute helpers' fallback) for rows
+    written before the org key existed. Rows carry the fingerprint of the
+    key that hashed them, so verification is a dict hit in the common case;
+    the ordered scan only runs for legacy rows stamped before fingerprints
+    existed.
+    """
+    from common.models.organization import Organization
+
+    candidates: list[tuple[str, str | None]] = []
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if org and org.forensic_verify_key:
+        candidates.append((key_fingerprint(org.forensic_verify_key), org.forensic_verify_key))
+    if org and org.forensic_key_history:
+        for retired in reversed(org.forensic_key_history):
+            key = retired.get("key") if isinstance(retired, dict) else None
+            if key:
+                candidates.append((key_fingerprint(key), key))
+    candidates.append((key_fingerprint(None), None))
+    return candidates
 
 
 def verify_chain(
@@ -585,6 +643,13 @@ def verify_chain(
        ``entry_hash_org`` (linkage).
     3. ``entry_hash_org`` recomputes to the stored value (per-row
        tamper-evidence).
+
+    Key epochs: rows are verified under the key that actually hashed them
+    (selected via ``audit_log.key_fingerprint``, falling back to trying
+    the org's current key, retired keys, then the global platform key).
+    Rows verified under a non-current key are counted in
+    ``legacy_key_entries`` — the chain is intact, but an offline verifier
+    holding only the current key cannot cover those rows.
 
     When ``agent_id`` is provided, the function filters to that agent
     within the org and skips the sequence + linkage checks (an
@@ -621,11 +686,19 @@ def verify_chain(
             message="No entries to verify",
         )
 
-    org_hmac_key = hmac_key if hmac_key is not None else _resolve_org_hmac_key(db, org_id)
+    # Candidate keys for this org, in likelihood order. An explicit hmac_key
+    # override (testing) pins verification to that single key.
+    if hmac_key is not None:
+        candidates = [(key_fingerprint(hmac_key), hmac_key)]
+    else:
+        candidates = _org_key_candidates(db, org_id)
+    candidate_map = dict(candidates)
+    current_fp = candidates[0][0]
 
     expected_prev_hash = GENESIS
     expected_seq = 1
     verified = 0
+    legacy_key_entries = 0
 
     # Seek by org_chain_seq rather than OFFSET: the unique index on
     # (org_id, org_chain_seq) makes each batch an index range scan, where
@@ -676,22 +749,48 @@ def verify_chain(
                         ),
                     )
 
-            recomputed = compute_entry_hash_org(
-                agent_id=entry.agent_id,
-                endpoint=entry.endpoint,
-                method=entry.method,
-                decision=entry.decision,
-                cost_estimate_usd=(
-                    float(entry.cost_estimate_usd) if entry.cost_estimate_usd is not None else None
-                ),
-                latency_ms=entry.latency_ms,
-                request_metadata=entry.request_metadata,
-                created_at=_ensure_utc(entry.created_at),
-                prev_hash_org=entry.prev_hash_org,
-                hmac_key=org_hmac_key,
-            )
+            def _recompute(key: str | None, row: AuditLog = entry) -> str:
+                return compute_entry_hash_org(
+                    agent_id=row.agent_id,
+                    endpoint=row.endpoint,
+                    method=row.method,
+                    decision=row.decision,
+                    cost_estimate_usd=(
+                        float(row.cost_estimate_usd) if row.cost_estimate_usd is not None else None
+                    ),
+                    latency_ms=row.latency_ms,
+                    request_metadata=row.request_metadata,
+                    created_at=_ensure_utc(row.created_at),
+                    prev_hash_org=row.prev_hash_org,
+                    hmac_key=key,
+                )
 
-            if recomputed != entry.entry_hash_org:
+            # Pick the key by the row's recorded epoch fingerprint when we
+            # hold it; otherwise (legacy rows stamped before fingerprints,
+            # or an unknown fingerprint) try every candidate. The server
+            # holds all epochs — current, retired, and global — so a row
+            # that matches no candidate is genuinely inconsistent, not a
+            # key-epoch artifact.
+            matched_fp: str | None = None
+            recomputed = ""
+            if entry.key_fingerprint and entry.key_fingerprint in candidate_map:
+                recomputed = _recompute(candidate_map[entry.key_fingerprint])
+                if recomputed == entry.entry_hash_org:
+                    matched_fp = entry.key_fingerprint
+            else:
+                for fp, key in candidates:
+                    recomputed = _recompute(key)
+                    if recomputed == entry.entry_hash_org:
+                        matched_fp = fp
+                        break
+
+            if matched_fp is None:
+                epoch_note = ""
+                if entry.key_fingerprint and entry.key_fingerprint not in candidate_map:
+                    epoch_note = (
+                        f" (row records key epoch {entry.key_fingerprint}, "
+                        f"which matches none of the {len(candidates)} held keys)"
+                    )
                 return ChainVerificationResult(
                     valid=False,
                     total_entries=total,
@@ -701,9 +800,12 @@ def verify_chain(
                         f"Hash mismatch at entry {entry.id} "
                         f"(seq={entry.org_chain_seq}): "
                         f"recomputed={recomputed!r}, "
-                        f"stored={entry.entry_hash_org!r}"
+                        f"stored={entry.entry_hash_org!r}{epoch_note}"
                     ),
                 )
+
+            if matched_fp != current_fp:
+                legacy_key_entries += 1
 
             expected_prev_hash = entry.entry_hash_org
             expected_seq += 1
@@ -711,11 +813,19 @@ def verify_chain(
 
         last_seq = entries[-1].org_chain_seq
 
+    message = "Chain integrity verified"
+    if legacy_key_entries:
+        message += (
+            f" ({legacy_key_entries} of {verified} entries were written under an "
+            "earlier key epoch — before the org's current forensic key existed; "
+            "offline verification with only the current key cannot cover them)"
+        )
     return ChainVerificationResult(
         valid=True,
         total_entries=total,
         entries_verified=verified,
-        message="Chain integrity verified",
+        message=message,
+        legacy_key_entries=legacy_key_entries,
     )
 
 
@@ -746,27 +856,25 @@ def verify_global_chain(
             message="No entries to verify",
         )
 
-    # Build a cache of agent_id → org forensic_verify_key so we use the
-    # same key that was used when the entry was created.
-    _org_key_cache: dict[uuid.UUID, str | None] = {}
+    # Build a cache of agent_id → candidate keys so we can find the key
+    # each entry was created under (current org key, retired org keys from
+    # regeneration, or the global platform key).
+    _org_key_cache: dict[uuid.UUID, list[str | None]] = {}
 
-    def _resolve_hmac_key(entry_agent_id: uuid.UUID) -> str | None:
-        """Return the per-org HMAC key for an agent, or None for the global key."""
+    def _resolve_hmac_keys(entry_agent_id: uuid.UUID) -> list[str | None]:
+        """Return candidate HMAC keys for an agent's rows, in likelihood order."""
         if hmac_key is not None:
-            return hmac_key  # explicit override (testing)
+            return [hmac_key]  # explicit override (testing)
         if entry_agent_id in _org_key_cache:
             return _org_key_cache[entry_agent_id]
         from common.models.agent import Agent as AgentModel
-        from common.models.organization import Organization
 
         agent = db.query(AgentModel).filter(AgentModel.id == entry_agent_id).first()
-        key = None
+        keys: list[str | None] = [None]
         if agent and agent.org_id:
-            org = db.query(Organization).filter(Organization.id == agent.org_id).first()
-            if org and org.forensic_verify_key:
-                key = org.forensic_verify_key
-        _org_key_cache[entry_agent_id] = key
-        return key
+            keys = [key for _, key in _org_key_candidates(db, agent.org_id)]
+        _org_key_cache[entry_agent_id] = keys
+        return keys
 
     expected_prev_hash = GENESIS
     verified = 0
@@ -805,14 +913,14 @@ def verify_global_chain(
                 prev_hash=entry.prev_hash,
             )
 
-            entry_hmac_key = _resolve_hmac_key(entry.agent_id)
-            recomputed = compute_entry_hash(**hash_kwargs, hmac_key=entry_hmac_key)
-
-            # Entries created before the per-org key was configured were
-            # signed with the global key. If the org key doesn't match,
-            # retry with the global key (hmac_key=None) before failing.
-            if recomputed != entry.entry_hash and entry_hmac_key is not None:
-                recomputed = compute_entry_hash(**hash_kwargs, hmac_key=None)
+            # Entries may have been hashed under any of the org's key
+            # epochs (current, retired, or the pre-org-key global key) —
+            # try candidates in likelihood order.
+            recomputed = ""
+            for candidate_key in _resolve_hmac_keys(entry.agent_id):
+                recomputed = compute_entry_hash(**hash_kwargs, hmac_key=candidate_key)
+                if recomputed == entry.entry_hash:
+                    break
 
             if recomputed != entry.entry_hash:
                 return ChainVerificationResult(

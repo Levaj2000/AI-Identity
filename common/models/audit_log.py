@@ -111,6 +111,19 @@ class AuditLog(Base):
         comment="1-based monotonic sequence within org_id; completeness guard",
     )
 
+    # Key-epoch marker: SHA-256 fingerprint (first 16 hex chars) of the HMAC
+    # key this row was hashed under. Orgs get their forensic_verify_key lazily
+    # (or regenerate it), so one org's chain can span several key epochs; the
+    # fingerprint lets verifiers pick the right key per row and report "row
+    # written under a different key" instead of a false "hash mismatch".
+    # NOT included in the HMAC integrity chain — it's derived metadata, and
+    # legacy rows are stamped by scripts/backfill_key_fingerprints.py.
+    key_fingerprint: Mapped[str | None] = mapped_column(
+        String(16),
+        nullable=True,
+        comment="SHA-256[:16] fingerprint of the HMAC key used for this row's hashes",
+    )
+
     # Timestamp — server_default kept as fallback; writer sets explicitly for hash
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
