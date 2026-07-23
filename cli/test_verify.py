@@ -1600,6 +1600,226 @@ class TestAttestationVerification(unittest.TestCase):
             os.unlink(pub_path)
 
 
+# ── Test: Key-epoch handling ────────────────────────────────────────────
+
+
+KEY_A = "org-key-epoch-a"
+KEY_B = "org-key-epoch-b"
+
+
+def _fp(key: str) -> str:
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+
+
+def _build_epoch_org_chain(segments: list[tuple[int, str]]) -> list[dict[str, Any]]:
+    """Build a per-org chain spanning key epochs.
+
+    ``segments`` is a list of (count, key) — e.g. [(2, KEY_A), (3, KEY_B)]
+    yields 5 chained entries: the first two hashed under KEY_A, the rest
+    under KEY_B, each stamped with its key's fingerprint (mirroring what
+    the server exports after key-epoch tracking).
+    """
+    entries = []
+    prev_hash_org = "GENESIS"
+    seq = 1
+    for count, key in segments:
+        for _ in range(count):
+            created_at = f"2026-07-08T10:{seq:02d}:00+00:00"
+            metadata = {"status_code": 200, "model": "gpt-4"}
+            entry_hash_org = _make_entry_hash(
+                agent_id=TEST_AGENT_ID,
+                endpoint="/v1/chat/completions",
+                method="POST",
+                decision="allow",
+                cost_estimate_usd=None,
+                latency_ms=50,
+                request_metadata=metadata,
+                created_at=created_at,
+                prev_hash=prev_hash_org,
+                key=key.encode("utf-8"),
+            )
+            entries.append(
+                {
+                    "id": seq,
+                    "agent_id": TEST_AGENT_ID,
+                    "endpoint": "/v1/chat/completions",
+                    "method": "POST",
+                    "decision": "allow",
+                    "cost_estimate_usd": None,
+                    "latency_ms": 50,
+                    "request_metadata": metadata,
+                    "created_at": created_at,
+                    "prev_hash_org": prev_hash_org,
+                    "entry_hash_org": entry_hash_org,
+                    "org_chain_seq": seq,
+                    "key_fingerprint": _fp(key),
+                    "entry_hash": entry_hash_org,
+                    "prev_hash": prev_hash_org,
+                }
+            )
+            prev_hash_org = entry_hash_org
+            seq += 1
+    return entries
+
+
+class TestKeyEpochVerification(unittest.TestCase):
+    """Multi-key-epoch chains: coverage reporting vs. tamper detection."""
+
+    def test_all_epochs_covered_with_extra_key(self):
+        """Holding both epoch keys (env + --key) verifies every entry."""
+        entries = _build_epoch_org_chain([(2, KEY_A), (3, KEY_B)])
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path, "--key", KEY_A], env_key=KEY_B)
+            self.assertEqual(code, 0)
+            self.assertIn("CHAIN INTACT", out)
+            self.assertIn("5/5", out)
+            self.assertNotIn("partial key coverage", out)
+        finally:
+            os.unlink(path)
+
+    def test_uncovered_epoch_reported_as_partial_not_tampered(self):
+        """Entries from an epoch we don't hold → partial coverage, exit 0."""
+        entries = _build_epoch_org_chain([(2, KEY_A), (3, KEY_B)])
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path], env_key=KEY_B)
+            self.assertEqual(code, 0)
+            self.assertIn("CHAIN INTACT", out)
+            self.assertIn("partial key coverage", out)
+            self.assertIn("3/5", out)
+            self.assertIn("earlier key epoch", out)
+            self.assertIn(_fp(KEY_A), out)
+            self.assertNotIn("CHAIN BROKEN", out)
+        finally:
+            os.unlink(path)
+
+    def test_uncovered_epoch_json_result(self):
+        entries = _build_epoch_org_chain([(2, KEY_A), (3, KEY_B)])
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--json", "chain", path], env_key=KEY_B)
+            self.assertEqual(code, 0)
+            result = json.loads(out)
+            self.assertEqual(result["result"], "valid_partial_coverage")
+            self.assertEqual(result["details"]["entries_verified"], 3)
+            self.assertEqual(result["details"]["entries_not_covered_by_keys"], 2)
+            self.assertEqual(result["details"]["uncovered_key_epochs"], {_fp(KEY_A): 2})
+        finally:
+            os.unlink(path)
+
+    def test_sequence_gap_still_detected_in_uncovered_epoch(self):
+        """Structural checks run on every entry — even uncovered epochs."""
+        entries = _build_epoch_org_chain([(3, KEY_A), (2, KEY_B)])
+        del entries[1]  # delete a KEY_A-epoch row we don't hold the key for
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path], env_key=KEY_B)
+            self.assertEqual(code, 1)
+            self.assertIn("CHAIN BROKEN", out)
+            self.assertIn("sequence gap", out)
+        finally:
+            os.unlink(path)
+
+    def test_tamper_in_held_epoch_detected(self):
+        """A fingerprint we hold that fails to recompute is tampering."""
+        entries = _build_epoch_org_chain([(2, KEY_A), (3, KEY_B)])
+        entries[3]["endpoint"] = "/v1/tampered"  # KEY_B epoch, key held
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path], env_key=KEY_B)
+            self.assertEqual(code, 1)
+            self.assertIn("CHAIN BROKEN", out)
+        finally:
+            os.unlink(path)
+
+    def test_zero_coverage_is_not_a_pass(self):
+        """A key matching NO epoch verifies nothing — must not read as INTACT.
+
+        Guards against a typo'd key (or a totally foreign key) exiting 0
+        just because every entry got classified as an uncovered epoch."""
+        entries = _build_epoch_org_chain([(2, KEY_A), (3, KEY_B)])
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path], env_key="typo-key")
+            self.assertEqual(code, 1)
+            self.assertIn("NOT VERIFIED", out)
+            self.assertIn("no key coverage", out)
+            self.assertIn("KEY MISMATCH", out)
+            self.assertNotIn("CHAIN INTACT", out)
+            self.assertNotIn("CHAIN BROKEN", out)  # explicitly not a tamper verdict
+        finally:
+            os.unlink(path)
+
+    def test_zero_coverage_json_result(self):
+        entries = _build_epoch_org_chain([(3, KEY_A)])
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--json", "chain", path], env_key="typo-key")
+            self.assertEqual(code, 1)
+            result = json.loads(out)
+            self.assertEqual(result["result"], "no_key_coverage")
+            self.assertEqual(result["details"]["entries_verified"], 0)
+            self.assertEqual(result["details"]["entries_not_covered_by_keys"], 3)
+        finally:
+            os.unlink(path)
+
+    def test_wrong_key_hint_on_legacy_export(self):
+        """Fingerprint-less export + wrong key → key-mismatch hint, not just BROKEN."""
+        entries = _build_org_chain(4)  # hashed under TEST_HMAC_KEY, no fingerprints
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path], env_key="the-wrong-key")
+            self.assertEqual(code, 1)
+            self.assertIn("CHAIN BROKEN", out)
+            self.assertIn("KEY MISMATCH", out)
+            self.assertIn("0/4", out)
+        finally:
+            os.unlink(path)
+
+    def test_legacy_export_verifies_via_extra_key(self):
+        """--key also rescues fingerprint-less exports (try-all-keys)."""
+        entries = _build_org_chain(3)
+        path = _write_json(entries)
+        try:
+            code, out, _ = _run_cmd(
+                ["--no-color", "chain", path, "--key", TEST_HMAC_KEY],
+                env_key="some-newer-key",
+            )
+            self.assertEqual(code, 0)
+            self.assertIn("CHAIN INTACT", out)
+        finally:
+            os.unlink(path)
+
+    def test_report_key_mismatch_hint(self):
+        """Report signed under another epoch → explicit key-mismatch note."""
+        report = _build_report()
+        report["verification_key_fingerprint"] = _fp("another-orgs-key")
+        path = _write_json(report)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "report", path], env_key="the-wrong-key")
+            self.assertEqual(code, 1)
+            self.assertIn("INVALID", out)
+            self.assertIn("KEY MISMATCH", out)
+            self.assertIn(_fp("another-orgs-key"), out)
+        finally:
+            os.unlink(path)
+
+    def test_report_valid_with_extra_key(self):
+        """A retired key passed via --key can still validate the report."""
+        report = _build_report()
+        path = _write_json(report)
+        try:
+            code, out, _ = _run_cmd(
+                ["--no-color", "report", path, "--key", TEST_HMAC_KEY],
+                env_key="some-newer-key",
+            )
+            self.assertEqual(code, 0)
+            self.assertIn("VALID", out)
+        finally:
+            os.unlink(path)
+
+
 if __name__ == "__main__":
     unittest.main()
 

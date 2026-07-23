@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from api.app.auth import get_current_user
 from common.audit import generate_report_signature, verify_chain, verify_global_chain
-from common.audit.writer import _resolve_org_hmac_key
+from common.audit.writer import _resolve_org_hmac_key, key_fingerprint
 from common.forensic.anchor_service import assemble_evidence
 from common.forensic.signer import ForensicSignerConfigError, get_forensic_signer
 from common.models import Agent, AuditLog, OrgMembership, Policy, User, get_db
@@ -865,6 +865,7 @@ def audit_reconstruct(
             entries_verified=chain_result.entries_verified,
             first_broken_id=chain_result.first_broken_id,
             message=chain_result.message,
+            legacy_key_entries=chain_result.legacy_key_entries,
         ),
         active_policy=PolicyResponse.model_validate(active_policy) if active_policy else None,
         stats=stats,
@@ -1012,6 +1013,7 @@ def _build_case_file(
         entries_verified=chain_result.entries_verified,
         first_broken_id=chain_result.first_broken_id,
         message=chain_result.message,
+        legacy_key_entries=chain_result.legacy_key_entries,
     )
     # Sign the report with the SAME key the chain verified under (the org's
     # forensic_verify_key, falling back to the global key for legacy orgs) so a
@@ -1042,6 +1044,7 @@ def _build_case_file(
         stats=stats,
         report_signature=report_sig,
         reliability_statement=_build_reliability_statement(chain_result),
+        verification_key_fingerprint=key_fingerprint(report_key),
     )
     return _CaseFile(report=report, events=events, file_label=file_label, short_token=short_token)
 
@@ -1184,6 +1187,7 @@ def audit_report(
                 "created_at",
                 "entry_hash",
                 "prev_hash",
+                "key_fingerprint",
                 "request_metadata",
             ]
         )
@@ -1200,6 +1204,7 @@ def audit_report(
                     e.created_at.isoformat(),
                     e.entry_hash,
                     e.prev_hash,
+                    e.key_fingerprint,
                     str(e.request_metadata),
                 ]
             )
@@ -1308,6 +1313,24 @@ Both checks use the **same key** from your dashboard. Run from this folder exact
   **completeness** proof comes from an org-scope export.
 - **Signature VALID** — the report header (id, time, counts, chain result) is authentic and
   unmodified since export.
+
+## Key epochs (if the verifier reports "earlier key epoch")
+
+Each audit entry records a short **fingerprint** of the signing key it was written under.
+Your organization's history can span more than one key epoch:
+
+- Events recorded **before your organization's verification key was created** were signed
+  with an AI Identity platform key. Your key cannot re-compute those hashes — the verifier
+  reports them as *"earlier key epoch"*, **not** as tampering. Their inclusion can still be
+  proven publicly via the `evidence-anchor/` proofs below, or by AI Identity on request.
+- If you **regenerated** your key, events from before the rotation verify with the previous
+  key. Retired keys stay available on the dashboard (Organization -> Forensics); pass them
+  to the verifier with `--key <previous-key>` to cover every epoch:
+
+      python3 ai_identity_verify.py chain case-file-*.json --key <previous-key>
+
+A result of **CHAIN BROKEN** mid-chain is different: that means an entry failed against the
+very key that signed it — treat that as evidence of tampering.
 
 ## Reliability Statement
 
@@ -1656,6 +1679,7 @@ def verify_audit_chain(
         entries_verified=result.entries_verified,
         first_broken_id=result.first_broken_id,
         message=result.message,
+        legacy_key_entries=result.legacy_key_entries,
     )
 
 
@@ -1698,6 +1722,7 @@ def verify_global_audit_chain(
         entries_verified=result.entries_verified,
         first_broken_id=result.first_broken_id,
         message=result.message,
+        legacy_key_entries=result.legacy_key_entries,
     )
 
 
