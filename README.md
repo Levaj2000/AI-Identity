@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Levaj2000/AI-Identity/actions/workflows/ci.yml/badge.svg)](https://github.com/Levaj2000/AI-Identity/actions/workflows/ci.yml)
 [![PyPI - langchain-ai-identity](https://img.shields.io/pypi/v/langchain-ai-identity?label=langchain-ai-identity&color=blue)](https://pypi.org/project/langchain-ai-identity/)
-[![License](https://img.shields.io/badge/license-proprietary-red)](LICENSE)
+[![License](https://img.shields.io/badge/license-proprietary%20core%20·%20MIT%20verifier-blue)](LICENSE)
 
 **Identity, governance, and forensic accountability for AI agents.**
 
@@ -152,4 +152,14 @@ Key rotation supports a 24-hour grace period — both old and new keys work duri
 
 ## License
 
-Proprietary — All rights reserved.
+**Platform: proprietary** — the API, gateway, dashboard, Mandate Service, and shared libraries are all rights reserved. The repository is public so the code can be audited, not reused.
+
+**Verification and integration surfaces: permissive** — trusting AI Identity evidence must never require trusting AI Identity, so everything a relying party needs to verify our records independently is openly licensed:
+
+| Component | License |
+|---|---|
+| [`cli/`](cli/) — offline verifier (ships in every Case File bundle) + audit review CLI | MIT |
+| [`sdk/langchain/`](sdk/langchain/) — LangChain SDK ([PyPI](https://pypi.org/project/langchain-ai-identity/)) | MIT |
+| CPEX OCSF audit plugin — contributed upstream to IBM's CPEX gateway | Apache-2.0 |
+
+Record formats follow open standards: our schema contributions are merged upstream in [ocsf/ocsf-schema](https://github.com/ocsf/ocsf-schema) (OCSF 1.9). See [LICENSE](LICENSE) for the full terms.
