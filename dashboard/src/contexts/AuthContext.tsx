@@ -14,7 +14,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // When Clerk session is available, register the token getter for API calls
   useEffect(() => {
     if (session) {
-      setSessionTokenGetter(() => session.getToken())
+      setSessionTokenGetter((opts) => session.getToken(opts))
     } else {
       clearSessionTokenGetter()
     }
