@@ -608,7 +608,6 @@ def verify_chain(
         db.query(AuditLog)
         .filter(AuditLog.org_id == org_id)
         .filter(AuditLog.org_chain_seq.isnot(None))
-        .order_by(AuditLog.org_chain_seq.asc())
     )
     if agent_id:
         query = query.filter(AuditLog.agent_id == agent_id)
@@ -627,10 +626,22 @@ def verify_chain(
     expected_prev_hash = GENESIS
     expected_seq = 1
     verified = 0
-    offset = 0
 
-    while offset < total:
-        entries = query.offset(offset).limit(batch_size).all()
+    # Seek by org_chain_seq rather than OFFSET: the unique index on
+    # (org_id, org_chain_seq) makes each batch an index range scan, where
+    # OFFSET re-walks every skipped row and turns the full-chain walk
+    # quadratic in the tenant's history.
+    last_seq: int | None = None
+
+    while verified < total:
+        batch_query = query
+        if last_seq is not None:
+            batch_query = batch_query.filter(AuditLog.org_chain_seq > last_seq)
+        entries = (
+            batch_query.order_by(AuditLog.org_chain_seq.asc())
+            .limit(min(batch_size, total - verified))
+            .all()
+        )
         if not entries:
             break
 
@@ -698,7 +709,7 @@ def verify_chain(
             expected_seq += 1
             verified += 1
 
-        offset += batch_size
+        last_seq = entries[-1].org_chain_seq
 
     return ChainVerificationResult(
         valid=True,
