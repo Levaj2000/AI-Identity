@@ -271,3 +271,119 @@ class TestUserListOrgAdminVisibility:
         endpoints = [item["endpoint"] for item in body["items"]]
         assert "/v1/a" in endpoints
         assert "/v1/b" not in endpoints
+
+
+# ── /audit/stats org scoping ─────────────────────────────────────────
+
+
+class TestAuditStatsOrgScoping:
+    """Org admins get tenant-wide stat counts; members get their own agents.
+
+    Guards the Compliance page's one-denominator rule: the stat cards, the
+    audit table, and the chain-verify banner must all count the same set of
+    rows for an org admin (regression: cards used to count the caller's
+    agents across every org while the table and banner were org-scoped).
+    """
+
+    def _seed_member_agent_with_entries(self, db_session, member, n_allow=2, n_deny=1):
+        agent = Agent(
+            id=uuid.uuid4(),
+            user_id=member.id,
+            org_id=ORG_A_ID,
+            name="Member Agent",
+            status="active",
+            capabilities=[],
+            metadata_={},
+        )
+        db_session.add(agent)
+        db_session.commit()
+        for _ in range(n_allow):
+            create_audit_entry(
+                db_session,
+                agent_id=agent.id,
+                endpoint="/v1/chat",
+                method="POST",
+                decision="allow",
+                request_metadata={},
+            )
+        for _ in range(n_deny):
+            create_audit_entry(
+                db_session,
+                agent_id=agent.id,
+                endpoint="/v1/chat",
+                method="POST",
+                decision="deny",
+                request_metadata={},
+            )
+        db_session.commit()
+        return agent
+
+    def test_org_admin_stats_are_org_wide(self, client, db_session):
+        _, _, owner_a, _, member_a, agent_a, _ = _seed_two_orgs(db_session)
+        # Owner's own agent: 1 allow. Member's agent: 2 allow + 1 deny.
+        create_audit_entry(
+            db_session,
+            agent_id=agent_a.id,
+            endpoint="/v1/chat",
+            method="POST",
+            decision="allow",
+            request_metadata={},
+        )
+        db_session.commit()
+        self._seed_member_agent_with_entries(db_session, member_a)
+
+        resp = client.get("/api/v1/audit/stats", headers={"X-API-Key": USER_A_OWNER_EMAIL})
+
+        assert resp.status_code == 200
+        data = resp.json()
+        # Org-wide: owner's 1 + member's 3 — NOT just the owner's own agent.
+        assert data["scope"] == "organization"
+        assert data["total_events"] == 4
+        assert data["allowed_count"] == 3
+        assert data["denied_count"] == 1
+
+    def test_member_stats_stay_scoped_to_own_agents(self, client, db_session):
+        _, _, _, _, member_a, agent_a, _ = _seed_two_orgs(db_session)
+        create_audit_entry(
+            db_session,
+            agent_id=agent_a.id,
+            endpoint="/v1/chat",
+            method="POST",
+            decision="allow",
+            request_metadata={},
+        )
+        db_session.commit()
+        self._seed_member_agent_with_entries(db_session, member_a)
+
+        resp = client.get("/api/v1/audit/stats", headers={"X-API-Key": USER_A_MEMBER_EMAIL})
+
+        assert resp.status_code == 200
+        data = resp.json()
+        # Plain member: only their own agent's 3 entries; owner's agent excluded.
+        assert data["scope"] == "your-agents"
+        assert data["total_events"] == 3
+        assert data["allowed_count"] == 2
+        assert data["denied_count"] == 1
+
+    def test_org_admin_agent_filter_keeps_agent_scope(self, client, db_session):
+        """Passing agent_id bypasses the org branch — the filter still narrows."""
+        _, _, owner_a, _, _, agent_a, _ = _seed_two_orgs(db_session)
+        create_audit_entry(
+            db_session,
+            agent_id=agent_a.id,
+            endpoint="/v1/chat",
+            method="POST",
+            decision="allow",
+            request_metadata={},
+        )
+        db_session.commit()
+
+        resp = client.get(
+            f"/api/v1/audit/stats?agent_id={agent_a.id}",
+            headers={"X-API-Key": USER_A_OWNER_EMAIL},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total_events"] == 1
+        assert data["scope"] == "your-agents"

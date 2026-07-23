@@ -75,6 +75,7 @@ export function CompliancePage() {
     allowCount: 0,
     denyCount: 0,
     errorCount: 0,
+    scope: 'your-agents',
   })
 
   // Event detail drawer
@@ -125,6 +126,7 @@ export function CompliancePage() {
           allowCount: s.allowed_count,
           denyCount: s.denied_count,
           errorCount: s.error_count,
+          scope: s.scope ?? 'your-agents',
         })
       } catch {
         // Stats failed — non-critical
@@ -345,7 +347,11 @@ export function CompliancePage() {
         <div className="rounded-xl border border-line bg-surface p-5">
           <p className="text-xs font-medium uppercase tracking-wider text-subtle">Total Entries</p>
           <p className="mt-2 text-2xl font-bold text-ink">{stats.totalEntries.toLocaleString()}</p>
-          <p className="mt-1 text-xs text-subtle">Append-only audit records</p>
+          <p className="mt-1 text-xs text-subtle">
+            {stats.scope === 'organization'
+              ? 'Append-only records · entire organization'
+              : 'Append-only records · your agents'}
+          </p>
         </div>
 
         {/* Allow / Deny */}
@@ -524,7 +530,7 @@ export function CompliancePage() {
             <thead>
               <tr className="border-b border-line bg-elevated">
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
-                  #
+                  Seq
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-subtle">
                   Timestamp
@@ -582,7 +588,12 @@ export function CompliancePage() {
                     className="bg-surface hover:bg-elevated transition-colors cursor-pointer"
                     onClick={() => setSelectedEvent(entry)}
                   >
-                    <td className="px-4 py-3 font-mono text-xs text-subtle">{entry.id}</td>
+                    <td
+                      className="px-4 py-3 font-mono text-xs text-subtle"
+                      title={`org chain seq ${entry.org_chain_seq ?? '—'} · record id ${entry.id}`}
+                    >
+                      {entry.org_chain_seq ?? entry.id}
+                    </td>
                     <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
                       {formatDate(entry.created_at)}
                     </td>
