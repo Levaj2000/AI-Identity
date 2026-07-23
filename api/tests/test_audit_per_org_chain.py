@@ -354,3 +354,88 @@ class TestSequenceUniqueness:
         with pytest.raises(IntegrityError):
             db_session.commit()
         db_session.rollback()
+
+
+class TestBatchedChainWalk:
+    """verify_chain pages by seeking on org_chain_seq, not OFFSET.
+
+    Every other test in this file seeds fewer rows than the default
+    batch_size, so the paging loop runs exactly once and never exercises
+    the cursor. These force multiple batches with a small batch_size.
+    """
+
+    def _write(self, db_session, agent, n):
+        return [
+            create_audit_entry(
+                db_session,
+                agent_id=agent.id,
+                endpoint=f"/x/{i}",
+                method="GET",
+                decision="allow",
+                request_metadata={},
+            )
+            for i in range(n)
+        ]
+
+    def test_org_chain_verifies_across_batches(self, db_session):
+        agent = _seed_org(db_session, org_id=ORG_A, email_prefix="a")
+        self._write(db_session, agent, 7)
+
+        result = verify_chain(db_session, org_id=ORG_A, batch_size=2)
+
+        assert result.valid is True
+        assert result.total_entries == 7
+        # Every row walked exactly once — a cursor that skipped or
+        # re-read rows would land short or long here.
+        assert result.entries_verified == 7
+
+    def test_batched_walk_detects_tamper_in_later_batch(self, db_session):
+        """The row that matters is past the first batch boundary.
+
+        If the cursor skipped rows, a tampered entry in a later batch
+        would verify clean — the chain would silently lie.
+        """
+        agent = _seed_org(db_session, org_id=ORG_A, email_prefix="a")
+        entries = self._write(db_session, agent, 7)
+        target = entries[5]  # batch 3 of 4 at batch_size=2
+
+        db_session.execute(
+            AuditLog.__table__.update()
+            .where(AuditLog.id == target.id)
+            .values(entry_hash_org="deadbeef" * 8)
+        )
+        db_session.commit()
+
+        result = verify_chain(db_session, org_id=ORG_A, batch_size=2)
+
+        assert result.valid is False
+        assert result.first_broken_id == target.id
+
+    def test_agent_filtered_walk_spans_sparse_seq(self, db_session):
+        """An agent-filtered view has gaps in org_chain_seq by design.
+
+        Two agents interleaved in one org means agent A's rows carry
+        seq 1,3,5,7 — the cursor must seek on the real seq values, not
+        assume they are contiguous.
+        """
+        agent_a = _seed_org(db_session, org_id=ORG_A, email_prefix="a")
+        agent_b = Agent(
+            id=uuid.uuid4(),
+            user_id=agent_a.user_id,
+            org_id=ORG_A,
+            name="Agent A2",
+            status="active",
+            capabilities=[],
+            metadata_={},
+        )
+        db_session.add(agent_b)
+        db_session.commit()
+
+        for _ in range(4):
+            self._write(db_session, agent_a, 1)
+            self._write(db_session, agent_b, 1)
+
+        result = verify_chain(db_session, org_id=ORG_A, agent_id=agent_a.id, batch_size=2)
+
+        assert result.valid is True
+        assert result.entries_verified == 4
