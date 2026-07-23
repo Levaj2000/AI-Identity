@@ -681,7 +681,12 @@ export function CompliancePage() {
                   }`}
                   onClick={() => setSelectedEvent(entry)}
                 >
-                  <p className="font-mono text-[10px] text-subtle">#{entry.id}</p>
+                  <p
+                    className="font-mono text-[10px] text-subtle"
+                    title={`org chain seq ${entry.org_chain_seq ?? '—'} · record id ${entry.id}`}
+                  >
+                    #{entry.org_chain_seq ?? entry.id}
+                  </p>
                   <p
                     className={`text-xs font-medium ${
                       isAllowDecision(entry.decision)
