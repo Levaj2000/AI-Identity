@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 AI Identity (jeff@ai-identity.co)
 """AI Identity — Offline Verification CLI.
 
 Standalone tool for auditors to verify AI Identity forensic exports
 completely offline — no database, no API, no network.
+
+MIT licensed: run it, read it, fork it, embed it in your own audit
+tooling. Verification must never require trusting the vendor — this
+tool is the proof. (Full text: LICENSE in this directory, or
+https://opensource.org/license/mit when this file ships alone inside
+a Case File bundle.)
 
 Four verification modes:
   report           — verify the HMAC chain-of-custody certificate on an exported report
