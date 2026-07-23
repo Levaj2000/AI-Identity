@@ -1,0 +1,31 @@
+AI Identity — License
+
+Copyright (c) 2026 AI Identity (jeff@ai-identity.co). All rights reserved.
+
+The AI Identity platform — including the API server (api/), gateway
+(gateway/), dashboard (dashboard/), Mandate Service (mandate/), shared
+platform libraries (common/), marketing site (landing-page/), and all other
+contents of this repository not listed below — is proprietary software. No
+license, express or implied, is granted to use, copy, modify, or distribute
+it. The repository is public so the code can be read and audited, not so it
+can be reused.
+
+VERIFICATION TOOLS AND INTEGRATION SURFACES ARE PERMISSIVELY LICENSED.
+
+Trust in AI Identity evidence must never require trusting AI Identity.
+Anything a relying party needs in order to independently verify our records
+— and anything a producer needs in order to integrate with them — carries
+its own permissive license in its directory, which governs over this file:
+
+  cli/                          MIT         Offline verifier + audit review CLI
+                                            (ships inside every Case File bundle)
+  sdk/langchain/                MIT         LangChain SDK
+  CPEX OCSF audit plugin        Apache-2.0  Contributed upstream to IBM's CPEX
+                                            gateway; licensed per that project
+
+Record formats follow the open standards they implement: OCSF schema
+contributions live upstream in ocsf/ocsf-schema (Apache-2.0), and exported
+evidence bundles are documented, self-contained, and verifiable with the
+MIT-licensed CLI above.
+
+For commercial licensing of the platform, contact jeff@ai-identity.co.
