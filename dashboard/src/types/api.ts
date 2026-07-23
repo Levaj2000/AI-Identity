@@ -260,6 +260,7 @@ export interface AuditLogEntry {
   request_metadata: Record<string, unknown>
   entry_hash: string
   prev_hash: string
+  org_chain_seq: number | null
   created_at: string
 }
 
@@ -283,6 +284,7 @@ export interface AuditStatsResponse {
   total_cost_usd: number
   avg_latency_ms: number | null
   top_endpoints: TopEndpoint[]
+  scope?: 'organization' | 'your-agents'
 }
 
 export interface ChainVerifyResponse {

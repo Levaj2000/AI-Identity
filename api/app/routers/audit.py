@@ -477,8 +477,24 @@ def audit_stats(
     """Return aggregated statistics for audit log entries.
 
     Provides decision counts, cost totals, average latency, and top
-    endpoints for the given time window. Scoped to user's agents.
+    endpoints for the given time window.
+
+    Scoping mirrors the audit *list* endpoint so the Compliance page's stat
+    cards, table, and chain-verify banner all share one denominator:
+    org owners/admins get tenant-wide counts (``scope="organization"``);
+    everyone else gets their own agents plus shadow-agent denials
+    (``scope="your-agents"``).
     """
+    if user.org_id and agent_id is None and _is_org_admin(db, user, user.org_id):
+        stats = _compute_stats_for_org(
+            db,
+            org_id=user.org_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        stats.scope = "organization"
+        return stats
+
     user_agents = _user_agent_ids(db, user)
 
     return _compute_stats(

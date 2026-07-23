@@ -486,6 +486,14 @@ class AuditStatsResponse(BaseModel):
     total_cost_usd: float = Field(description="Sum of cost_estimate_usd")
     avg_latency_ms: float | None = Field(description="Average latency in ms")
     top_endpoints: list[TopEndpoint] = Field(description="Top 10 endpoints by request count")
+    scope: str = Field(
+        default="your-agents",
+        description=(
+            "What the counts cover: 'organization' (org admins — every agent in the "
+            "tenant, same denominator as the org chain) or 'your-agents' (agents you "
+            "own plus your shadow-agent denials)."
+        ),
+    )
 
 
 class AuditReconstructResponse(BaseModel):
