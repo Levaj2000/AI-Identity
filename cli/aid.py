@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 AI Identity (jeff@ai-identity.co)
 """aid — AI Identity audit review CLI.
 
 Minimal command-line tool for reviewing an agent's audit trail. Hits the
