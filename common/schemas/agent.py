@@ -419,6 +419,18 @@ class AuditLogResponse(BaseModel):
             "in the sequence is a completeness violation."
         ),
     )
+    key_fingerprint: str | None = Field(
+        default=None,
+        max_length=16,
+        description=(
+            "SHA-256[:16] fingerprint of the HMAC key this row was hashed "
+            "under. An org's chain can span key epochs (pre-org-key rows "
+            "use the platform key; regeneration retires a key) — the "
+            "fingerprint lets the offline verifier pick the right key per "
+            "row and report a key-epoch boundary instead of a false "
+            "tamper alarm. Null on legacy rows not yet backfilled."
+        ),
+    )
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -443,6 +455,15 @@ class AuditChainVerifyResponse(BaseModel):
         None, description="ID of the first entry with a broken hash (if any)"
     )
     message: str = Field(description="Human-readable verification result")
+    legacy_key_entries: int = Field(
+        default=0,
+        description=(
+            "Entries that verified under an earlier key epoch (platform key "
+            "from before the org's forensic key existed, or a retired org "
+            "key). Integrity holds, but an offline verifier holding only "
+            "the current key cannot cover these rows."
+        ),
+    )
 
 
 # ── Forensics Schemas ────────────────────────────────────────────────────
@@ -531,6 +552,17 @@ class ForensicsReportResponse(BaseModel):
     reliability_statement: ReliabilityStatement | None = Field(
         default=None,
         description="Plain-English reliability statement for FRE 702 / ISO 27037 use.",
+    )
+    verification_key_fingerprint: str | None = Field(
+        default=None,
+        max_length=16,
+        description=(
+            "SHA-256[:16] fingerprint of the org key that signed this report "
+            "(and hashes the current key epoch's events). The offline verifier "
+            "compares it against the fingerprint of the key you supply, so a "
+            "wrong or stale key is reported as a key mismatch — not as a "
+            "broken chain."
+        ),
     )
 
 
