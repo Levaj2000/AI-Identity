@@ -4,7 +4,7 @@ import datetime
 import uuid
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from common.models.base import Base
@@ -38,6 +38,14 @@ class Organization(Base):
 
     # Per-org HMAC key for audit chain verification
     forensic_verify_key: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+
+    # Retired forensic keys, newest last: [{"key", "key_fingerprint", "retired_at"}].
+    # Regenerating the key appends the old one here instead of discarding it,
+    # so audit rows written under earlier key epochs stay verifiable — by the
+    # server and by the org's own admins (who are entitled to their org's
+    # retired keys). Reassign the whole list when appending; in-place mutation
+    # is invisible to SQLAlchemy's change tracking.
+    forensic_key_history: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     # Stripe billing (org-level for business/enterprise)
     stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True, unique=True)

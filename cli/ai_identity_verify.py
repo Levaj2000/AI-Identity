@@ -33,9 +33,15 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 TOOL_NAME = "ai-identity-verify"
 GENESIS = "GENESIS"
+
+# Key fingerprint — first 16 hex chars of SHA-256(key). Must match
+# common/audit/writer.py:key_fingerprint. Exported entries carry the
+# fingerprint of the HMAC key they were hashed under, so this tool can
+# tell a key-epoch boundary apart from tampering.
+KEY_FINGERPRINT_LEN = 16
 
 # DSSE constants — must match common/schemas/forensic_attestation.py
 ATTESTATION_PAYLOAD_TYPE = "application/vnd.ai-identity.attestation+json"
@@ -101,6 +107,26 @@ def _get_hmac_key() -> bytes:
         )
         sys.exit(2)
     return key.encode("utf-8")
+
+
+def _key_fingerprint(key: bytes) -> str:
+    """SHA-256 hex of the key, truncated — matches the server's fingerprint."""
+    return hashlib.sha256(key).hexdigest()[:KEY_FINGERPRINT_LEN]
+
+
+def _get_hmac_keys(args: argparse.Namespace) -> list[bytes]:
+    """All verification keys, primary (env) first, then any --key extras.
+
+    An org's audit history can span key epochs (a regenerated key retires
+    the old one; each epoch's rows verify only with that epoch's key).
+    Supplying every key you hold lets one run cover every epoch.
+    """
+    keys = [_get_hmac_key()]
+    for extra in getattr(args, "extra_keys", None) or []:
+        key = extra.encode("utf-8")
+        if key not in keys:
+            keys.append(key)
+    return keys
 
 
 def _canonical_report_payload(
@@ -176,6 +202,42 @@ def _compute_entry_hash(key: bytes, entry: dict[str, Any], prev_hash: str) -> st
     """Compute HMAC-SHA256 hex digest for an audit chain entry."""
     message = _canonical_entry_payload(entry, prev_hash)
     return hmac.new(key, message, hashlib.sha256).hexdigest()
+
+
+def _entry_hash_matches_any(
+    keys: list[bytes], entry: dict[str, Any], prev_hash: str, stored_hash: str
+) -> tuple[bool, str]:
+    """Recompute the entry hash with each key; return (matched, last recomputed).
+
+    Entries without a recorded key fingerprint may belong to any epoch —
+    accepting a match under ANY held key is safe because a match proves the
+    content is exactly what that key signed.
+    """
+    recomputed = ""
+    for key in keys:
+        recomputed = _compute_entry_hash(key, entry, prev_hash)
+        if hmac.compare_digest(recomputed, stored_hash):
+            return True, recomputed
+    return False, recomputed
+
+
+def _print_wrong_key_hint(keys: list[bytes]) -> None:
+    """Explain the 0-verified-from-entry-#1 pattern: key mismatch, not tampering."""
+    fps = ", ".join(_key_fingerprint(k) for k in keys)
+    print(
+        "  Likely cause: KEY MISMATCH, not tampering. Every entry failed against\n"
+        "                your key starting at the very first one, while the chain's\n"
+        "                internal linkage is consistent — the classic signature of\n"
+        "                verifying with the wrong key. Common reasons:\n"
+        "                  - your organization's key was created AFTER these events\n"
+        "                    (they were signed under an AI Identity platform key)\n"
+        "                  - the key was regenerated since this export (use the\n"
+        "                    retired key: Dashboard -> Organization -> Forensics)\n"
+        "                  - a copy/paste error in the key\n"
+        "                Pass additional keys with --key to cover earlier epochs.\n"
+        f"                Fingerprint(s) of the key(s) you supplied: {fps}"
+    )
+    print()
 
 
 def _entries_have_org_chain(entries: list[dict[str, Any]]) -> bool:
@@ -264,20 +326,31 @@ def _progress_bar(current: int, total: int, width: int = 32) -> str:
 
 def cmd_report(args: argparse.Namespace) -> int:
     """Verify a report's chain-of-custody certificate."""
-    key = _get_hmac_key()
+    keys = _get_hmac_keys(args)
     data = _load_json(args.file)
     fields = _extract_report_fields(data)
 
-    expected = _compute_report_signature(
-        key,
-        report_id=fields["report_id"],
-        generated_at=fields["generated_at"],
-        chain_valid=fields["chain_valid"],
-        total_entries=fields["total_entries"],
-        entries_verified=fields["entries_verified"],
-    )
+    valid = False
+    expected = ""
+    for key in keys:
+        expected = _compute_report_signature(
+            key,
+            report_id=fields["report_id"],
+            generated_at=fields["generated_at"],
+            chain_valid=fields["chain_valid"],
+            total_entries=fields["total_entries"],
+            entries_verified=fields["entries_verified"],
+        )
+        if hmac.compare_digest(expected, fields["report_signature"]):
+            valid = True
+            break
 
-    valid = hmac.compare_digest(expected, fields["report_signature"])
+    # New exports state which key epoch signed the report; when the
+    # signature fails and the fingerprints don't line up, the problem is
+    # the key, not the report.
+    report_fp = data.get("verification_key_fingerprint")
+    held_fps = [_key_fingerprint(k) for k in keys]
+    key_mismatch = bool(report_fp) and report_fp not in held_fps and not valid
 
     if args.json:
         result = {
@@ -295,6 +368,11 @@ def cmd_report(args: argparse.Namespace) -> int:
                 "signature_valid": valid,
             },
         }
+        if key_mismatch:
+            result["details"]["key_mismatch"] = {
+                "report_key_fingerprint": report_fp,
+                "supplied_key_fingerprints": held_fps,
+            }
         print(json.dumps(result, indent=2))
     else:
         chain_mark = _green("\u2713") if fields["chain_valid"] else _red("\u2717")
@@ -312,6 +390,14 @@ def cmd_report(args: argparse.Namespace) -> int:
         print(f"  Chain Valid:  {chain_mark}")
         print()
         print(f"  Signature:    {sig_text}")
+        if key_mismatch:
+            print(
+                "  Note:         KEY MISMATCH \u2014 this report was signed under key epoch\n"
+                f"                {report_fp}, but your key(s) fingerprint to\n"
+                f"                {', '.join(held_fps)}. Fetch the current key from\n"
+                "                Dashboard -> Organization -> Forensics (or supply the\n"
+                "                right retired key with --key) and re-run."
+            )
         print()
 
         if args.verbose:
@@ -365,7 +451,7 @@ def _load_chain_entries(path: str) -> tuple[list[dict[str, Any]], dict[str, Any]
 
 
 def _cmd_chain_full(
-    args: argparse.Namespace, key: bytes, entries: list[dict[str, Any]], total: int
+    args: argparse.Namespace, keys: list[bytes], entries: list[dict[str, Any]], total: int
 ) -> int:
     """Verify the full HMAC audit chain (first entry has prev_hash=GENESIS)."""
     expected_prev_hash = GENESIS
@@ -387,9 +473,9 @@ def _cmd_chain_full(
             }
             break
 
-        # 2. Recompute HMAC and compare
-        recomputed = _compute_entry_hash(key, entry, entry_prev)
-        if not hmac.compare_digest(recomputed, stored_hash):
+        # 2. Recompute HMAC and compare (any held key epoch may match)
+        matched, recomputed = _entry_hash_matches_any(keys, entry, entry_prev, stored_hash)
+        if not matched:
             break_info = {
                 "index": i,
                 "entry_id": entry.get("id", "?"),
@@ -472,6 +558,14 @@ def _cmd_chain_full(
 
         print()
 
+        if (
+            not intact
+            and break_info["reason"] == "hash mismatch"
+            and break_info["index"] == 0
+            and verified == 0
+        ):
+            _print_wrong_key_hint(keys)
+
         if args.verbose and not intact and break_info:
             print(_dim("  Full values:"))
             if break_info["reason"] == "prev_hash mismatch":
@@ -486,7 +580,7 @@ def _cmd_chain_full(
 
 
 def _cmd_chain_partial(
-    args: argparse.Namespace, key: bytes, entries: list[dict[str, Any]], total: int
+    args: argparse.Namespace, keys: list[bytes], entries: list[dict[str, Any]], total: int
 ) -> int:
     """Verify a partial chain export (first entry does not start at genesis)."""
     first_entry_id = entries[0].get("id", "?")
@@ -520,9 +614,9 @@ def _cmd_chain_partial(
                 )
                 continue
 
-        # Recompute HMAC using the entry's own prev_hash
-        recomputed = _compute_entry_hash(key, entry, entry_prev)
-        if not hmac.compare_digest(recomputed, stored_hash):
+        # Recompute HMAC using the entry's own prev_hash (any held key epoch)
+        matched, recomputed = _entry_hash_matches_any(keys, entry, entry_prev, stored_hash)
+        if not matched:
             tampered_entries.append(
                 {
                     "index": i,
@@ -655,7 +749,7 @@ def _cmd_chain_partial(
 
 def _cmd_chain_org(
     args: argparse.Namespace,
-    key: bytes,
+    keys: list[bytes],
     entries: list[dict[str, Any]],
     total: int,
     agent_scoped: bool = False,
@@ -675,12 +769,21 @@ def _cmd_chain_org(
     numbers, and each gap re-anchors the window. Completeness (no deleted
     rows) can only be proven by an org-scope export.
 
+    Key epochs: each entry may carry ``key_fingerprint`` — the fingerprint
+    of the HMAC key it was hashed under. Entries whose fingerprint matches
+    none of the supplied keys (e.g. rows written under the platform key
+    before the org's key existed) are reported as **not covered by your
+    key(s)** — an honest partial result — rather than as tampering. The
+    structural checks (sequence + linkage) still run on every entry.
+
     Sorts by ``org_chain_seq`` defensively in case the export ordering
     differs.
     """
     entries = sorted(entries, key=lambda e: e["org_chain_seq"])
+    keymap = {_key_fingerprint(k): k for k in keys}
     verified = 0
     gaps_reanchored = 0
+    foreign_epochs: dict[str, int] = {}  # fingerprint → entry count not covered by held keys
     break_info: dict[str, Any] | None = None
     expected_seq: int | None = None
     expected_prev_hash: str | None = None
@@ -720,17 +823,34 @@ def _cmd_chain_org(
                 }
                 break
 
+        entry_fp = entry.get("key_fingerprint")
+        if entry_fp and entry_fp not in keymap:
+            # Recorded under a key epoch we don't hold — its hash cannot be
+            # recomputed with the supplied keys, so this is a coverage gap,
+            # not evidence of tampering. Linkage continues over the stored
+            # hash, so structure is still fully checked.
+            foreign_epochs[entry_fp] = foreign_epochs.get(entry_fp, 0) + 1
+            expected_prev_hash = stored_hash
+            expected_seq = seq + 1
+            continue
+
         # Recompute entry_hash_org and compare. _compute_entry_hash uses
         # the same canonical payload — we just pass prev_hash_org as the
-        # chain field.
-        recomputed = _compute_entry_hash(key, entry, entry_prev)
-        if not hmac.compare_digest(recomputed, stored_hash):
+        # chain field. With a recorded fingerprint we know the exact key;
+        # legacy entries without one may match any held key.
+        if entry_fp:
+            recomputed = _compute_entry_hash(keymap[entry_fp], entry, entry_prev)
+            matched = hmac.compare_digest(recomputed, stored_hash)
+        else:
+            matched, recomputed = _entry_hash_matches_any(keys, entry, entry_prev, stored_hash)
+        if not matched:
             break_info = {
                 "index": i,
                 "entry_id": entry.get("id", "?"),
                 "reason": "hash mismatch",
                 "expected_hash": recomputed,
                 "got_hash": stored_hash,
+                "entry_key_fingerprint": entry_fp,
             }
             break
 
@@ -739,20 +859,39 @@ def _cmd_chain_org(
         verified += 1
 
     intact = break_info is None
+    unverified = sum(foreign_epochs.values())
+    # Zero coverage — the supplied key(s) match no entry's epoch at all.
+    # Structure may be intact, but NOTHING was cryptographically verified;
+    # reporting that as a pass would let a typo'd key masquerade as a
+    # successful verification. Distinct result, non-zero exit.
+    no_coverage = intact and unverified > 0 and verified == 0
+    partial = intact and unverified > 0 and verified > 0
 
     if args.json:
+        if not intact:
+            result_str = "broken"
+        elif no_coverage:
+            result_str = "no_key_coverage"
+        elif partial:
+            result_str = "valid_partial_coverage"
+        else:
+            result_str = "valid"
         details: dict[str, Any] = {
             "file": os.path.basename(args.file),
             "total_entries": total,
             "entries_verified": verified,
+            "entries_not_covered_by_keys": unverified,
             "chain_intact": intact,
             "mode": "per-org-agent-slice" if agent_scoped else "per-org",
+            "supplied_key_fingerprints": sorted(keymap),
             "seq_range": (
                 [entries[0]["org_chain_seq"], entries[-1]["org_chain_seq"]] if entries else None
             ),
         }
         if agent_scoped:
             details["gaps_reanchored"] = gaps_reanchored
+        if foreign_epochs:
+            details["uncovered_key_epochs"] = foreign_epochs
         if break_info:
             details["break_at"] = break_info
         result = {
@@ -760,7 +899,7 @@ def _cmd_chain_org(
             "version": __version__,
             "command": "chain",
             "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "result": "valid" if intact else "broken",
+            "result": result_str,
             "details": details,
         }
         print(json.dumps(result, indent=2))
@@ -783,9 +922,33 @@ def _cmd_chain_org(
         else:
             print("  Mode:         Per-org (tenant-scoped completeness proof)")
         print()
-        if intact:
+        if intact and not partial and not no_coverage:
             print(f"  Result:       {_green('CHAIN INTACT ✓')}")
             print(f"  Verified:     {verified}/{total} entries")
+        elif no_coverage:
+            print(f"  Result:       {_red('NOT VERIFIED ✗')} (no key coverage)")
+            print(f"  Verified:     0/{total} entries")
+            fps = ", ".join(sorted(foreign_epochs))
+            print(f"  Key epochs:   entries were recorded under: {fps}")
+            print(
+                "                None of the supplied keys match any entry's key epoch,\n"
+                "                so nothing could be cryptographically verified (sequence\n"
+                "                and linkage structure are consistent). This is a key\n"
+                "                problem, not proof of tampering — see below."
+            )
+        elif intact:
+            print(f"  Result:       {_green('CHAIN INTACT ✓')} (partial key coverage)")
+            print(f"  Verified:     {verified}/{total} entries with your key(s)")
+            fps = ", ".join(sorted(foreign_epochs))
+            print(f"  Not covered:  {unverified} entries from earlier key epoch(s): {fps}")
+            print(
+                "                These were recorded before your current key existed (or\n"
+                "                under a retired key you did not supply with --key), so\n"
+                "                your key cannot recompute their hashes. Sequence and\n"
+                "                linkage checks passed for ALL entries; the uncovered\n"
+                "                hashes can be verified by AI Identity or independently\n"
+                "                via evidence-anchor public proofs (see README)."
+            )
         else:
             assert break_info is not None
             print(f"  Result:       {_red('CHAIN BROKEN ✗')}")
@@ -793,12 +956,22 @@ def _cmd_chain_org(
             print(f"  Break at:     Entry #{break_info['index'] + 1}")
             print(f"    Reason:     {break_info['reason']}")
         print()
-    return 0 if intact else 1
+        wrong_key_shape = no_coverage or (
+            not intact
+            and break_info is not None
+            and break_info["reason"] == "hash mismatch"
+            and break_info["index"] == 0
+            and verified == 0
+            and not break_info.get("entry_key_fingerprint")
+        )
+        if wrong_key_shape:
+            _print_wrong_key_hint(keys)
+    return 0 if intact and not no_coverage else 1
 
 
 def cmd_chain(args: argparse.Namespace) -> int:
     """Verify the HMAC audit chain (per-org, full, or partial)."""
-    key = _get_hmac_key()
+    keys = _get_hmac_keys(args)
     entries, scope = _load_chain_entries(args.file)
     total = len(entries)
     agent_scoped = isinstance(scope, dict) and scope.get("type") == "agent"
@@ -836,14 +1009,14 @@ def cmd_chain(args: argparse.Namespace) -> int:
     # tenant-scoped completeness proof. Older exports without the
     # org-chain fields fall through to the legacy global path.
     if not getattr(args, "global_chain", False) and _entries_have_org_chain(entries):
-        return _cmd_chain_org(args, key, entries, total, agent_scoped=agent_scoped)
+        return _cmd_chain_org(args, keys, entries, total, agent_scoped=agent_scoped)
 
     # Legacy / fallback: global chain. Detect partial export (first
     # entry's prev_hash is not GENESIS) → use partial verify.
     is_partial = entries[0].get("prev_hash", "") != GENESIS
     if is_partial:
-        return _cmd_chain_partial(args, key, entries, total)
-    return _cmd_chain_full(args, key, entries, total)
+        return _cmd_chain_partial(args, keys, entries, total)
+    return _cmd_chain_full(args, keys, entries, total)
 
 
 # ── Attestation verification (DSSE + ECDSA P-256) ──────────────────────
@@ -1349,6 +1522,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  %(prog)s report forensics_report.json\n"
             "  %(prog)s chain audit_export.json --verbose\n"
             "  %(prog)s chain audit_export.json --json\n"
+            "  %(prog)s chain audit_export.json --key <retired-key>   # multi key-epoch\n"
             "  %(prog)s attestation envelope.json --pubkey signer.pem\n"
             "  %(prog)s attestation envelope.json --jwks keys.json\n"
             "\n"
@@ -1396,6 +1570,16 @@ def build_parser() -> argparse.ArgumentParser:
     report_parser.add_argument(
         "file",
         help="Path to a JSON report file (ForensicsReportResponse)",
+    )
+    report_parser.add_argument(
+        "--key",
+        dest="extra_keys",
+        action="append",
+        metavar="KEY",
+        help=(
+            "Additional HMAC key to try (repeatable), e.g. a retired key from "
+            "before a key regeneration. AI_IDENTITY_HMAC_KEY remains the primary."
+        ),
     )
 
     # attestation subcommand
@@ -1481,6 +1665,19 @@ def build_parser() -> argparse.ArgumentParser:
     chain_parser.add_argument(
         "file",
         help="Path to a JSON file containing audit log entries",
+    )
+    chain_parser.add_argument(
+        "--key",
+        dest="extra_keys",
+        action="append",
+        metavar="KEY",
+        help=(
+            "Additional HMAC key to try (repeatable). An org's history can span "
+            "key epochs — rows written before your key existed, or before a key "
+            "regeneration, verify only with that epoch's key. Supply every key "
+            "you hold to cover all epochs; entries from epochs you don't hold "
+            "are reported as 'not covered', never as tampering."
+        ),
     )
     chain_parser.add_argument(
         "--expected-prev-hash",
