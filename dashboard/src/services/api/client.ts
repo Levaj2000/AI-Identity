@@ -14,11 +14,15 @@ const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || ''
 
 // ─── Session token management ────────────────────────────────────
 
-/** Function that returns a Clerk session token (set by AuthProvider). */
-let getSessionToken: (() => Promise<string | null>) | null = null
+/** Function that returns a Clerk session token (set by AuthProvider).
+ * Accepts Clerk's getToken options so callers can force a refresh
+ * (skipCache) when a cached token has just expired. */
+let getSessionToken: ((opts?: { skipCache?: boolean }) => Promise<string | null>) | null = null
 
 /** Register the Clerk session token getter. Called by AuthProvider. */
-export function setSessionTokenGetter(getter: () => Promise<string | null>): void {
+export function setSessionTokenGetter(
+  getter: (opts?: { skipCache?: boolean }) => Promise<string | null>,
+): void {
   getSessionToken = getter
 }
 
@@ -139,7 +143,20 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     }
   }
 
-  const response = await fetch(url, { ...options, headers })
+  let response = await fetch(url, { ...options, headers })
+
+  // A 401 on a Bearer-authenticated call is usually a just-expired cached
+  // Clerk token (they live ~60s; a page that sat open fires its first
+  // burst of requests with a stale one). Force-refresh the token and
+  // retry ONCE — without this, every component's catch block renders the
+  // 401 as an empty/zero state, which reads as data loss.
+  if (response.status === 401 && headers['Authorization'] && getSessionToken) {
+    const fresh = await getSessionToken({ skipCache: true })
+    if (fresh) {
+      headers['Authorization'] = `Bearer ${fresh}`
+      response = await fetch(url, { ...options, headers })
+    }
+  }
 
   if (!response.ok) {
     throw await parseErrorResponse(response)
