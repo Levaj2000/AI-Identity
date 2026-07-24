@@ -52,7 +52,7 @@ def _build_response(template: TicketTemplate, db: Session) -> TicketTemplateResp
     response_model=TicketTemplateListResponse,
     summary="List ticket templates",
 )
-async def list_ticket_templates(
+def list_ticket_templates(
     limit: int = Query(50, ge=1, le=100, description="Number of templates to return"),
     offset: int = Query(0, ge=0, description="Number of templates to skip"),
     user: User = Depends(get_current_user),
@@ -92,7 +92,7 @@ async def list_ticket_templates(
     summary="Create a ticket template",
     status_code=201,
 )
-async def create_ticket_template(
+def create_ticket_template(
     data: TicketTemplateCreate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -139,7 +139,7 @@ async def create_ticket_template(
     response_model=TicketTemplateResponse,
     summary="Get ticket template details",
 )
-async def get_ticket_template(
+def get_ticket_template(
     template_id: UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -165,7 +165,7 @@ async def get_ticket_template(
     response_model=TicketTemplateResponse,
     summary="Update a ticket template",
 )
-async def update_ticket_template(
+def update_ticket_template(
     template_id: UUID,
     data: TicketTemplateUpdate,
     user: User = Depends(get_current_user),
@@ -215,7 +215,7 @@ async def update_ticket_template(
     status_code=204,
     summary="Delete a ticket template",
 )
-async def delete_ticket_template(
+def delete_ticket_template(
     template_id: UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -248,7 +248,7 @@ async def delete_ticket_template(
     summary="Create a ticket from a template",
     status_code=201,
 )
-async def create_ticket_from_template(
+def create_ticket_from_template(
     template_id: UUID,
     data: TicketFromTemplateCreate,
     user: User = Depends(get_current_user),

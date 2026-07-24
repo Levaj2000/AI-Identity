@@ -62,7 +62,7 @@ class SupportMetricsResponse(BaseModel):
     response_model=SupportMetricsResponse,
     summary="Get support metrics",
 )
-async def get_support_metrics(
+def get_support_metrics(
     days: int = Query(30, ge=1, le=365, description="Number of days to analyze"),
     assigned_to_user_id: str | None = Query(
         None, description="Filter metrics for specific assignee"

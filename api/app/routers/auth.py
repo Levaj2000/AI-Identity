@@ -54,7 +54,7 @@ def _user_profile(user: User) -> UserProfile:
 
 
 @router.get("/me", response_model=UserProfile, summary="Get current user profile")
-async def get_me(
+def get_me(
     current_user: User = Depends(get_current_user),
 ):
     """Return the authenticated user's profile.
