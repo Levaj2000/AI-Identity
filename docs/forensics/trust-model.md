@@ -1,8 +1,9 @@
 # Forensic attestation trust model
 
-**Status:** v1 — documents the trust guarantees shipped in Milestone #33.
+**Status:** v1.1 — documents the trust guarantees shipped in Milestone #33;
+adds the tamper-evident vs. tamper-proof threat model.
 **Owner:** CTO
-**Last reviewed:** 2026-04-17
+**Last reviewed:** 2026-07-17
 **Audience:** SOC 2 auditors, customer compliance teams, incident
 responders, and anyone who needs to reason about what a signed AI
 Identity attestation does and does not claim.
@@ -85,6 +86,47 @@ hold:
 | Timing within the session | `session_start` / `session_end` are producer-reported; `signed_at` is the only timestamp the signer attests to | Independent timing (gateway logs, upstream timestamps) |
 | Events outside the committed range | The attestation says nothing about `audit_log.id < first_audit_id` or `> last_audit_id` | A separate attestation covering the other range |
 | That AI Identity itself is trustworthy | Attestation only proves the chain is intact — it cannot prove AI Identity didn't fabricate the whole session before signing | The HMAC chain uses a *different* key than the attestation (see Trust root §3) |
+
+## Tamper-evident, not tamper-proof
+
+The audit chain is **tamper-evident**, deliberately — not
+tamper-proof. Records *can* still be altered by an actor with enough
+access; the guarantee is that the alteration becomes **detectable** at
+the next verification, not that it is physically impossible. The
+honest one-liner:
+
+> Nothing prevents a sufficiently privileged attacker from touching
+> the bytes — what the chain guarantees is that they cannot do it
+> without breaking verification, they cannot repair verification
+> without the HMAC key, and they cannot hide truncation once a
+> checkpoint has left the building.
+
+Each qualifier in that sentence maps to a specific control:
+
+| Qualifier | Threat it names | Control |
+|---|---|---|
+| "touching the bytes" | A DBA, superuser, or anyone with disk/backup access can rewrite rows — `GRANT`-level append-only is policy, not physics | Append-only grants raise the bar; they are not the guarantee |
+| "without breaking verification" | Any edit to a stored payload | Chained HMACs — one changed byte breaks `entry_hash` at that row and every `prev_hash` link after it |
+| "without the HMAC key" | An attacker who edits a row *and* recomputes every downstream hash produces a chain that verifies. HMAC is symmetric: the verify key is the forge key | Two chains, two custody domains. The per-org key (`organizations.forensic_verify_key`) lives in the application database and is dashboard-visible to org admins — it can verify *and* forge the org chain, which is why the dashboard warns never to hand it to an external auditor. The platform-wide key (`AUDIT_HMAC_KEY`) is runtime configuration, never stored in the database — every row carries both hashes, so a re-forged org chain still fails platform-chain verification |
+| "once a checkpoint has left the building" | Truncation: deleting the tail of the chain leaves a shorter chain that is internally valid. The gap-free per-org sequence catches holes in the middle, not a clean cut at the end | External anchors — signed Merkle checkpoints (Evidence Anchor) and exported, signed Case Files held outside our infrastructure. A rolled-back chain cannot match a head the verifier already holds |
+
+The privileged insider is the ceiling of the HMAC layer. An org admin
+can read the org verify key from the dashboard *by design* — so
+against your own administrators (or a compromised admin account), the
+per-org chain proves nothing by itself. That adversary is answered by
+the layers whose keys an insider cannot hold: the KMS attestation key
+(non-extractable from the HSM — Trust root §1) and external anchors —
+signed Merkle checkpoints and Case Files already exported to third
+parties. A dual-key insider can rewrite the database into perfect
+self-consistency; they cannot make it match the copy of history
+someone else already holds.
+
+One further boundary: the chain seals whatever the audit writer is
+handed. If an event is falsified *upstream* of the writer, the chain
+faithfully and verifiably records the falsehood. Chain integrity
+proves a record has not changed *since it was written*; authenticity
+at capture time is the job of the signing layers above (agent
+identity, signed mandates, attestations).
 
 ## What to show a SOC 2 auditor
 

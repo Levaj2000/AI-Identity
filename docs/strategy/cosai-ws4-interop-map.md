@@ -52,7 +52,7 @@ corrected by each owner.**
 |---|---|---|---|---|---|
 | **AI Identity** | 5 — Record/evidence | Signed OCSF events; DSSE envelopes; offline-verifiable; Evidence Anchor (inclusion proofs); attestation / record_integrity profiles | Signed, queryable OCSF event records | Identity, authority, attestation, policy signals from layers 1–4 | Is the boundary — maps everyone's outputs into one neutral evidence schema |
 | **ODIS** | 2 — Authority grant | Passport / Bridge / Router; "Delegation Chain Record" | Delegation grants / passports | Identity (layer 1) | Grant → recorded as an OCSF delegation event |
-| **TrustGraph** (Red Hat) | 1 + 2 — Identity + delegation graph | KeyCloak SPI + SPIFFE + AuthBridge sidecar → OTel spans → delegation DAG | OTel spans; runtime delegation graph | Workload identity, tokens | OTel → OCSF mapping (telemetry spans → evidence records) |
+| **TrustGraph** (Red Hat) | 1 + 2 — Identity + delegation graph (raw telemetry; becomes durable evidence via the OCSF seam below) | KeyCloak SPI + SPIFFE + AuthBridge sidecar → OTel spans → delegation DAG | OTel spans; runtime delegation graph | Workload identity, tokens | OTel → OCSF mapping (telemetry spans → evidence records) |
 | **EQTY Lab** | 4 — Environment attestation | TEE (AMD SEV/TDX, NVIDIA CC); DIDs; model signing; RFC 9421 gateway; offline-verifiable | Hardware attestation quotes; integrity graph; signed certs | Workloads, models | Hardware quote → OCSF workload-attestation object |
 | **IBM CPEX / CMF** | 3 — Runtime enforcement | CPEX (policy engine); CMF (typed policy input: ContentPart + extensions); APL (declarative policy) | Policy decisions; CMF delegation.chain; security labels; tool/framework context | Identity, delegation, attestation | CMF ↔ OCSF cross-map: delegation.chain, security labels, tool/framework context |
 
@@ -61,6 +61,14 @@ corrected by each owner.**
 > (Mandate Service) layers — our primary contribution to this shared map is the
 > record/evidence substrate, where the other layers' outputs become durable,
 > verifiable evidence.*
+
+> **A note on "evidence" (added 2026-07-02):** several layers naturally produce
+> audit-relevant output — logs, spans, traces — that reasonably *feels* like
+> evidence. To keep layer 5 useful as a shared reference, we're using a specific
+> bar for what counts: durable, neutral-schema, cryptographically verifiable,
+> tamper-evident. Raw telemetry becomes that kind of evidence once it crosses an
+> OCSF-boundary seam (see below) — not before. Flagging this so the map stays
+> precise as more layers describe their outputs as "evidence" in conversation.
 
 ## Interop seams worth building (the positive-sum payoff)
 

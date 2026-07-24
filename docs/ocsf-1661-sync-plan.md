@@ -6,6 +6,15 @@ layer predates the final review round and must catch up. **Execution window:
 after the 2026-07-20 IBM demo** (demo freeze — the demo runs on the proven
 deployed build). Draft branch: `feat/ocsf-1661-merged-shape`.
 
+> **Status 2026-07-21:** A+B done on `feat/ocsf-1661-merged-shape` (pushed,
+> commit `021ae944`, tests green per 7/17 session) — awaiting PR + merge (demo
+> freeze lifted 7/20). C done in the same worktree (uncommitted — plugin home
+> still undecided). D pends deploy. F flips ALL executed: pipeline + badge
+> shipped 7/17 (PRs #387/#388); 30-min runbook say-lines + Ian close,
+> cross-runtime doc+PDF (regenerated), and positioning-note flipped locally
+> 2026-07-21. Cross-runtime PDF: re-share to the David Pierce DM only if the
+> old "final review" version was posted there — verify before sending.
+
 ## What changed in the final merged shape (vs. what we emit)
 
 | We emit today | Merged #1661 shape |
