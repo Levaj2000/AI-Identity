@@ -21,9 +21,9 @@
       "bom-ref": "lib/liboqs-python",
       "description": "Open Quantum Safe binding; ML-DSA-87 verify path (verify only).",
       "name": "liboqs-python",
-      "purl": "pkg:pypi/liboqs-python@0.15.0",
+      "purl": "pkg:pypi/liboqs-python@0.16.0",
       "type": "library",
-      "version": "0.15.0"
+      "version": "0.16.0"
     },
     {
       "bom-ref": "lib/pyjwt",
@@ -130,7 +130,7 @@
         },
         {
           "name": "ai-identity:implementation",
-          "value": "liboqs-python 0.15.0 (liboqs / Open Quantum Safe)"
+          "value": "liboqs-python 0.16.0 (liboqs / Open Quantum Safe)"
         },
         {
           "name": "ai-identity:keyCustody",
