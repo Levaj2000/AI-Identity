@@ -81,7 +81,11 @@ docs/cosai-ws4-ocsf-mapping/CMF-OCSF-CROSSMAP.*
 docs/cosai-ws4-ocsf-mapping/CMF-OCSF-FIELD-MAP.md
 docs/cosai-ws4-ocsf-mapping/build_ibm_*.py
 docs/cosai-ws4-ocsf-mapping/build_teryl_*.py
+docs/cosai-ws4-ocsf-mapping/build_cosai_demo_deck_pdf.py
+docs/cosai-ws4-ocsf-mapping/COSAI-DEMO-DECK-*.pdf
 docs/cosai-ws4-ocsf-mapping/build_cmf_ocsf_crossmap_pdf.py
+docs/cosai-ws4-ocsf-mapping/ws4-rfc61-comment-draft-*.md
+docs/cosai-ws4-ocsf-mapping/ocsf-signature-object-position-*.md
 docs/strategy/ibm-relationship-read-and-triggers.md
 # Internal strategy/prep — candid reads, competitor comparisons, grant answers
 docs/strategy/trustgraph-vs-ai-identity-comparison-*.pdf
@@ -95,3 +99,10 @@ docs/strategy/trust-graph-telemetry-call-prep-*.pdf
 docs/strategy/cosai-ws4-adlc-sig-notes-*.md
 docs/strategy/cosai-ws4-adlc-delegation-escalation-workshop-note.md
 docs/strategy/cosai-ws4-trust-graph-kickoff-*.md
+docs/strategy/cosai-ws4-talk-track-*
+docs/cosai-ws4-ocsf-mapping/build_ws4_exec_kit_pdfs.py
+
+# Local dev artifacts (never commit)
+test.db
+.codex/
+.claude/brand-voice-archive/

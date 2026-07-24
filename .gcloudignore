@@ -1,0 +1,45 @@
+# Patterns to exclude from `gcloud builds submit` source uploads.
+# Mirrors .gitignore intent but is read by gcloud, not git.
+
+.git/
+.gcloudignore
+
+# Python build / venv
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Node / frontend
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+**/dist/
+**/build/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+
+# Mac launcher artifacts (host-only)
+agent/dist/
+
+# Local env files (secrets stay in Secret Manager)
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Worktrees of this repo are managed by .claude — never upload them
+.claude/worktrees/
