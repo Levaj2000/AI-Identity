@@ -56,8 +56,8 @@ LIBRARIES: list[dict[str, Any]] = [
     {
         "bom-ref": "lib/liboqs-python",
         "name": "liboqs-python",
-        "version": "0.15.0",
-        "purl": "pkg:pypi/liboqs-python@0.15.0",
+        "version": "0.16.0",
+        "purl": "pkg:pypi/liboqs-python@0.16.0",
         "description": "Open Quantum Safe binding; ML-DSA-87 verify path (verify only).",
     },
     {
@@ -126,7 +126,7 @@ CRYPTO_ASSETS: list[dict[str, Any]] = [
             "keyCustody": "settings.forensic_mldsa_public_key (trusted public key; verify only)",
             "encoding": "raw message signing (no prehash); RFC 8785 canonical pre-image",
             "status": "verify-only, opt-in (inert until a trusted PQC key is configured); no issuance",
-            "implementation": "liboqs-python 0.15.0 (liboqs / Open Quantum Safe)",
+            "implementation": "liboqs-python 0.16.0 (liboqs / Open Quantum Safe)",
         },
     },
     {
