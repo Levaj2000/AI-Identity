@@ -37,7 +37,7 @@ must not be conflated (they don't coincide):
 
 | Lineage | Edge | Home |
 |---|---|---|
-| **Spawn** (who *created* whom — orchestration tree) | `agent.agent_id → parent_agent_id` | Issue 2 (sibling attribute) |
+| **Spawn** (who *created* whom — orchestration tree) | `agent.agent_id → parent_agent_id` | ~~Issue 2 (sibling attribute)~~ → **`agent_activity` `Spawn` event** (Ania ruling 2026-07-13: a lifecycle fact, not run/graph context — deferred to the agent control-plane work) |
 | **Delegation** (who *acts on behalf of* whom — authority graph) | `delegation.chain` hops w/ scopes/audience | Issue 6 / #1665 |
 | **Message-derivation** (what *derived from* what — provenance DAG) | `provenance.parent_id` | Candidate issue (below) — NOT the hash chain; see mapping-review C2 |
 
@@ -49,6 +49,18 @@ it partially conflates the spawn tree with the authority graph. **Raise with
 Ania:** a spawn that doesn't change authority shouldn't mint a new delegation;
 keep the spawn edge on the agent side (Issue 2's `parent_agent_uid`) and let
 `delegation.parent_uid` mean re-delegation only.
+
+**RESOLVED (2026-07-13, Ania email, Q1):** agreed in full — `parent_uid` =
+re-delegation only, never spawn. Fix pushed to #1665 and **verified in the live
+diff**: object description now says the authority graph "is distinct from any
+agent instantiation or orchestration hierarchy," and `parent_uid` says "Does
+not indicate that the delegate was instantiated or spawned by the parent's
+delegate." **Placement ruling (updates our framing):** spawn lineage belongs on
+`agent_activity`'s **Spawn event** — *not* Issue 2's sibling attribute, not
+delegation ("a lifecycle fact, not run/graph context"). Issue 2 drops
+`parent_agent_uid` accordingly. ⚠️ Nit to flag gently: the #1665 **PR summary
+text** still carries the old "re-delegation / sub-agent spawning" wording in
+its `parent_uid` bullet — the schema text is clean; only the body blurb lags.
 
 **One correlation model.** `run_id` and `correlation_uid` are the same concept —
 file one field, not two. CMF carries five candidate ids; the agreed mapping:
@@ -160,7 +172,7 @@ already carry. (CMF verification: `FrameworkExtension` carries `framework`,
 | `framework_version` | string | not in the `ai_agent.type_id` enum — candidate add; 1:1 with CMF |
 | `graph_id` | string | orchestration graph identity — **maps 1:1 to CMF `graph_id` today** |
 | `node_id` | string | position within the graph — CMF carries it; first draft missed it (Teryl add) |
-| `parent_agent_uid` | string | **spawn lineage** (who spawned this agent) — the orchestration tree, distinct from delegation (see shared framing); maps to CMF `agent.parent_agent_id` |
+| ~~`parent_agent_uid`~~ | string | **DROPPED (Ania ruling 2026-07-13):** spawn lineage moves to `agent_activity`'s Spawn event (lifecycle, not run/graph context) — Issue 2 files with the three attributes above only; CMF `agent.parent_agent_id` maps there instead |
 
 ~~`run_id`~~ — **dropped.** Run correlation is `correlation_uid =
 conversation_id` (shared framing above); don't file two ids for one concept.
@@ -176,8 +188,11 @@ only. No version, no graph/node ids, no parent reference anywhere on `ai_agent`.
 One nuance to respect: `ai_agent.version` already exists but is defined as the
 **agent's own code/config revision** — so the proposed `framework_version` is
 genuinely distinct (don't overload `version`). All four proposed adds are clean.
-**[DECIDE w/ Fred]** spawn lineage here as `parent_agent_uid` (as tabled) vs.
-its own micro-issue.
+~~**[DECIDE w/ Fred]** spawn lineage here as `parent_agent_uid` (as tabled) vs.
+its own micro-issue.~~ **RESOLVED (2026-07-13, Ania, Q1):** neither — spawn
+lineage lands on `agent_activity`'s Spawn event with the deferred agent
+control-plane work. Issue 2 scope is now `framework_version` + `graph_id` +
+`node_id` only.
 
 ---
 
@@ -314,16 +329,21 @@ TransactionToken | Custom), `from_cache`.
 
 **Convergence checklist for #1665 (walk with Ania) — verified 2026-07-06
 against the live PR diff:**
-- ✅ #1665 = the *delegation* DAG, with one wording fix to request: `parent_uid`
-  folds "sub-agent spawning" into re-delegation (see shared framing — spawn
-  belongs on the agent side).
+- ✅ #1665 = the *delegation* DAG. Wording fix **requested AND landed** (Ania,
+  2026-07-13): `parent_uid` is re-delegation only; spawn explicitly excluded in
+  the live diff. (Only the PR summary blurb still lags — see shared framing.)
 - ⚠️ **Confirmed: #1665 carries only the pointer skeleton** (`uid`,
   `parent_uid`, `created_time`, `issuer_uid`) — **no per-hop authority
   content**: no scopes, no audience, no `authorization_details`, no TTL. So CMF
   `DelegationHop` does NOT map 1:1 yet. This is the concrete contribution to
   bring to Ania: add the authority fields per delegation node
   (`scopes_granted[]`, `audience`, `authorization_details[]`, `expiration_time`)
-  — as a follow-up to her PR, not a competing shape. Positive note: her
+  — as a follow-up to her PR, not a competing shape. **ACCEPTED (2026-07-13,
+  Ania, Q2): yes — as a follow-on PR, not in #1665 (she's keeping it minimal).
+  Her design constraint to honor: `authorization_details` is a typed array per
+  RFC 9396, not a flat field — needs its own design pass. This is now the
+  follow-on PR to draft (sketch started in
+  `docs/ocsf-ai-forensics-followon-pr-sketch.md`).** Positive note: her
   `issuer_uid` ("generated by a trusted system component, not self-asserted")
   matches the gateway-issuance model exactly.
 - **RAR rides the hop (mapping-review C7):** RFC 9396 `authorization_details`
