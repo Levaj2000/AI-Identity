@@ -110,4 +110,9 @@ class AuditCheckpoint(Base):
             "last_audit_id",
         ),
         Index("ix_audit_checkpoint_created", "org_id", "created_at"),
+        # Public feed (anchor_feed.py): global history ordered by signing time,
+        # and the split-view spot lookup by root. Both are unauthenticated —
+        # they must never be able to trigger a sequential scan.
+        Index("ix_audit_checkpoint_signed_at", "signed_at", "id"),
+        Index("ix_audit_checkpoint_merkle_root", "merkle_root"),
     )

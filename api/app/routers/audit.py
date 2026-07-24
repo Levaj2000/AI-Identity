@@ -1376,6 +1376,17 @@ Unlike the chain/report checks above (which use your symmetric key), this is asy
 public key can only *verify*, never forge. Any events not yet anchored are listed under
 `pending` in `inclusion-proofs.json`.
 
+**Cross-check against the public record (optional, recommended).** The checkpoint history is
+also published — you don't have to trust that the checkpoint in this bundle is the one
+everyone else saw. Take a `merkle_root` from `evidence-anchor/checkpoints.json` and look it
+up in the public feed:
+
+    curl https://api.ai-identity.co/evidence-anchor/checkpoints/<merkle_root>
+
+A 200 returning the identical envelope means your bundle's checkpoint is part of the public,
+independently mirrored history. A 404 for a root that verifies offline means you were shown
+a checkpoint the public was not — report that to security@ai-identity.co and keep this bundle.
+
 ## Help
 
 Visit https://ai-identity.co/docs
