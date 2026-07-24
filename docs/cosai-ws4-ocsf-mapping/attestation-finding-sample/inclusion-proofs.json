@@ -1,0 +1,87 @@
+{
+  "leaf_rule": "leaf_data = bytes.fromhex(attestation.entry_hash.value); RFC 6962 domain separation",
+  "tree_size": 8,
+  "merkle_root": "93fff77bd476367130845353fa2dc83e1e42a1ff66883b64eac93c28019c4629",
+  "proofs": [
+    {
+      "ref_index": 0,
+      "event_uid": "255",
+      "entry_hash": "7f59a80735be325d501023587f0632d9cc447a2fbb35c3dd55250e1f0238506e",
+      "audit_path": [
+        "c2c15cf43a8810b4fb1662e0c3e6c9d6a814efe2d747b74b14c3e503cc307b83",
+        "94b49b723160c8c88865fac7546bbe86c2eeb474ad449c845301d6f40bb61c7a",
+        "2757529495dc9ab63a5940119e337cbeae5670c8ba139f8293d44cebc6c6e0c9"
+      ]
+    },
+    {
+      "ref_index": 1,
+      "event_uid": "256",
+      "entry_hash": "88d9ecc4ec4788bfe0085050c6c0d0fc986c20bebf95458fc771a5527125c65a",
+      "audit_path": [
+        "099de6fa5a6ff1b09b0555567c18f8bd53396867b6692b0192592ddd52d1c999",
+        "94b49b723160c8c88865fac7546bbe86c2eeb474ad449c845301d6f40bb61c7a",
+        "2757529495dc9ab63a5940119e337cbeae5670c8ba139f8293d44cebc6c6e0c9"
+      ]
+    },
+    {
+      "ref_index": 2,
+      "event_uid": "257",
+      "entry_hash": "92cb11daa4007f8ee24d685feb741ffce29738904215205fbe65c0b50a003a0a",
+      "audit_path": [
+        "3150e03ec2819f9d8cc33201d6da3f8f6ba57644f37d594c894c55cf5deb748f",
+        "ff93d29b0273aa4908c99b2b4bc0167e7fb3ca34de4e6feb8118fbb5b960617e",
+        "2757529495dc9ab63a5940119e337cbeae5670c8ba139f8293d44cebc6c6e0c9"
+      ]
+    },
+    {
+      "ref_index": 3,
+      "event_uid": "258",
+      "entry_hash": "f5fec8164c25b3cc8644919ee3db14a8b92a74906735782c8efec326e2d9553e",
+      "audit_path": [
+        "7699e4d5a8b8d432bee5c77dbfb6718cadb86991b6dbdd30abbb3e9f18a1fe57",
+        "ff93d29b0273aa4908c99b2b4bc0167e7fb3ca34de4e6feb8118fbb5b960617e",
+        "2757529495dc9ab63a5940119e337cbeae5670c8ba139f8293d44cebc6c6e0c9"
+      ]
+    },
+    {
+      "ref_index": 4,
+      "event_uid": "259",
+      "entry_hash": "651102adb2a1f68c717fef6eaabee3eae9be4f29bf183a9f98de6715c1e6d818",
+      "audit_path": [
+        "30acabe18d30f31c6abf4b01e2bc30aaca8d4d6773397e3f4bf3e608af495cd2",
+        "7f0293e12ffe72811a9b4bda2ff7f064d89c87d0d3aaa8a77c1dab1db2129608",
+        "50d9f07e2bc802a630661ed7dc66c247cbd2e8f790d901b52ea3ca88f3ab1f67"
+      ]
+    },
+    {
+      "ref_index": 5,
+      "event_uid": "260",
+      "entry_hash": "6da718368ce2239efff94217aca760608d2d801857a7081ba3eb3a5fd895486b",
+      "audit_path": [
+        "2db6b6000207808b8fd29693944ca607a23731452bbdd0797254100906e72618",
+        "7f0293e12ffe72811a9b4bda2ff7f064d89c87d0d3aaa8a77c1dab1db2129608",
+        "50d9f07e2bc802a630661ed7dc66c247cbd2e8f790d901b52ea3ca88f3ab1f67"
+      ]
+    },
+    {
+      "ref_index": 6,
+      "event_uid": "261",
+      "entry_hash": "3489616ef56c0ebade8bd76370c199dda5b7cbee3c80af35276ab98ddb9878a8",
+      "audit_path": [
+        "9e43f18ae1abbda6dbe47f51d8ca5e761c31ed9249ea169c131ab8087a78fc17",
+        "220ff18611f0dbf1e8984657366a1b47206700301bfe48098b1e366d3c1e84cf",
+        "50d9f07e2bc802a630661ed7dc66c247cbd2e8f790d901b52ea3ca88f3ab1f67"
+      ]
+    },
+    {
+      "ref_index": 7,
+      "event_uid": "262",
+      "entry_hash": "b27c16b7c843b144913b0b374bebebe13fb519555a757c549d4407bc725e3951",
+      "audit_path": [
+        "3e47fbcb168d3b5150844b8e16848897606f347788ab3ec3d80d166720eefd7d",
+        "220ff18611f0dbf1e8984657366a1b47206700301bfe48098b1e366d3c1e84cf",
+        "50d9f07e2bc802a630661ed7dc66c247cbd2e8f790d901b52ea3ca88f3ab1f67"
+      ]
+    }
+  ]
+}
