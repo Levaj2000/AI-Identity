@@ -1,0 +1,142 @@
+{
+  "activity_id": 1,
+  "activity_name": "Create",
+  "category_uid": 2,
+  "class_uid": 2009,
+  "type_uid": 200901,
+  "severity_id": 1,
+  "time": 1784040872016,
+  "metadata": {
+    "version": "1.9.0-dev",
+    "profiles": [
+      "record_integrity"
+    ],
+    "uid": "anchor-checkpoint:f3576cf6-87ff-4c07-b446-e6ac526236a5:255-262",
+    "product": {
+      "name": "AI Identity Gateway \u2014 Evidence Anchor",
+      "vendor_name": "AI Identity"
+    }
+  },
+  "attestation_authority_uid": "ai-identity:evidence-anchor:org/f3576cf6-87ff-4c07-b446-e6ac526236a5",
+  "finding_info": {
+    "uid": "anchor-checkpoint:f3576cf6-87ff-4c07-b446-e6ac526236a5:255-262",
+    "title": "Evidence Anchor checkpoint over 8 gateway audit events",
+    "desc": "Signed RFC 6962 Merkle checkpoint committing to the ordered set of referenced events. The signature's digest is the Merkle root over the referenced records' attestation hashes.",
+    "created_time": 1784040872016,
+    "related_events": [
+      {
+        "uid": "255",
+        "type_uid": 600302,
+        "record_hash": {
+          "algorithm_id": 99,
+          "algorithm": "HMAC-SHA-256",
+          "value": "7f59a80735be325d501023587f0632d9cc447a2fbb35c3dd55250e1f0238506e"
+        }
+      },
+      {
+        "uid": "256",
+        "type_uid": 600301,
+        "record_hash": {
+          "algorithm_id": 99,
+          "algorithm": "HMAC-SHA-256",
+          "value": "88d9ecc4ec4788bfe0085050c6c0d0fc986c20bebf95458fc771a5527125c65a"
+        }
+      },
+      {
+        "uid": "257",
+        "type_uid": 600301,
+        "record_hash": {
+          "algorithm_id": 99,
+          "algorithm": "HMAC-SHA-256",
+          "value": "92cb11daa4007f8ee24d685feb741ffce29738904215205fbe65c0b50a003a0a"
+        }
+      },
+      {
+        "uid": "258",
+        "type_uid": 600301,
+        "record_hash": {
+          "algorithm_id": 99,
+          "algorithm": "HMAC-SHA-256",
+          "value": "f5fec8164c25b3cc8644919ee3db14a8b92a74906735782c8efec326e2d9553e"
+        }
+      },
+      {
+        "uid": "259",
+        "type_uid": 600304,
+        "record_hash": {
+          "algorithm_id": 99,
+          "algorithm": "HMAC-SHA-256",
+          "value": "651102adb2a1f68c717fef6eaabee3eae9be4f29bf183a9f98de6715c1e6d818"
+        }
+      },
+      {
+        "uid": "260",
+        "type_uid": 600301,
+        "record_hash": {
+          "algorithm_id": 99,
+          "algorithm": "HMAC-SHA-256",
+          "value": "6da718368ce2239efff94217aca760608d2d801857a7081ba3eb3a5fd895486b"
+        }
+      },
+      {
+        "uid": "261",
+        "type_uid": 600304,
+        "record_hash": {
+          "algorithm_id": 99,
+          "algorithm": "HMAC-SHA-256",
+          "value": "3489616ef56c0ebade8bd76370c199dda5b7cbee3c80af35276ab98ddb9878a8"
+        }
+      },
+      {
+        "uid": "262",
+        "type_uid": 600301,
+        "record_hash": {
+          "algorithm_id": 99,
+          "algorithm": "HMAC-SHA-256",
+          "value": "b27c16b7c843b144913b0b374bebebe13fb519555a757c549d4407bc725e3951"
+        }
+      }
+    ]
+  },
+  "attestation_list": [
+    {
+      "attestation_authority_uid": "ai-identity:evidence-anchor:org/f3576cf6-87ff-4c07-b446-e6ac526236a5",
+      "signatures": [
+        {
+          "algorithm_id": 3,
+          "algorithm": "ECDSA-P256-SHA256",
+          "created_time": 1784040872016,
+          "digest": {
+            "algorithm_id": 3,
+            "algorithm": "SHA-256",
+            "value": "93fff77bd476367130845353fa2dc83e1e42a1ff66883b64eac93c28019c4629"
+          }
+        }
+      ]
+    }
+  ],
+  "unmapped": {
+    "evidence_anchor": {
+      "checkpoint": {
+        "schema_version": 1,
+        "org_id": "f3576cf6-87ff-4c07-b446-e6ac526236a5",
+        "tree_size": 8,
+        "merkle_root": "93fff77bd476367130845353fa2dc83e1e42a1ff66883b64eac93c28019c4629",
+        "first_audit_id": 255,
+        "last_audit_id": 262,
+        "signed_at": "2026-07-14T14:54:32.016203Z",
+        "signer_key_id": "local:ca04cf0f5eb6d70760b8c402cb97bd503d2d5307ae6fda924465a53c89c8590b"
+      },
+      "dsse_envelope": {
+        "payloadType": "application/vnd.ai-identity.anchor-checkpoint+json",
+        "payload": "eyJmaXJzdF9hdWRpdF9pZCI6MjU1LCJsYXN0X2F1ZGl0X2lkIjoyNjIsIm1lcmtsZV9yb290IjoiOTNmZmY3N2JkNDc2MzY3MTMwODQ1MzUzZmEyZGM4M2UxZTQyYTFmZjY2ODgzYjY0ZWFjOTNjMjgwMTljNDYyOSIsIm9yZ19pZCI6ImYzNTc2Y2Y2LTg3ZmYtNGMwNy1iNDQ2LWU2YWM1MjYyMzZhNSIsInNjaGVtYV92ZXJzaW9uIjoxLCJzaWduZWRfYXQiOiIyMDI2LTA3LTE0VDE0OjU0OjMyLjAxNjIwM1oiLCJzaWduZXJfa2V5X2lkIjoibG9jYWw6Y2EwNGNmMGY1ZWI2ZDcwNzYwYjhjNDAyY2I5N2JkNTAzZDJkNTMwN2FlNmZkYTkyNDQ2NWE1M2M4OWM4NTkwYiIsInRyZWVfc2l6ZSI6OH0=",
+        "signatures": [
+          {
+            "keyid": "local:ca04cf0f5eb6d70760b8c402cb97bd503d2d5307ae6fda924465a53c89c8590b",
+            "sig": "MEUCIQC9tm9ZQotJC2lNLwpcq8IVRzH+KsCLgJ99lNXy+9Mh5QIgDDI5IM8fVFXjoHfS0+P0xkzZdo+a4W0XPHiIcVUvOAw="
+          }
+        ]
+      }
+    }
+  }
+}
