@@ -537,6 +537,7 @@ from api.app.routers.admin import router as admin_router  # noqa: E402
 from api.app.routers.agent_assignments import router as agent_assignments_router  # noqa: E402
 from api.app.routers.agents import router as agents_router  # noqa: E402
 from api.app.routers.anchor_cron import router as anchor_cron_router  # noqa: E402
+from api.app.routers.anchor_feed import router as anchor_feed_router  # noqa: E402
 from api.app.routers.approvals import router as approvals_router  # noqa: E402
 from api.app.routers.attachment_cleanup_cron import (  # noqa: E402
     router as attachment_cleanup_cron_router,
@@ -593,6 +594,7 @@ app.include_router(compliance_exports_router)
 app.include_router(credentials_router)
 app.include_router(cleanup_cron_router)
 app.include_router(anchor_cron_router)
+app.include_router(anchor_feed_router)
 app.include_router(compliance_exports_cron_router)
 app.include_router(email_cron_router)
 app.include_router(sla_escalation_cron_router)

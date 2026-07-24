@@ -1,0 +1,67 @@
+name: Evidence Anchor Mirror
+
+# Off-infrastructure witness for the public Evidence Anchor checkpoint feed
+# (GET https://api.ai-identity.co/evidence-anchor/checkpoints). Every 6 hours
+# this job snapshots the full signed-checkpoint history onto the dedicated
+# `evidence-anchor-mirror` branch, so "someone else already holds the
+# checkpoint" is true by default: GitHub — not our GKE cluster — holds a
+# timestamped, git-history-preserving copy that survives an API outage and
+# that anyone can clone or watch.
+#
+# The snapshot script enforces append-only: if the feed ever stops extending
+# the history the mirror already holds (a rewritten batch, a vanished or
+# mutated checkpoint — the split-view/rollback family of attacks), the run
+# FAILS without touching the snapshot, and the existing mirror branch is the
+# evidence. Failure triggers GitHub's default notification email.
+#
+# See docs/forensics/evidence-anchor-public-feed.md for the detection story
+# and honest scope (a mirror in our own GitHub org raises the bar; truly
+# independent witnesses are third parties who clone/watch this branch).
+#
+# No secrets required — the feed and this repo are public; pushes use the
+# workflow's own GITHUB_TOKEN.
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare mirror-branch worktree
+        run: |
+          git config user.name "evidence-anchor-mirror[bot]"
+          git config user.email "noreply@ai-identity.co"
+          if git fetch origin evidence-anchor-mirror; then
+            git worktree add mirror FETCH_HEAD
+          else
+            # First run: bootstrap the branch from an empty tree so the
+            # mirror history contains nothing but snapshots.
+            EMPTY_TREE=$(git hash-object -t tree /dev/null)
+            BOOTSTRAP=$(git commit-tree "$EMPTY_TREE" -m "bootstrap evidence-anchor mirror")
+            git worktree add mirror "$BOOTSTRAP"
+          fi
+
+      - name: Snapshot the public checkpoint feed (append-only enforced)
+        run: python3 scripts/evidence_anchor_mirror.py --out mirror
+
+      - name: Commit and push if the history grew
+        run: |
+          cd mirror
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No new checkpoints since last snapshot."
+            exit 0
+          fi
+          git commit -m "mirror: evidence anchor snapshot $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          # Fully qualified: HEAD is detached in the worktree, and on the
+          # first run the remote branch doesn't exist to be guessed.
+          git push origin HEAD:refs/heads/evidence-anchor-mirror
