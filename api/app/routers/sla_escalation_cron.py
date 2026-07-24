@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/v1/cron", tags=["cron"])
 
 
 @router.post("/sla-escalation")
-async def escalate_overdue_tickets(
+def escalate_overdue_tickets(
     db: Session = Depends(get_db),
     x_internal_key: str | None = Header(None, alias="x-internal-key"),
 ) -> dict:

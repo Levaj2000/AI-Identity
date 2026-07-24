@@ -53,7 +53,7 @@ def _to_response(approval: ApprovalRequest, agent_name: str | None = None) -> Ap
     response_model=ApprovalListResponse,
     summary="List approval requests",
 )
-async def list_approvals(
+def list_approvals(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     limit: int = Query(20, ge=1, le=100),
@@ -97,7 +97,7 @@ async def list_approvals(
     response_model=ApprovalPendingCount,
     summary="Count pending approvals",
 )
-async def pending_count(
+def pending_count(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApprovalPendingCount:
@@ -122,7 +122,7 @@ async def pending_count(
     response_model=ApprovalResponse,
     summary="Get approval detail",
 )
-async def get_approval(
+def get_approval(
     approval_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -163,7 +163,7 @@ async def get_approval(
     response_model=ApprovalResponse,
     summary="Approve or reject a pending request",
 )
-async def resolve_approval(
+def resolve_approval(
     approval_id: str,
     body: ApprovalResolveRequest,
     user: User = Depends(get_current_user),

@@ -106,7 +106,7 @@ def _get_dismissed_set(db: Session, user: User, agent_ids: list[str]) -> set[str
     response_model=ShadowAgentStats,
     summary="Shadow agent summary counts",
 )
-async def shadow_stats(
+def shadow_stats(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     start_date: datetime.datetime | None = Query(None),
@@ -160,7 +160,7 @@ async def shadow_stats(
     response_model=ShadowAgentListResponse,
     summary="List detected shadow agents",
 )
-async def list_shadow_agents(
+def list_shadow_agents(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     start_date: datetime.datetime | None = Query(None),
@@ -263,7 +263,7 @@ async def list_shadow_agents(
     response_model=ShadowAgentDetail,
     summary="Shadow agent detail",
 )
-async def shadow_agent_detail(
+def shadow_agent_detail(
     agent_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -354,7 +354,7 @@ async def shadow_agent_detail(
     response_model=BlockAgentResponse,
     summary="Block a shadow agent",
 )
-async def block_shadow_agent(
+def block_shadow_agent(
     agent_id: str,
     body: BlockAgentRequest | None = None,
     user: User = Depends(get_current_user),
@@ -388,7 +388,7 @@ async def block_shadow_agent(
     status_code=204,
     summary="Unblock a shadow agent",
 )
-async def unblock_shadow_agent(
+def unblock_shadow_agent(
     agent_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -415,7 +415,7 @@ async def unblock_shadow_agent(
     response_model=DismissResponse,
     summary="Dismiss a shadow agent",
 )
-async def dismiss_shadow_agent(
+def dismiss_shadow_agent(
     agent_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -443,7 +443,7 @@ async def dismiss_shadow_agent(
     status_code=204,
     summary="Un-dismiss a shadow agent",
 )
-async def undismiss_shadow_agent(
+def undismiss_shadow_agent(
     agent_id: str,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

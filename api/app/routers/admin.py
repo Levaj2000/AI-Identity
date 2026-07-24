@@ -46,7 +46,7 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
     response_model=AdminStatsResponse,
     summary="Platform-wide statistics",
 )
-async def get_platform_stats(
+def get_platform_stats(
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> AdminStatsResponse:
@@ -85,7 +85,7 @@ async def get_platform_stats(
     response_model=AdminUserListResponse,
     summary="List all users with usage info",
 )
-async def list_users(
+def list_users(
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
     limit: int = Query(20, ge=1, le=100),
@@ -145,7 +145,7 @@ class CreateUserRequest(BaseModel):
     status_code=201,
     summary="Create a new user (admin)",
 )
-async def create_user(
+def create_user(
     body: CreateUserRequest,
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
@@ -192,7 +192,7 @@ async def create_user(
     response_model=AdminUserSummary,
     summary="Change a user's tier (admin override)",
 )
-async def update_user_tier(
+def update_user_tier(
     user_id: str,
     body: AdminTierUpdate,
     _admin: User = Depends(require_admin),
@@ -249,7 +249,7 @@ async def update_user_tier(
     response_model=AdminUserDetail,
     summary="Get detailed user profile (admin)",
 )
-async def get_user_detail(
+def get_user_detail(
     user_id: str,
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
@@ -338,7 +338,7 @@ async def get_user_detail(
     response_model=AdminAgentListResponse,
     summary="List all agents with owner info",
 )
-async def list_agents(
+def list_agents(
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
     limit: int = Query(20, ge=1, le=100),
@@ -391,7 +391,7 @@ async def list_agents(
     response_model=AdminPurgeResponse,
     summary="Hard-delete revoked agents past retention period",
 )
-async def purge_revoked_agents(
+def purge_revoked_agents(
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
     retention_days: int = Query(
@@ -472,7 +472,7 @@ async def purge_revoked_agents(
         404: {"description": "Agent not found"},
     },
 )
-async def purge_single_agent(
+def purge_single_agent(
     agent_id: str,
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
@@ -532,7 +532,7 @@ async def purge_single_agent(
     response_model=AdminHealthResponse,
     summary="System health metrics",
 )
-async def get_system_health(
+def get_system_health(
     _admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ) -> AdminHealthResponse:

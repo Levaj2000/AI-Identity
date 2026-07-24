@@ -378,7 +378,7 @@ async def download_attachment(
     response_model=AttachmentListResponse,
     summary="List attachments for a ticket",
 )
-async def list_ticket_attachments(
+def list_ticket_attachments(
     ticket_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -451,7 +451,7 @@ async def list_ticket_attachments(
     status_code=204,
     summary="Delete attachment (soft delete)",
 )
-async def delete_attachment(
+def delete_attachment(
     attachment_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
