@@ -102,7 +102,7 @@ def _extract_email_from_clerk_claims(claims: dict) -> str | None:
 # ── Main auth dependency ────────────────────────────────────────────
 
 
-async def get_current_user(
+def get_current_user(
     request: Request,
     x_api_key: str | None = Header(None, description="Deprecated — no longer accepted"),
     db: Session = Depends(get_db),
@@ -192,7 +192,7 @@ async def get_current_user(
     return user
 
 
-async def require_admin(
+def require_admin(
     user: User = Depends(get_current_user),
 ) -> User:
     """Require the current user to have admin role.

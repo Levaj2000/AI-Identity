@@ -165,7 +165,7 @@ def _can_access_ticket(user: User, ticket: SupportTicket) -> bool:
     summary="Create a new support ticket",
     status_code=201,
 )
-async def create_ticket(
+def create_ticket(
     data: TicketCreate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -264,7 +264,7 @@ async def create_ticket(
     response_model=TicketListResponse,
     summary="List support tickets",
 )
-async def list_tickets(
+def list_tickets(
     status: TicketStatus | None = Query(None, description="Filter by status"),
     priority: TicketPriority | None = Query(None, description="Filter by priority"),
     category: TicketCategory | None = Query(None, description="Filter by category"),
@@ -324,7 +324,7 @@ async def list_tickets(
     response_model=TicketDetailResponse,
     summary="Get ticket details",
 )
-async def get_ticket(
+def get_ticket(
     ticket_id: UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -349,7 +349,7 @@ async def get_ticket(
     response_model=TicketDetailResponse,
     summary="Update a ticket",
 )
-async def update_ticket(
+def update_ticket(
     ticket_id: UUID,
     data: TicketUpdate,
     user: User = Depends(get_current_user),
@@ -450,7 +450,7 @@ async def update_ticket(
     summary="Add a comment to a ticket",
     status_code=201,
 )
-async def add_comment(
+def add_comment(
     ticket_id: UUID,
     data: CommentCreate,
     user: User = Depends(get_current_user),
@@ -536,7 +536,7 @@ async def add_comment(
     response_model=TicketContextResponse,
     summary="Get related context for a ticket",
 )
-async def get_ticket_context(
+def get_ticket_context(
     ticket_id: UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

@@ -46,7 +46,7 @@ def _build_response(response: CannedResponse, db: Session) -> CannedResponseResp
     response_model=CannedResponseListResponse,
     summary="List canned responses",
 )
-async def list_canned_responses(
+def list_canned_responses(
     category: str | None = Query(None, description="Filter by category"),
     search: str | None = Query(None, description="Search in title and body"),
     limit: int = Query(50, ge=1, le=100, description="Number of responses to return"),
@@ -104,7 +104,7 @@ async def list_canned_responses(
     summary="Create a canned response",
     status_code=201,
 )
-async def create_canned_response(
+def create_canned_response(
     data: CannedResponseCreate,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -148,7 +148,7 @@ async def create_canned_response(
     response_model=CannedResponseResponse,
     summary="Get canned response details",
 )
-async def get_canned_response(
+def get_canned_response(
     response_id: UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -174,7 +174,7 @@ async def get_canned_response(
     response_model=CannedResponseResponse,
     summary="Update a canned response",
 )
-async def update_canned_response(
+def update_canned_response(
     response_id: UUID,
     data: CannedResponseUpdate,
     user: User = Depends(get_current_user),
@@ -218,7 +218,7 @@ async def update_canned_response(
     status_code=204,
     summary="Delete a canned response",
 )
-async def delete_canned_response(
+def delete_canned_response(
     response_id: UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
