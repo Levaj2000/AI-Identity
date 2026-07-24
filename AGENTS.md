@@ -2,6 +2,27 @@
 
 This file provides guidance to agents when working with code in this repository.
 
+## Working as a Delegated / Offload Agent
+
+Tasks are often delegated here to run autonomously. Own the task end-to-end to the same bar as a clean handoff: a root-cause fix, tests, a fully green suite, and a tight diff.
+
+**Definition of done — all of these, in order:**
+1. **Plan first.** State the root cause and intended change before editing. For anything past a one-line fix, outline the approach.
+2. **Fix the cause, not the symptom.** Prefer the defensive/correct fix over a patch that just silences the error.
+3. **Add or update tests** that would have caught the bug. New behavior without a test is not done.
+4. **Run the FULL suite and quote summaries verbatim** — backend `pytest` (covers api + gateway + common + mandate; bare `pytest`, not just `make test` — see "`make test` ≠ `pytest`") AND frontend `cd dashboard && npm test` (Vitest). Report passes and skips separately (see "Verification Before Reporting Done").
+5. **Keep the diff tight.** Touch only what the task needs. Don't refactor adjacent code, reformat unrelated lines, or "improve" things unasked — surface those as a note instead.
+6. **Report with evidence** — quoted test summaries, files changed, what was verified. No "should work."
+
+**Stop and hand back (do NOT autonomously merge) when the task touches:**
+- **OCSF / standards work** — schema files, `attestation.json`, profiles, anything feeding PRs #1641/#1661/#1662. Public-facing and reputation-bearing; facts and framing need a human pass.
+- **Architecture / build-vs-buy** — new external dependencies, or any change to a public API contract.
+- **Secrets, infra, or production migrations** — Secret Manager, GKE/deploy manifests, forward-only Alembic migrations.
+- **Public-facing copy** — landing-page/marketing/docs claims (the "Four Pillars", no-vaporware code-state claims).
+- **Ambiguous scope** — if the task could mean two things, ask rather than guess.
+
+Green to fully own: bugfixes with a clear repro, test/coverage additions, mechanical refactors within a file, dependency-level fixes — anything where a passing full suite is sufficient proof. (The Sentry transaction-filter fix in #359 is the model: defensive fix + new tests + full suite green + clean merge.)
+
 ## Secrets Management (Non-Standard)
 
 **CRITICAL**: This cluster uses Google Secret Manager + GKE CSI driver, NOT k8s Secrets.
@@ -73,7 +94,7 @@ Use `make setup` — it runs `scripts/docker-setup.sh` which generates `.env` wi
 
 ## `make test` ≠ `pytest`
 
-`make test` runs `pytest` separately inside the api and gateway containers and **skips `common/tests/`**. Bare `pytest` (per `pyproject.toml` `testpaths`) covers all three. If you only run `make test`, common-library regressions slip through.
+`make test` runs `pytest` separately inside the api and gateway containers and **skips both `common/tests/` and `mandate/tests/`**. Bare `pytest` (per `pyproject.toml` `testpaths`) covers all four — `api`, `gateway`, `common`, `mandate`. If you only run `make test`, common-library and mandate-service regressions slip through.
 
 ## Ruff Format: Double Quotes
 
