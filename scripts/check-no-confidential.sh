@@ -16,7 +16,11 @@
 set -euo pipefail
 
 # ── Path patterns (extended regex, matched against staged paths) ────────────
-FORBIDDEN_PATHS='^(private/|marketing/sales/|outreach/|competitive-brief-.*\.md$|.*Budget_Tracker.*\.xlsx$|AI-Identity-Status-Report-.*\.docx$)'
+# Directory prefixes anchor at the repo root; filename patterns match at ANY
+# depth — `.gitignore` matches them at any depth too, and this hook exists to
+# backstop the `git add -f` that bypasses `.gitignore`. A root-only filename
+# pattern would leave docs/competitive-brief-*.md unguarded.
+FORBIDDEN_PATHS='^(private/|marketing/sales/|outreach/)|(^|/)competitive-brief-[^/]*\.md$|(^|/)[^/]*Budget_Tracker[^/]*\.xlsx$|(^|/)AI-Identity-Status-Report-[^/]*\.docx$'
 
 # ── Content: SHA-256 of lowercased addresses that must never be committed ───
 FORBIDDEN_EMAIL_HASHES="
@@ -33,6 +37,9 @@ staged() {
   git diff --cached --name-only --diff-filter=ACMR
 }
 
+blob=$(mktemp)
+trap 'rm -f "$blob"' EXIT
+
 violations=""
 
 # ── 1. Forbidden paths ──────────────────────────────────────────────────────
@@ -47,9 +54,13 @@ done < <(staged)
 # Extract every email-shaped token, hash it, compare. Never prints the address.
 while IFS= read -r file; do
   [ -n "$file" ] || continue
-  # Skip binaries and anything already gone from the worktree.
-  [ -f "$file" ] || continue
-  grep -Iq . "$file" 2>/dev/null || continue
+  # Read the STAGED blob, never the worktree copy. Partial staging (`git add
+  # -p`, or an edit made after `git add`) means the two differ, and it is the
+  # staged version that gets committed — scanning the worktree lets an address
+  # staged and then edited out of the file sail straight through.
+  git show ":$file" >"$blob" 2>/dev/null || continue
+  # Skip binaries.
+  grep -Iq . "$blob" 2>/dev/null || continue
 
   while IFS= read -r addr; do
     [ -n "$addr" ] || continue
@@ -59,7 +70,7 @@ while IFS= read -r file; do
       violations+="  [email] $file — contains a personal address that must not be published"$'\n'
       break
     fi
-  done < <(grep -oIE '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' "$file" 2>/dev/null | sort -u)
+  done < <(grep -oIE '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' "$blob" 2>/dev/null | sort -u)
 done < <(staged)
 
 if [ -n "$violations" ]; then
