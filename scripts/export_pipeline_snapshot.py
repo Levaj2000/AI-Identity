@@ -2,11 +2,16 @@
 """Export design-partner pipeline state as a CSV + post a summary briefing.
 
 Reads the pipeline tracking decision (#40 by default) and produces:
-  1. CSV file at marketing/sales/pipeline-snapshots/YYYY-MM-DD.csv
+  1. CSV file at private/pipeline-snapshots/YYYY-MM-DD.csv
   2. A briefing posted to the dashboard with summary + risk callouts
 
 The briefing is what shows up on the Team page; the CSV is for any
 spreadsheet workflow (Google Sheets import, Excel, etc.).
+
+The CSV names prospects, contacts, and candid deal risk. This repo is
+PUBLIC — `private/` is gitignored and the snapshot must never be
+committed. Override the destination with PIPELINE_SNAPSHOT_DIR (e.g. a
+path outside the repo entirely).
 
 The pipeline format is parsed from the decision's `reasoning` field —
 specifically the section between '=== PIPELINE — YYYY-MM-DD ===' and
@@ -36,7 +41,12 @@ from urllib import request as ureq
 API_BASE = os.environ.get("CEO_API_URL", "https://ceo-agent-evfb.onrender.com")
 COMPANY = "ai-identity"
 DEFAULT_DECISION_ID = 40
-SNAPSHOT_DIR = Path(__file__).parent.parent / "marketing" / "sales" / "pipeline-snapshots"
+SNAPSHOT_DIR = Path(
+    os.environ.get(
+        "PIPELINE_SNAPSHOT_DIR",
+        Path(__file__).parent.parent / "private" / "pipeline-snapshots",
+    )
+)
 
 
 def _api_key() -> str:

@@ -6,6 +6,8 @@ docs/strategy/anthropic-3-tier-posture-mapping.md
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -29,7 +31,9 @@ INK = colors.HexColor("#2A2A33")
 GRAY = colors.HexColor("#6B6B78")
 WHITE = colors.white
 
-OUT = "marketing/sales/ai-identity-anthropic-tier-posture-2026-06-23.pdf"
+# Sales collateral — written to the gitignored private/ tree. This repo is PUBLIC.
+OUT = "private/sales/ai-identity-anthropic-tier-posture-2026-06-23.pdf"
+Path(OUT).parent.mkdir(parents=True, exist_ok=True)
 DOCNAME = "Agent-Security Posture Map"
 DATE = "June 23, 2026"
 

@@ -12,7 +12,9 @@ retention-workflow action, not a cleanup side effect.
 """
 
 import contextlib
+import hashlib
 import logging
+import os
 from typing import Any
 
 from sqlalchemy import exists, text
@@ -25,10 +27,49 @@ from common.models.organization import Organization
 logger = logging.getLogger("ai_identity.user_cleanup")
 
 # Users that must never be deleted, regardless of matching patterns or inactivity.
-PROTECTED_EMAILS = {
-    "bisteroleg@gmail.com",
-    "levaj2000@gmail.com",
-}
+#
+# This repo is PUBLIC, so the addresses are not stored here in plaintext —
+# publishing them invites targeted phishing at exactly the accounts that must
+# never be lost. Protection is two-layered:
+#
+#   1. PROTECTED_EMAILS — read from the PROTECTED_EMAILS env var (comma-
+#      separated). Lets an operator extend the list without a deploy, and lets
+#      callers push the exclusion down into SQL where that is cheaper.
+#   2. _PROTECTED_EMAIL_HASHES — a hard-coded SHA-256 backstop, so protection
+#      cannot silently disappear if the env var is unset or misconfigured.
+#      An empty env var must never mean "protect nobody".
+#
+# is_protected() checks both. Every deletion path MUST filter through it rather
+# than testing membership of PROTECTED_EMAILS directly.
+_PROTECTED_EMAIL_HASHES = frozenset(
+    {
+        "6ad13664ba4f2fdbbfedbaea18f4c8167425cd3881ec341c57b65c53aaec4f69",
+        "16ed82df9608ecc8096756eca2fd5e90c0ab10013be157b14afc34ad3361dfb7",
+    }
+)
+
+
+def _env_protected_emails() -> set[str]:
+    raw = os.environ.get("PROTECTED_EMAILS", "")
+    return {part.strip().lower() for part in raw.split(",") if part.strip()}
+
+
+PROTECTED_EMAILS = _env_protected_emails()
+
+
+def is_protected(email: str | None) -> bool:
+    """True if this address must never be deleted.
+
+    Checks the env-configured allowlist first, then the hard-coded hash
+    backstop. Comparison is case-insensitive and whitespace-tolerant, so it is
+    strictly more protective than a raw set membership test.
+    """
+    normalized = (email or "").strip().lower()
+    if not normalized:
+        return False
+    if normalized in PROTECTED_EMAILS:
+        return True
+    return hashlib.sha256(normalized.encode()).hexdigest() in _PROTECTED_EMAIL_HASHES
 
 
 def owners_with_audit_history(db: Session, users: list[User]) -> set:
@@ -73,7 +114,7 @@ def delete_users_with_cascade(
         return {"deleted_count": 0, "emails": [], "agents_removed": 0, "retained_for_evidence": []}
 
     # Filter out protected users as a safety net
-    users = [u for u in users if u.email not in PROTECTED_EMAILS]
+    users = [u for u in users if not is_protected(u.email)]
 
     # Evidence retention: skip users whose org still holds audit history
     # (owner_id cascade would hit fk_audit_log_org_id and abort the whole run).

@@ -112,8 +112,9 @@ the prior UptimeRobot setup if it's still the source of truth).
    - Unpause
 4. Add new monitors for any rows in the table above that don't have one
    yet (dashboard, landing, public keys if shipped).
-5. Confirm each monitor's notification channel routes to
-   `levaj2000@gmail.com` (or the on-call alias, once we have one).
+5. Confirm each monitor's notification channel routes to the founder's
+   alerting address (or the on-call alias, once we have one). This repo is
+   public — keep the actual address in UptimeRobot, not in the runbook.
 6. Delete or archive the retired `*.onrender.com` monitors after 7 days
    of green on the new ones.
 
@@ -146,7 +147,8 @@ fails. External monitors tell us when **no requests are observed**. The
 
 ## Alert routing
 
-Current: email to `levaj2000@gmail.com`. Good enough for solo founder.
+Current: email to the founder's personal address (configured in UptimeRobot,
+deliberately not written down here — public repo). Good enough for solo founder.
 
 Before enterprise pilots: add PagerDuty / OpsGenie integration so alerts
 route through on-call rotation with escalation. Track as a separate
