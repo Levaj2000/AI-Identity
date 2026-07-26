@@ -45,8 +45,11 @@ jobs:
       || github.event_name == 'workflow_dispatch'
         && (github.event.inputs.task == 'pipeline' || github.event.inputs.task == 'all')
     runs-on: ubuntu-latest
-    permissions:
-      contents: write   # commit the weekly CSV snapshot back to the repo
+    # No contents:write — the snapshot names prospects, contacts, and candid
+    # deal risk, and this repo is PUBLIC. The briefing posted to the dashboard
+    # is the delivery mechanism; the CSV stays on the runner and is discarded.
+    # Do NOT upload it as an Actions artifact either — artifacts on a public
+    # repo are downloadable by anyone.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -59,17 +62,6 @@ jobs:
           # Dogfood: X-Agent-Key for a "sales"-role AI Identity agent (author == role).
           CEO_AGENT_KEY: ${{ secrets.DASHBOARD_AGENT_KEY_SALES }}
         run: python scripts/export_pipeline_snapshot.py
-      - name: Commit weekly CSV
-        run: |
-          if [[ -n "$(git status --porcelain marketing/sales/pipeline-snapshots/)" ]]; then
-            git config user.name  'github-actions[bot]'
-            git config user.email 'github-actions[bot]@users.noreply.github.com'
-            git add marketing/sales/pipeline-snapshots/
-            git commit -m "chore(sales): weekly pipeline snapshot $(date -u +%Y-%m-%d)"
-            git push
-          else
-            echo "No new snapshot to commit."
-          fi
 
   stale-decisions:
     # Daily run + on-demand. Pipeline-only Monday schedule skips this job.

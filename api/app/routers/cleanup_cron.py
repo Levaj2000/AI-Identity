@@ -16,6 +16,7 @@ from common.models import User, get_db
 from common.queries.user_cleanup import (
     PROTECTED_EMAILS,
     delete_users_with_cascade,
+    is_protected,
     owners_with_audit_history,
 )
 
@@ -47,18 +48,19 @@ def cleanup_inactive_users(
     cutoff = datetime.now(UTC) - timedelta(days=inactivity_days)
 
     # Find inactive free-tier users
-    eligible = (
-        db.query(User)
-        .filter(
-            User.tier == "free",
-            User.role != "admin",
-            User.updated_at <= cutoff,
-            User.stripe_customer_id.is_(None),
-            User.stripe_subscription_id.is_(None),
-            User.email.notin_(PROTECTED_EMAILS),
-        )
-        .all()
+    query = db.query(User).filter(
+        User.tier == "free",
+        User.role != "admin",
+        User.updated_at <= cutoff,
+        User.stripe_customer_id.is_(None),
+        User.stripe_subscription_id.is_(None),
     )
+    # Push the env-configured allowlist into SQL when it is populated; the
+    # authoritative check is is_protected() below, which also covers the
+    # hard-coded hash backstop the database cannot match on.
+    if PROTECTED_EMAILS:
+        query = query.filter(User.email.notin_(PROTECTED_EMAILS))
+    eligible = [u for u in query.all() if not is_protected(u.email)]
 
     if dry_run:
         retained_ids = owners_with_audit_history(db, eligible)
