@@ -8,12 +8,24 @@
 
 ## Summary
 
-No credentials were exposed. All 1,113 blobs in the full git history were
-scanned for API keys, private keys, database URLs, and cloud tokens; every hit
-was a test fixture or placeholder. Secrets live in Google Secret Manager and
-are referenced by name only. The only committed key material is
+No credentials were exposed. **2,969 blobs** — every blob reachable from all
+refs across the full 683-commit history (2026-03-11 onward) and all ~115
+branches — were scanned for API keys, private keys, database URLs, and cloud
+tokens. Every hit was a test fixture or placeholder: `postgres:postgres@db`,
+`user:password@host`, `admin:s3cret_pw@db.neon.tech`, `ghp_abc123def456…` in
+`test_sanitizer.py`, and a bare `-----BEGIN PRIVATE KEY-----` header written
+by `test_code_tools_secrets.py`. Secrets live in Google Secret Manager and are
+referenced by name only. The only committed key material is
 `docs/cosai-ws4-ocsf-mapping/attestation-finding-sample/checkpoint-public-key.pem`,
 a public key published on purpose.
+
+> **Scan-scope correction.** The first pass of this audit ran against a
+> *shallow* clone — 50 commits back to 2026-06-29 — and reported "1,113 blobs,
+> full history". That covered roughly the last four weeks of an approximately
+> four-and-a-half-month repo. The numbers above are the corrected, full-history
+> figures after `git fetch --unshallow`. The conclusion did not change, but the
+> original evidence did not support it. Early history is exactly where secrets
+> tend to land, so re-run any future scan against a full clone.
 
 The exposure was **commercial, not technical**: the business was in the repo
 alongside the code.
@@ -131,6 +143,35 @@ you prefer). `docs/strategy/build_anthropic_tier_posture_pdf.py` writes to
   content and fails the commit on forbidden paths or forbidden personal
   addresses. Addresses are matched by SHA-256 so the guard does not itself
   leak them.
+
+## The material is on stale branches too, not just `main`
+
+The confidential paths appear on roughly **30 other public branches** — merged
+and abandoned feature branches that still carry the full `marketing/sales/`
+tree (35 files on `fix/verifier-agent-scope` and
+`claude/sleepy-northcutt-fadb4a`, 34 on `ocsf-pr1661-assets`,
+`feat/marketing-content-sweep` and others, 27 across the support-ticket and
+menubar branches). Removing them from `main` does not touch those.
+
+Two consequences:
+
+1. Between merging the removal and rewriting history, the material stays
+   browsable on those branches. Deleting stale branches is the fastest partial
+   mitigation and worth doing on its own merits — most of them are merged.
+2. The rewrite handles them: `git filter-repo --invert-paths` operates on all
+   refs, and the script's `git push --force --all origin` propagates it. Do not
+   substitute a single-branch force-push, or the branches will keep the blobs
+   alive and a later merge can reintroduce them.
+
+To list the branches carrying confidential paths:
+
+```bash
+for br in $(git branch -r | grep -v HEAD | sed 's| *origin/||'); do
+  n=$(git ls-tree -r --name-only "origin/$br" \
+      | grep -cE '^(marketing/sales/|outreach/|competitive-brief|AI_Identity_Budget|AI-Identity-Status-Report)')
+  [ "$n" -gt 0 ] && echo "$br: $n"
+done
+```
 
 ## Removing this from history
 
