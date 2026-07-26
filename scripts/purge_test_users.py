@@ -18,7 +18,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy import or_  # noqa: E402
 
 from common.models import Agent, SessionLocal, User  # noqa: E402
-from common.queries.user_cleanup import PROTECTED_EMAILS, delete_users_with_cascade  # noqa: E402
+from common.queries.user_cleanup import (  # noqa: E402
+    PROTECTED_EMAILS,
+    delete_users_with_cascade,
+    is_protected,
+)
 
 # Patterns that identify test/seed users
 TEST_PATTERNS = [
@@ -37,8 +41,11 @@ def find_test_users(db):
     filters = [User.email.like(p) for p in TEST_PATTERNS]
     filters.extend(User.email == e for e in TEST_EXACT)
 
-    users = db.query(User).filter(or_(*filters)).filter(User.email.notin_(PROTECTED_EMAILS)).all()
-    return users
+    query = db.query(User).filter(or_(*filters))
+    if PROTECTED_EMAILS:
+        query = query.filter(User.email.notin_(PROTECTED_EMAILS))
+    # is_protected() is authoritative — it also covers the hash backstop.
+    return [u for u in query.all() if not is_protected(u.email)]
 
 
 def main():
@@ -73,7 +80,8 @@ def main():
             print()
 
         print(f"Total: {len(users)} test users to delete")
-        print(f"Protected: {', '.join(PROTECTED_EMAILS)}")
+        # Count only — never print protected addresses to a log or terminal.
+        print(f"Protected: {len(PROTECTED_EMAILS)} configured + hash backstop")
         print()
 
         if not args.execute:

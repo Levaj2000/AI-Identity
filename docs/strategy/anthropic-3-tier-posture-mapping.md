@@ -2,7 +2,8 @@
 
 **Sprint 16 · board item #416 · 2026-06-23**
 Canonical source for the positioning artifact. Internal reference + basis for the executive PDF
-(`marketing/sales/ai-identity-anthropic-tier-posture-2026-06-23.pdf`). Pairs with Insight #101 / briefing #215.
+(`private/sales/ai-identity-anthropic-tier-posture-2026-06-23.pdf` — gitignored; this repo is public).
+Pairs with Insight #101 / briefing #215.
 
 ---
 
