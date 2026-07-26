@@ -49,6 +49,16 @@ repos:
         pass_filenames: false
         files: ^dashboard/.*\.(ts|tsx|json|css|html)$
 
+  # ── Public-repo hygiene: no confidential GTM material ─────────────────
+  - repo: local
+    hooks:
+      - id: no-confidential-material
+        name: no confidential material (public repo)
+        entry: scripts/check-no-confidential.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+
   # ── Brand consistency: Four Pillars canon ─────────────────────────────
   - repo: local
     hooks:
