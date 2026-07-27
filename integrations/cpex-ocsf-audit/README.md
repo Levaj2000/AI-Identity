@@ -67,6 +67,8 @@ plugins:
 Built **green** against `contextforge-org/cpex@feat/hil_apl` commit `ad666ba` — Teryl's
 review baseline (`cargo build` clean, `cargo test` 13/13 passing, 2026-07-20). Every CMF
 accessor path and `ContentPart` variant shape was confirmed against that commit.
+Re-verified against the **public `dev` branch** at `baa9e17` (2026-07-27): build, all 13
+tests, and the `emit_sample` example pass unchanged — no API drift between the two.
 
 **Revision 0.0.2 (2026-07-20) — P0 + review §4-B**, per the production-readiness plan
 (2026-07-17) and the decisions closed on the 2026-07-18 thread:
@@ -132,10 +134,10 @@ Honest inventory of what's solid vs. open:
 # API moves). Clone contextforge-org/cpex next to the AI-Identity repo:
 #   git clone https://github.com/contextforge-org/cpex ../../../cpex
 #
-# `dev` is the public default and carries crates/cpex-core. The crate was
-# verified green against feat/hil_apl `ad666ba` (2026-07-06), which is NOT
-# a public branch — if you have access, check it out for the exact
-# baseline; otherwise build against dev and expect some API drift.
+# `dev` is the public default and carries crates/cpex-core. The crate is
+# verified green against BOTH baselines: feat/hil_apl `ad666ba` (2026-07-06,
+# not a public branch) and public dev `baa9e17` (2026-07-27) — build, all
+# 13 tests, and the example pass on each.
 #
 # To build without a local checkout, swap the dep for the git form pinned
 # to a rev (see the comment in Cargo.toml).

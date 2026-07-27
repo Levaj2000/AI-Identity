@@ -3,9 +3,9 @@
 # DSSE-signed) instead of a free-form JSON line.
 #
 # Verified green against contextforge-org/cpex @ feat/hil_apl `ad666ba`
-# (Teryl's verification baseline, 2026-07-06). That branch is not public;
-# `dev` is the public entry point and carries crates/cpex-core, but this
-# crate has NOT been rebuilt against it — expect API drift.
+# (Teryl's verification baseline, 2026-07-06) AND against the public `dev`
+# branch @ `baa9e17` (2026-07-27): cargo build + all 13 tests + the example
+# pass on both. `dev` is the public entry point and carries crates/cpex-core.
 #
 # This crate is intentionally standalone (NOT a member of the cpex
 # workspace) so it can live in the AI-Identity repo as a reference
