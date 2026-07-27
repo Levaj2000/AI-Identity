@@ -77,6 +77,44 @@ EOF
   exit 1
 fi
 
+# ── Identity inputs, validated BEFORE anything is exported or destroyed ──────
+# The addresses are NEVER stored in this file. An earlier revision hardcoded
+# them and published both to this public repo — the exact class of leak this
+# script exists to remove. Supply them at run time:
+#
+#   SCRUB_FOUNDER_EMAIL=... SCRUB_OTHER_EMAIL=... ./scripts/scrub-public-history.sh
+#
+# Each value is checked against the SHA-256 backstop already published in
+# common/queries/user_cleanup.py, so a typo fails here — cheaply, before the
+# export and the rewrite — rather than silently rewriting nothing and
+# reporting success.
+NOREPLY="${SCRUB_NOREPLY_EMAIL:-120221487+Levaj2000@users.noreply.github.com}"
+FOUNDER="${SCRUB_FOUNDER_EMAIL:-}"
+OTHER="${SCRUB_OTHER_EMAIL:-}"
+
+# Same values as _PROTECTED_EMAIL_HASHES in common/queries/user_cleanup.py.
+EXPECTED_HASHES="
+6ad13664ba4f2fdbbfedbaea18f4c8167425cd3881ec341c57b65c53aaec4f69
+16ed82df9608ecc8096756eca2fd5e90c0ab10013be157b14afc34ad3361dfb7
+"
+
+check_addr() {  # $1 = address, $2 = variable name for the error message
+  local h
+  h=$(printf '%s' "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" | sha256sum | cut -d' ' -f1)
+  if ! grep -qx "$h" <<<"$(tr -d ' ' <<<"$EXPECTED_HASHES")"; then
+    echo "ERROR: \$$2 does not match either known address (compared by SHA-256,"
+    echo "       so this script never has to contain them). Fix it and re-run."
+    exit 1
+  fi
+}
+
+IDENTITY_REWRITE=0
+if [ -n "$FOUNDER" ] || [ -n "$OTHER" ]; then
+  [ -n "$FOUNDER" ] && check_addr "$FOUNDER" SCRUB_FOUNDER_EMAIL
+  [ -n "$OTHER" ]   && check_addr "$OTHER"   SCRUB_OTHER_EMAIL
+  IDENTITY_REWRITE=1
+fi
+
 # ── Guard: never rewrite the evidence mirror ─────────────────────────────────
 # evidence-anchor-mirror is an orphan branch holding the public, append-only
 # Evidence Anchor checkpoint record. Its whole value is that it has never been
@@ -133,29 +171,38 @@ if [ -z "$(ls -A "$EXPORT_DIR" 2>/dev/null)" ]; then
 fi
 
 # ── 2. Build the identity + text rewrite rules ──────────────────────────────
-# Kept in a temp dir so the addresses never land in a file inside the repo.
+# Values were read and validated at the top, before anything was destroyed.
+# They live only in this temp dir, never in a file inside the repo.
 RULES=$(mktemp -d)
 trap 'rm -rf "$RULES"' EXIT
 
-FOUNDER="120221487+Levaj2000@users.noreply.github.com"
-OTHER="[redacted]"
-NOREPLY="120221487+Levaj2000@users.noreply.github.com"
+if [ "$IDENTITY_REWRITE" -eq 1 ]; then
+  : > "$RULES/replace-text"
+  if [ -n "$FOUNDER" ]; then
+    printf 'Jeff Leva <%s> <%s>\n' "$NOREPLY" "$FOUNDER" > "$RULES/mailmap"
+    printf '%s==>%s\n' "$FOUNDER" "$NOREPLY" >> "$RULES/replace-text"
+  fi
+  [ -n "$OTHER" ] && printf '%s==>[redacted]\n' "$OTHER" >> "$RULES/replace-text"
+  cp "$RULES/replace-text" "$RULES/replace-message"
+else
+  cat <<'EOF'
 
-printf 'Jeff Leva <%s> <%s>\n' "$NOREPLY" "$FOUNDER" > "$RULES/mailmap"
-printf '%s==>%s\n%s==>[redacted]\n' "$FOUNDER" "$NOREPLY" "$OTHER" > "$RULES/replace-text"
-cp "$RULES/replace-text" "$RULES/replace-message"
+  NOTE: SCRUB_FOUNDER_EMAIL / SCRUB_OTHER_EMAIL are unset, so this run purges
+        PATHS ONLY. Author and committer emails will be left as they are.
+        That is a valid mode — just not the full scrub.
+
+EOF
+fi
 
 # ── 3. Rewrite ──────────────────────────────────────────────────────────────
 echo "==> Rewriting $TARGET_REF"
 args=()
 for p in "${PATHS[@]}"; do args+=(--path "$p"); done
-git filter-repo \
-  --refs "$TARGET_REF" \
-  --invert-paths "${args[@]}" \
-  --mailmap "$RULES/mailmap" \
-  --replace-text "$RULES/replace-text" \
-  --replace-message "$RULES/replace-message" \
-  --force
+if [ "$IDENTITY_REWRITE" -eq 1 ]; then
+  [ -f "$RULES/mailmap" ] && args+=(--mailmap "$RULES/mailmap")
+  args+=(--replace-text "$RULES/replace-text" --replace-message "$RULES/replace-message")
+fi
+git filter-repo --refs "$TARGET_REF" --invert-paths "${args[@]}" --force
 
 # ── 4. Verify — a failure here is FATAL ─────────────────────────────────────
 echo "==> Verifying"
@@ -167,9 +214,11 @@ for p in "${PATHS[@]}"; do
   fi
 done
 
-if git log "$TARGET_REF" --format='%ae%n%ce' | grep -qF "$FOUNDER"; then
-  echo "    STILL PRESENT: personal address in author/committer fields"
-  remaining=1
+if [ "$IDENTITY_REWRITE" -eq 1 ] && [ -n "$FOUNDER" ]; then
+  if git log "$TARGET_REF" --format='%ae%n%ce' | grep -qF "$FOUNDER"; then
+    echo "    STILL PRESENT: personal address in author/committer fields"
+    remaining=1
+  fi
 fi
 
 if [ "$remaining" -ne 0 ]; then
