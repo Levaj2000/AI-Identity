@@ -6,12 +6,38 @@
 
 **Identity, governance, and forensic accountability for AI agents.**
 
-AI Identity is the identity, governance, and forensic infrastructure that enterprises need to deploy AI agents with confidence. Each agent gets a cryptographic identity, enforceable policies, compliance-ready audit logs, and tamper-evident forensic trails.
+Each agent gets a cryptographic identity, enforceable policies, compliance-ready audit logs, and tamper-evident forensic trails. The design constraint the whole system is built around: **trusting AI Identity evidence must never require trusting AI Identity.** Everything a relying party needs to check our records independently is openly licensed and runs offline.
+
+## Verify our claims without asking us
+
+The audit records are Merkle-batched and the signed checkpoints are published, so you can confirm the evidence is real before you talk to anyone here.
+
+```bash
+# 1. Pull a signed checkpoint from the public feed — no auth, no account
+curl -s "https://api.ai-identity.co/evidence-anchor/checkpoints?limit=1"
+
+# 2. Verify an exported audit chain offline — zero dependencies, MIT licensed
+python3 cli/ai_identity_verify.py chain export.json
+
+# 3. Verify a Merkle inclusion proof against a signed checkpoint
+python3 cli/ai_identity_verify.py inclusion-proof bundle.json
+```
+
+The checkpoint history is also mirrored to the [`evidence-anchor-mirror`](https://github.com/Levaj2000/AI-Identity/tree/evidence-anchor-mirror) branch of this repo every six hours, with append-only enforcement — a rewritten batch, a vanished root, or a mutated envelope fails the run rather than overwriting the record. A checkpoint that verifies offline but is absent from the public feed is the tamper signal.
+
+## Standards
+
+The record formats are not ours to define, so we contributed them upstream:
+
+- **OCSF** — the `attestation` object and `record_integrity` profile are merged into [OCSF 1.9](https://github.com/ocsf/ocsf-schema). This repo is the reference implementation that produced them; the emitter writes the merged shape.
+- **CPEX** — the OCSF audit plugin is contributed to IBM's CPEX gateway under Apache-2.0.
+- **CoSAI WS4** — the CMF ↔ OCSF cross-map and interop material lives in [`docs/cosai-ws4-ocsf-mapping/`](docs/cosai-ws4-ocsf-mapping/).
 
 | | URL |
 |---|---|
 | **Dashboard** | [ai-identity.co](https://ai-identity.co) |
 | **API Docs** | [api.ai-identity.co/docs](https://api.ai-identity.co/docs) |
+| **Checkpoint feed** | [api.ai-identity.co/evidence-anchor/checkpoints](https://api.ai-identity.co/evidence-anchor/checkpoints) |
 
 ## Integrations
 
@@ -147,7 +173,7 @@ Key rotation supports a 24-hour grace period — both old and new keys work duri
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS
 - **Forensics**: HMAC-SHA256 hash-chained audit logs, offline CLI verifier
 - **Integrations**: LangChain ([PyPI](https://pypi.org/project/langchain-ai-identity/))
-- **CI/CD**: GitHub Actions, Ruff (lint + format), pytest (427+ tests)
+- **CI/CD**: GitHub Actions, Ruff (lint + format), pytest (1,000+ tests)
 - **Deployment**: GKE Autopilot (API + Gateway), Vercel (Dashboard), GitHub Actions CI/CD with Cloud Build
 
 ## License
