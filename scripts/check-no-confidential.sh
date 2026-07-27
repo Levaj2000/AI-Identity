@@ -5,6 +5,12 @@
 # `git add -f` and does nothing for paths nobody thought to list. This hook is
 # the second line: it inspects what is actually STAGED and fails the commit.
 #
+# Two modes, one set of patterns:
+#   (no args)              inspect the index — the pre-commit hook.
+#   --range <base> <head>  inspect a commit range — CI, where nothing is
+#                          staged. Hooks are per-clone and skippable with
+#                          --no-verify; CI is the backstop that is neither.
+#
 # Two classes of violation:
 #   1. Path patterns — GTM material that must live outside the repo
 #      (named prospects, deal risk, pricing, spend, internal status).
@@ -33,8 +39,34 @@ FORBIDDEN_EMAIL_HASHES="
 # common/queries/user_cleanup.py) pass without an allowlist — and an allowlist
 # would mean a plaintext address re-added to exactly those files went unnoticed.
 
+# ── Mode ────────────────────────────────────────────────────────────────────
+MODE=staged
+BASE=""
+HEAD_REV=""
+if [ "${1:-}" = "--range" ]; then
+  MODE=range
+  BASE="${2:?--range needs a base revision}"
+  HEAD_REV="${3:?--range needs a head revision}"
+fi
+
+# The set of files to inspect.
 staged() {
-  git diff --cached --name-only --diff-filter=ACMR
+  if [ "$MODE" = range ]; then
+    # Three-dot: everything the branch adds since it diverged, so a violation
+    # introduced in an early commit and left in place is still caught.
+    git diff --name-only --diff-filter=ACMR "$BASE...$HEAD_REV"
+  else
+    git diff --cached --name-only --diff-filter=ACMR
+  fi
+}
+
+# The content that would land on main, for a path from staged().
+read_blob() {
+  if [ "$MODE" = range ]; then
+    git show "$HEAD_REV:$1"
+  else
+    git show ":$1"
+  fi
 }
 
 blob=$(mktemp)
@@ -57,8 +89,9 @@ while IFS= read -r file; do
   # Read the STAGED blob, never the worktree copy. Partial staging (`git add
   # -p`, or an edit made after `git add`) means the two differ, and it is the
   # staged version that gets committed — scanning the worktree lets an address
-  # staged and then edited out of the file sail straight through.
-  git show ":$file" >"$blob" 2>/dev/null || continue
+  # staged and then edited out of the file sail straight through. In range
+  # mode the equivalent is the blob at HEAD, not the runner's checkout.
+  read_blob "$file" >"$blob" 2>/dev/null || continue
   # Skip binaries.
   grep -Iq . "$blob" 2>/dev/null || continue
 
@@ -74,7 +107,11 @@ while IFS= read -r file; do
 done < <(staged)
 
 if [ -n "$violations" ]; then
-  echo "✗ Confidential material staged for a PUBLIC repository."
+  if [ "$MODE" = range ]; then
+    echo "✗ Confidential material in these changes — this is a PUBLIC repository."
+  else
+    echo "✗ Confidential material staged for a PUBLIC repository."
+  fi
   echo
   printf '%s' "$violations"
   echo

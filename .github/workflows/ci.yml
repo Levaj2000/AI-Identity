@@ -7,6 +7,40 @@ on:
     branches: [main]
 
 jobs:
+  no-confidential:
+    name: Public repo — no confidential material
+    runs-on: ubuntu-latest
+
+    # Same script as the pre-commit hook, so the patterns never drift. The hook
+    # lives in one clone and dies with `--no-verify`; this job is the backstop.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need the merge base, not just the tip
+
+      - name: Scan the pull request
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: scripts/check-no-confidential.sh --range "$BASE_SHA" "$HEAD_SHA"
+
+      - name: Scan the pushed commits
+        if: github.event_name == 'push'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        # A direct push to main bypasses the PR gate. Admins are not covered by
+        # branch protection here, so scan those commits too. `before` is all
+        # zeros on a branch's first push and can point at a force-pushed-away
+        # commit; fall back to the parent when it is not resolvable.
+        run: |
+          base="$BEFORE_SHA"
+          if ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            base=$(git rev-parse "${AFTER_SHA}^" 2>/dev/null || echo "$AFTER_SHA")
+          fi
+          scripts/check-no-confidential.sh --range "$base" "$AFTER_SHA"
+
   python-lint-test:
     name: Python — Lint & Test
     runs-on: ubuntu-latest
