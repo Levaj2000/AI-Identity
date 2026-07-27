@@ -101,6 +101,8 @@ docs/strategy/cosai-ws4-adlc-delegation-escalation-workshop-note.md
 docs/strategy/cosai-ws4-trust-graph-kickoff-*.md
 docs/strategy/cosai-ws4-talk-track-*
 docs/cosai-ws4-ocsf-mapping/build_ws4_exec_kit_pdfs.py
+# Offload/delegated-agent task briefs — internal workflow, not deliverables.
+ANTIGRAVITY-TASK*.md
 
 # Confidential GTM material — this repo is PUBLIC. NEVER COMMIT:
 # named prospects/contacts, candid deal risk, pricing, spend, or weekly

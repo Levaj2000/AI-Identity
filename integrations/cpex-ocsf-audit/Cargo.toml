@@ -1,0 +1,38 @@
+# cpex-plugin-ocsf-audit — CMF plugin that serializes each dispatched
+# request into an OCSF AI Operation event (optionally hash-chained and
+# DSSE-signed) instead of a free-form JSON line.
+#
+# Verified green against contextforge-org/cpex @ feat/hil_apl `ad666ba`
+# (Teryl's verification baseline, 2026-07-06). That branch is not public;
+# `dev` is the public entry point and carries crates/cpex-core, but this
+# crate has NOT been rebuilt against it — expect API drift.
+#
+# This crate is intentionally standalone (NOT a member of the cpex
+# workspace) so it can live in the AI-Identity repo as a reference
+# implementation. Build it against a local checkout of cpex, or point
+# the dep below at a pinned git rev.
+
+[package]
+name = "cpex-plugin-ocsf-audit"
+version = "0.0.2"
+edition = "2021"
+license = "Apache-2.0"
+description = "CPEX CMF plugin — emit OCSF AI Operation events (DSSE-ready attestation chain)."
+rust-version = "1.96"
+
+[dependencies]
+# Local checkout (clone cpex next to the AI-Identity repo — see README
+# "Building"). To build without a local checkout, swap in the git dep:
+#   cpex-core = { git = "https://github.com/contextforge-org/cpex", branch = "dev" }
+# Pin a rev rather than tracking `dev` for anything reproducible.
+cpex-core = { path = "../../../cpex/crates/cpex-core" }
+
+async-trait = "0.1"
+chrono      = { version = "0.4", features = ["serde"] }
+serde       = { version = "1", features = ["derive"] }
+serde_json  = "1"
+sha2        = "0.10"
+tracing     = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
