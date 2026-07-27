@@ -1,9 +1,14 @@
 # Ada — Cloud Build pipeline (build + deploy to Cloud Run).
 #
+# Deploying Ada is a MANUAL step — there is no CI deploy. The `Deploy Ada`
+# GitHub workflow was retired on 2026-07-27 (it never succeeded; the WIF SA
+# had no Cloud Build role, and nothing calls a deployed Ada). Read
+# docs/ada-deployment.md before the first run: the IAM grants and the secret
+# names below have never been exercised end-to-end.
+#
 # Trigger:
 #   gcloud builds submit --config=agent/cloudbuild.yaml \
 #     --substitutions=SHORT_SHA=$(git rev-parse --short HEAD) .
-# Or via a Cloud Build trigger on PRs / main pushes that touch agent/**.
 #
 # Substitutions (override at trigger creation or via --substitutions):
 #   _REGION         — Artifact Registry + Cloud Run region (default us-east1).

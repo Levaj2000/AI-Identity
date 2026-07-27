@@ -12,6 +12,50 @@ with #228 (secret-file denylist), #229 (X-Agent-Key auth + CORS lockdown),
 
 ---
 
+## Status: manual only — automatic deploy retired 2026-07-27
+
+**There is no CI deploy for Ada.** The `Deploy Ada` workflow
+(`.github/workflows/deploy-ada.yml`, added in #236) was deleted. Everything
+below still works; run it by hand.
+
+It was retired rather than repaired for two reasons:
+
+1. **It never once worked.** All six runs between 2026-05-04 and 2026-07-27
+   died at the same line — `gcloud builds submit` →
+   `PERMISSION_DENIED: The caller does not have permission`. The WIF service
+   account was never granted a Cloud Build role. `deploy-gke.yml` shares the
+   same `secrets.WIF_SA` and works fine because it never calls Cloud Build at
+   all: it runs `docker build`/`docker push` on the runner, then kubectl.
+   Nothing about the WIF setup was broken — Ada's workflow just needed IAM
+   that was never requested.
+2. **Nothing calls a deployed Ada.** Ingress is `internal` with no LB and no
+   in-VPC caller, and day-to-day Ada runs locally via
+   [the launcher](../agent/launcher/README.md). A green build would have
+   produced a correct service that nothing could reach.
+
+A permanently red workflow on every push to `main` is worse than no workflow:
+it teaches everyone to ignore failures on this repo, which is where a real
+failure hides. The deploy artifacts are deliberately kept — `agent/Dockerfile`
+and `agent/cloudbuild.yaml` are the manual path documented below, and they
+remain the on-ramp if Ada ever needs to be hosted.
+
+### Before the first real deploy
+
+Two things must be settled — neither was ever exercised end-to-end, so both
+are unverified:
+
+- **IAM.** Whoever deploys (a person, or a future SA) needs
+  `roles/cloudbuild.builds.editor` on the project, plus the Cloud Build SA
+  grants in [Prerequisites §5](#5-cloud-build-sa).
+- **Secret names disagree.** [§4](#4-secrets) below creates `ada-admin-key`
+  and `ada-runtime-key`, but `agent/cloudbuild.yaml` defaults `_ADMIN_SECRET`
+  / `_RUNTIME_SECRET` to `ai-identity-ADA_ADMIN_KEY` and
+  `ai-identity-ADA_RUNTIME_KEY`. One of the two is wrong. Check
+  `gcloud secrets list --project=$PROJECT_ID` and fix whichever doesn't match
+  reality before deploying, or the build will fail at the deploy step.
+
+---
+
 ## Service shape
 
 - **Runtime**: Cloud Run, fully-managed, region `us-east1` (matching the
@@ -25,10 +69,10 @@ with #228 (secret-file denylist), #229 (X-Agent-Key auth + CORS lockdown),
   Ada unreachable and caused recurring manual flips to `ingress=all`. Ada is
   an auth-gated internal API (day-to-day Ada runs locally via the launcher),
   so it needs no public endpoint. External token-based verification (the
-  `curl $URL/...` checks below) must run from inside the VPC; CI's deploy
-  verification uses `gcloud run services describe` (control plane) and is
-  unaffected. To add a branded demo endpoint later, build the LB first, then
-  switch `--ingress` back to `internal-and-cloud-load-balancing`.
+  `curl $URL/...` checks below) must run from inside the VPC; the
+  `gcloud run services describe` checks go through the control plane and work
+  from anywhere. To add a branded demo endpoint later, build the LB first,
+  then switch `--ingress` back to `internal-and-cloud-load-balancing`.
 - **Auth**: every protected route requires a valid `X-Agent-Key`
   ([`agent/auth.py`](../agent/auth.py)) verified against AI Identity's
   `/api/v1/keys/verify`. Admin credential lives in Secret Manager.
