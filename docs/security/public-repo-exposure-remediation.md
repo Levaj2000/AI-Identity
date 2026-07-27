@@ -179,15 +179,44 @@ done
 file is still reachable in history and through the GitHub UI. Run:
 
 ```bash
+brew install git-filter-repo
 git clone https://github.com/Levaj2000/AI-Identity.git ai-identity-scrub
 cd ai-identity-scrub
-pip install git-filter-repo
 ./scripts/scrub-public-history.sh
 ```
 
 The script exports the material to `../ai-identity-private-export/` **before**
 destroying it, refuses to proceed if that export is empty, rewrites history,
-and verifies the blobs are gone. Force-pushing is left to you.
+and verifies the result. Force-pushing is left to you.
+
+### What the rewrite covers, and what it deliberately does not
+
+Beyond the paths, the rewrite also replaces the **author and committer email**
+on every commit with the GitHub noreply address, and scrubs both personal
+addresses out of blob content and commit messages. Those are one force-push,
+not two — a separate identity rewrite later would mean rewriting history twice.
+
+Two things are deliberately excluded, and both are load-bearing:
+
+- **`evidence-anchor-mirror` is never rewritten or pushed.** It is an orphan
+  branch holding the public, append-only Evidence Anchor checkpoint record, and
+  its entire value is that it has not been rewritten — *the existing branch is
+  the evidence*. It carries no confidential paths, so there is nothing to purge
+  there. This is why the script targets `refs/heads/main` and the runbook says
+  `git push --force origin main` rather than `--all`.
+- **The `ocsf-1689-sample-artifacts` tag must be deleted first**, and the script
+  refuses to run while it exists. The tag pins commit `92458691` so that
+  SHA-pinned links in `ocsf/ocsf-schema#1689` keep resolving — but that commit's
+  tree also carries 35 confidential files, so leaving it alive would make the
+  purge cosmetic. All nine files that comment links to are also on `main`, so
+  no content is lost by dropping the tag; only the pinned URLs break, on a PR
+  closed since 2026-07-16. Edit the comment to point at `blob/main/docs/...`
+  first if the record matters.
+
+Verified on a throwaway clone before any live run: commits touching the
+confidential paths went 10 → 0, gmail-authored commits 383 → 0, the two commit
+messages carrying the address → 0, and the resulting HEAD tree was byte-identical
+to live `main` — history rewritten, content untouched.
 
 ### Residual risk after the rewrite
 
