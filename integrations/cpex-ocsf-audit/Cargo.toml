@@ -4,8 +4,11 @@
 #
 # Verified green against contextforge-org/cpex @ feat/hil_apl `ad666ba`
 # (Teryl's verification baseline, 2026-07-06) AND against the public `dev`
-# branch @ `baa9e17` (2026-07-27): cargo build + all 13 tests + the example
-# pass on both. `dev` is the public entry point and carries crates/cpex-core.
+# branch @ `baa9e17` (2026-07-27): cargo build + tests + the example pass
+# on both; `dev` is the public entry point and carries crates/cpex-core.
+# The 2026-07-31 revision (DSSE signer wired, authority_uid, 21 tests)
+# was verified against the local checkout on feat/ocsf-audit-plugin
+# @ `9fe56e5` — re-run against `dev` before any upstream sync.
 #
 # This crate is intentionally standalone (NOT a member of the cpex
 # workspace) so it can live in the AI-Identity repo as a reference
@@ -14,10 +17,10 @@
 
 [package]
 name = "cpex-plugin-ocsf-audit"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 license = "Apache-2.0"
-description = "CPEX CMF plugin — emit OCSF AI Operation events (DSSE-ready attestation chain)."
+description = "CPEX CMF plugin — emit OCSF AI Operation events (DSSE-signed attestation chain)."
 rust-version = "1.96"
 
 [dependencies]
@@ -28,7 +31,13 @@ rust-version = "1.96"
 cpex-core = { path = "../../../cpex/crates/cpex-core" }
 
 async-trait = "0.1"
+base64      = "0.22"
 chrono      = { version = "0.4", features = ["serde"] }
+# ECDSA P-256 for the DSSE signer — same curve as the production JWKS
+# (https://api.ai-identity.co/.well-known/ai-identity-public-keys.json).
+# RustCrypto's ecdsa signs per RFC 6979 (deterministic), which preserves
+# the crate's byte-identical-output-across-runs invariant.
+p256        = { version = "0.13", features = ["ecdsa", "pem", "pkcs8"] }
 serde       = { version = "1", features = ["derive"] }
 serde_json  = "1"
 sha2        = "0.10"

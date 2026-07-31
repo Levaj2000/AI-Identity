@@ -94,7 +94,10 @@ fn tool_read_only_hint(ext: &Extensions, call_name: Option<&str>) -> bool {
             return false;
         }
     }
-    matches!(tool.annotations.get("readOnlyHint"), Some(Value::Bool(true)))
+    matches!(
+        tool.annotations.get("readOnlyHint"),
+        Some(Value::Bool(true))
+    )
 }
 
 /// Infer the OCSF activity from the message content parts (the typed
@@ -118,7 +121,7 @@ pub fn activity_of(payload: &MessagePayload, ext: &Extensions) -> Activity {
                     Activity::Read
                 } else {
                     Activity::Other("Invoke Tool")
-                }
+                };
             }
             ContentPart::PromptRequest { .. }
             | ContentPart::PromptResult { .. }
@@ -176,28 +179,30 @@ pub fn build_ai_operation(
     // metadata + product (field map: `meta`/`request` -> base metadata)
     let mut profiles = vec!["ai_operation", "security_control"];
     if cfg.chain {
-        // The attestation wrapper (entry_hash chain) is the
-        // record_integrity shape from PR #1661 / OCSF 1.9.
+        // `attestation_list` is the record_integrity profile from
+        // PR #1661, merged 2026-07-17 (`2a244bc9`), shipping in 1.9.
         profiles.push("record_integrity");
     }
-    ev.insert(
-        "metadata".into(),
-        json!({
-            "version": SCHEMA_VERSION,
-            "profiles": profiles,
-            "product": { "name": cfg.product_name, "vendor_name": cfg.vendor_name },
-        }),
-    );
+    let mut metadata = json!({
+        "version": SCHEMA_VERSION,
+        "profiles": profiles,
+        "product": { "name": cfg.product_name, "vendor_name": cfg.vendor_name },
+    });
 
-    // correlation (field map: AgentExtension.conversation_id -> base
-    // correlation_uid). Review C1: the correlation key must be stable
-    // across every event of one run — conversation_id IS the run.
+    // correlation (field map: AgentExtension.conversation_id ->
+    // metadata.correlation_uid). Review C1: the correlation key must be
+    // stable across every event of one run — conversation_id IS the run.
     // Per-event ids (request_id, tool_call_id) correlate nothing;
     // tool_call_id rides at api.request.uid instead (see
     // attach_capability_coords).
+    //
+    // Placement (2026-07-31): `correlation_uid` is an attribute of
+    // `metadata`, not of base_event — it was previously emitted at the
+    // event root, where no OCSF consumer would look for it.
     if let Some(cid) = correlation_uid(ext) {
-        ev.insert("correlation_uid".into(), json!(cid));
+        metadata["correlation_uid"] = json!(cid);
     }
+    ev.insert("metadata".into(), metadata);
 
     // status (field map: ToolResult.is_error -> status)
     if let Some(is_err) = first_tool_error(payload) {
@@ -208,7 +213,7 @@ pub fn build_ai_operation(
     if let Some(sec) = ext.security.as_ref() {
         if let Some(s) = &sec.subject {
             // roles/teams are HashSets — sort so the emitted event is
-            // canonical and entry_hash is reproducible (review C2).
+            // canonical and the fingerprint is reproducible (review C2).
             let mut groups: Vec<&String> = s.teams.iter().collect();
             groups.sort_unstable();
             let mut roles: Vec<&String> = s.roles.iter().collect();
@@ -314,7 +319,10 @@ fn build_unmapped_gaps(payload: &MessagePayload, ext: &Extensions) -> Value {
     // gap 3: completion.stop_reason
     if let Some(comp) = ext.completion.as_ref() {
         if let Some(sr) = &comp.stop_reason {
-            g.insert("cmf.completion.stop_reason".into(), json!(format!("{sr:?}")));
+            g.insert(
+                "cmf.completion.stop_reason".into(),
+                json!(format!("{sr:?}")),
+            );
         }
     }
 
@@ -421,7 +429,7 @@ fn attach_capability_coords(ev: &mut Map<String, Value>, payload: &MessagePayloa
 fn security_labels(sec: &cpex_core::extensions::SecurityExtension) -> Vec<String> {
     // MonotonicSet<String>::iter() -> impl Iterator<Item = &String>.
     // The backing HashSet iterates in randomized, seed-dependent order;
-    // sort so the emitted array is canonical and the entry_hash an
+    // sort so the emitted array is canonical and the fingerprint an
     // independent verifier recomputes matches ours (review C2).
     let mut labels: Vec<String> = sec.labels.iter().cloned().collect();
     labels.sort_unstable();

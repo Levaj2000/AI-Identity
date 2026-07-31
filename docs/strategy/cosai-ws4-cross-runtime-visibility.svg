@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1760" height="990" viewBox="0 0 1760 990" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5B21B6"/>
+    </marker>
+    <marker id="arrowGray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#B45309"/>
+    </marker>
+  </defs>
+
+  <rect width="1760" height="990" fill="#FFFFFF"/>
+
+  <!-- Title -->
+  <text x="60" y="62" font-size="34" font-weight="bold" fill="#1F2937">Cross-Runtime Agent Visibility — three separable problems</text>
+  <text x="60" y="96" font-size="19" fill="#6B7280">When an agent crosses into a runtime you don't control, each lane below has a different owner, standard, and limit</text>
+
+  <!-- Runtime panels -->
+  <rect x="220" y="140" width="600" height="600" rx="18" fill="#F5F1FC" stroke="#5B21B6" stroke-width="2.5"/>
+  <text x="520" y="180" font-size="23" font-weight="bold" fill="#4C1D95" text-anchor="middle">HOME RUNTIME (instrumented)</text>
+  <text x="520" y="207" font-size="16" fill="#6D28D9" text-anchor="middle">your gateway · your policies · your telemetry</text>
+
+  <rect x="940" y="140" width="600" height="600" rx="18" fill="#F4F4F5" stroke="#9CA3AF" stroke-width="2.5"/>
+  <text x="1240" y="180" font-size="23" font-weight="bold" fill="#374151" text-anchor="middle">FOREIGN RUNTIME</text>
+  <text x="1240" y="207" font-size="16" fill="#6B7280" text-anchor="middle">hosted platform (e.g. Perplexity) — not under your control</text>
+
+  <!-- Boundary -->
+  <line x1="880" y1="130" x2="880" y2="905" stroke="#B45309" stroke-width="3" stroke-dasharray="12 9"/>
+  <rect x="796" y="748" width="168" height="34" rx="17" fill="#B45309"/>
+  <text x="880" y="771" font-size="16" font-weight="bold" fill="#FFFFFF" text-anchor="middle">trust boundary</text>
+
+  <!-- Agent chips -->
+  <rect x="270" y="232" width="120" height="46" rx="23" fill="#5B21B6"/>
+  <text x="330" y="262" font-size="18" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Agent</text>
+  <rect x="1370" y="232" width="130" height="46" rx="23" fill="#6B7280"/>
+  <text x="1435" y="262" font-size="18" font-weight="bold" fill="#FFFFFF" text-anchor="middle">Agent&#8242;</text>
+  <line x1="400" y1="255" x2="1360" y2="255" stroke="#9CA3AF" stroke-width="2" stroke-dasharray="4 6" marker-end="url(#arrowGray)"/>
+  <text x="880" y="243" font-size="15" fill="#6B7280" text-anchor="middle" font-style="italic" stroke="#FFFFFF" stroke-width="6" paint-order="stroke">the agent keeps acting on the far side</text>
+
+  <!-- LANE 1: AUTHORITY -->
+  <text x="60" y="345" font-size="20" font-weight="bold" fill="#4C1D95">1 · AUTHORITY</text>
+  <text x="60" y="370" font-size="14" fill="#6B7280">same principal,</text>
+  <text x="60" y="388" font-size="14" fill="#6B7280">same grant?</text>
+  <line x1="270" y1="352" x2="1490" y2="352" stroke="#5B21B6" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <rect x="420" y="322" width="470" height="40" rx="8" fill="#FFFFFF" stroke="#5B21B6" stroke-width="2"/>
+  <text x="655" y="348" font-size="16" font-weight="bold" fill="#4C1D95" text-anchor="middle">signed grant / mandate travels WITH the agent</text>
+  <text x="1180" y="340" font-size="15" fill="#5B21B6">scope · spend ceiling · expiry</text>
+  <text x="270" y="392" font-size="15" fill="#7C3AED">ODIS Passport · CMF delegation.chain · SPIFFE identity</text>
+
+  <!-- LANE 2: CORRELATION -->
+  <text x="60" y="470" font-size="20" font-weight="bold" fill="#4C1D95" stroke="#FFFFFF" stroke-width="8" paint-order="stroke">2 · CORRELATION</text>
+  <text x="60" y="495" font-size="14" fill="#6B7280">do the two record</text>
+  <text x="60" y="513" font-size="14" fill="#6B7280">sets join?</text>
+  <line x1="270" y1="477" x2="1490" y2="477" stroke="#7C3AED" stroke-width="3" stroke-dasharray="14 8" marker-end="url(#arrow)"/>
+  <rect x="470" y="447" width="380" height="40" rx="8" fill="#FFFFFF" stroke="#7C3AED" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="660" y="473" font-size="16" font-weight="bold" fill="#5B21B6" text-anchor="middle">W3C traceparent / OTEL baggage</text>
+  <text x="270" y="517" font-size="15" fill="#7C3AED" stroke="#FFFFFF" stroke-width="6" paint-order="stroke">OpenTelemetry context propagation — the thread that joins both sides' records after the fact</text>
+
+  <!-- LANE 3: EVIDENCE -->
+  <text x="60" y="600" font-size="20" font-weight="bold" fill="#4C1D95">3 · EVIDENCE</text>
+  <text x="60" y="625" font-size="14" fill="#6B7280">verifiable records,</text>
+  <text x="60" y="643" font-size="14" fill="#6B7280">stitched?</text>
+
+  <!-- chain_uid ribbon -->
+  <rect x="270" y="586" width="1220" height="118" rx="12" fill="none" stroke="#10B981" stroke-width="2" stroke-dasharray="5 5"/>
+  <text x="1482" y="580" font-size="15" font-weight="bold" fill="#059669" text-anchor="end" stroke="#FFFFFF" stroke-width="6" paint-order="stroke">shared chain_uid — survives the handoff, one query retrieves the whole narrative</text>
+
+  <!-- home events -->
+  <rect x="300" y="612" width="110" height="66" rx="10" fill="#5B21B6"/>
+  <text x="355" y="640" font-size="17" font-weight="bold" fill="#FFFFFF" text-anchor="middle">E1</text>
+  <text x="355" y="662" font-size="12" fill="#DDD6FE" text-anchor="middle">signed · hashed</text>
+  <rect x="475" y="612" width="110" height="66" rx="10" fill="#5B21B6"/>
+  <text x="530" y="640" font-size="17" font-weight="bold" fill="#FFFFFF" text-anchor="middle">E2</text>
+  <text x="530" y="662" font-size="12" fill="#DDD6FE" text-anchor="middle">signed · hashed</text>
+  <line x1="475" y1="645" x2="416" y2="645" stroke="#5B21B6" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="300" y="690" width="285" height="30" rx="15" fill="#EDE9FE"/>
+  <text x="442" y="710" font-size="14" font-weight="bold" fill="#5B21B6" text-anchor="middle">authority_uid: home gateway</text>
+
+  <!-- foreign events -->
+  <rect x="1170" y="612" width="110" height="66" rx="10" fill="#4B5563"/>
+  <text x="1225" y="640" font-size="17" font-weight="bold" fill="#FFFFFF" text-anchor="middle">E3</text>
+  <text x="1225" y="662" font-size="12" fill="#D1D5DB" text-anchor="middle">signed · hashed</text>
+  <rect x="1345" y="612" width="110" height="66" rx="10" fill="#4B5563"/>
+  <text x="1400" y="640" font-size="17" font-weight="bold" fill="#FFFFFF" text-anchor="middle">E4</text>
+  <text x="1400" y="662" font-size="12" fill="#D1D5DB" text-anchor="middle">signed · hashed</text>
+  <line x1="1345" y1="645" x2="1286" y2="645" stroke="#4B5563" stroke-width="2.5" marker-end="url(#arrowGray)"/>
+  <rect x="1170" y="690" width="285" height="30" rx="15" fill="#E5E7EB"/>
+  <text x="1312" y="710" font-size="14" font-weight="bold" fill="#374151" text-anchor="middle">authority_uid: foreign runtime</text>
+
+  <!-- the seam -->
+  <line x1="1170" y1="645" x2="591" y2="645" stroke="#B45309" stroke-width="4" marker-end="url(#arrowAmber)"/>
+  <rect x="653" y="608" width="452" height="30" rx="15" fill="#B45309"/>
+  <text x="879" y="629" font-size="15.5" font-weight="bold" fill="#FFFFFF" text-anchor="middle">prev_event.fingerprint — tamper-evident seam</text>
+  <text x="879" y="672" font-size="14.5" font-weight="bold" fill="#B45309" text-anchor="middle">OCSF record_integrity · attestation_list[] · PR #1661</text>
+
+  <!-- Dark-runtime callout -->
+  <rect x="220" y="790" width="1320" height="76" rx="12" fill="#FFFBEB" stroke="#B45309" stroke-width="2"/>
+  <text x="245" y="822" font-size="18" font-weight="bold" fill="#92400E">If the far side is dark (emits nothing): boundary evidence is the guaranteed floor (terms, not conduct).</text>
+  <text x="245" y="850" font-size="16" fill="#92400E">Record the delegation at egress (grant + limits are non-repudiable even when the interior isn't observable) → reconcile on return; enforce limits at settlement.</text>
+
+  <!-- Footer -->
+  <line x1="60" y1="900" x2="1700" y2="900" stroke="#E5E7EB" stroke-width="2"/>
+  <text x="60" y="935" font-size="15.5" fill="#374151"><tspan font-weight="bold" fill="#4C1D95">Who closes which lane:</tspan>  1 Authority = grant standards (ODIS · CMF · SPIFFE)   ·   2 Correlation = OpenTelemetry   ·   3 Evidence = OCSF record_integrity (PR #1661)</text>
+  <text x="60" y="963" font-size="15.5" fill="#374151"><tspan font-weight="bold" fill="#4C1D95">AI Identity</tspan> = running reference implementation of lane 3 + the boundary floor: gateway emitter · offline verifier CLI · Evidence Anchor checkpoints · Mandate Service</text>
+</svg>
