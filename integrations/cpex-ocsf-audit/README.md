@@ -11,7 +11,7 @@ difference is the record shape:
 | | `audit-logger` (upstream) | `ocsf-audit` (this crate) |
 |---|---|---|
 | Output | free-form JSON line | OCSF AI Operation event |
-| Verifiability | none | hash chain (`entry_hash`→`prev_entry_hash`), DSSE-ready |
+| Verifiability | none | hash chain (`fingerprint`→`prev_event`), DSSE-signed (ECDSA P-256) |
 | Schema | ad hoc | OCSF — interoperable across tools |
 
 **Why:** it makes CPEX's enforcement record *interoperable* (OCSF) and *independently
@@ -48,8 +48,11 @@ plugins:
       - cmf.prompt_post_invoke   # NOT cmf.prompt_post_fetch — see hook-name note below
     config:
       destination: stderr        # or: tracing
-      chain: true                # tamper-evident entry_hash chain
-      signing: none              # or: dsse (production)
+      chain: true                # tamper-evident fingerprint chain
+      signing: dsse              # or: none (chained-but-unsigned)
+      signing_key_pem_path: /etc/cpex/keys/ocsf-signing.pem  # PKCS#8 P-256
+      signing_key_id: "prod-2026-07"       # JWKS kid -> unmapped.signature_key_id
+      authority_uid: "org-f3576cf6"        # the party the signing key belongs to
       chain_uid: "org-f3576cf6"  # stable chain id across the deployment
 ```
 
@@ -65,10 +68,13 @@ plugins:
 ## Status
 
 Built **green** against `contextforge-org/cpex@feat/hil_apl` commit `ad666ba` — Teryl's
-review baseline (`cargo build` clean, `cargo test` 13/13 passing, 2026-07-20). Every CMF
-accessor path and `ContentPart` variant shape was confirmed against that commit.
-Re-verified against the **public `dev` branch** at `baa9e17` (2026-07-27): build, all 13
-tests, and the `emit_sample` example pass unchanged — no API drift between the two.
+review baseline (`cargo build` clean, 2026-07-20). Every CMF accessor path and
+`ContentPart` variant shape was confirmed against that commit. Re-verified against the
+**public `dev` branch** at `baa9e17` (2026-07-27): build, tests, and the `emit_sample`
+example pass unchanged — no API drift between the two. The 2026-07-31 revision (DSSE
+signer wired, `authority_uid`; **21 tests**, all green, sample output byte-identical
+across runs) was verified against the local checkout on `feat/ocsf-audit-plugin`
+@ `9fe56e5`.
 
 **Revision 0.0.2 (2026-07-20) — P0 + review §4-B**, per the production-readiness plan
 (2026-07-17) and the decisions closed on the 2026-07-18 thread:
@@ -82,11 +88,22 @@ tests, and the `emit_sample` example pass unchanged — no API drift between the
   (+ `"record_integrity"` when chaining is on). The passive post-hook stream carries
   `action_id: 3 (Observed)` / `disposition_id: 17 (Logged)`; deny/modify mappings
   (`action_id` 2/4) wait on the cpex-core decision event (WS-A / P1).
-- **Predecessor binding fixed (review §4-B):** `entry_hash` is now SHA-256 over the JCS
-  canonical bytes of `{"chain_uid", "event", "prev_entry_hash"}` — the predecessor hash
-  and chain id are part of the hashed input, so chain order is cryptographically bound
-  and records can't be spliced across chains. The signer consumes the same binding
-  bytes, committing any future DSSE signature to the record's chain position.
+- **Predecessor binding fixed (review §4-B):** the fingerprint is SHA-256 over the JCS
+  canonical bytes of the event *including* its own `chain_uid` and `prev_event` — the
+  predecessor and chain id are part of the hashed input, so chain order is
+  cryptographically bound and records can't be spliced across chains. The signer consumes
+  the same bytes, committing the DSSE signature to the record's chain position.
+
+**Merged #1661 shape, applied 2026-07-31.** PR #1661 merged upstream 2026-07-17
+(`2a244bc9`), so the emitted carrier is now `attestation_list[]` with `fingerprint` /
+`prev_event` / `signatures` objects, replacing the draft `attestation` member with string
+`entry_hash` / `prev_entry_hash` / singular `signature`. Two consequences worth naming:
+the fingerprint is computed per the merged semantics (whole event, minus only
+`fingerprint`/`signatures`), so **a verifier following the schema can reproduce it without
+knowing this crate's conventions** — the previous construction hashed a private wrapper
+object. And `metadata.uid` is now emitted, because `prev_event.uid` has to point at
+something. Separately, `correlation_uid` moved to `metadata`, which is where OCSF defines
+it; it had been emitted at the event root, where no OCSF consumer would look.
 
 **Review corrections applied 2026-07-06** (from Teryl Taylor's review of the mapping):
 
@@ -99,7 +116,7 @@ tests, and the `emit_sample` example pass unchanged — no API drift between the
   `tool_call_id` moved to `api.request.uid`.
 - **C2 caveat — canonicalization implemented.** Events are JCS-style canonically serialized
   (sorted keys; set-derived arrays sorted at build time), so an independent verifier can
-  recompute the `entry_hash` chain from the emitted JSON. See below.
+  recompute the fingerprint chain from the emitted JSON. See below.
 
 Honest inventory of what's solid vs. open:
 
@@ -114,17 +131,30 @@ Honest inventory of what's solid vs. open:
   gateway). Remaining conformance caveat: the `emits_required_ocsf_base_fields` test
   checks structural conformance only, **not** full schema validation — validating against
   the published OCSF schema in CI is the open WS-E item.
-- **Stub:** `sign::DsseSigner` returns `None` (chained-but-unsigned) until wired to AI
-  Identity's existing DSSE/key machinery (the gateway's `this_workload` identity is the
-  natural signer). This is the remaining gate on the *identity* half of the
-  "verifies offline" claim; the *integrity* half (recomputable hash chain) is delivered.
-- **Canonicalization (review C2 caveat — FIXED 2026-07-06):** `entry_hash` and the signer
+- **Signing (wired 2026-07-31):** `sign::DsseSigner` produces ECDSA-P256-SHA256 over the
+  DSSE PAE of the same canonical bytes the fingerprint covers, deterministic per RFC 6979.
+  Enum ids verified against ocsf-schema main: `digital_signature.algorithm_id` 3 = ECDSA,
+  `serialization_id` 5 = DSSE (a different enum than `fingerprint.algorithm_id`, where
+  3 = SHA-256). The key is operator-provided PKCS#8 PEM (`signing_key_pem` /
+  `signing_key_pem_path`) — a key handle, not a key service: custody (HSM/KMS residency,
+  rotation epochs, JWKS publication and never unpublishing old versions) belongs to the
+  authority named by `attestation.authority_uid`, which sits inside the hashed bytes so
+  the claimed authority cannot be swapped post-hoc. Verifier rule as running code:
+  `sign::signing_input` reconstructs the covered bytes from an emitted event (strip
+  `fingerprint`/`signatures` + the post-hash `unmapped.signature_b64`/`signature_key_id`
+  extras, which await a schema home via
+  [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/pull/1709)); then the
+  fingerprint recomputes and the signature verifies over `sign::dsse_pae` of those bytes —
+  exercised end-to-end by the `signed_event_verifies_offline` test and printed as the
+  `// verify` lines of `cargo run --example emit_sample`. This closes the *identity* half
+  of the "verifies offline" claim; both halves are now delivered.
+- **Canonicalization (review C2 caveat — FIXED 2026-07-06):** the fingerprint and the signer
   now consume `sign::canonical_bytes`, an explicit JCS-style serializer (sorted keys,
   compact output, independent of serde_json feature flags). Set-derived arrays —
   `cmf.security.labels`, `actor.roles`, `actor.user.groups`, previously randomized
   `HashSet`/`MonotonicSet` iteration order — are sorted at build time in `ocsf.rs`, so the
   same logical event always canonicalizes to the same bytes and an independent verifier
-  recomputing `entry_hash` gets our value. Covered by the `canonical_form_is_sorted_and_compact`
+  recomputing the fingerprint gets our value. Covered by the `canonical_form_is_sorted_and_compact`
   and `set_derived_arrays_are_sorted_for_canonical_hashing` tests.
 
 ## Building
