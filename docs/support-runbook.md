@@ -43,14 +43,23 @@ Is the API returning 5xx for all users?
 | Gateway | `gateway.ai-identity.co` | `GET /health` | GKE Autopilot (us-east1) |
 | Dashboard | `dashboard.ai-identity.co` | Load `/` | Vercel |
 | Landing Page | `ai-identity.co` | Load `/` | Vercel |
-| Database | Neon PostgreSQL | Via API `/health` | Neon |
+| Database | Neon PostgreSQL | Gateway `GET /health/deep` | Neon |
 | CEO Dashboard | `ceo.corethread.tech` | `GET /api/v1/dashboard/summary` | Vercel |
+
+**Shallow vs. deep health.** `/health` is process-level only and never opens a
+database session. `/health/deep` (gateway) adds a `SELECT 1`. Keep the
+Kubernetes probes and the 5-minute UptimeRobot monitors on `/health`: any
+database session resets Neon's ~5-minute scale-to-zero timer, and a readiness
+probe firing every 10s across 2 replicas kept the prod compute awake for 41
+consecutive days (373 CU-hours billed for an idle 35 MB database). Deep checks
+are for on-demand triage, not for monitors.
 
 ### Quick Health Check (run from terminal)
 
 ```bash
 echo "API:" && curl -sf https://api.ai-identity.co/health | jq .status
 echo "Gateway:" && curl -sf https://gateway.ai-identity.co/health | jq .status
+echo "Database:" && curl -sf https://gateway.ai-identity.co/health/deep | jq .database
 echo "Dashboard:" && curl -sf -o /dev/null -w "%{http_code}" https://dashboard.ai-identity.co
 echo "Landing:" && curl -sf -o /dev/null -w "%{http_code}" https://ai-identity.co
 ```
@@ -197,6 +206,7 @@ export UPTIMEROBOT_API_KEY="ur_your_key_here"
 ```
 □ Confirm the outage (check /health endpoint)
 □ Check GKE pod status and logs (kubectl get pods, kubectl logs)
+□ Check database reachability (curl gateway /health/deep — /health won't show it)
 □ Check Neon console for database connectivity
 □ If deploy failure: roll back with kubectl rollout undo
 □ If database: check Neon status page, restart API service
