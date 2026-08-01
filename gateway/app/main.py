@@ -39,7 +39,7 @@ from gateway.app.rate_limiter import RateLimitResult, rate_limiter
 def _filter_transactions(event, hint):
     """Drop health/root transactions — monitoring noise, not actionable."""
     url = event.get("request", {}).get("url", "")
-    if url.endswith(("/health", "/")):
+    if url.endswith(("/health", "/health/deep", "/")):
         return None
     return event
 
@@ -583,13 +583,24 @@ def circuit_breaker_status():
 
 # ── Health ───────────────────────────────────────────────────────────────
 
-# Cached DB probe — avoids opening a connection on every health check.
+# Cached DB probe — only reached via /health/deep, never from `/health`.
+#
+# Why the split: Neon scales the compute to zero after ~5 minutes of no client
+# activity. A health check that opens a Postgres session is enough to reset that
+# timer, and the readiness probe fires every 10s across 2 replicas — so the
+# compute never suspended once between 2026-06-21 and 2026-08-01 and billed
+# 373 CU-hours for a 35 MB database that took ~500 writes in its lifetime.
+# Kubernetes probes and the 5-minute uptime monitor must stay off the database.
+#
+# The second reason is availability, not cost: a liveness probe that fails on a
+# transient DB blip restarts otherwise-healthy pods, turning a brief database
+# hiccup into a full gateway outage.
 _db_probe_cache: dict = {"ok": False, "error": None, "ts": 0.0}
-_DB_PROBE_TTL = 10.0  # seconds
+_DB_PROBE_TTL = 60.0  # seconds
 
 
 def _probe_db() -> tuple[bool, str | None]:
-    """Run SELECT 1 with a 10-second TTL cache.
+    """Run SELECT 1 with a TTL cache.
 
     Returns (db_ok, db_error_name). Repeated calls within the TTL
     window return the cached result without touching the database.
@@ -621,10 +632,32 @@ def _probe_db() -> tuple[bool, str | None]:
 async def health():
     """Returns service status, version, and circuit breaker state.
 
-    Includes a lightweight DB connectivity check: executes SELECT 1
-    to verify the database is reachable (cached for 10 seconds).
-    Reports 'degraded' if the circuit breaker is open OR the database
-    is unreachable.
+    Process-level only — deliberately does not touch the database, so the
+    Kubernetes probes and the 5-minute uptime monitor let Neon's compute
+    scale to zero. Use ``/health/deep`` to verify database connectivity.
+    """
+    breaker_state = policy_circuit_breaker.state
+    return {
+        "status": "ok" if breaker_state != CircuitState.OPEN else "degraded",
+        "version": settings.app_version,
+        "service": "ai-identity-gateway",
+        "circuit_breaker": breaker_state.value,
+    }
+
+
+@app.api_route(
+    "/health/deep",
+    methods=["GET", "HEAD"],
+    tags=["health"],
+    summary="Health check including database connectivity",
+)
+async def health_deep():
+    """Health check that also verifies the database with SELECT 1.
+
+    Reports 'degraded' if the circuit breaker is open OR the database is
+    unreachable. This wakes a suspended Neon compute, so call it on demand
+    or on a low-frequency schedule — never from a Kubernetes probe or a
+    minute-scale uptime monitor. See the note on ``_DB_PROBE_TTL``.
     """
     breaker_state = policy_circuit_breaker.state
     db_ok, db_error = _probe_db()

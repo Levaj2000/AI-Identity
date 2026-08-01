@@ -493,6 +493,36 @@ class TestGatewayEndpoints:
         assert data["circuit_breaker"] == "closed"
         assert data["status"] == "ok"
 
+    def test_health_does_not_touch_the_database(self, client, monkeypatch):
+        """GET /health must never open a DB session.
+
+        The readiness probe hits /health every 10s across 2 replicas, and any
+        Postgres session resets Neon's scale-to-zero timer. When /health ran
+        SELECT 1 the prod compute stayed awake for 41 straight days and billed
+        373 CU-hours for an idle database. Keep the probe path DB-free.
+        """
+        import gateway.app.main as gateway_main
+
+        def _explode():
+            raise AssertionError("/health opened a database session")
+
+        monkeypatch.setattr(gateway_main, "SessionLocal", _explode)
+        gateway_main._db_probe_cache.update({"ok": False, "error": None, "ts": 0.0})
+
+        resp = client.get("/health")
+
+        assert resp.status_code == 200
+        assert "database" not in resp.json()
+
+    def test_health_deep_reports_database(self, client):
+        """GET /health/deep is the endpoint that does verify connectivity."""
+        resp = client.get("/health/deep")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["database"] == "connected"
+        assert data["circuit_breaker"] == "closed"
+
 
 # ── Audit Data Quality ─────────────────────────────────────────────────
 
