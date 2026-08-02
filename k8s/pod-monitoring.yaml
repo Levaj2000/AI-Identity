@@ -1,6 +1,7 @@
 # Google Managed Prometheus — scrape AI Identity API + Gateway /metrics.
 #
-# GMP's managed collector runs in gmp-system and scrapes targets matching
+# GMP's managed collector runs in gke-gmp-system (Autopilot naming; docs
+# for standard clusters say gmp-system) and scrapes targets matching
 # the PodMonitoring selector. Metrics flow to Cloud Monitoring's Prometheus
 # backend where they're queryable via PromQL in the GCP console, Grafana
 # (via the Managed Service for Prometheus datasource), or the Monitoring
