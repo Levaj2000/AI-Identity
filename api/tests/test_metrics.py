@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 
+import pytest
 from prometheus_client.parser import text_string_to_metric_families
 
 from common.audit import create_audit_entry
 from common.audit.outbox import flush_outbox
 from common.audit.transports import DeliveryResult
+from common.config.settings import settings
 from common.models import Agent, AuditLogSink, Organization, OrgMembership, User
+from common.observability import router as observability_router
 from common.observability.metrics import (
     REGISTRY,
     audit_denies_total,
@@ -17,6 +21,21 @@ from common.observability.metrics import (
     record_audit_write,
     refresh_db_gauges,
 )
+from common.observability.router import reset_db_gauge_cache
+
+
+@pytest.fixture(autouse=True)
+def _fresh_gauge_cache():
+    """Make each test's first scrape refresh the DB-backed gauges.
+
+    The /metrics handler throttles gauge refreshes to once per TTL window
+    (Neon autosuspend protection); without a reset, whichever test scrapes
+    first would consume the whole suite's only refresh.
+    """
+    reset_db_gauge_cache()
+    yield
+    reset_db_gauge_cache()
+
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
@@ -245,6 +264,51 @@ class TestRefreshDbGauges:
 
         assert _metric_value(body, "ai_identity_agents_total", status="active") == 1
         assert _metric_value(body, "ai_identity_agents_total", status="suspended") == 1
+
+
+# ── Gauge-refresh throttle (Neon autosuspend protection) ────────────
+
+
+class TestDbGaugeRefreshThrottle:
+    """The scrape handler must not touch the DB more than once per TTL.
+
+    A refresh resets Neon's ~5-minute autosuspend timer; on a 30s scrape
+    interval an unthrottled refresh keeps the compute awake 24/7.
+    """
+
+    def _count_refreshes(self, monkeypatch):
+        calls: list[int] = []
+        monkeypatch.setattr(observability_router, "refresh_db_gauges", lambda db: calls.append(1))
+        return calls
+
+    def test_scrape_burst_refreshes_at_most_once(self, client, monkeypatch):
+        calls = self._count_refreshes(monkeypatch)
+        # Don't start the burst within 2s of an epoch-aligned window
+        # boundary — crossing one mid-burst legitimately allows a second
+        # refresh and would flake this test.
+        ttl = settings.metrics_db_gauge_ttl_seconds
+        if ttl - (time.time() % ttl) < 2:
+            time.sleep(2)
+        for _ in range(5):
+            assert client.get("/metrics").status_code == 200
+        assert len(calls) == 1
+
+    def test_refresh_resumes_in_next_window(self, client, monkeypatch):
+        calls = self._count_refreshes(monkeypatch)
+        client.get("/metrics")
+        assert len(calls) == 1
+
+        # Rewind the recorded window, as if the wall clock crossed into
+        # the next epoch-aligned 15-minute window.
+        current_window = int(time.time() // settings.metrics_db_gauge_ttl_seconds)
+        observability_router._last_gauge_refresh_window = current_window - 1
+        client.get("/metrics")
+        assert len(calls) == 2
+
+    def test_ttl_exceeds_neon_autosuspend_timeout(self):
+        """Guard: a TTL at or under Neon's ~5-min suspend timeout would
+        keep the compute awake 24/7 — the bug this throttle exists to fix."""
+        assert settings.metrics_db_gauge_ttl_seconds > 300
 
 
 # ── Graceful degradation ────────────────────────────────────────────

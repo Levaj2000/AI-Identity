@@ -246,7 +246,11 @@ spec:
 
 ---
 # Ingress: Google Managed Prometheus (GMP) collector pods → api + gateway
-# for /metrics scraping. GMP collectors run in the gmp-system namespace.
+# for /metrics scraping. On GKE Autopilot the managed collectors run in
+# gke-gmp-system, NOT the gmp-system namespace Google's docs describe for
+# standard clusters — this policy silently blocked every scrape for 107
+# days when it matched only gmp-system (NetworkPolicy denies don't log).
+# Both namespaces are admitted so the policy survives either flavor.
 # The /metrics endpoint is unauthenticated (cluster-internal only, returns
 # aggregate counters with no PII) — standard k8s pattern.
 apiVersion: networking.k8s.io/v1
@@ -262,6 +266,9 @@ spec:
     - Ingress
   ingress:
     - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: gke-gmp-system
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: gmp-system

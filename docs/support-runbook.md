@@ -54,6 +54,13 @@ probe firing every 10s across 2 replicas kept the prod compute awake for 41
 consecutive days (373 CU-hours billed for an idle 35 MB database). Deep checks
 are for on-demand triage, not for monitors.
 
+`/metrics` has the same trap: its DB-backed gauges (agent counts, outbox
+backlog, sink health) refresh at most once per
+`METRICS_DB_GAUGE_TTL_SECONDS` (default 900s), not on every 30s Prometheus
+scrape. Keep that TTL comfortably above Neon's ~5-minute suspend timeout —
+lowering it to the scrape interval re-creates the always-awake bug.
+Counters and histograms are in-process and unaffected by the throttle.
+
 ### Quick Health Check (run from terminal)
 
 ```bash

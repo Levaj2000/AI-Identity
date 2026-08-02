@@ -17,13 +17,16 @@ Prometheus labels multiply. We deliberately keep labels bounded:
 We do NOT label by ``org_id``, ``agent_id``, or any per-request value.
 Those belong in the SIEM (Phase 2A forwarding), not in the metrics series.
 
-Compute-on-scrape gauges
-------------------------
-``db_backed_gauges`` is populated lazily by the ``/metrics`` handler from
-live DB queries (agent counts, outbox backlog, sink health). We don't hold
-these values in-memory because they change based on other writers (other
-API pods, migrations, manual cleanup). A 30-second Prometheus scrape
-interval means one query per 30 seconds per service — negligible load.
+DB-backed gauges
+----------------
+The DB-backed gauges (agent counts, outbox backlog, sink health) are
+populated by the ``/metrics`` handler from live DB queries because they
+change based on other writers (other API pods, migrations, manual
+cleanup). The handler throttles the refresh to at most once per
+``settings.metrics_db_gauge_ttl_seconds`` — refreshing on every 30s
+scrape would reset Neon's ~5-minute autosuspend timer and keep the
+compute awake 24/7 (see common/observability/router.py). Between
+refreshes, scrapes serve the last-known gauge values.
 """
 
 from __future__ import annotations
@@ -124,7 +127,7 @@ attestation_signs_total = Counter(
 )
 
 
-# ── Process-level gauges (populated on scrape) ─────────────────────────
+# ── Process-level gauges (refreshed at most once per TTL window) ───────
 
 agents_total = Gauge(
     "ai_identity_agents_total",
@@ -250,13 +253,14 @@ def record_outbox_delivery(outcome: str, *, count: int = 1) -> None:
         logging.getLogger("ai_identity.metrics").warning("metrics emission failed", exc_info=True)
 
 
-# ── DB-backed gauge refresh (called by /metrics handler on scrape) ─────
+# ── DB-backed gauge refresh (throttled by the /metrics handler) ────────
 
 
 def refresh_db_gauges(db) -> None:  # type: ignore[no-untyped-def]
     """Populate the DB-backed gauges from live queries.
 
-    Called once per scrape from the ``/metrics`` HTTP handler. Never
+    Called by the ``/metrics`` HTTP handler at most once per TTL window
+    (the handler owns the throttle — this function always queries). Never
     raises — a DB hiccup during scrape shouldn't page anyone; Prometheus
     will notice missing samples on its own and alert per staleness rules.
     """

@@ -89,6 +89,18 @@ class Settings(BaseSettings):
     # Gateway — human-in-the-loop approval (enterprise tier)
     hitl_default_timeout_seconds: int = 300  # 5 minutes, then auto-expire (fail-closed)
 
+    # /metrics DB-backed gauge refresh interval. Must comfortably exceed
+    # Neon's ~5-minute autosuspend timeout: a refresh wakes the compute
+    # and resets that timer, so anything close to (or under) it keeps the
+    # database awake 24/7 — the same idle-uptime bug /health had before
+    # the /health vs /health/deep split. Refresh windows are epoch-
+    # aligned, so the 900s default opens them at :00/:15/:30/:45 — the
+    # instants the */15 evidence-anchor cron already wakes the compute.
+    # Keep it a value whose windows land on quarter-hours (900, 1800,
+    # 3600) or refreshes start paying their own wakes.
+    # See common/observability/router.py.
+    metrics_db_gauge_ttl_seconds: int = 900
+
     # Audit debug logging — opt-in, PII-redacted, auto-expiring
     audit_debug_logging: bool = False
     audit_debug_ttl_hours: int = 24
