@@ -326,6 +326,25 @@ class TestRateLimitMiddlewareHTTP:
         resp = client.get("/health")
         assert resp.status_code == 200
 
+    def test_health_deep_exempt_from_rate_limit(self, client, test_agent, test_policy):
+        """GET /health/deep is not rate limited either.
+
+        It is the endpoint an operator curls during an incident, which is
+        exactly when the IP limit is most likely to be exhausted.
+        """
+        for i in range(100):
+            client.post(
+                "/gateway/enforce",
+                params={
+                    "agent_id": str(uuid.uuid4()) if i >= 50 else str(test_agent.id),
+                    "endpoint": "/v1/chat",
+                    "method": "POST",
+                },
+            )
+
+        resp = client.get("/health/deep")
+        assert resp.status_code == 200
+
     def test_root_exempt_from_rate_limit(self, client, test_agent, test_policy):
         """GET / is not rate limited even after IP is exhausted."""
         for i in range(100):
