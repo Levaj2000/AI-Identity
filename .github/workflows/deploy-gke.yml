@@ -11,7 +11,6 @@ on:
       - 'alembic/**'
       - 'Dockerfile.*'
       - 'k8s/**'
-      - 'cloudbuild.yaml'
   workflow_dispatch:
 
 env:
@@ -49,6 +48,14 @@ jobs:
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      # The image builds are hermetic (--no-index): pip inside the Dockerfiles
+      # cannot reach PyPI, so a deleted/yanked release cannot break a deploy
+      # (2026-07-24 liboqs-python yank, #405). Wheels come from this step —
+      # fetched from the pypi-cache AR remote repo, cached across runs on the
+      # locks' hash. After changing a lock, the first run re-downloads.
+      - name: Populate wheelhouse
+        uses: ./.github/actions/populate-wheelhouse
 
       - name: Build and push API image
         run: |

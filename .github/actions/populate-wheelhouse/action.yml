@@ -1,0 +1,46 @@
+name: Populate wheelhouse
+description: >
+  Download every wheel pinned in the three service locks into wheelhouse/,
+  fetched from the pypi-cache Artifact Registry remote repository — never from
+  PyPI directly — so an upstream deletion or yank cannot break image builds.
+  Requires google-github-actions/auth + setup-gcloud to have run first.
+  An actions/cache fast path keyed on the locks skips the download entirely
+  when the dependency set is unchanged.
+
+runs:
+  using: composite
+  steps:
+    - name: Cache wheelhouse
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: wheelhouse
+        key: wheelhouse-${{ hashFiles('api/requirements.lock', 'gateway/requirements.lock', 'mandate/requirements.lock') }}
+
+    - name: Download locked wheels from Artifact Registry
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        # Short-lived token from the workflow's WIF auth; exported via env so
+        # it never appears in argv, and pip redacts credentials in URLs it
+        # prints. The repo is a remote (pull-through) proxy of PyPI: artifacts
+        # already cached there keep serving even if upstream deletes them.
+        export PIP_INDEX_URL="https://oauth2accesstoken:$(gcloud auth print-access-token)@us-east1-python.pkg.dev/project-8bbb04f8-fda8-462e-bc2/pypi-cache/simple/"
+
+        # Per-lock, not jointly: each lock is internally consistent, but the
+        # three are not co-resolvable (pyasn1-modules pins differ between the
+        # api and mandate locks — separate images, separate resolutions).
+        #
+        # The platform/version flags select the wheels the python:3.11-slim
+        # (glibc x86_64) images need, independent of the runner's Python.
+        # --only-binary=:all: is safe: every locked package-version ships a
+        # linux-compatible wheel (verified against the PyPI JSON API, PR #420).
+        # Hashes in the locks are enforced during download.
+        for svc in api gateway mandate; do
+          python3 -m pip download -q \
+            --only-binary=:all: \
+            --platform manylinux_2_28_x86_64 --platform manylinux_2_17_x86_64 \
+            --platform manylinux2014_x86_64 --platform manylinux1_x86_64 \
+            --python-version 311 --implementation cp \
+            -r "$svc/requirements.lock" -d wheelhouse
+        done

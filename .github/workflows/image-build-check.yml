@@ -1,0 +1,43 @@
+name: Image build check
+
+# Proves the hermetic (--no-index) image builds stay green BEFORE merge, so a
+# lock/Dockerfile change can't land and then break the real deploy. Builds all
+# three images exactly the way deploy-gke.yml does — same wheelhouse action,
+# same docker build — but never pushes and never touches the cluster.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile.*'
+      - '*/requirements.lock'
+      - '.github/actions/populate-wheelhouse/**'
+      - '.github/workflows/image-build-check.yml'
+
+jobs:
+  build-images:
+    name: Hermetic image builds (--no-index)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Populate wheelhouse
+        uses: ./.github/actions/populate-wheelhouse
+
+      - name: Build all three images (no push)
+        run: |
+          docker build -f Dockerfile.api -t build-check/api .
+          docker build -f Dockerfile.gateway -t build-check/gateway .
+          docker build -f Dockerfile.mandate -t build-check/mandate .

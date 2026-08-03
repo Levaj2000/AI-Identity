@@ -86,7 +86,19 @@ Alembic files are excluded from ruff linting (`exclude = ["alembic/"]` in `pypro
 
 ## `common/` Is an Editable Package
 
-`common/` is its own installable package (`common/setup.py`, name `ai-identity-common`). Local dev installs it editable: `pip install -e common/`. Existing module edits are picked up live, but **adding a new submodule may require a reinstall** before imports resolve. Both `api/` and `gateway/` import from it, so changes there affect both services.
+`common/` is its own installable package (`common/setup.py`, name `ai-identity-common`). Local dev installs it editable: `pip install -e common/`. Existing module edits are picked up live, but **adding a new submodule may require a reinstall** before imports resolve. Both `api/` and `gateway/` import from it, so changes there affect both services. In the deployed images and CI it is installed with `--no-deps` — its `install_requires` ranges must stay satisfiable by the locks (they are all pinned there), so **never add a dependency to `common/setup.py` without also adding it to each service's `requirements.txt` and regenerating the locks**.
+
+## Dependency Locks & Hermetic Image Builds (PyPI-yank immunity)
+
+Context: on 2026-07-24 `liboqs-python==0.15.0` vanished from PyPI and broke every GKE deploy (#405). The deploy path no longer trusts PyPI at build time.
+
+- **Locks**: `api|gateway|mandate/requirements.lock` pin the full transitive graph with hashes, cross-resolved for the image platform. **After ANY edit to a `requirements.txt`, regenerate that service's lock** — the exact `uv pip compile` command is in each lock's header — or the `lockfile-consistency` CI job (`scripts/check_lockfiles.py`) fails the PR. The three locks are each internally consistent but NOT jointly resolvable (transitive pins differ between services) — always install/download per-lock.
+- **Image builds are hermetic**: the three deploy Dockerfiles install with `--no-index --find-links=/wheelhouse --require-hashes` from a BuildKit bind mount. pip physically cannot reach PyPI during an image build; a deletion/yank upstream cannot fail a deploy.
+- **The wheelhouse** is populated in CI by `.github/actions/populate-wheelhouse`: per-lock `pip download` from the `pypi-cache` Artifact Registry **remote repo** (us-east1, pull-through proxy of PyPI — cached artifacts keep serving after upstream deletion), `actions/cache`d on the locks' hash. The deploy SA needs no extra grant (project-level `artifactregistry.writer` covers reads).
+- **Pre-merge proof**: `image-build-check.yml` builds all three images with `--no-index` on any PR touching Dockerfiles or locks — a lock/Dockerfile mistake surfaces on the PR, not in the deploy.
+- **New/bumped pins**: after regenerating a lock, the first CI run warms the AR cache automatically when the wheelhouse step downloads the new version (runner → AR → PyPI). Nothing manual.
+- **Local image builds** need a wheelhouse first: `python3 -m pip download --only-binary=:all: --platform manylinux_2_28_x86_64 --platform manylinux_2_17_x86_64 --platform manylinux2014_x86_64 --platform manylinux1_x86_64 --python-version 311 --implementation cp -r <svc>/requirements.lock -d wheelhouse` (plain PyPI is fine locally). Day-to-day local dev is unaffected: `docker compose` uses the root `Dockerfile`, which deliberately still installs from PyPI.
+- **Known out of scope**: `agent/requirements.txt` is unpinned (`>=`) and the root `Dockerfile` is non-hermetic — both are off the GKE deploy path.
 
 ## Bootstrapping Local Env
 
