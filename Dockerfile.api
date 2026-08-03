@@ -14,13 +14,26 @@ RUN apt-get update \
 # Create non-root user
 RUN useradd -m -u 1000 appuser
 
-# Install shared library first (changes less often -> better layer cache)
-COPY common/ common/
-RUN pip install --no-cache-dir -e common/
+# Install the locked dependency set — hermetically. Wheels come from the CI
+# wheelhouse (populated from the pypi-cache Artifact Registry proxy, see
+# .github/actions/populate-wheelhouse), --no-index forbids pip from reaching
+# any package index, and every wheel is hash-checked against the lock. A PyPI
+# deletion or yank therefore cannot fail this build (the 2026-07-24
+# liboqs-python yank broke all GKE deploys; see AGENTS.md "Dependency locks").
+# Lock layer first: it changes the least, so code edits never bust this layer.
+# BuildKit required (default on the GHA runners); the bind mount keeps ~300MB
+# of wheels out of the image layers. Building locally? Populate wheelhouse/
+# first — command in AGENTS.md — or use docker-compose (root Dockerfile).
+COPY api/requirements.lock api/requirements.lock
+RUN --mount=type=bind,source=wheelhouse,target=/wheelhouse \
+    pip install --no-cache-dir --no-index --find-links=/wheelhouse \
+      --require-hashes -r api/requirements.lock
 
-# Install service-specific deps
-COPY api/requirements.txt api/requirements.txt
-RUN pip install --no-cache-dir -r api/requirements.txt
+# Shared library — after the locks, with --no-deps + --no-build-isolation so
+# this editable install can neither resolve anything outside the lock set nor
+# reach an index for build deps (its install_requires are all in the lock).
+COPY common/ common/
+RUN pip install --no-cache-dir --no-deps --no-build-isolation -e common/
 
 # Copy Alembic config (API runs migrations on startup)
 COPY alembic.ini alembic.ini

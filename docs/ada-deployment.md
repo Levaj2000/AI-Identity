@@ -60,7 +60,8 @@ are unverified:
 
 - **Runtime**: Cloud Run, fully-managed, region `us-east1` (matching the
   GKE-deployed API + gateway services per
-  [`cloudbuild.yaml`](../cloudbuild.yaml) at the repo root).
+  [`deploy-gke.yml`](../.github/workflows/deploy-gke.yml); the vestigial root
+  `cloudbuild.yaml` was removed — deploys build on the GHA runner).
 - **Image**: `us-east1-docker.pkg.dev/$PROJECT_ID/ai-identity/ada:$SHORT_SHA`.
 - **Ingress**: `internal` — VPC-internal only, no public network reach.
   Callers must also have `roles/run.invoker` (IAM-gated; defense-in-depth).

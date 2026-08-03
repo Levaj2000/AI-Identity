@@ -34,11 +34,26 @@ RUN apt-get update \
 
 RUN useradd -m -u 1000 appuser
 
-COPY common/ common/
-RUN pip install --no-cache-dir -e common/
+# Install the locked dependency set — hermetically. Wheels come from the CI
+# wheelhouse (populated from the pypi-cache Artifact Registry proxy, see
+# .github/actions/populate-wheelhouse), --no-index forbids pip from reaching
+# any package index, and every wheel is hash-checked against the lock. A PyPI
+# deletion or yank therefore cannot fail this build — this image is where the
+# 2026-07-24 liboqs-python yank broke all GKE deploys (#405).
+# Lock layer first: it changes the least, so code edits never bust this layer.
+# BuildKit required (default on the GHA runners); the bind mount keeps the
+# wheels out of the image layers. Building locally? Populate wheelhouse/
+# first — command in AGENTS.md — or use docker-compose (root Dockerfile).
+COPY mandate/requirements.lock mandate/requirements.lock
+RUN --mount=type=bind,source=wheelhouse,target=/wheelhouse \
+    pip install --no-cache-dir --no-index --find-links=/wheelhouse \
+      --require-hashes -r mandate/requirements.lock
 
-COPY mandate/requirements.txt mandate/requirements.txt
-RUN pip install --no-cache-dir -r mandate/requirements.txt
+# Shared library — after the locks, with --no-deps + --no-build-isolation so
+# this editable install can neither resolve anything outside the lock set nor
+# reach an index for build deps (its install_requires are all in the lock).
+COPY common/ common/
+RUN pip install --no-cache-dir --no-deps --no-build-isolation -e common/
 
 COPY mandate/ mandate/
 

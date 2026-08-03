@@ -8,6 +8,9 @@ dist/
 build/
 .eggs/
 *.so
+# CI-populated wheel cache for hermetic image builds (never committed;
+# see .github/actions/populate-wheelhouse and AGENTS.md "Dependency locks")
+wheelhouse/
 
 # Virtual environments
 .venv*/
