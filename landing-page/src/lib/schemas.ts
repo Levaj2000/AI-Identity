@@ -100,7 +100,7 @@ export function makeArticleSchema(post: {
     author: {
       "@type": "Person",
       name: "Jeff Leva",
-      url: "https://www.linkedin.com/in/jeffleva",
+      url: "https://www.linkedin.com/in/jeff-leva-a7373958",
     },
     publisher: {
       "@type": "Organization",

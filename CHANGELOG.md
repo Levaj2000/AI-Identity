@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Blog structured data pointed at the wrong founder LinkedIn profile.** The BlogPosting `author.url` in `landing-page/src/lib/schemas.ts` used `linkedin.com/in/jeffleva` — not Jeff's profile — while every other surface (about page, footer, the org `sameAs` in the same file) uses `linkedin.com/in/jeff-leva-a7373958`, verified live as the real one. Structured data feeds search/knowledge-graph identity linking, so the wrong URL there associates the blog's authorship with someone else's profile. One-line fix; marketing site only — no product impact. (#425)
+
 ### Changed
 - **Marketing site: `/spec` reframed from open draft to the OCSF 1.9.0 graduation story.** With the spec's core primitives — the `attestation` object and `record_integrity` profile — shipped in OCSF 1.9.0 ([release v1.9.0](https://github.com/ocsf/ocsf-schema/releases/tag/v1.9.0), via ocsf-schema#1661) and the `forensic-audit-trail-spec` repo archived on 2026-08-04 as superseded, the page no longer presents the draft as under public review. New framing: the draft directly informed what shipped, the OCSF schema is the normative home, the AI Identity platform is the production reference implementation, and the archived repo remains the historical record. Adds a four-step graduation timeline (draft published May 2026 → #1661 merged Jul 2026 → shipped in 1.9.0 Aug 2026 → draft archived), retargets the primary CTA at the OCSF 1.9.0 GitHub release, moves the §9 open-questions copy to past tense, and replaces the "Help us land v1.1" review CTA with contribute-upstream. Page kept deliberately — it earns standards credibility and may hold inbound links. Marketing site only — no product impact. (#424)
 
