@@ -1,6 +1,6 @@
 # langchain-ai-identity
 
-Secure your LangChain agents with per-agent identity, policy enforcement, and tamper-proof audit logs — in 5 lines of code.
+Secure your LangChain agents with per-agent identity, policy enforcement, and tamper-evident audit logs — in 5 lines of code.
 
 [![PyPI version](https://img.shields.io/pypi/v/langchain-ai-identity.svg)](https://pypi.org/project/langchain-ai-identity/)
 [![Python versions](https://img.shields.io/pypi/pyversions/langchain-ai-identity.svg)](https://pypi.org/project/langchain-ai-identity/)
@@ -67,7 +67,7 @@ Your Agent
             └── Audit log → AI Identity API
 ```
 
-Every request to an LLM or tool is pre-checked against the agent's **policy** before executing. If the policy denies it, the call is blocked and the denial is logged. All events — whether allowed or denied — are appended to a tamper-proof HMAC-chained audit log.
+Every request to an LLM or tool is pre-checked against the agent's **policy** before executing. If the policy denies it, the call is blocked and the denial is logged. All events — whether allowed or denied — are appended to a tamper-evident HMAC-chained audit log.
 
 ---
 

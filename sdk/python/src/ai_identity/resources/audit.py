@@ -7,7 +7,7 @@ BASE = "/api/v1/audit"
 
 
 class AuditResource:
-    """Query tamper-proof audit logs and forensic data."""
+    """Query tamper-evident audit logs and forensic data."""
 
     def __init__(self, http: HTTPClient) -> None:
         self._http = http

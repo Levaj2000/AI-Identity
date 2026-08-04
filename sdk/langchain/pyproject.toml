@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "langchain-ai-identity"
 version = "0.1.0"
-description = "Secure your LangChain agents with per-agent identity, policy enforcement, and tamper-proof audit logs."
+description = "Secure your LangChain agents with per-agent identity, policy enforcement, and tamper-evident audit logs."
 readme = "README.md"
 license = { text = "MIT" }
 authors = [

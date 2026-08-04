@@ -32,7 +32,11 @@ async with AIIdentityClient(api_key="aid_sk_...") as client:
     # Create a policy
     await client.policies.create(
         agent_id=result.agent.id,
-        rules={"blocked_endpoints": ["/admin/*"], "max_tokens_per_request": 4096},
+        rules={
+            "allowed_endpoints": ["/v1/chat", "/v1/embeddings"],
+            "denied_endpoints": ["/v1/admin/*"],  # deny always wins
+            "allowed_methods": ["GET", "POST"],
+        },
     )
 
     # Verify audit chain integrity
@@ -60,6 +64,16 @@ client.close()
 | `client.policies` | `create`, `list` |
 | `client.credentials` | `create`, `list`, `rotate`, `revoke` |
 | `client.audit` | `list`, `stats`, `verify_chain` |
+
+## Examples
+
+Runnable end-to-end scripts live in [`examples/`](examples/):
+
+- [`01_register_agent.py`](examples/01_register_agent.py) — create an agent, capture its show-once key, update and list agents
+- [`02_attach_policy.py`](examples/02_attach_policy.py) — attach an enforcement policy (fail-closed; deny wins over allow)
+- [`03_audit_and_verify.py`](examples/03_audit_and_verify.py) — query the audit log, pull stats, and verify HMAC chain integrity
+
+Each script needs `AI_IDENTITY_API_KEY` set in the environment.
 
 ## Error Handling
 

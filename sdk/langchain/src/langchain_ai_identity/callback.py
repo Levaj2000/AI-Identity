@@ -1,6 +1,6 @@
 """LangChain callback handler that logs events to the AI Identity audit log.
 
-Every LLM call, tool invocation, and chain error is recorded as a tamper-proof
+Every LLM call, tool invocation, and chain error is recorded as a tamper-evident
 audit entry in AI Identity, giving you a cryptographically verifiable trail of
 everything your agent did.
 """

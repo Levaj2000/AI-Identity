@@ -3,7 +3,7 @@
 This example demonstrates:
   1. Attaching multiple tools to an AI Identity-secured agent.
   2. Observing a tool call that's allowed vs. one that's denied by policy.
-  3. Reading the audit log after the agent runs to verify the tamper-proof trail.
+  3. Reading the audit log after the agent runs to verify the tamper-evident trail.
 
 Prerequisites
 -------------

@@ -3,7 +3,7 @@
 Routes every chat completion request through the AI Identity gateway for
 policy enforcement before forwarding to OpenAI.  Automatically injects the
 :class:`~langchain_ai_identity.callback.AIIdentityCallbackHandler` for audit
-logging, so you get both enforcement *and* a tamper-proof audit trail with
+logging, so you get both enforcement *and* a tamper-evident audit trail with
 zero extra setup.
 """
 
