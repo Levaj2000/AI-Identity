@@ -1,5 +1,5 @@
 """langchain-ai-identity — Secure your LangChain agents with per-agent identity,
-policy enforcement, and tamper-proof audit logs.
+policy enforcement, and tamper-evident audit logs.
 
 Quickstart::
 

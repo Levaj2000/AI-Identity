@@ -26,7 +26,7 @@ Note
 ----
 CrewAI tools inherit from LangChain's BaseTool, so AIIdentityToolkit wraps them
 without any code changes.  All tool calls go through AI Identity gateway
-enforcement and are recorded in the tamper-proof audit log.
+enforcement and are recorded in the tamper-evident audit log.
 """
 
 from __future__ import annotations
