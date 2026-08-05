@@ -11,6 +11,7 @@ const navLinks = [
   { label: "Pricing", path: "/pricing" },
   { label: "Blog", path: "/blog" },
   { label: "About", path: "/about" },
+  { label: "Advisory", path: "/advisory" },
 ];
 
 const solutionSections = [
