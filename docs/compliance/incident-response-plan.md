@@ -1,9 +1,9 @@
 # Incident Response Plan
 
 **Document Owner:** Jeff Leva, CEO
-**Version:** 1.0
-**Last Reviewed:** March 25, 2026
-**Next Review:** June 25, 2026
+**Version:** 1.1
+**Last Reviewed:** August 5, 2026
+**Next Review:** November 5, 2026
 
 ---
 
@@ -69,6 +69,7 @@ This plan defines how AI Identity detects, responds to, and recovers from securi
 ## 6. Evidence Preservation
 
 - **Audit logs** are append-only and integrity-protected with HMAC chains (`AUDIT_HMAC_KEY`). Each entry's hash includes the previous entry's hash, making tampering detectable.
+- **Signed attestations** (DSSE envelopes, ECDSA P-256 via Google Cloud KMS) can be exported over the audit chain so a third party can verify record integrity without access to our systems. Audit events also export in OCSF format for ingestion into external SIEM/forensic tooling.
 - **GKE and Cloud Build deploy logs** are retained in GCP Cloud Logging and provide a timeline of all deployments.
 - **Git history** is immutable and provides a complete record of all code changes.
 - **Sentry events** are retained per Sentry's data retention policy and provide stack traces and context.
