@@ -18,8 +18,18 @@ FILES
 linkedin_article.md   ← PRIMARY. LinkedIn article. Standalone, TL;DR up top.
 linkedin_post.md      ← Feed post driving to the article. Post article first, then paste link.
 issue_03.md           ← Newsletter/archive version. Keeps the "Exhibit A" framing and Issue 02 callback.
-ExhibitA_03_cover.png / _square.png  ← already built
-make_cover.py         ← cover generator
+                         Dead weight now that Buttondown is cancelled — safe to delete.
+make_cover.py         ← cover generator. Run `python make_cover.py` to rebuild.
+paper_trail_cover.png         1200x627   ← LinkedIn article hero. USE THIS ONE.
+paper_trail_cover_square.png  1200x1200  ← square share / repost tile
+
+Both PNGs stay untracked (over the repo's 500KB pre-commit limit) — regenerate
+from the script rather than expecting them in a fresh clone.
+
+RETIRED: ExhibitA_03_cover.png / _square.png. Do not use. They carry the
+"EXHIBIT A · ISSUE 03" masthead, the old title ("Has to Be Public"), and a
+subhead reading "It's a pull request" — accurate in June, wrong now that the
+work shipped.
 
 
 ARTICLE TITLE
