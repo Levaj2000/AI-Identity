@@ -1,9 +1,9 @@
 # Change Management Policy
 
 **Document Owner:** Jeff Leva, CEO
-**Version:** 1.0
-**Last Reviewed:** March 30, 2026
-**Next Review:** June 25, 2026
+**Version:** 1.1
+**Last Reviewed:** August 5, 2026
+**Next Review:** November 5, 2026
 
 ---
 
@@ -139,7 +139,7 @@ For P1 incidents where CI is too slow, a manual deploy can be triggered via `kub
 | CC8.1 -- Change management process | Sections 2-6: defined workflow from branch to production with automated gates |
 | CC8.2 -- Testing before deployment | Sections 3-4: pre-commit hooks and CI pipeline with lint, type checks, and tests |
 | CC8.3 -- Change approval | Section 5: PR review requirement, branch protection on `main` |
-| CC8.4 -- Emergency changes | Section 9: hotfix process with post-merge review |
+| CC8.4 -- Emergency changes | Section 10: hotfix process with post-merge review |
 | CC8.5 -- Configuration management | Section 7: Alembic migrations, K8s manifests as infrastructure-as-code |
 | CC7.5 -- Rollback and recovery | Section 8: rollback procedures for application, database, and DNS |
-| CC1.1 -- Accountability | Section 10: git history, deploy logs, and HMAC-chained audit trail |
+| CC1.1 -- Accountability | Section 11: git history, deploy logs, and HMAC-chained audit trail |

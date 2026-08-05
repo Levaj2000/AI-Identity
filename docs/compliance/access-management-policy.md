@@ -1,9 +1,9 @@
 # Access Management Policy
 
 **Document Owner:** Jeff Leva, CEO
-**Version:** 1.0
-**Last Reviewed:** March 25, 2026
-**Next Review:** June 25, 2026
+**Version:** 1.1
+**Last Reviewed:** August 5, 2026
+**Next Review:** November 5, 2026
 
 ---
 
@@ -11,18 +11,24 @@
 
 This policy defines how AI Identity controls access to production systems, infrastructure services, and customer data. It applies to all personnel, service accounts, and automated systems.
 
+Corporate identity is anchored on **Google Workspace**; vendor accounts use SSO against it where the vendor supports it.
+
 ## 2. Production Access Inventory
 
-| Service | Access Holder | Auth Method | MFA Required |
-|---------|--------------|-------------|--------------|
-| GitHub (Levaj2000/AI-Identity) | Jeff Leva | SSO + PAT | Yes |
-| GCP / GKE (ai-identity-api, ai-identity-gateway) | Jeff Leva | Google SSO | Yes |
-| Neon (PostgreSQL) | Jeff Leva | Email/password | Yes |
-| Clerk (user auth dashboard) | Jeff Leva | Email/password | Yes |
-| Stripe (billing dashboard) | Jeff Leva | Email/password | Yes |
-| Vercel (dashboard frontend) | Jeff Leva | GitHub SSO | Yes |
-| Cloudflare (DNS/CDN) | Jeff Leva | Email/password | Yes |
-| Sentry (error monitoring) | Jeff Leva | GitHub SSO | Yes |
+| Service | Access Holder | MFA Enforced |
+|---------|--------------|--------------|
+| Google Workspace (corporate IdP) | Jeff Leva | Yes |
+| GitHub (Levaj2000/AI-Identity) | Jeff Leva | Yes |
+| GCP / GKE / Cloud KMS (ai-identity-api, ai-identity-gateway) | Jeff Leva | Yes |
+| Neon (PostgreSQL) | Jeff Leva | Yes |
+| MongoDB Atlas (Mandate Service) | Jeff Leva | Yes |
+| Clerk (user auth dashboard) | Jeff Leva | Yes |
+| Stripe (billing dashboard) | Jeff Leva | Yes |
+| Vercel (dashboard frontend) | Jeff Leva | Yes |
+| Cloudflare (DNS/CDN) | Jeff Leva | Yes |
+| Sentry (error monitoring) | Jeff Leva | Yes |
+
+Per-service authentication methods and detailed access records are maintained in an internal access log, not in this public document.
 
 As a solo-founder company, Jeff Leva is currently the only individual with production access. When additional team members are onboarded, this table will be updated and the approval process in Section 3 will apply.
 
@@ -49,6 +55,8 @@ AI Identity uses the following service-level secrets, managed as Kubernetes secr
 - **CLERK_ISSUER** -- Clerk JWT issuer URL for token verification
 
 All secrets are stored as Kubernetes secrets in the GKE cluster, managed via `kubectl`. They are never committed to the repository. The `.env.example` file documents required variables without values.
+
+**Attestation signing keys** are held in Google Cloud KMS (`EC_SIGN_P256_SHA256`). Private key material never leaves KMS; the application requests signatures via the KMS API under its service-account identity.
 
 ## 5. Database Access Controls
 
@@ -88,7 +96,7 @@ Every quarter, the document owner will:
 | Trust Services Criteria | How This Policy Addresses It |
 |------------------------|------------------------------|
 | CC6.1 -- Logical access security | Sections 2-4: access inventory, granting/revocation, secret management |
-| CC6.2 -- Credentials and authentication | Section 2: MFA required on all services |
+| CC6.2 -- Credentials and authentication | Section 2: Google Workspace as corporate IdP, MFA enforced on all services |
 | CC6.3 -- Access authorization | Section 3: explicit approval process, least privilege (Section 7) |
 | CC6.5 -- Restriction and revocation | Section 3: 24-hour revocation, immediate key rotation |
 | CC6.6 -- Periodic access review | Section 8: quarterly review cadence |
