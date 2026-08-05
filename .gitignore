@@ -123,3 +123,8 @@ AI-Identity-Status-Report-*.docx
 test.db
 .codex/
 .claude/brand-voice-archive/
+
+# Build output & scratch trees — never commit
+integrations/**/target/
+/output/
+/tmp/
