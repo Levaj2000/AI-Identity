@@ -38,6 +38,7 @@ const compareLinks = [
 
 const companyLinks = [
   { label: "About", path: "/about" },
+  { label: "Advisory", path: "/advisory" },
   { label: "Blog", path: "/blog" },
   { label: "Careers", path: "/careers" },
   { label: "Contact", path: "/contact" },
