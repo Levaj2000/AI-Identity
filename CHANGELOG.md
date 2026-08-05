@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Marketing site: `/advisory` — founder-led advisory engagements are now a public offer.** New page offering advisory work in the three areas where inbound interest already arrives: agent identity & governance architecture, tamper-evident audit evidence, and OCSF adoption/standards alignment (grounded in the contributions shipped in OCSF 1.9.0). Written in first person — a deliberate departure from the site's company voice, since the offering *is* the founder — with an email-only CTA consistent with the inbound, no-cold-outreach posture and the contributor/consulting-led business direction (Decision #56). Registered in the top nav, footer company links, and sitemap; the founder profile PDF is published at `/jeff-leva-profile.pdf` and linked from the page's receipts section as "who you'd be working with." Marketing site only — no product impact. (#426)
+
 ### Fixed
 - **Blog structured data pointed at the wrong founder LinkedIn profile.** The BlogPosting `author.url` in `landing-page/src/lib/schemas.ts` used `linkedin.com/in/jeffleva` — not Jeff's profile — while every other surface (about page, footer, the org `sameAs` in the same file) uses `linkedin.com/in/jeff-leva-a7373958`, verified live as the real one. Structured data feeds search/knowledge-graph identity linking, so the wrong URL there associates the blog's authorship with someone else's profile. One-line fix; marketing site only — no product impact. (#425)
 
