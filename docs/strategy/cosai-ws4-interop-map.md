@@ -33,8 +33,8 @@ two — not all:
 
 | Layer | Question it answers | Example occupant(s) |
 |---|---|---|
-| **1. Identity** | Who is this agent / workload? | SPIFFE/SVID, DIDs, agent keys |
-| **2. Authority / delegation grant** | Who may act, on whose behalf? | ODIS (Passport), CMF delegation |
+| **1. Identity** | Who is this agent / workload? | SPIFFE/SVID, DIDs, agent keys, Agent Manifest (deploy-time declaration) |
+| **2. Authority / delegation grant** | Who may act, on whose behalf? | ODIS (Passport), CMF delegation, ca2a |
 | **3. Runtime enforcement** | Is this action allowed *right now*? | IBM CPEX / CMF / APL |
 | **4. Environment attestation** | Is the runtime itself trustworthy? | EQTY (TEE / hardware) |
 | **5. Record / evidence (system-of-record)** | What actually happened, verifiably? | AI Identity / OCSF |
@@ -50,10 +50,11 @@ corrected by each owner.**
 
 | Player | Primary layer(s) | Core primitive | Emits (outputs) | Consumes (inputs) | OCSF-boundary seam |
 |---|---|---|---|---|---|
-| **AI Identity** | 5 — Record/evidence | Signed OCSF events; DSSE envelopes; offline-verifiable; Evidence Anchor (inclusion proofs); attestation / record_integrity profiles | Signed, queryable OCSF event records | Identity, authority, attestation, policy signals from layers 1–4 | Is the boundary — maps everyone's outputs into one neutral evidence schema |
+| **AI Identity** | 5 — Record/evidence | Signed OCSF events; DSSE envelopes; offline-verifiable; Evidence Anchor (inclusion proofs); `attestation` object + `record_integrity` profile, merged 2026-07-17, shipped in OCSF 1.9.0 (released 2026-08-03) | Signed, queryable OCSF event records | Identity, authority, attestation, policy signals from layers 1–4 | Maps other layers' outputs into the neutral OCSF evidence schema |
 | **ODIS** | 2 — Authority grant | Passport / Bridge / Router; "Delegation Chain Record" | Delegation grants / passports | Identity (layer 1) | Grant → recorded as an OCSF delegation event |
-| **TrustGraph** (Red Hat) | 1 + 2 — Identity + delegation graph (raw telemetry; becomes durable evidence via the OCSF seam below) | KeyCloak SPI + SPIFFE + AuthBridge sidecar → OTel spans → delegation DAG | OTel spans; runtime delegation graph | Workload identity, tokens | OTel → OCSF mapping (telemetry spans → evidence records) |
+| **TrustGraph** (Red Hat) | 1 + 2 — Identity + delegation graph; **also 5** — per the group's 2026-07-02 discussion, its audit-trail / traceability output is itself record-of-evidence, currently in OTel rather than OCSF form | KeyCloak SPI + SPIFFE + AuthBridge sidecar → OTel spans → delegation DAG | OTel spans; runtime delegation graph; audit trail | Workload identity, tokens | OTel ↔ OCSF mapping (spans ↔ event records) |
 | **EQTY Lab** | 4 — Environment attestation | TEE (AMD SEV/TDX, NVIDIA CC); DIDs; model signing; RFC 9421 gateway; offline-verifiable | Hardware attestation quotes; integrity graph; signed certs | Workloads, models | Hardware quote → OCSF workload-attestation object |
+| **Agent Manifest / TRACE** | 1 + 2 — deploy-time declaration of what the agent *is*; **also 5** via TRACE, its own attestation-record format and append-only registry | Hardware-anchored manifest over deploy-time artifacts (prompt, policy bundle, model identity, tool schemas, delegation chain, provenance); TRACE claims | Signed manifest; TRACE records; registry anchors | Deploy-time artifacts; TEE attestation | Manifest hash as an attested artifact in the runtime record; TRACE claims ↔ OCSF events |
 | **IBM CPEX / CMF** | 3 — Runtime enforcement | CPEX (policy engine); CMF (typed policy input: ContentPart + extensions); APL (declarative policy) | Policy decisions; CMF delegation.chain; security labels; tool/framework context | Identity, delegation, attestation | CMF ↔ OCSF cross-map: delegation.chain, security labels, tool/framework context |
 
 > **On AI Identity's scope:** *AI Identity is a working reference implementation
@@ -62,23 +63,26 @@ corrected by each owner.**
 > record/evidence substrate, where the other layers' outputs become durable,
 > verifiable evidence.*
 
-> **A note on "evidence" (added 2026-07-02):** several layers naturally produce
-> audit-relevant output — logs, spans, traces — that reasonably *feels* like
-> evidence. To keep layer 5 useful as a shared reference, we're using a specific
-> bar for what counts: durable, neutral-schema, cryptographically verifiable,
-> tamper-evident. Raw telemetry becomes that kind of evidence once it crosses an
-> OCSF-boundary seam (see below) — not before. Flagging this so the map stays
-> precise as more layers describe their outputs as "evidence" in conversation.
+> **A note on "evidence" (added 2026-07-02, revised 2026-07-31):** several layers
+> here produce audit-relevant output — logs, spans, traces, audit trails, TRACE
+> claims — and more than one is fairly described as evidence. Rather than police
+> the word, it seems more useful to name the properties that let a record be
+> checked later by someone who wasn't there: durable, neutral-schema,
+> cryptographically verifiable, tamper-evident. Different layers supply different
+> subsets of those today, and serializing across an OCSF seam is one way — not the
+> only way — to reach the full set. Noting the properties, not a threshold, so the
+> map stays precise as each layer describes its own outputs.
 
 ## Interop seams worth building (the positive-sum payoff)
 
 The map makes the interop work concrete — each seam is a natural OCSF-track
 convergence point:
 
-- **TrustGraph OTel spans → OCSF** evidence records (telemetry → record mapping)
-- **ODIS delegation grant → OCSF** delegation record (converging on Ania's open delegation PR #1665, not a parallel shape)
+- **TrustGraph OTel spans ↔ OCSF** event records (telemetry ↔ record mapping)
+- **ODIS delegation grant → OCSF** delegation record (converging on the `delegation` object from Ania's PR #1665, merged 2026-07-24 — not a parallel shape)
 - **EQTY hardware quote → OCSF** workload-attestation object
 - **CMF delegation.chain / security labels / tool context → OCSF**
+- **Agent Manifest hash → an attested artifact** in the runtime record; **TRACE claims ↔ OCSF** events
 - All of the above compose on the **layer-5 record** — one verifiable account of
   who was authorized, what ran, in what environment, and what happened.
 

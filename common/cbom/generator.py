@@ -2,10 +2,16 @@
 
 Output format: CycloneDX 1.6 (the OWASP standard with first-class
 ``cryptographic-asset`` components). We chose CycloneDX because CISA's
-forthcoming "CBOM minimum elements" (~Dec 2026, per Sprint 17 #424) is being
-built around it — so aligning now keeps "revisit when CISA lands" a tweak,
-not a rewrite — and because it's the format a partner (IBM / CoSAI WS4 /
-OCSF) can ingest with existing tooling.
+forthcoming "CBOM minimum elements" is being built around it — so aligning now
+keeps "revisit when CISA lands" a tweak, not a rewrite — and because it's the
+format a partner (IBM / CoSAI WS4 / OCSF) can ingest with existing tooling.
+
+That guidance is now mandated rather than merely expected: EO 14412 §5(d)
+(2026-06-22) directs CISA, with NIST, to publish the minimum elements within
+270 days — roughly **2027-03-19**, and explicitly scoped to "enable the
+automated assessment of the cryptographic assets utilized by a hardware or
+software element." An earlier version of this note estimated ~Dec 2026 from
+Sprint 17 #424; that predated the EO and was wrong.
 
 This is a *curated* inventory maintained in code, not AST-derived. Crypto
 usage is not reliably auto-detectable, and a CBOM is a deliberate attestation
