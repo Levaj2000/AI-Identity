@@ -1,7 +1,7 @@
 # Change Management Policy
 
 **Document Owner:** Jeff Leva, CEO
-**Version:** 1.1
+**Version:** 1.2
 **Last Reviewed:** August 5, 2026
 **Next Review:** November 5, 2026
 
@@ -87,19 +87,16 @@ Both jobs must pass before a PR can be merged. Failed CI blocks the merge button
 
 ## 9. Change Windows
 
-**Current policy (< 50 users, free tier):** No formal change window. All deployments are continuous via CI/CD with zero-downtime deploys. Standard releases, bug fixes, and feature additions deploy on merge to `main` at any time.
+**Standard changes:** No standing change window. All deployments are continuous via CI/CD with zero-downtime rolling deploys — bug fixes, new features, and additive migrations deploy on merge to `main` at any time. This is the prevailing practice for cloud-native services; safety comes from the automated pipeline (Sections 2-6), rolling updates behind health probes, and fast rollback (Section 8), not from batching changes into fixed windows.
 
-**Formal change window trigger — established when ANY of these conditions are met:**
-- First paying customer is onboarded
-- Monthly active users exceed 100
-- Enterprise contract is signed
-
-**Planned future change window:** Tuesdays 6:00-10:00 AM ET for:
+**High-risk changes** are scheduled deliberately rather than deployed on merge:
 - Breaking API changes (response shape changes, endpoint deprecation)
 - Destructive database migrations (column drops, type changes)
 - Infrastructure changes (scaling, region changes, provider switches)
 
-Standard deploys (bug fixes, new features, additive migrations) remain continuous and are not restricted to the change window.
+These are performed during low-traffic periods, announced per the notification table below, and never combined with unrelated changes in the same deploy.
+
+**Contractual change windows:** If a customer contract, SLA, or partner production dependency requires defined maintenance windows or change freezes, those commitments are honored per-agreement and this section is updated to record them. Formal windows are driven by contractual commitments, not by internal usage thresholds.
 
 **Customer notification requirements:**
 
