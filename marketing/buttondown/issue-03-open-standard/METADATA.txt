@@ -1,0 +1,92 @@
+ISSUE 03 — METADATA CHEAT SHEET
+================================
+Drafted 2026-06 as "proposals, not done deals." NEVER PUBLISHED.
+Rewritten 2026-08-05 after OCSF 1.9.0 shipped all three pieces on 2026-08-03,
+so it now tells the whole arc in one piece instead of leaving a dangling promise.
+
+CHANNEL DECISION (2026-08-05): LinkedIn-first.
+The Buttondown list does not exist — exhibit-a.ai-identity.co and
+buttondown.com/exhibit-a both return 404, and landing-page/src/app/api/probe-signup/route.ts
+documents that the slug was never created. The footer form emails jeff@ instead.
+Every "subscribe here" CTA has been removed from the body for that reason.
+Ship linkedin_article.md + linkedin_post.md. issue_03.md is the archive/newsletter
+version, ready if a real list is ever stood up.
+
+
+FILES
+-----
+linkedin_article.md   ← PRIMARY. LinkedIn article. Standalone, TL;DR up top.
+linkedin_post.md      ← Feed post driving to the article. Post article first, then paste link.
+issue_03.md           ← Newsletter/archive version. Keeps the "Exhibit A" framing and Issue 02 callback.
+                         Dead weight now that Buttondown is cancelled — safe to delete.
+make_cover.py         ← cover generator. Run `python make_cover.py` to rebuild.
+paper_trail_cover.png         1200x627   ← LinkedIn article hero. USE THIS ONE.
+paper_trail_cover_square.png  1200x1200  ← square share / repost tile
+
+Both PNGs stay untracked (over the repo's 500KB pre-commit limit) — regenerate
+from the script rather than expecting them in a fresh clone.
+
+RETIRED: ExhibitA_03_cover.png / _square.png. Do not use. They carry the
+"EXHIBIT A · ISSUE 03" masthead, the old title ("Has to Be Public"), and a
+subhead reading "It's a pull request" — accurate in June, wrong now that the
+work shipped.
+
+
+ARTICLE TITLE
+-------------
+The Paper Trail Went Public
+
+Alternates:
+  It Landed: What Shipped in OCSF 1.9.0
+  A Trust Root You Own Is Not a Trust Root
+
+
+NEWSLETTER SUBJECT LINE (if the archive version is ever sent)
+-------------------------
+Option A:  The paper trail went public.                        ← recommended
+Option B:  We put our best feature in a standard we don't own.
+Option C:  It landed.
+
+
+DESCRIPTION / PREVIEW TEXT (under 90 chars)
+---------------------------
+A trust root you own is not a trust root. It's a dependency.
+
+
+TAGS
+----
+AI Identity
+AI Governance
+OCSF
+Open Standards
+Agent Forensics
+
+
+VERIFIED CLAIMS (checked 2026-08-05 against the tagged release, not just merge status)
+--------------------------------------------------------------------
+OCSF 1.9.0 released 2026-08-03T14:39:07Z (gh release list, ocsf/ocsf-schema)
+Present at ref 1.9.0:
+  objects/attestation.json          ✓
+  profiles/record_integrity.json    ✓
+  objects/ai_agent.json             ✓
+  objects/digital_signature.json    ✓ contains serialization_id
+
+PR provenance:
+  #1641  ai_agent object                       Ania Kacewicz    merged 2026-06-29
+  #1661  attestation + record_integrity        Jeff Leva        merged 2026-07-17
+  #1662  serialization_id                      Jeff Leva        merged 2026-06-09
+
+Still open, targeted at the next release (described in the article as "under review"):
+  #1704  normalized stop_reason/stop_reason_id on ai_operation
+  #1705  per-node authority fields for delegation
+  #1709  carry signature bytes on digital_signature
+
+
+PRE-PUBLISH CHECKLIST
+---------------------
+- [ ] Decide on naming Ania Kacewicz (see reviewer's note #2)
+- [ ] All 5 external links resolve (1.9.0 release, PRs #1641/#1661/#1662, /advisory)
+- [ ] Article posted FIRST, then paste its URL into linkedin_post.md's [ARTICLE LINK]
+- [ ] Cover image attached to the article
+- [ ] Confirm the three open PRs are still open on the morning you post — if one
+      merged overnight, the "still under review" line needs a one-word fix
