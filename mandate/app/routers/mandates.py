@@ -63,12 +63,13 @@ def _write_mandate_audit(
 
     The subject agent id must be a platform agent UUID for org resolution;
     mandates issued to external/non-platform subjects are logged locally
-    and skipped — they have no org chain to join.
+    and skipped — they have no org chain to join. That id parse is the
+    only thing the try/except below guards.
 
-    Deliberately NOT wrapped in try/except: if the audit chain cannot be
-    written, the caller's HTTP request fails. An unauditable mandate
-    operation is worse than a failed one — same fail-close stance as the
-    gateway.
+    The create_audit_entry call itself is deliberately NOT wrapped in
+    try/except: if the audit chain cannot be written, the caller's HTTP
+    request fails. An unauditable mandate operation is worse than a
+    failed one — same fail-close stance as the gateway.
     """
     try:
         agent_uuid = uuid.UUID(subject_agent_id)
