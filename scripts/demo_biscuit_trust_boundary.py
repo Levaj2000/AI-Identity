@@ -123,8 +123,11 @@ def _gateway_draw(
     )
     draw = body.get("mandate") or {}
     if body.get("decision") == "allow":
-        verdict = f"{GREEN}ALLOW{RESET}"
+        # A settlement can be accepted AND breach the grant — that's the point.
+        verdict = f"{RED}EXCEEDED{RESET}" if draw.get("exceeded") else f"{GREEN}ALLOW{RESET}"
         tail = f"spent {_cents(draw.get('spent_cents'))} of {_cents(draw.get('limit_cents'))}"
+        if draw.get("exceeded"):
+            tail += f"  [recorded — mandate now {draw.get('status')}]"
     else:
         exceeded = bool(draw.get("exceeded"))
         verdict = f"{RED}EXCEEDED{RESET}" if exceeded else f"{RED}DENIED{RESET}"
