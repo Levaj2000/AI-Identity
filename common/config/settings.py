@@ -50,6 +50,14 @@ class Settings(BaseSettings):
     # "mldsa-local:<fingerprint>" key_id scheme (see mandate/app/signing.py).
     forensic_mldsa_public_key: str = ""
 
+    # Biscuit presentation-credential root key (demo tier — common/biscuit/).
+    # PEM-encoded Ed25519 private key. When set, the Mandate Service can mint
+    # a Biscuit token wrapping a mandate's grant for presentation at the
+    # gateway; the gateway derives the verify key from the same PEM
+    # (single-key trust, mirroring the forensic signer's local-PEM pattern).
+    # When empty, the mint endpoint 503s and gateway Biscuit checks are off.
+    biscuit_root_key_pem: str = ""
+
     # Upstream credential encryption (Fernet)
     credential_encryption_key: str = ""
 

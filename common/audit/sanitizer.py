@@ -70,6 +70,14 @@ ALLOWED_METADATA_KEYS: frozenset[str] = frozenset(
         "spend_currency",
         "spend_settlement",
         "spend_reference",
+        # Biscuit presentation credentials (common/biscuit/) — flat scalars.
+        # credential_format distinguishes biscuit-presented draws from
+        # direct API draws; revocation id + block count tie the audit row
+        # to the exact token (and its attenuation depth) that was presented.
+        "credential_format",
+        "biscuit_revocation_id",
+        "biscuit_block_count",
+        "biscuit_deny_detail",
         # Change-log v2.1 source context. SOC 2 CC7.2 and HIPAA
         # §164.312(b) both expect source IP and user agent on audit
         # records — their absence is a reviewer finding. Writers are

@@ -26,6 +26,7 @@ from mandate.app.schemas import (
     MandateRevocation,
     MandateStatus,
     MandateSubject,
+    MintBiscuitResult,
     RecordSpendRequest,
     RecordSpendResult,
     RevokeMandateRequest,
@@ -293,6 +294,89 @@ async def revoke_mandate(
 
     updated = await mongo["mandates"].find_one({"mandate_id": mandate_id}, {"_id": 0})
     return MandateResponse(**updated)
+
+
+# ── Mint Biscuit presentation token ────────────────────────────────────────
+
+
+@router.post(
+    "/{mandate_id}/biscuit",
+    response_model=MintBiscuitResult,
+    summary="Mint a Biscuit presentation token for a mandate",
+)
+async def mint_biscuit(
+    mandate_id: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mint a Biscuit wrapping this mandate's grant terms.
+
+    The Biscuit is a presentation credential: the agent carries it to the
+    gateway (and may offline-attenuate it for sub-agents); the signed
+    mandate document and its cumulative spend state remain authoritative
+    here. Grant fields only — never runtime state. See common/biscuit/.
+    """
+    from common.biscuit import BiscuitUnavailableError, mint_mandate_biscuit
+    from common.config.settings import settings
+
+    mongo = get_mongo()
+    org_id = str(current_user.org_id) if current_user.org_id else str(current_user.id)
+    doc = await mongo["mandates"].find_one(
+        {"mandate_id": mandate_id, "issuer.org_id": org_id},
+        {"_id": 0},
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Mandate not found")
+    if doc["status"] != MandateStatus.active.value:
+        raise HTTPException(status_code=409, detail=f"Mandate is {doc['status']}, not active")
+
+    mandate = MandateDocument(**doc)
+    try:
+        minted = mint_mandate_biscuit(
+            private_key_pem=settings.biscuit_root_key_pem,
+            mandate_id=mandate.mandate_id,
+            subject_agent_id=mandate.subject.agent_id,
+            subject_org_id=mandate.subject.org_id,
+            scope=mandate.scope,
+            valid_from=mandate.valid_from,
+            valid_until=mandate.valid_until,
+            limit_cents=mandate.spend_limit.limit_cents if mandate.spend_limit else None,
+            currency=mandate.spend_limit.currency if mandate.spend_limit else "USD",
+        )
+    except BiscuitUnavailableError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+
+    now = datetime.now(UTC)
+    await mongo["mandate_events"].insert_one(
+        {
+            "mandate_id": mandate_id,
+            "event_type": "biscuit_minted",
+            "event_at": now.isoformat(),
+            "actor": str(current_user.id),
+            "revocation_id": minted.revocation_ids[0],
+        }
+    )
+
+    _write_mandate_audit(
+        db,
+        subject_agent_id=mandate.subject.agent_id,
+        endpoint=f"/api/v1/mandates/{mandate_id}/biscuit",
+        decision="allow",
+        metadata={
+            "action_type": "mandate_biscuit_minted",
+            "resource_type": "mandate",
+            "mandate_id": mandate_id,
+            "credential_format": "biscuit",
+            "biscuit_revocation_id": minted.revocation_ids[0],
+        },
+    )
+
+    return MintBiscuitResult(
+        mandate_id=mandate_id,
+        token=minted.token,
+        root_public_key=minted.root_public_key,
+        revocation_ids=minted.revocation_ids,
+    )
 
 
 # ── Record spend ───────────────────────────────────────────────────────────

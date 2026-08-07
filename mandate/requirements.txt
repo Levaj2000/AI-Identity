@@ -22,6 +22,11 @@ cryptography==46.0.5
 rfc8785==0.1.4
 google-cloud-kms==3.12.0
 PyJWT==2.10.1
+# Biscuit presentation credentials (common/biscuit/) — Rust-backed wheel,
+# pre-1.0 so pinned hard; verify cp311 manylinux_x86_64 wheel exists on
+# PyPI before ANY version bump (liboqs yank incident #405 is the cautionary
+# tale for native wheels in the hermetic build).
+biscuit-python==0.4.0
 # PQC verify path (ML-DSA-87, FIPS 204) — verify only, no issuance.
 # Wheel is a thin loader; the native liboqs lib is NOT built into the image by
 # default (the verify path is opt-in/inert in prod and the from-source build
