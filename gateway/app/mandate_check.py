@@ -114,6 +114,78 @@ def check_presentation(
     return MandateCheckOutcome(allowed=True, audit_metadata=meta)
 
 
+def draw_receipt(
+    *,
+    agent_id: str,
+    endpoint: str,
+    amount_cents: int,
+    currency: str,
+    settlement: bool,
+    decision: str,
+    presentation_metadata: dict,
+    deny_reason: str | None = None,
+    draw: dict | None = None,
+    correlation_id: str | None = None,
+) -> dict | None:
+    """Assemble and sign the receipt handed back to the presenting agent.
+
+    The return path of the delegation loop: the Biscuit carried authority
+    down to this enforcement point; the receipt carries signed evidence of
+    what was done — or refused — back up to whoever holds the token, so a
+    delegator ends up with offline-verifiable proof of its delegate's
+    actions. Denials get receipts too: "your delegate tried and was
+    refused" is evidence the delegator wants.
+
+    Signed with the same Ed25519 root key that anchors the tokens
+    (common/biscuit/receipts.py). Best-effort by design: returns None if
+    unsignable — a receipt failure must never block or fail the request
+    it evidences.
+    """
+    from common.biscuit import mint_receipt
+
+    payload: dict = {
+        "kind": "mandate_draw_receipt",
+        "agent_id": agent_id,
+        "endpoint": endpoint,
+        "amount_cents": amount_cents,
+        "currency": currency,
+        "settlement": settlement,
+        "decision": decision,
+    }
+    if presentation_metadata.get("mandate_id"):
+        payload["mandate_id"] = presentation_metadata["mandate_id"]
+    if presentation_metadata.get("biscuit_revocation_id"):
+        # Identifies WHICH copy of the authority acted — a parent's receipt
+        # provably concerns its delegate's attenuated token.
+        payload["revocation_id"] = presentation_metadata["biscuit_revocation_id"]
+    if presentation_metadata.get("biscuit_block_count") is not None:
+        payload["attenuation_blocks"] = presentation_metadata["biscuit_block_count"]
+    if deny_reason:
+        payload["deny_reason"] = deny_reason
+    if presentation_metadata.get("biscuit_deny_detail"):
+        payload["deny_detail"] = presentation_metadata["biscuit_deny_detail"]
+    if draw:
+        for src, dst in (
+            ("spent_cents", "spent_cents"),
+            ("limit_cents", "limit_cents"),
+            ("remaining_cents", "remaining_cents"),
+            ("exceeded", "exceeded"),
+            ("status", "mandate_status"),
+        ):
+            if draw.get(src) is not None:
+                payload[dst] = draw[src]
+    if correlation_id:
+        # Ties the receipt to the chained audit rows for this exact request —
+        # a receipt-in-hand reconciles against the tamper-evident ledger.
+        payload["correlation_id"] = correlation_id
+
+    try:
+        return mint_receipt(settings.biscuit_root_key_pem, payload)
+    except ValueError as e:
+        logger.warning("receipt not minted: %s", e)
+        return None
+
+
 def settle_draw(
     mandate_id: str,
     *,

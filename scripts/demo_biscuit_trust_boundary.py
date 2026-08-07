@@ -137,6 +137,26 @@ def _gateway_draw(
     return status, body
 
 
+def _show_receipt(body: dict, root_public_key: str) -> None:
+    """The return path: verify the leaf's signed receipt as the delegator would."""
+    from common.biscuit import verify_receipt
+
+    bundle = body.get("receipt")
+    if not bundle:
+        print(f"    {YELLOW}(no receipt returned){RESET}")
+        return
+    ok = verify_receipt(bundle, root_public_key)
+    r = bundle["receipt"]
+    mark = f"{GREEN}✓ verified{RESET}" if ok else f"{RED}✗ INVALID{RESET}"
+    rev = (r.get("revocation_id") or "")[:12]
+    print(
+        f"    ⤶ receipt {mark} offline (same root key as the token) — "
+        f"{r['decision']}"
+        + (f" [{r.get('deny_reason')}]" if r.get("deny_reason") else "")
+        + (f", token {rev}…" if rev else "")
+    )
+
+
 def main() -> int:
     try:
         from biscuit_auth import Biscuit
@@ -215,12 +235,23 @@ def main() -> int:
         f"to a sub-agent — no service was called{RESET}"
     )
 
-    # 4 / 5 — the narrowed token enforces itself
-    _gateway_draw(agent_id, sub_token, 1_500, label="sub-agent draw", reference="ord_2002")
-    _gateway_draw(agent_id, sub_token, 4_000, label="sub-agent over-ceiling", reference="ord_2003")
+    # 4 / 5 — the narrowed token enforces itself; every outcome yields a
+    # signed receipt back to the presenter (the return path of the loop)
+    _, body = _gateway_draw(
+        agent_id, sub_token, 1_500, label="sub-agent draw", reference="ord_2002"
+    )
+    _show_receipt(body, minted["root_public_key"])
+    _, body = _gateway_draw(
+        agent_id, sub_token, 4_000, label="sub-agent over-ceiling", reference="ord_2003"
+    )
     print(
         f"    {YELLOW}↑ denied by the token's own attenuation check, offline — "
         f"the mandate service was never consulted{RESET}"
+    )
+    _show_receipt(body, minted["root_public_key"])
+    print(
+        f"    {YELLOW}⤶ the delegator now holds signed proof of BOTH: what its "
+        f"delegate did, and what it was refused{RESET}"
     )
 
     # 6 — out-of-band settlement breaches the grant
