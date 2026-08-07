@@ -119,6 +119,16 @@ class TestAuthorize:
         early = dt.datetime(2025, 6, 1, tzinfo=dt.UTC)
         assert not _authorize(minted, now=early).allowed
 
+    def test_settlement_mode_passes_authority_ceiling(self, minted):
+        # Money already moved: settlement must be RECORDABLE past the grant
+        # so the breach can be evidenced. The verifier asserts settlement.
+        result = _authorize(minted, amount_cents=40_500, settlement=True)
+        assert result.allowed
+
+    def test_settlement_mode_still_enforces_subject_and_scope(self, minted):
+        assert not _authorize(minted, amount_cents=100, settlement=True, agent_id="x").allowed
+        assert not _authorize(minted, amount_cents=100, settlement=True, scope="admin:x").allowed
+
     def test_no_spend_limit_means_no_amount_ceiling(self, root_pem):
         unlimited = mint_mandate_biscuit(
             private_key_pem=root_pem,
@@ -176,6 +186,16 @@ class TestAttenuation:
         injected = token.append(evil).to_base64()
         result = _authorize(minted, token=injected, amount_cents=40_500)
         assert not result.allowed
+
+    def test_settlement_does_not_bypass_attenuation_ceiling(self, minted):
+        # A sub-agent's delegated cap is absolute — settlement mode must not
+        # let a narrowed token settle past its attenuation block.
+        narrowed = attenuate_spend_ceiling(
+            minted.token, minted.root_public_key, ceiling_cents=2_000
+        )
+        result = _authorize(minted, token=narrowed, amount_cents=4_000, settlement=True)
+        assert not result.allowed
+        assert "block n°1" in (result.deny_detail or "")
 
     def test_attenuation_cannot_widen(self, minted):
         # A "wider" ceiling appends a check that passes, but the authority

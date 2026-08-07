@@ -71,6 +71,7 @@ def check_presentation(
     amount_cents: int,
     scope: str,
     currency: str,
+    settlement: bool = False,
 ) -> MandateCheckOutcome:
     """Layer 1 — verify and evaluate the presented Biscuit locally."""
     pem = settings.biscuit_root_key_pem
@@ -90,6 +91,7 @@ def check_presentation(
         amount_cents=amount_cents,
         scope=scope,
         currency=currency,
+        settlement=settlement,
     )
     meta = _presentation_metadata(presentation)
     if not presentation.allowed:

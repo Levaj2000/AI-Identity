@@ -139,11 +139,19 @@ def mint_mandate_biscuit(
     if valid_until is not None:
         builder.add_code("check if time($t), $t < {valid_until};", {"valid_until": valid_until})
     if limit_cents is not None:
+        # The ceiling check admits settlement mode: money that already moved
+        # must be RECORDABLE past the grant (that's how a breach gets flipped
+        # to `exceeded` and evidenced) — so the authority ceiling yields to a
+        # settlement(true) fact. Only the verifier (the gateway) asserts that
+        # fact; a token holder cannot, because holder-added facts are scoped
+        # to their own block and invisible to this check. Attenuation
+        # ceilings (attenuate_spend_ceiling) stay absolute on purpose: a
+        # sub-agent's cap is a hard delegation bound, not a grant.
         builder.add_code(
             """
             limit_cents({limit});
             granted_currency({currency});
-            check if amount($a), $a <= {limit};
+            check if amount($a), $a <= {limit} or settlement(true);
             check if currency($c), $c == {currency};
             """,
             {"limit": limit_cents, "currency": currency},
@@ -182,6 +190,7 @@ def authorize_presentation(
     amount_cents: int,
     scope: str,
     currency: str = "USD",
+    settlement: bool = False,
     now: dt.datetime | None = None,
 ) -> PresentationResult:
     """The gateway side: verify signatures, then run every token check
@@ -214,6 +223,10 @@ def authorize_presentation(
         """,
         {"agent_id": agent_id, "amount": amount_cents, "scope": scope, "currency": currency},
     )
+    if settlement:
+        # Verifier-asserted: lets the authority ceiling yield in settlement
+        # mode (see mint). Attenuation-block ceilings do not reference it.
+        builder.add_code("settlement(true);")
     if now is not None:
         builder.add_code("time({now});", {"now": now})
     else:

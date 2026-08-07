@@ -482,6 +482,7 @@ def enforce_request(
             amount_cents=spend_amount_cents,
             scope=spend_scope,
             currency=spend_currency,
+            settlement=spend_settlement,
         )
         mandate_metadata = presentation.audit_metadata
         if not presentation.allowed:
