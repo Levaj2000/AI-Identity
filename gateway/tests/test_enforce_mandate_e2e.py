@@ -105,6 +105,42 @@ def test_allow_flow_settles_and_returns_mandate(
     assert settle_calls == [{"mandate_id": MANDATE_ID, "amount_cents": 3_000, "settlement": False}]
 
 
+def test_allow_receipt_verifies_and_names_the_token(
+    client, test_agent, test_policy, minted, settle_calls
+):
+    from common.biscuit import verify_receipt
+
+    body = _enforce(client, minted.token).json()
+    receipt = body["receipt"]
+    # Signed by the same root key that anchors the token — offline-verifiable
+    # by anyone holding the published key.
+    assert verify_receipt(receipt, minted.root_public_key)
+    assert receipt["receipt"]["decision"] == "allow"
+    assert receipt["receipt"]["mandate_id"] == MANDATE_ID
+    # Names the exact token copy that acted.
+    assert receipt["receipt"]["revocation_id"] == minted.revocation_ids[-1]
+    assert receipt["receipt"]["spent_cents"] == 3_000
+    assert receipt["receipt"]["correlation_id"]
+
+
+def test_offline_denial_still_yields_a_receipt(
+    client, test_agent, test_policy, minted, settle_calls
+):
+    from common.biscuit import attenuate_spend_ceiling as attenuate
+    from common.biscuit import verify_receipt
+
+    narrowed = attenuate(minted.token, minted.root_public_key, ceiling_cents=2_000)
+    body = _enforce(client, narrowed, amount=4_000).json()
+    receipt = body["receipt"]
+    assert verify_receipt(receipt, minted.root_public_key)
+    assert receipt["receipt"]["decision"] == "deny"
+    assert receipt["receipt"]["deny_reason"] == "biscuit_denied"
+    # The receipt names the DELEGATE's attenuated token, not the parent's.
+    assert receipt["receipt"]["revocation_id"] != minted.revocation_ids[-1]
+    assert receipt["receipt"]["attenuation_blocks"] == 2
+    assert settle_calls == []
+
+
 def test_attenuated_over_ceiling_denied_without_settlement(
     client, test_agent, test_policy, minted, settle_calls
 ):

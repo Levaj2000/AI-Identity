@@ -413,6 +413,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     response_description="Enforcement decision: allow, deny, or error",
 )
 def enforce_request(
+    request: Request,
     agent_id: uuid.UUID = Query(..., description="UUID of the requesting agent"),
     endpoint: str = Query(..., description="Target API endpoint (e.g., /v1/chat)"),
     method: str = Query("POST", description="HTTP method"),
@@ -467,9 +468,10 @@ def enforce_request(
     # its metadata rides into the policy audit row. The actual draw only
     # settles after policy ALLOW — money moves when both layers agree.
     mandate_metadata: dict = {}
+    receipt_kwargs: dict = {}
     if mandate_token is not None:
         from gateway.app.enforce import Decision, DenyReason, EnforcementResult, _audit_decision
-        from gateway.app.mandate_check import check_presentation
+        from gateway.app.mandate_check import check_presentation, draw_receipt
 
         if spend_amount_cents is None:
             raise HTTPException(
@@ -485,6 +487,15 @@ def enforce_request(
             settlement=spend_settlement,
         )
         mandate_metadata = presentation.audit_metadata
+        receipt_kwargs = {
+            "agent_id": str(agent_id),
+            "endpoint": endpoint,
+            "amount_cents": spend_amount_cents,
+            "currency": spend_currency,
+            "settlement": spend_settlement,
+            "presentation_metadata": mandate_metadata,
+            "correlation_id": getattr(request.state, "correlation_id", None),
+        }
         if not presentation.allowed:
             deny = EnforcementResult(
                 decision=Decision.DENY,
@@ -501,6 +512,13 @@ def enforce_request(
                     "status_code": presentation.status_code,
                     "message": presentation.message,
                     "deny_reason": presentation.deny_reason,
+                    # Refusals are evidence too — the delegator holding this
+                    # token learns its delegate tried and was denied.
+                    "receipt": draw_receipt(
+                        decision="deny",
+                        deny_reason=presentation.deny_reason,
+                        **receipt_kwargs,
+                    ),
                 },
             )
 
@@ -530,7 +548,7 @@ def enforce_request(
 
     # ── Biscuit mandate settlement (layer 2: authoritative draw) ─────
     if mandate_token is not None:
-        from gateway.app.mandate_check import settle_draw
+        from gateway.app.mandate_check import draw_receipt, settle_draw
 
         settle = settle_draw(
             mandate_metadata["mandate_id"],
@@ -550,9 +568,20 @@ def enforce_request(
                     "message": settle.message,
                     "deny_reason": settle.deny_reason,
                     "mandate": settle.draw,
+                    "receipt": draw_receipt(
+                        decision="deny",
+                        deny_reason=settle.deny_reason,
+                        draw=settle.draw,
+                        **receipt_kwargs,
+                    ),
                 },
             )
         response["mandate"] = settle.draw
+        response["receipt"] = draw_receipt(
+            decision="allow",
+            draw=settle.draw,
+            **receipt_kwargs,
+        )
 
     # ── Fetch user context (shared by HITL + quota) ──────────────────
     from common.models import Agent, User
