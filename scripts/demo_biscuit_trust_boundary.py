@@ -166,7 +166,33 @@ def main() -> int:
         f"signed {mandate['signatures'][0]['algorithm']}"
     )
 
-    minted = _mandate_api("POST", f"/api/v1/mandates/{mid}/biscuit")
+    # BISCUIT_MINT=local mints client-side from BISCUIT_ROOT_KEY_PEM_FILE —
+    # for driving the demo against a deployed mandate service that predates
+    # the /biscuit endpoint. The mandate itself (issue, signature, spend,
+    # audit) still comes from the real service either way.
+    if os.environ.get("BISCUIT_MINT") == "local":
+        import datetime as _dt
+
+        from common.biscuit import mint_mandate_biscuit
+
+        pem = Path(os.environ["BISCUIT_ROOT_KEY_PEM_FILE"]).read_text()
+        _iso = lambda s: _dt.datetime.fromisoformat(s.replace("Z", "+00:00"))  # noqa: E731
+        m = mint_mandate_biscuit(
+            private_key_pem=pem,
+            mandate_id=mid,
+            subject_agent_id=agent_id,
+            subject_org_id=mandate["subject"]["org_id"],
+            scope=mandate["scope"],
+            valid_from=_iso(mandate["valid_from"]),
+            valid_until=_iso(mandate["valid_until"]) if mandate.get("valid_until") else None,
+            limit_cents=mandate["spend_limit"]["limit_cents"]
+            if mandate.get("spend_limit")
+            else None,
+            currency=mandate["spend_limit"]["currency"] if mandate.get("spend_limit") else "USD",
+        )
+        minted = {"token": m.token, "root_public_key": m.root_public_key}
+    else:
+        minted = _mandate_api("POST", f"/api/v1/mandates/{mid}/biscuit")
     parent_token = minted["token"]
     print(f"{GREEN}minted{RESET} Biscuit ({len(parent_token)} chars) — the grant, as Datalog:\n")
     authority = Biscuit.from_base64(parent_token, _public_key(minted["root_public_key"]))
