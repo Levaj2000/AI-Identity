@@ -187,6 +187,10 @@ class Settings(BaseSettings):
     # scripts); Phase 4 replaces it with internal HMAC service auth. When empty,
     # requests presenting a mandate Biscuit are denied 503 (fail-closed).
     mandate_draw_token: str = ""
+    # Or a path to a file re-read at call time (demo tier: Clerk session
+    # tokens expire in ~60s, so a static env value dies between gateway
+    # startup and the draw; a file can be refreshed without a restart).
+    mandate_draw_token_file: str = ""
     mandate_check_timeout_ms: int = 2000
 
     # Perplexity AI — "What happened here?" audit summaries (leave empty to disable)

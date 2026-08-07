@@ -133,12 +133,19 @@ def settle_draw(
             deny_reason="mandate_unavailable",
             message="Mandate service circuit breaker is open",
         )
-    if not settings.mandate_draw_token:
+    draw_token = settings.mandate_draw_token
+    if not draw_token and settings.mandate_draw_token_file:
+        try:
+            with open(settings.mandate_draw_token_file) as fh:
+                draw_token = fh.read().strip()
+        except OSError as e:
+            logger.warning("mandate_draw_token_file unreadable: %s", e)
+    if not draw_token:
         return MandateCheckOutcome(
             allowed=False,
             status_code=503,
             deny_reason="mandate_unavailable",
-            message="No mandate draw credential configured (MANDATE_DRAW_TOKEN)",
+            message="No mandate draw credential configured (MANDATE_DRAW_TOKEN[_FILE])",
         )
 
     body = {
@@ -158,7 +165,7 @@ def settle_draw(
             resp = client.post(
                 f"/api/v1/mandates/{mandate_id}/spend",
                 json=body,
-                headers={"Authorization": f"Bearer {settings.mandate_draw_token}"},
+                headers={"Authorization": f"Bearer {draw_token}"},
             )
     except httpx.HTTPError as e:
         mandate_circuit_breaker.record_failure()
