@@ -182,6 +182,12 @@ class Settings(BaseSettings):
 
     # Mandate Service URL (H2 — internal calls from API/Gateway)
     mandate_url: str = "http://localhost:8003"
+    # Gateway → Mandate Service draw call (demo tier — gateway/app/mandate_check.py).
+    # mandate_draw_token is a developer bearer token (same pattern as the demo
+    # scripts); Phase 4 replaces it with internal HMAC service auth. When empty,
+    # requests presenting a mandate Biscuit are denied 503 (fail-closed).
+    mandate_draw_token: str = ""
+    mandate_check_timeout_ms: int = 2000
 
     # Perplexity AI — "What happened here?" audit summaries (leave empty to disable)
     perplexity_api_key: str = ""

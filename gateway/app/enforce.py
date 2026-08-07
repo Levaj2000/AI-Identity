@@ -82,6 +82,10 @@ class DenyReason(enum.StrEnum):
     AGENT_BLOCKED = "agent_blocked"
     RUNTIME_KEY_ON_MANAGEMENT = "runtime_key_on_management_endpoint"
     ADMIN_KEY_ON_RUNTIME = "admin_key_on_runtime_endpoint"
+    # Biscuit mandate presentation (gateway/app/mandate_check.py)
+    BISCUIT_DENIED = "biscuit_denied"
+    MANDATE_DENIED = "mandate_denied"
+    MANDATE_UNAVAILABLE = "mandate_unavailable"
 
 
 @dataclass
