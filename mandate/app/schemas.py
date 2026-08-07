@@ -228,6 +228,22 @@ class MandateListResponse(BaseModel):
     page_size: int
 
 
+class MintBiscuitResult(BaseModel):
+    """Response for POST /api/v1/mandates/{id}/biscuit.
+
+    The token is a presentation credential wrapping the mandate's GRANT
+    (never its runtime spend state); the authoritative document and its
+    ECDSA signature are unchanged. The root public key is returned so a
+    holder can offline-attenuate and a verifier can be pointed at the
+    right trust anchor.
+    """
+
+    mandate_id: str
+    token: str = Field(description="Biscuit, URL-safe base64")
+    root_public_key: str = Field(description="Ed25519 public key, hex")
+    revocation_ids: list[str] = Field(description="One per block, hex")
+
+
 class VerifyMandateRequest(BaseModel):
     """Body for POST /api/v1/mandates/verify — accepts a full mandate payload."""
 

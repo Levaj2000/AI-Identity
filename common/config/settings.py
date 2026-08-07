@@ -50,6 +50,14 @@ class Settings(BaseSettings):
     # "mldsa-local:<fingerprint>" key_id scheme (see mandate/app/signing.py).
     forensic_mldsa_public_key: str = ""
 
+    # Biscuit presentation-credential root key (demo tier — common/biscuit/).
+    # PEM-encoded Ed25519 private key. When set, the Mandate Service can mint
+    # a Biscuit token wrapping a mandate's grant for presentation at the
+    # gateway; the gateway derives the verify key from the same PEM
+    # (single-key trust, mirroring the forensic signer's local-PEM pattern).
+    # When empty, the mint endpoint 503s and gateway Biscuit checks are off.
+    biscuit_root_key_pem: str = ""
+
     # Upstream credential encryption (Fernet)
     credential_encryption_key: str = ""
 
@@ -174,6 +182,16 @@ class Settings(BaseSettings):
 
     # Mandate Service URL (H2 — internal calls from API/Gateway)
     mandate_url: str = "http://localhost:8003"
+    # Gateway → Mandate Service draw call (demo tier — gateway/app/mandate_check.py).
+    # mandate_draw_token is a developer bearer token (same pattern as the demo
+    # scripts); Phase 4 replaces it with internal HMAC service auth. When empty,
+    # requests presenting a mandate Biscuit are denied 503 (fail-closed).
+    mandate_draw_token: str = ""
+    # Or a path to a file re-read at call time (demo tier: Clerk session
+    # tokens expire in ~60s, so a static env value dies between gateway
+    # startup and the draw; a file can be refreshed without a restart).
+    mandate_draw_token_file: str = ""
+    mandate_check_timeout_ms: int = 2000
 
     # Perplexity AI — "What happened here?" audit summaries (leave empty to disable)
     perplexity_api_key: str = ""

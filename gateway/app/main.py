@@ -17,7 +17,7 @@ import uuid
 from contextlib import asynccontextmanager
 
 import sentry_sdk
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
@@ -426,6 +426,24 @@ def enforce_request(
         None,
         description="Approval review ID for human-in-the-loop resubmission (enterprise tier).",
     ),
+    mandate_token: str | None = Header(
+        None,
+        alias="X-Agent-Mandate",
+        description="Biscuit presentation token (URL-safe base64) minted from a mandate. "
+        "When present, spend_amount_cents is required and the request is additionally "
+        "checked against the token's grant/attenuation and settled against the mandate.",
+    ),
+    spend_amount_cents: int | None = Query(
+        None, gt=0, description="Spend to draw against the presented mandate, integer cents"
+    ),
+    spend_currency: str = Query("USD", pattern="^[A-Z]{3}$"),
+    spend_scope: str = Query("spend:commerce", description="Scope presented for the draw"),
+    spend_settlement: bool = Query(
+        False,
+        description="False = enforce (deny a crossing spend); True = record post-hoc "
+        "settlement (a crossing flips the mandate to exceeded)",
+    ),
+    spend_reference: str | None = Query(None, max_length=100),
     db: Session = Depends(get_db),
 ):
     """Evaluate whether an agent's request should be allowed or denied.
@@ -444,12 +462,55 @@ def enforce_request(
 
     Only an explicit ALLOW from a successful policy evaluation permits forwarding.
     """
+    # ── Biscuit mandate presentation (layer 1: local, offline) ───────
+    # Runs BEFORE policy enforcement: it's cheap (no DB, no network) and
+    # its metadata rides into the policy audit row. The actual draw only
+    # settles after policy ALLOW — money moves when both layers agree.
+    mandate_metadata: dict = {}
+    if mandate_token is not None:
+        from gateway.app.enforce import Decision, DenyReason, EnforcementResult, _audit_decision
+        from gateway.app.mandate_check import check_presentation
+
+        if spend_amount_cents is None:
+            raise HTTPException(
+                status_code=400,
+                detail="spend_amount_cents is required when X-Agent-Mandate is presented",
+            )
+        presentation = check_presentation(
+            mandate_token,
+            agent_id=str(agent_id),
+            amount_cents=spend_amount_cents,
+            scope=spend_scope,
+            currency=spend_currency,
+            settlement=spend_settlement,
+        )
+        mandate_metadata = presentation.audit_metadata
+        if not presentation.allowed:
+            deny = EnforcementResult(
+                decision=Decision.DENY,
+                deny_reason=DenyReason(presentation.deny_reason),
+                status_code=presentation.status_code,
+                message=presentation.message,
+                agent_id=agent_id,
+            )
+            _audit_decision(db, deny, endpoint, method, dict(mandate_metadata))
+            return JSONResponse(
+                status_code=presentation.status_code,
+                content={
+                    "decision": deny.decision.value,
+                    "status_code": presentation.status_code,
+                    "message": presentation.message,
+                    "deny_reason": presentation.deny_reason,
+                },
+            )
+
     result = enforce(
         db,
         agent_id=agent_id,
         endpoint=endpoint,
         method=method,
         key_type=key_type,
+        request_metadata=dict(mandate_metadata) or None,
     )
 
     response = {
@@ -466,6 +527,32 @@ def enforce_request(
             status_code=result.status_code,
             content=response,
         )
+
+    # ── Biscuit mandate settlement (layer 2: authoritative draw) ─────
+    if mandate_token is not None:
+        from gateway.app.mandate_check import settle_draw
+
+        settle = settle_draw(
+            mandate_metadata["mandate_id"],
+            amount_cents=spend_amount_cents,
+            currency=spend_currency,
+            settlement=spend_settlement,
+            reference=spend_reference,
+        )
+        if not settle.allowed:
+            # The Mandate Service audited the draw decision itself (denials
+            # included — that's the point); the gateway just relays it.
+            return JSONResponse(
+                status_code=settle.status_code,
+                content={
+                    "decision": "deny",
+                    "status_code": settle.status_code,
+                    "message": settle.message,
+                    "deny_reason": settle.deny_reason,
+                    "mandate": settle.draw,
+                },
+            )
+        response["mandate"] = settle.draw
 
     # ── Fetch user context (shared by HITL + quota) ──────────────────
     from common.models import Agent, User
