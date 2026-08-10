@@ -17,7 +17,7 @@ This revision tracks the **final OCSF PR #1661 attestation shape** (as merged in
 | File | What it is | Use |
 |---|---|---|
 | `production-ocsf-excerpt.ocsf.ndjson` | **7-event annotated slice** (`org_chain_seq` 16–22), a single agent's lifecycle | Start here — read top to bottom with the walkthrough below |
-| `production-ocsf-full-export.ocsf.ndjson` | <!-- REGEN:STATS --> **Full org chain**, 193 events, seq 1→193, 34 agents (115 allowed / 78 denied) <!-- /REGEN:STATS --> | The real raw export from the `format=ocsf` endpoint |
+| `production-ocsf-full-export.ocsf.ndjson` | <!-- REGEN:STATS --> **Full org chain**, 236 events, seq 1→236, 34 agents (144 allowed / 92 denied) <!-- /REGEN:STATS --> | The real raw export from the `format=ocsf` endpoint |
 | `regenerate.py` | Rebuilds this bundle from a fresh `format=ocsf` download: validates the final #1661 shape, verifies the chain, verifies every ECDSA signature against the public JWKS, refreshes this README | `python3 regenerate.py <fresh-export.ndjson>` |
 
 > **Retired:** `signed-chain-ecdsa-example.json` (the hand-built ECDSA/JCS worked example from the 2026-06-16 bundle). It existed to show the *target* asymmetric shape while production only had the HMAC chain. Production now emits real per-event ECDSA signatures in the export itself (`attestation.signatures` + `unmapped.signature_b64`), so the mock was redundant — and it carried draft-era fields (`sequence`, singular `signature`) that no longer exist in #1661.
@@ -55,7 +55,7 @@ One agent (`QA-eae97318`, uid `32928870…`), seven consecutive gateway events. 
   "time": 1776094414825,
   "metadata": {
     "uid": "99",
-    "version": "1.9.0-dev",
+    "version": "1.9.0",
     "profiles": [
       "ai_operation",
       "record_integrity"
@@ -113,7 +113,7 @@ One agent (`QA-eae97318`, uid `32928870…`), seven consecutive gateway events. 
           "algorithm": "ECDSA-P256-SHA256",
           "serialization_id": 1,
           "serialization": "Flat",
-          "created_time": 1784755487529,
+          "created_time": 1786381680510,
           "digest": {
             "algorithm_id": 99,
             "algorithm": "HMAC-SHA-256",
@@ -127,7 +127,7 @@ One agent (`QA-eae97318`, uid `32928870…`), seven consecutive gateway events. 
     }
   ],
   "unmapped": {
-    "signature_b64": "MEUCIE7U6pS4ADjqn71SwQH6…",
+    "signature_b64": "MEUCIQC7SNQRH0a8IEKOQN3o…",
     "signature_key_id": "projects/…/cryptoKeys/session-attestation/cryptoKeyVersions/1",
     "org_chain_seq": 18,
     "policy_version": 10
@@ -188,4 +188,4 @@ This export is the evidence behind the gap list — every gap below is something
 
 ---
 
-*Generated for CoSAI WS4 / OCSF AI WG collaboration. Schema: OCSF 1.9.0-dev, API Activity 6003, `ai_operation` + `record_integrity` profiles (#1661 final shape @ `fa4003ad`; emitter: AI-Identity PR #370). Source: AI Identity gateway audit export (`format=ocsf`).*
+*Generated for CoSAI WS4 / OCSF AI WG collaboration. Schema: OCSF 1.9.0 (released 2026-08-03), API Activity 6003, `ai_operation` + `record_integrity` profiles (#1661 shape as shipped in the release; emitter: AI-Identity PRs #393/#434). Source: AI Identity gateway audit export (`format=ocsf`).*
