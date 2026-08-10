@@ -89,7 +89,7 @@ registration, granted a mandate, and now its actions are on the record.
 {
   "activity_id": 1, "category_uid": 6, "class_uid": 6003, "type_uid": 600301,
   "action": "Allowed", "time": 1774539159723,
-  "metadata": { "version": "1.9.0-dev", "profiles": ["ai_operation"] },
+  "metadata": { "version": "1.9.0", "profiles": ["ai_operation"] },
   "ai_agent": { "uid": "274a3fcf-480c-4630-a4a6-9f67c3ccf0cc", "name": "demo-agent-mn7msq4n" },
   "attestation": {
     "entry_hash": "ccc5caa486356183049476cc88c6da990d4fd970a0da7f0cb5e114ffe95fce45",
