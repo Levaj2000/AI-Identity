@@ -286,9 +286,9 @@ t = bullet(
     c,
     LEFT,
     t,
-    "Non-repudiation wedge (ours): #1662 (serialization on digital_signature) "
-    "MERGED 2026-06-09 to the dev line the maintainer calls '1.9.0-dev' — no 1.9.0 tag exists "
-    "yet. #1661 (attestation object) is OPEN, needs its approvals.",
+    "Non-repudiation wedge (ours): #1662 (serialization on digital_signature) and "
+    "#1661 (attestation object + record_integrity profile) both SHIPPED in the OCSF "
+    "1.9.0 release (tagged 2026-08-03).",
 )
 t = bullet(
     c,

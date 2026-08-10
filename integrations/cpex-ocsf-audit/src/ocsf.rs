@@ -34,7 +34,7 @@ use cpex_core::hooks::payload::Extensions;
 use crate::config::OcsfAuditConfig;
 
 // --- OCSF identifiers ---
-const SCHEMA_VERSION: &str = "1.9.0-dev";
+const SCHEMA_VERSION: &str = "1.9.0";
 const CATEGORY_UID_APPLICATION: u32 = 6;
 /// API Activity — the concrete Application-category class hosting the
 /// ai_operation profile (P0 decision, 2026-07-18 thread).

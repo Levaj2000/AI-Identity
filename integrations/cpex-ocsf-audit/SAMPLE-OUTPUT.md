@@ -136,7 +136,7 @@ attestation carrier changed, so the hashes changed with it. Notes on fidelity:
       "record_integrity"
     ],
     "uid": "demo-chain-org-f3576cf6-000000",
-    "version": "1.9.0-dev"
+    "version": "1.9.0"
   },
   "severity_id": 1,
   "time": "2026-06-30T12:00:00.000Z",
@@ -251,7 +251,7 @@ attestation carrier changed, so the hashes changed with it. Notes on fidelity:
       "record_integrity"
     ],
     "uid": "demo-chain-org-f3576cf6-000001",
-    "version": "1.9.0-dev"
+    "version": "1.9.0"
   },
   "severity_id": 1,
   "time": "2026-06-30T12:00:01.000Z",

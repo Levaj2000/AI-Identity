@@ -51,7 +51,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-OCSF_VERSION = "1.9.0-dev"
+OCSF_VERSION = "1.9.0"
 
 # Chain fingerprints, everywhere they appear (attestation.fingerprint,
 # prev_event.fingerprint, signature digest): keyed HMAC (algorithm Other + a
