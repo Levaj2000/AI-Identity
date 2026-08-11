@@ -58,7 +58,9 @@ AGENT_NAME = "QA-eae97318"
 INSTANCE_UID = "0c9b8f2e-5a41-4d7f-9e2a-6b3c1d8e4f70"  # this run of the agent
 CORRELATION_UID = "corr-4e1f9a72"
 CHARTER_URL = f"https://api.ai-identity.co/api/v1/agents/{AGENT_UID}/charter"
-AUTHORITY_UID = "gateway.ai-identity.co"  # the attesting authority (#1661 attestation.authority_uid)
+AUTHORITY_UID = (
+    "gateway.ai-identity.co"  # the attesting authority (#1661 attestation.authority_uid)
+)
 
 # Vendor-namespace placeholder for the proposed class (Discovery, category 5).
 CLASS_UID = 1000005
@@ -352,6 +354,7 @@ def verify() -> int:
 
 def _iter_content_fingerprints(ev: dict):
     """Yield every content fingerprint object in declared/executed sections."""
+
     def walk(node):
         if isinstance(node, dict):
             fp = node.get("fingerprint")
