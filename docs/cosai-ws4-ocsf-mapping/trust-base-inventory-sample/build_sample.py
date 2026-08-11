@@ -57,7 +57,6 @@ AGENT_UID = "32928870-56a1-4518-be76-7e99bfcdeac4"
 AGENT_NAME = "QA-eae97318"
 INSTANCE_UID = "0c9b8f2e-5a41-4d7f-9e2a-6b3c1d8e4f70"  # this run of the agent
 CORRELATION_UID = "corr-4e1f9a72"
-CHARTER_URL = f"https://api.ai-identity.co/api/v1/agents/{AGENT_UID}/charter"
 AUTHORITY_UID = (
     "gateway.ai-identity.co"  # the attesting authority (#1661 attestation.authority_uid)
 )
@@ -136,7 +135,9 @@ def event_fp_object(value: str) -> dict:
 def ai_agent_object() -> dict:
     # Merged ai_agent object (uid / instance_uid / version / charter /
     # ai_model verified against ocsf-schema main) — the identity spine the
-    # proposed class inherits rather than reinvents.
+    # proposed class inherits rather than reinvents. ``charter`` is a ``file``
+    # object in the dictionary, so the charter's content digest rides its
+    # ``hashes`` array natively — no new attribute needed.
     return {
         "uid": AGENT_UID,
         "instance_uid": INSTANCE_UID,
@@ -149,7 +150,10 @@ def ai_agent_object() -> dict:
             "name": "claude-sonnet-5",
             "version": "2026-06-15",
         },
-        "charter": CHARTER_URL,
+        "charter": {
+            "name": "agent-charter-r3.md",
+            "hashes": [content_fp("charter_v3")],
+        },
     }
 
 
@@ -172,33 +176,41 @@ def base_event(uid: str, time_ms: int, activity_id: int, activity_name: str) -> 
     }
 
 
+def artifact(name: str, type_id: int, type_name: str, preimage_key: str, **extra: str) -> dict:
+    """An ``agent_artifact`` (class-draft shape): typed, digest-anchored."""
+    entry: dict = {"name": name, **extra, "type_id": type_id, "type": type_name}
+    entry["fingerprint"] = content_fp(preimage_key)
+    return entry
+
+
 def declared_configuration(tool_schema_key: str, adapters: list[dict]) -> dict:
-    """The trust base as *declared*: registry/manifest view, digest-anchored."""
+    """The trust base as *declared*: registry/manifest view, digest-anchored.
+
+    Shape per the class draft (docs/ocsf-1724-class-draft/): one typed
+    ``artifacts`` array rather than per-kind arrays — the ``type_id`` enum
+    says what each element is. The charter is NOT here: its digest rides
+    ``ai_agent.charter.hashes`` (existing ``file`` object), per the draft.
+    """
     return {
         # Hosted-model nuance: no local artifact to digest, so the pinned
         # (provider, name, version) tuple IS the trust-base element. Digests
         # apply to locally loaded artifacts (adapters, schemas, policies).
-        "model": {
+        "ai_model": {
             "ai_provider": "Anthropic",
             "name": "claude-sonnet-5",
             "version": "2026-06-15",
         },
-        "adapters": adapters,
-        "tool_schema_sources": [
-            {
-                "uid": "mcp://mcp.ai-identity.internal/billing-tools",
-                "name": "billing-tools",
-                "fingerprint": content_fp(tool_schema_key),
-            }
+        "artifacts": [
+            artifact(
+                "billing-tools",
+                3,
+                "Tool Schema",
+                tool_schema_key,
+                uid="mcp://mcp.ai-identity.internal/billing-tools",
+            ),
+            artifact("org-gateway-policy", 4, "Policy Bundle", "policy_v10", version="10"),
+            *adapters,
         ],
-        "policy_bundles": [
-            {
-                "name": "org-gateway-policy",
-                "version": "10",
-                "fingerprint": content_fp("policy_v10"),
-            }
-        ],
-        "charter": {"uid": CHARTER_URL, "fingerprint": content_fp("charter_v3")},
     }
 
 
@@ -214,12 +226,24 @@ def executed_parameters(tools_invoked: list[str], adapters_loaded: list[dict]) -
         "sampling": {"temperature": 0.2, "top_p": 0.95, "max_output_tokens": 2048},
         "tools_invoked": tools_invoked,
         "credentials": [
-            {"type": "mandate", "uid": "mnd_a1b2c3d4", "scopes": ["read:billing"]},
-            {"type": "api_key", "uid": "key_7f3e2d1c", "scopes": ["gateway:invoke"]},
+            {
+                "type_id": 4,
+                "type": "Delegation Grant",
+                "uid": "mnd_a1b2c3d4",
+                "scopes": ["read:billing"],
+            },
+            {
+                "type_id": 1,
+                "type": "API Key",
+                "uid": "key_7f3e2d1c",
+                "scopes": ["gateway:invoke"],
+            },
         ],
     }
     if adapters_loaded:
-        executed["adapters_loaded"] = adapters_loaded
+        # Artifacts actually loaded, digests over the bytes as mapped — the
+        # counterpart consumers compare against declared_configuration.artifacts.
+        executed["artifacts"] = adapters_loaded
     return executed
 
 
@@ -254,22 +278,12 @@ def build_events() -> list[dict]:
     ev3 = base_event("tbi-0003", T_ADAPTER_LOAD, 3, "Change")
     ev3["declared_configuration"] = declared_configuration(
         "tool_schema_v42",
-        adapters=[
-            {
-                "name": "refunds-tone-lora",
-                "version": "1.4.0",
-                "fingerprint": content_fp("adapter_registry"),
-            }
-        ],
+        adapters=[artifact("refunds-tone-lora", 2, "Adapter", "adapter_registry", version="1.4.0")],
     )
     ev3["executed_parameters"] = executed_parameters(
         tools_invoked=["kb.search", "billing.get_invoice", "billing.refund_status"],
         adapters_loaded=[
-            {
-                "name": "refunds-tone-lora",
-                "version": "1.4.0",
-                "fingerprint": content_fp("adapter_loaded"),
-            }
+            artifact("refunds-tone-lora", 2, "Adapter", "adapter_loaded", version="1.4.0")
         ],
     )
 
@@ -335,11 +349,14 @@ def verify() -> int:
         prev_uid = att["uid"]
 
     # 4. The divergence the sample exists to show: event 3's declared adapter
-    # digest differs from the loaded digest.
+    # digest (type_id 2) differs from the loaded-bytes digest.
     ev3 = events[-1]
-    declared = ev3["declared_configuration"]["adapters"][0]["fingerprint"]["value"]
-    loaded = ev3["executed_parameters"]["adapters_loaded"][0]["fingerprint"]["value"]
-    if declared == loaded:
+
+    def adapter_digest(section: str) -> str:
+        entries = [a for a in ev3[section]["artifacts"] if a.get("type_id") == 2]
+        return entries[0]["fingerprint"]["value"]
+
+    if adapter_digest("declared_configuration") == adapter_digest("executed_parameters"):
         print("✗ event 3: expected declared/loaded adapter digest divergence")
         ok = False
 
@@ -353,20 +370,27 @@ def verify() -> int:
 
 
 def _iter_content_fingerprints(ev: dict):
-    """Yield every content fingerprint object in declared/executed sections."""
+    """Yield every content fingerprint in declared/executed/ai_agent sections.
+
+    Covers both carriers: ``fingerprint`` (agent_artifact) and ``hashes[]``
+    (the charter's ``file`` object on ``ai_agent``).
+    """
 
     def walk(node):
         if isinstance(node, dict):
             fp = node.get("fingerprint")
             if isinstance(fp, dict) and "value" in fp:
                 yield fp
+            for h in node.get("hashes") or []:
+                if isinstance(h, dict) and "value" in h:
+                    yield h
             for v in node.values():
                 yield from walk(v)
         elif isinstance(node, list):
             for item in node:
                 yield from walk(item)
 
-    for section in ("declared_configuration", "executed_parameters"):
+    for section in ("declared_configuration", "executed_parameters", "ai_agent"):
         yield from walk(ev.get(section, {}))
 
 

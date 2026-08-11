@@ -1,0 +1,43 @@
+{
+  "uid": 24,
+  "caption": "AI Agent Trust Inventory",
+  "description": "AI Agent Trust Inventory events report the trust base of an AI agent: the declared configuration (model, adapters, tool schemas, policy bundles, each anchored by a content digest) paired with the parameters actually enforced in the executing process. Events are emitted at session start and again whenever an element of the trust base changes, after the change is observed and before the changed element executes. Emitting both sides in a single event enables downstream consumers to compute declared/executed divergence without reconstructing producer state; the producer reports both sides and embeds no verdict. Chain-of-custody comes from the record_integrity profile applied per emission, with chain_uid scoped to the agent instance so an unrecorded change manifests as a gap in the chain. Proposed in ocsf/ocsf-schema#1724.",
+  "extends": "discovery",
+  "name": "ai_agent_trust_inventory",
+  "attributes": {
+    "activity_id": {
+      "enum": {
+        "1": {
+          "caption": "Log",
+          "description": "The agent trust-base information is via a log."
+        },
+        "2": {
+          "caption": "Collect",
+          "description": "The agent trust-base information is via a collection process, such as the baseline snapshot taken when an agent session starts."
+        },
+        "3": {
+          "caption": "Change",
+          "description": "A trust-base element changed mid-session: a tool schema refreshed from its remote source, an adapter initialized, a model artifact loaded on first use, or a policy bundle reloaded. The event is emitted after the change is observed and before the changed element executes."
+        }
+      }
+    },
+    "actor": {
+      "description": "The actor that produced the inventory snapshot, such as the agent runtime, orchestrator, or gateway supervising the agent.",
+      "group": "context",
+      "requirement": "optional"
+    },
+    "ai_agent": {
+      "description": "The agent whose trust base is being inventoried. The agent's charter document and its content digest ride on this object's charter attribute (a file object with hashes).",
+      "group": "primary",
+      "requirement": "required"
+    },
+    "declared_configuration": {
+      "group": "primary",
+      "requirement": "required"
+    },
+    "executed_parameters": {
+      "group": "primary",
+      "requirement": "required"
+    }
+  }
+}

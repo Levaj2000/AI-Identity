@@ -1,0 +1,75 @@
+{
+  "_comment": "New entries for dictionary.json 'attributes'. Verified against ocsf-schema main 2026-08-11: none of these names exist yet ('charter' already EXISTS as a file object and is deliberately NOT redefined — the charter digest rides ai_agent.charter.hashes[]). 'fingerprint', 'name', 'uid', 'version', 'type', 'type_id', 'ai_model' are existing entries reused by the new objects, not redefined here.",
+  "attributes": {
+    "declared_configuration": {
+      "caption": "Declared Configuration",
+      "description": "The declared half of an AI agent's trust base: the model and digest-anchored artifacts the agent is configured to run, as asserted by its registry, manifest, or control plane.",
+      "type": "agent_config_declaration"
+    },
+    "executed_parameters": {
+      "caption": "Executed Parameters",
+      "description": "The executed half of an AI agent's trust base: the parameters actually enforced and observed in the executing process.",
+      "type": "agent_execution_params"
+    },
+    "artifacts": {
+      "caption": "Artifacts",
+      "description": "A list of digest-anchored agent trust-base artifacts.",
+      "is_array": true,
+      "type": "agent_artifact"
+    },
+    "credentials": {
+      "caption": "Credentials",
+      "description": "References to credentials reachable by an executing process — identifiers and scopes only, never credential material.",
+      "is_array": true,
+      "type": "agent_credential"
+    },
+    "sampling": {
+      "caption": "Sampling Parameters",
+      "description": "The sampling parameters applied to model invocations.",
+      "type": "ai_sampling_params"
+    },
+    "tool_allowlist": {
+      "caption": "Tool Allowlist",
+      "description": "The tool names an executing process will actually permit, as enforced.",
+      "is_array": true,
+      "type": "string_t"
+    },
+    "tools_invoked": {
+      "caption": "Tools Invoked",
+      "description": "The tool names invoked so far in a session, in first-invocation order.",
+      "is_array": true,
+      "type": "string_t"
+    },
+    "scopes": {
+      "caption": "Scopes",
+      "description": "The scopes or permissions granted to a credential.",
+      "is_array": true,
+      "type": "string_t"
+    },
+    "temperature": {
+      "caption": "Temperature",
+      "description": "The sampling temperature applied to a model invocation.",
+      "type": "float_t"
+    },
+    "top_p": {
+      "caption": "Top-p",
+      "description": "The nucleus (top-p) sampling value applied to a model invocation.",
+      "type": "float_t"
+    },
+    "top_k": {
+      "caption": "Top-k",
+      "description": "The top-k sampling value applied to a model invocation.",
+      "type": "integer_t"
+    },
+    "max_output_tokens": {
+      "caption": "Max Output Tokens",
+      "description": "The maximum output token limit applied to a model invocation.",
+      "type": "integer_t"
+    },
+    "seed": {
+      "caption": "Seed",
+      "description": "The sampling seed applied to a model invocation, when the runtime supports seeded decoding.",
+      "type": "integer_t"
+    }
+  }
+}

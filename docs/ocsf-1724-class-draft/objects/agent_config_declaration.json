@@ -1,0 +1,22 @@
+{
+  "caption": "Agent Configuration Declaration",
+  "description": "The declared half of an AI agent's trust base: the model and the digest-anchored artifacts (adapters, tool schemas, policy bundles) the agent is configured to run, as asserted by its registry, manifest, or control plane — before any drift introduced at load or execution time. For an API-hosted model with no locally loadable artifact, the pinned ai_model tuple (provider, name, version) is the trust-base element and no artifact digest is expected; digests apply exactly where bytes are locally loaded.",
+  "extends": "object",
+  "name": "agent_config_declaration",
+  "attributes": {
+    "ai_model": {
+      "description": "The model the agent is declared to run, as pinned by its configuration.",
+      "requirement": "recommended"
+    },
+    "artifacts": {
+      "description": "The digest-anchored artifacts the agent is declared to load: adapters, tool schemas, policy bundles, model weights. Digests are those asserted by the registry or manifest the declaration was read from.",
+      "requirement": "recommended"
+    }
+  },
+  "constraints": {
+    "at_least_one": [
+      "ai_model",
+      "artifacts"
+    ]
+  }
+}

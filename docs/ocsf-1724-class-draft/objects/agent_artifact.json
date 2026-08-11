@@ -1,0 +1,60 @@
+{
+  "caption": "Agent Artifact",
+  "description": "A digest-anchored element of an AI agent's trust base: model weights, an adapter, a tool schema, a policy bundle, or the agent's charter. The fingerprint is a content digest of the artifact bytes, or of the canonical serialization of a remotely served schema. For remotely served elements, uid names the source (for example an MCP server URI); for registry artifacts, uid names the registry entry.",
+  "extends": "_entity",
+  "name": "agent_artifact",
+  "attributes": {
+    "name": {
+      "description": "The artifact name. For example: refunds-tone-lora or billing-tools.",
+      "requirement": "recommended"
+    },
+    "uid": {
+      "description": "The artifact source identifier: a registry entry, artifact store path, or remote source URI such as an MCP server address.",
+      "requirement": "optional"
+    },
+    "version": {
+      "description": "The artifact version identifier, as declared by its source.",
+      "requirement": "optional"
+    },
+    "type_id": {
+      "description": "The artifact type identifier.",
+      "requirement": "required",
+      "enum": {
+        "0": {
+          "caption": "Unknown"
+        },
+        "1": {
+          "caption": "Model Weights",
+          "description": "A locally loaded model artifact, such as a weights file."
+        },
+        "2": {
+          "caption": "Adapter",
+          "description": "A model adapter, such as a LoRA."
+        },
+        "3": {
+          "caption": "Tool Schema",
+          "description": "A tool or resource schema as presented to the model, such as an MCP tools/list result."
+        },
+        "4": {
+          "caption": "Policy Bundle",
+          "description": "A policy or guardrail bundle governing the agent."
+        },
+        "5": {
+          "caption": "Charter",
+          "description": "The agent's charter document, when not carried on ai_agent.charter."
+        },
+        "99": {
+          "caption": "Other"
+        }
+      }
+    },
+    "type": {
+      "description": "The artifact type, normalized to the caption of the type_id value. In the case of Other, it is defined by the source.",
+      "requirement": "optional"
+    },
+    "fingerprint": {
+      "description": "The content digest anchoring this artifact. The algorithm and serialization siblings state the actual construction; a producer that cannot obtain the true artifact bytes omits the fingerprint rather than digesting a proxy.",
+      "requirement": "required"
+    }
+  }
+}

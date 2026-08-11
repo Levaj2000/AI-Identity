@@ -1,0 +1,28 @@
+{
+  "caption": "AI Sampling Parameters",
+  "description": "The decoding and sampling configuration applied to a model invocation. These are configuration values that alter what a model will emit — part of the trust base — not runtime state: activations, logits, and cache contents are explicitly out of scope.",
+  "extends": "object",
+  "name": "ai_sampling_params",
+  "attributes": {
+    "temperature": {
+      "description": "The sampling temperature applied.",
+      "requirement": "optional"
+    },
+    "top_p": {
+      "description": "The nucleus (top-p) sampling value applied.",
+      "requirement": "optional"
+    },
+    "top_k": {
+      "description": "The top-k sampling value applied.",
+      "requirement": "optional"
+    },
+    "max_output_tokens": {
+      "description": "The maximum output token limit applied.",
+      "requirement": "optional"
+    },
+    "seed": {
+      "description": "The sampling seed applied, when the runtime supports seeded decoding.",
+      "requirement": "optional"
+    }
+  }
+}
