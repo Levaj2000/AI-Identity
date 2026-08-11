@@ -14,7 +14,9 @@ ocsf-schema `main`), `fingerprint` objects are the natural carrier for every con
 digest, and applying `record_integrity` per emission needs nothing invented.
 
 Review + assessment: `docs/ocsf-1724-trust-base-review.md`. Paste-ready issue
-response: `docs/ocsf-1724-draft-issue-comment.md`.
+response: `docs/ocsf-1724-draft-issue-comment.md`. **PR-shaped class
+definition** (events/objects/dictionary files this sample's shape follows):
+`docs/ocsf-1724-class-draft/`.
 
 ---
 
@@ -66,7 +68,7 @@ The issue's key design argument — emit declared and executed together so
 
 | | value |
 |---|---|
-| `declared_configuration.tool_schema_sources[0]` | digest of `tools/list` **v42** — now includes `billing.refund_execute` |
+| `declared_configuration.artifacts[]` (`type_id` 3 Tool Schema) | digest of `tools/list` **v42** — now includes `billing.refund_execute` |
 | `executed_parameters.tool_allowlist` | unchanged: `billing.get_invoice`, `billing.refund_status`, `kb.search` |
 
 A tool appeared upstream; the enforced allowlist did not admit it. The gap is
@@ -77,8 +79,8 @@ both sides can say so.
 
 | | SHA-256 |
 |---|---|
-| `declared_configuration.adapters[0].fingerprint` | `sha256("…artifact as published in the adapter registry")` |
-| `executed_parameters.adapters_loaded[0].fingerprint` | `sha256("…artifact bytes actually mapped at load time…")` — **differs** |
+| `declared_configuration.artifacts[]` (`type_id` 2 Adapter) | `sha256("…artifact as published in the adapter registry")` |
+| `executed_parameters.artifacts[]` (`type_id` 2 Adapter) | `sha256("…artifact bytes actually mapped at load time…")` — **differs** |
 
 Same name, same version string, different bytes. Behavioral observation cannot
 reliably catch a conditionally-triggered artifact (Hubinger et al.); a digest
@@ -108,11 +110,12 @@ inside `fingerprint` are an anti-pattern).
 ## Honest limitations (no overclaim)
 
 - **The proposed class does not exist.** `class_uid` 1000005 is a
-  vendor-namespace placeholder (1000000+ range, per OCSF convention);
-  `metadata.version` says `1.10.0-dev`; attribute names
-  (`declared_configuration`, `executed_parameters`, activity `Change`) are
-  illustrations of the issue's two components, not a submitted schema. Final
-  naming, numbering, and requirement levels belong to the working group.
+  vendor-namespace placeholder (1000000+ range, per OCSF convention) and
+  `metadata.version` says `1.10.0-dev`. The event shape follows the
+  PR-shaped draft in `docs/ocsf-1724-class-draft/` (`declared_configuration`
+  / `executed_parameters`, one typed `artifacts` array, activity `Change`) —
+  drafted, not submitted. Final naming, numbering, and requirement levels
+  belong to the working group.
 - **Synthetic preimages.** Content digests hash *descriptions* of artifacts,
   not artifacts — the sample optimizes for end-to-end recomputability with
   stdlib only. The production reference bundle next door is the
@@ -122,11 +125,13 @@ inside `fingerprint` are an anti-pattern).
   demonstrated with production keys in `../ocsf-log-reference-bundle/`; the
   signature-bytes/key-id gap ([#1709](https://github.com/ocsf/ocsf-schema/pull/1709))
   applies to this class the same way.
-- **Hosted-model nuance.** `declared_configuration.model` carries the pinned
-  `ai_model` tuple, not a weights digest — for an API-served model there are
-  no local artifact bytes to hash, and inventing a digest would overclaim.
-  Digests appear exactly where bytes are locally loaded: adapters, tool
-  schemas, policy bundles, charter.
+- **Hosted-model nuance.** `declared_configuration.ai_model` carries the
+  pinned `ai_model` tuple, not a weights digest — for an API-served model
+  there are no local artifact bytes to hash, and inventing a digest would
+  overclaim. Digests appear exactly where bytes are locally loaded: the
+  `artifacts` array (adapters, tool schemas, policy bundles) and the
+  charter's `hashes` on `ai_agent.charter` (an existing `file` object — no
+  new attribute needed).
 
 ---
 

@@ -1,0 +1,28 @@
+{
+  "caption": "Agent Execution Parameters",
+  "description": "The executed half of an AI agent's trust base: what is actually enforced and observed in the executing process. The effective tool allowlist as enforced, the sampling parameters as applied, the tools invoked so far in the session, the credentials reachable by the process (as references with scopes — never credential material), and the artifacts actually loaded, with digests computed over the bytes as mapped. Divergence between this object and the sibling declared configuration is computed by consumers; the producer is a witness, not a judge.",
+  "extends": "object",
+  "name": "agent_execution_params",
+  "attributes": {
+    "tool_allowlist": {
+      "description": "The tool names the executing process will actually permit, as enforced at the time of the event.",
+      "requirement": "recommended"
+    },
+    "sampling": {
+      "description": "The sampling parameters applied to model invocations. Configuration values only — activations and cache contents are out of scope.",
+      "requirement": "optional"
+    },
+    "tools_invoked": {
+      "description": "The tool names invoked so far in the session, in first-invocation order.",
+      "requirement": "optional"
+    },
+    "credentials": {
+      "description": "References to credentials reachable by the executing process. Identifiers and scopes only; never secret material.",
+      "requirement": "recommended"
+    },
+    "artifacts": {
+      "description": "The artifacts actually loaded by the executing process, with fingerprints computed over the bytes as mapped at load time — the counterpart a consumer compares against the declared artifacts.",
+      "requirement": "optional"
+    }
+  }
+}
