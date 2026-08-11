@@ -3,43 +3,43 @@
 **Context:** 2026-08-11, OCSF community Slack. Mitchell Wasson (Cisco) asked
 whether anyone is representing AI agent logs (Codex, Claude) in OCSF and
 which event type to use for MCP calls — "thinking of possibly using API
-Activity." That is our production shape, and his gap-to-be is Issue 1 of the
-CoSAI WS4 issues draft (`docs/cosai-ws4-ocsf-mapping/ocsf-issues-draft-with-teryl.md`
-— the `tool` object, Teryl pass done, Fred lead, status REVIEW since July).
+Activity." That is our production shape, and the gap he'll hit is Issue 1 of
+the CoSAI WS4 issues draft (`docs/cosai-ws4-ocsf-mapping/ocsf-issues-draft-with-teryl.md`
+— the `tool` object).
 
-**Posting notes:** paste the body below into the Slack thread. A Cisco
-producer asking this question in public is the multi-producer demand signal
-Issue 1 has been waiting on — if Mitchell engages, the follow-up move is to
-file Issue 1 upstream with Cisco named as an interested producer alongside
-the IBM/CMF alignment.
+**Filing ownership (settled 2026-08-11):** Teryl leads the upstream filing of
+the MCP-gap issue with Jeff as co-author — agreed directly, superseding the
+draft's earlier "Lead: Fred" note. Teryl is in CoSAI but **not** in the OCSF
+community Slack, so this reply deliberately keeps the proposal at
+one-sentence altitude: no field sketch, no "happy to share the draft," no
+channel discussion the author can't join. Jeff's role in-channel is
+connector — confirm the production shape, name the gap, and route Cisco's
+interest to the issue once Teryl files it.
+
+**Posting notes:** paste the body below into the Slack thread. When the
+issue lands upstream, follow up in the same thread with the link so
+Mitchell/Cisco can register their use case on the record.
 
 ---
 
 Hi Mitchell — yes, we're doing exactly this in production at AI Identity.
-Short version: API Activity (6003) with the `ai_operation` profile is the
-right call, and it's what our gateway emits today — one event per agent
-call/decision, `ai_agent` (merged via #1641) carrying agent identity,
-allow/deny in `action_id`, latency in `duration`, and the `record_integrity`
-profile (1.9, #1661) on top if you want tamper-evident chains. Real export
-you can poke at, 236 events, schema-conformant with verifiable signatures:
+API Activity (6003) with the `ai_operation` profile is the right call, and
+it's what our gateway emits today — one event per agent call/decision,
+`ai_agent` (merged via #1641) carrying agent identity, allow/deny in
+`action_id`, latency in `duration`, and the `record_integrity` profile
+(1.9, #1661) on top if you want tamper-evident chains. Real export you can
+poke at, 236 events, schema-conformant with verifiable signatures:
 https://github.com/levaj2000/ai-identity/tree/main/docs/cosai-ws4-ocsf-mapping/ocsf-log-reference-bundle
 
-The catch you'll hit quickly: MCP call identity has no structured home yet.
+One thing you'll hit quickly: MCP call identity has no structured home yet.
 The tool name ends up smuggled into `api.operation` as a path string, and
 the MCP server identity / resource URI / prompt name have nowhere to go but
 `unmapped` — so tool usage isn't queryable or comparable across producers.
-We've been drafting a proposal for exactly this with the CoSAI WS4 folks
-(cross-checked against IBM's CMF taxonomy): a small generic `tool` object on
-the `ai_operation` profile — `name`, `primitive` (tool | resource | prompt),
-`type` (mcp | function | builtin), plus an optional `mcp` sub-block
-(`server_name`, `server_uid`, `resource_uri`, `prompt_name`). Identity of
-the invocation only in v1; args/results deliberately out of scope (sensitive
-payloads).
+There's a proposal to close exactly that gap coming out of the CoSAI WS4 /
+OCSF alignment work — it should land as an ocsf-schema issue soon, and a
+second producer hitting the same wall is great timing. I'll ping this thread
+when it's filed so Cisco's use case can weigh in on the record.
 
-Related thread worth watching: ocsf-schema#1724 (agent trust-base inventory)
-covers the complementary side — tool *schemas* as declared/loaded
-configuration, where the per-call events cover invocation.
-
-If Cisco's landing on the same shape, that's exactly the multi-producer
-signal this needs — happy to share the full draft and compare notes before
-we file it.
+Also worth watching: ocsf-schema#1724 (agent trust-base inventory) covers
+the complementary side — tool *schemas* as declared/loaded configuration,
+where the per-call events cover invocation.
