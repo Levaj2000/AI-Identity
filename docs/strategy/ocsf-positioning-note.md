@@ -44,6 +44,11 @@ The standard makes our product the obvious, trusted choice. The product — the 
 
 ## 4. NSF SBIR broader-impact paragraph
 
+> **Shelved 2026-08-12** per CEO Dashboard decision "Do not pursue NSF SBIR/STTR funding":
+> second Project Pitch (00121677) declined; NSF submission limits lock us out until
+> 2027-06-04, with one lifetime pitch remaining for this technology. Kept for reference —
+> revisit only if the decision is reopened (review date 2027-06-04).
+
 > The accountability layer this project develops is being contributed to the Open Cybersecurity Schema Framework (OCSF), the open standard the security industry uses to represent and exchange telemetry. By defining a vendor-neutral vocabulary for cryptographic non-repudiation, independent signature verification, and delegated authority of autonomous AI agents, the work provides a public good: any security tool, auditor, or regulated organization gains a standard, interoperable way to verify what an AI agent did and under whose authority — rather than relying on proprietary, non-verifiable logs. As autonomous agents proliferate across healthcare, finance, and government, this open foundation for agent accountability benefits the broader economy and national security posture well beyond any single company's products.
 
 ---
