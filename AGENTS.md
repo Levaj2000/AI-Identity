@@ -23,6 +23,13 @@ Tasks are often delegated here to run autonomously. Own the task end-to-end to t
 
 Green to fully own: bugfixes with a clear repro, test/coverage additions, mechanical refactors within a file, dependency-level fixes — anything where a passing full suite is sufficient proof. (The Sentry transaction-filter fix in #359 is the model: defensive fix + new tests + full suite green + clean merge.)
 
+## This Repo Is Public — Drafts and Prep Are Never Committed
+
+Everything tracked here is world-readable. Two consequences:
+
+- **Reply/comment drafts, outreach prep, strategy notes, and reviewer notes about named people do NOT get committed.** Deliver draft replies in chat, or write them to `private/` (gitignored). This applies to Slack replies, GitHub comment drafts, issue-filing prep, and any `*.notes.md`. `docs/` is only for artifacts meant to be linked publicly (reference bundles, class drafts, the crosswalk, specs).
+- **CHANGELOG entries describe what shipped, not why strategically.** No negotiation posture, no notes about collaborators' access or availability, no "the play here is…" framing — that context goes in `private/` session notes.
+
 ## Secrets Management (Non-Standard)
 
 **CRITICAL**: This cluster uses Google Secret Manager + GKE CSI driver, NOT k8s Secrets.

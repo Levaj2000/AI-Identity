@@ -5,9 +5,9 @@ WS4 group on the interop map), so the live editing surface is **Google Docs**,
 and git holds a **one-directional markdown snapshot** for version history and as
 the text we paste into GitHub issues when filing.
 
-| Doc | Canonical (edit here) | Git snapshot |
+| Doc | Canonical (edit here) | Snapshot |
 |---|---|---|
-| OCSF Issues — Working Draft | Google Doc (shared w/ Teryl, Fred) | `docs/cosai-ws4-ocsf-mapping/ocsf-issues-draft-with-teryl.md` |
+| OCSF Issues — Working Draft | Google Doc (shared w/ collaborators) | `private/cosai-ws4/ocsf-issues-draft.md` (untracked — see rule 5) |
 | CoSAI WS4 Interop Map | Google Doc (shared w/ WS4) | `docs/strategy/cosai-ws4-interop-map.md` |
 
 ## The rules that prevent drift
@@ -19,8 +19,14 @@ the text we paste into GitHub issues when filing.
 3. **Sync is one-directional** (Google Doc → git), run at checkpoints: before a
    WG call, and before filing any section as a GitHub issue.
 4. **Internal reviewer notes never go in the Google Doc** (collaborators see it).
-   They live only in git, in a sibling `*.notes.md` file that sync never
+   They live in a sibling `*.notes.md` file next to the snapshot that sync never
    overwrites.
+5. **Unfiled co-drafts and reviewer notes never get committed — this repo is
+   public.** Snapshots of in-progress shared drafts and all `*.notes.md` files
+   live under `private/` (gitignored). Only text that has actually been filed
+   as a GitHub issue — and artifacts meant to be linked publicly — belongs in
+   `docs/`. The interop map stays tracked because the WS4 group treats it as a
+   public work product.
 
 ## Syncing (two ways)
 
