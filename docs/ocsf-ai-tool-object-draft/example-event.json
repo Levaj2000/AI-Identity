@@ -1,0 +1,83 @@
+{
+  "activity_id": 2,
+  "activity_name": "Read",
+  "category_uid": 6,
+  "class_uid": 6003,
+  "type_uid": 600302,
+  "time": 1755028800000,
+  "severity_id": 1,
+  "metadata": {
+    "version": "1.10.0-dev",
+    "profiles": [
+      "ai_operation"
+    ],
+    "product": {
+      "name": "Example AI Gateway",
+      "vendor_name": "Example"
+    }
+  },
+  "actor": {
+    "app_name": "planning-agent"
+  },
+  "api": {
+    "operation": "tools/call",
+    "request": {
+      "uid": "req-9f2c"
+    },
+    "response": {
+      "code": 200
+    }
+  },
+  "dst_endpoint": {
+    "hostname": "mcp-gateway.internal.example.com",
+    "port": 443
+  },
+  "ai_agent": {
+    "name": "Q4 Analysis Agent",
+    "uid": "agent-7d1a",
+    "instance_uid": "run-2026-08-12-0413",
+    "ai_model": {
+      "name": "claude-sonnet-5",
+      "ai_provider": "Anthropic"
+    }
+  },
+  "ai_tool": {
+    "type_id": 1,
+    "type": "Tool",
+    "name": "get_weather",
+    "uid": "weather-mcp/get_weather",
+    "transaction_uid": "call_abc",
+    "namespace": "weather",
+    "source_id": 1,
+    "source": "MCP",
+    "service": {
+      "uid": "weather-mcp",
+      "name": "Weather MCP Server",
+      "version": "2.3.0"
+    },
+    "transport_id": 2,
+    "transport": "Streamable HTTP",
+    "is_readonly": true,
+    "is_destructive": false,
+    "is_open_world": true,
+    "input_schema_fingerprint": {
+      "algorithm_id": 3,
+      "algorithm": "SHA-256",
+      "encoding_id": 1,
+      "serialization_id": 2,
+      "serialization": "JCS",
+      "value": "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
+    },
+    "output_schema_fingerprint": {
+      "algorithm_id": 3,
+      "algorithm": "SHA-256",
+      "encoding_id": 1,
+      "serialization_id": 2,
+      "serialization": "JCS",
+      "value": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730"
+    },
+    "cache_scope_id": 2,
+    "cache_scope": "Private",
+    "cache_ttl": 300000
+  }
+}

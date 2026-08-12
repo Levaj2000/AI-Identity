@@ -1,0 +1,88 @@
+{
+  "attributes": {
+    "ai_tool": {
+      "caption": "AI Tool",
+      "description": "The AI capability - tool, resource, or prompt - invoked in the operation described by the event.",
+      "type": "ai_tool"
+    },
+    "cache_scope": {
+      "caption": "Cache Scope",
+      "description": "The cache scope, normalized to the caption of the <code>cache_scope_id</code> value. In the case of 'Other', it is defined by the event source. See specific usage.",
+      "sibling": "cache_scope_id",
+      "type": "string_t"
+    },
+    "cache_scope_id": {
+      "caption": "Cache Scope ID",
+      "description": "The normalized identifier of the declared cache scope, determining whether shared intermediaries may cache a result. See specific usage.",
+      "sibling": "cache_scope",
+      "type": "integer_t",
+      "enum": {
+        "0": {
+          "caption": "Unknown",
+          "description": "The cache scope is unknown."
+        },
+        "99": {
+          "caption": "Other",
+          "description": "The cache scope is not mapped. See the <code>cache_scope</code> attribute, which contains a data source specific value."
+        }
+      }
+    },
+    "cache_ttl": {
+      "caption": "Cache TTL",
+      "description": "The declared freshness window of a cacheable result, in milliseconds.",
+      "type": "long_t"
+    },
+    "input_schema_fingerprint": {
+      "caption": "Input Schema Fingerprint",
+      "description": "The fingerprint identifying the declared input contract (schema) of a capability, by reference rather than by value.",
+      "type": "fingerprint"
+    },
+    "is_destructive": {
+      "caption": "Destructive",
+      "description": "Indicates that an operation or capability may perform destructive updates. See specific usage.",
+      "type": "boolean_t"
+    },
+    "is_idempotent": {
+      "caption": "Idempotent",
+      "description": "Indicates that repeated invocations with the same arguments have no additional effect. See specific usage.",
+      "type": "boolean_t"
+    },
+    "is_open_world": {
+      "caption": "Open World",
+      "description": "Indicates interaction with an open world of external entities rather than a closed domain. See specific usage.",
+      "type": "boolean_t"
+    },
+    "output_schema_fingerprint": {
+      "caption": "Output Schema Fingerprint",
+      "description": "The fingerprint identifying the declared output contract (schema) of a capability, by reference rather than by value.",
+      "type": "fingerprint"
+    },
+    "task_uid": {
+      "caption": "Task UID",
+      "description": "The unique identifier of a long-running task, correlating an originating call with subsequent task lifecycle events.",
+      "type": "string_t"
+    },
+    "transport": {
+      "caption": "Transport",
+      "description": "The transport, normalized to the caption of the <code>transport_id</code> value. In the case of 'Other', it is defined by the event source. See specific usage.",
+      "sibling": "transport_id",
+      "type": "string_t"
+    },
+    "transport_id": {
+      "caption": "Transport ID",
+      "description": "The normalized identifier of the transport binding used to reach a serving system. See specific usage.",
+      "sibling": "transport",
+      "type": "integer_t",
+      "enum": {
+        "0": {
+          "caption": "Unknown",
+          "description": "The transport is unknown."
+        },
+        "99": {
+          "caption": "Other",
+          "description": "The transport is not mapped. See the <code>transport</code> attribute, which contains a data source specific value."
+        }
+      }
+    }
+  }
+}

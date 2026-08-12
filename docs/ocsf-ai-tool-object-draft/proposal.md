@@ -1,5 +1,11 @@
 # [Schema Enhancement] Add an `ai_tool` object to the `ai_operation` profile for MCP primitive metadata
 
+> **v2.** Iterated from Teryl's 2026-08-12 draft. Shape changes are recorded in
+> the [decision log](README.md); the accompanying `objects/`, `profiles/`, and
+> `dictionary-additions.json` files are the proposal in PR-ready form, verified
+> against `ocsf-schema` `main` (`1.10.0-dev`). The v1 → v2 diff of this document
+> is the second commit on this branch.
+
 ## Summary
 
 When an AI agent invokes a Model Context Protocol (MCP) primitive — a **tool**,
@@ -32,37 +38,51 @@ either absent or buried in vendor-specific free text.
 
 ## Proposed addition
 
-Add a new `ai_tool` object, referenced (optional) from the `ai_operation` profile.
-It records the invoked primitive; it does **not** duplicate the transport
-(`http_request`/`api`) or the affected objects (`resources[]`), which remain the
-right home for those.
+Add a new `ai_tool` object (extending `_entity`), referenced (optional) from the
+`ai_operation` profile. It records the invoked primitive; it does **not**
+duplicate the transport (`http_request`/`api`) or the affected objects
+(`resources[]`), which remain the right home for those. Per OCSF metaschema
+rules, every attribute below is either an existing `dictionary.json` entry
+(marked *reused*) or a new entry defined in `dictionary-additions.json` — there
+are no anonymous inline objects.
 
 | Attribute | Requirement | Type | Description |
 |---|---|---|---|
-| `name` | Required | String | The primitive's name (tool name, resource name, or prompt name). |
-| `type_id` | Recommended | Integer (enum) | Primitive kind: `0` Unknown, `1` Tool, `2` Resource, `3` Prompt, `99` Other. |
-| `type` | Optional | String | The enum's string sibling. |
-| `uid` | Optional | String | The invocation/call identifier that correlates a request with its result. |
-| `namespace` | Optional | String | Namespace or grouping the primitive belongs to. |
-| `server` | Optional | Object | The MCP server that served the primitive — `{ uid, name, transport }`, where `transport` is `stdio` \| `streamable_http` \| `other` (per the MCP transport spec). Provenance. |
-| `input_schema` | Optional | Object | The declared input contract, by reference — `{ uid }` (e.g. a schema fingerprint), not the schema body. |
-| `output_schema` | Optional | Object | The declared structured-output contract, by reference — `{ uid }`. |
-| `annotations` | Optional | Object | Declared safety hints: `read_only`, `destructive`, `idempotent`, `open_world` (booleans). |
-| `uri` | Optional | String | For `type_id = 2` (Resource): the resource URI. |
-| `data_type` | Optional | String | For `type_id = 2` (Resource): the resource MIME type. |
+| `name` | Required | String *(reused)* | The primitive's name as advertised by its provider (tool, resource, or prompt name). |
+| `type_id` / `type` | Recommended | Integer enum + string sibling | Primitive kind: `0` Unknown, `1` Tool, `2` Resource, `3` Prompt, `99` Other. |
+| `uid` | Recommended | String *(reused)* | The **capability's** stable identifier (registry ID, or a producer-derived stable key such as server uid + name). Not the call ID — see `transaction_uid`. |
+| `transaction_uid` | Optional | String *(reused)* | The capability-layer invocation ID correlating a request with its result (for MCP, the JSON-RPC request id). Distinct from `api.request.uid`, which is transport-scoped. |
+| `namespace` | Optional | String *(reused)* | Namespace or grouping the primitive belongs to. |
+| `source_id` / `source` | Recommended | Integer enum + sibling *(reused attr, object-local enum)* | How the capability was provided: `1` MCP, `2` Function (framework-native), `3` Built-in (provider-hosted), `0`/`99`. Orthogonal to `type_id`. |
+| `service` | Recommended | `service` object *(reused)* | The **logical** serving system — for MCP, the MCP server (`uid`, `name`, `version`). Provenance, not a network endpoint; see the non-duplication section. |
+| `transport_id` / `transport` | Optional | Integer enum + sibling | Transport binding to the serving system: `1` stdio, `2` Streamable HTTP, `3` HTTP+SSE (legacy), `0`/`99`. |
+| `is_readonly` | Optional | Boolean *(reused)* | Declared `readOnlyHint`. Self-declared and unverified — see Justification. |
+| `is_destructive` | Optional | Boolean | Declared `destructiveHint`. Self-declared and unverified. |
+| `is_idempotent` | Optional | Boolean | Declared `idempotentHint`. Self-declared and unverified. |
+| `is_open_world` | Optional | Boolean | Declared `openWorldHint`. Self-declared and unverified. |
+| `input_schema_fingerprint` | Optional | `fingerprint` object *(reused)* | The declared input contract by reference: a reproducible fingerprint (`algorithm_id`, `encoding_id`, `serialization_id` — use `JCS` for canonical JSON), not the schema body. |
+| `output_schema_fingerprint` | Optional | `fingerprint` object *(reused)* | The declared structured-output contract, by reference. |
+| `uri` | Optional | URL *(reused)* | For `type_id = 2` (Resource): the resource URI. |
+| `mime_type` | Optional | String *(reused)* | For `type_id = 2` (Resource): the resource MIME type. |
+| `version` | Optional | String *(reused)* | The capability's advertised version, when versioned. |
 
-A minimal example (a read-only tool served over MCP):
+A minimal example (a read-only tool served over MCP) — the full event is in
+`example-event.json`:
 
 ```jsonc
 "ai_tool": {
   "type_id": 1,
   "name": "get_weather",
-  "uid": "call_abc",
+  "uid": "weather-mcp/get_weather",
+  "transaction_uid": "call_abc",
   "namespace": "weather",
-  "server": { "uid": "weather-mcp", "name": "Weather MCP Server", "transport": "streamable_http" },
-  "input_schema":  { "uid": "sha256:…" },
-  "output_schema": { "uid": "sha256:…" },
-  "annotations": { "read_only": true, "destructive": false }
+  "source_id": 1,
+  "service": { "uid": "weather-mcp", "name": "Weather MCP Server", "version": "2.3.0" },
+  "transport_id": 2,
+  "is_readonly": true,
+  "is_destructive": false,
+  "input_schema_fingerprint":  { "algorithm_id": 3, "serialization_id": 2, "value": "b5bb9d80…" },
+  "output_schema_fingerprint": { "algorithm_id": 3, "serialization_id": 2, "value": "7d865e95…" }
 }
 ```
 
@@ -74,9 +94,15 @@ second round trip. Each is optional and independently justified:
 
 | Attribute | Type | Why it is security-relevant |
 |---|---|---|
-| `cache_scope` | String (enum: `per_user`, `shared`, `unknown`, `other`) | The RC's `cacheScope` declares whether a result is safe to share across users. Recording it makes cross-tenant caching of user-specific data auditable — a data-exposure question nothing else on the event answers. |
-| `cache_ttl` | Integer (ms) | The RC's `ttlMs` freshness window; bounds how long a result was treated as valid. |
-| `task_uid` | String | The RC's Tasks extension returns a task handle for long-running calls; this correlates the originating call with later `tasks/get` / `update` / `cancel` events so an async tool lifecycle stays one thread instead of fragmenting across uncorrelated events. |
+| `cache_scope_id` / `cache_scope` | Integer enum + sibling: `0` Unknown, `1` Public, `2` Private, `99` Other | The RC's `cacheScope` (SEP-2549) is `public` \| `private`, modeled on HTTP Cache-Control; the enum mirrors the spec. A `Private` result cached in a shared scope is a cross-user data exposure — a question nothing else on the event answers. |
+| `cache_ttl` | Long (ms) | The RC's `ttlMs` freshness window; bounds how long a result was treated as valid. |
+| `task_uid` | String | The RC's Tasks extension returns a task handle for long-running calls; this correlates the originating call with later task lifecycle events (`get` / `update` / `cancel`) so an async tool lifecycle stays one thread instead of fragmenting across uncorrelated events. |
+
+**Placement caveat:** in the RC, `cacheScope`/`ttlMs` ride on *responses*
+(`tools/list`, `resources/read`, …), so they are declared caching metadata
+observed at serving time, not invariant capability properties. They are kept
+here for pragmatic single-home reasons, with descriptions that say so — whether
+they instead belong nearer `api.response` is an open question.
 
 ## Justification
 
@@ -87,26 +113,42 @@ answered today:
   different risk profiles; collapsing them into `api.operation` free text makes
   "resource reads vs. tool calls" un-queryable. A first-class discriminator is
   the single most valuable field here.
-- **`server`.** Tool provenance is a supply-chain question — *"which server
-  served the tool this agent ran?"* — and there is no field for it anywhere on
-  the event. This is the field most needed for trust and blast-radius analysis.
-  Its `transport` (`stdio` vs `streamable_http`) further distinguishes a
-  local-subprocess tool from a remote networked server — a real trust boundary,
-  and the reason an event's endpoint fields may legitimately be empty (stdio has
-  no network endpoint). MCP defines exactly these two standard transports plus
-  optional custom ones; OCSF has no field for them today (`protocol_name` is
-  IP-layer, and stdio is not a network protocol at all).
-- **`annotations`.** MCP tools self-declare `readOnlyHint` / `destructiveHint` /
-  etc. These are exactly the signals a reviewer wants to pivot on ("every
-  destructive tool invoked under delegated authority"), and they also let a
-  producer set `activity_id` to Read for a read-only tool rather than a generic
-  invoke.
-- **`input_schema` / `output_schema` (by reference).** Recording the contract
-  *identity* (a fingerprint), not its body, keeps events small while letting a
-  SIEM group by tool-contract version and detect drift — without carrying large
-  JSON Schema documents on every event.
-- **`uid`.** Correlates a call with its result across two events at the
-  capability layer (distinct from `api.request.uid`, which is transport-scoped).
+- **`service` + `transport_id`.** Tool provenance is a supply-chain question —
+  *"which server served the tool this agent ran?"* — and there is no field for
+  it anywhere on the event. This is the field most needed for trust and
+  blast-radius analysis. The transport (`stdio` vs `Streamable HTTP`) further
+  distinguishes a local-subprocess tool from a remote networked server — a real
+  trust boundary, and the reason an event's endpoint fields may legitimately be
+  empty (stdio has no network endpoint). OCSF has no field for this today
+  (`protocol_name` is IP-layer, and stdio is not a network protocol at all).
+  The `ai_agent.type_id` description already promises that communication
+  protocols (MCP, A2A) "are surfaced on the relevant operation rather than
+  here" — this is that slot.
+- **`is_readonly` / `is_destructive` / `is_idempotent` / `is_open_world`.**
+  MCP tools self-declare these hints, and they are exactly the signals a
+  reviewer wants to pivot on ("every destructive tool invoked under delegated
+  authority"). **They are also self-declared and unverified**: a malicious or
+  compromised server can label a destructive tool read-only, so the attribute
+  descriptions state that the hints support triage, must not be treated as
+  enforced properties, and that a mismatch between declaration and observed
+  behavior is itself a detection signal. The profile guidance permits deriving
+  `activity_id` from the hints (e.g., declared-read-only → `Read`) only when
+  observed behavior does not contradict the declaration.
+- **`input_schema_fingerprint` / `output_schema_fingerprint`.** Recording the
+  contract *identity*, not its body, keeps events small while letting a SIEM
+  group by tool-contract version and detect drift — including "rug pull"
+  changes where a tool's schema silently changes after initial approval.
+  Reusing OCSF's `fingerprint` object (rather than an opaque string) makes the
+  fingerprint reproducible: `serialization_id: JCS` pins the canonicalization,
+  so independent producers converge on the same value.
+- **`transaction_uid`.** Correlates a call with its result across two events at
+  the capability layer (distinct from `api.request.uid`, which is
+  transport-scoped), while `uid` stays what `_entity` semantics say it is: the
+  identity of the capability itself.
+- **`source_id`.** A protocol-neutral object must be able to say *how* the
+  capability was bound — MCP server, framework-native function, or provider
+  built-in — or consumers cannot separate the very bindings this proposal
+  describes. (Promoted from v1's open question 1.)
 
 ### Scope and non-duplication
 
@@ -115,39 +157,56 @@ transport, `resources[]` for affected objects, and `ai_agent`/`ai_model`/
 `delegation` for the actor, model, and authority. Schemas are referenced, not
 embedded; the per-call argument values and results go in `api.request.data` /
 `api.response.data` (subject to the producer's redaction policy), while
-`ai_tool` holds only the invariant description of the capability. The object is protocol-neutral — MCP is the motivating binding, but a
-`function`- or `builtin`-sourced tool populates the same shape (omitting the
-`server` and MCP-specific fields).
+`ai_tool` holds only the invariant description of the capability (the one
+deliberate exception being the observed-declaration cache fields, flagged
+above). The object is protocol-neutral — MCP is the motivating binding, but a
+`Function`- or `Built-in`-sourced tool populates the same shape (omitting the
+`service` and MCP-specific fields). And because the `ai_operation` profile is
+attached at the category level (application, network, IAM, system), `ai_tool`
+will surface on many classes beyond API Activity — no attribute description
+assumes HTTP or MCP.
 
 **Relationship to the network path / hops.** The network path to the server —
 including any gateway an MCP call traverses — is *out of scope* for this object;
 it is already owned by `src_endpoint` / `dst_endpoint`, the `network_proxy`
 profile, and the `trace` object (per-hop events correlated by `trace.uid`).
-`ai_tool.server` is **not** a network endpoint: when a gateway sits in the path,
-`dst_endpoint` is the *gateway*, while `ai_tool.server` is the *logical* MCP
+`ai_tool.service` is **not** a network endpoint: when a gateway sits in the path,
+`dst_endpoint` is the *gateway*, while `ai_tool.service` is the *logical* MCP
 server that actually served the primitive behind it — an application-layer
 identity the transport objects cannot express. The two are complementary, not
 redundant. (Credential/authority hops — e.g. token exchange at each gateway —
 are a third, separate concern, carried by the `delegation` object, not here.)
+Relatedly, `message_context.service` ("the server or service handling the
+request") partially overlaps; the profile guidance should state that when both
+apply, `ai_tool.service` is the capability's serving system and
+`message_context.service` is the conversation-level AI service.
 
 ## Open questions
 
-1. **A source axis?** Should the object also carry *how* the primitive was
-   invoked (`mcp` / `function` / `builtin`), kept orthogonal to `type_id` (which
-   is *what kind* of primitive)? Proposed as a follow-up, not part of the
-   minimal ask.
-2. **`activity_id` at the content layer.** A content-layer producer has no HTTP
-   verb and would derive `activity_id` (Read vs. Create/Update) from the
-   `annotations.read_only` hint rather than the method. Worth a one-line note in
-   the profile guidance so producers are consistent.
-3. **`cache_scope` enum values.** Confirm the value set OCSF wants to
-   standardize beyond `per_user` / `shared`.
+1. **Naming.** `ai_tool` parallels `ai_agent`/`ai_model` and matches industry
+   usage ("tool calling"), but an `ai_tool` with `type_id = Resource` reads
+   oddly; `ai_capability` is the natural alternative. The collision-avoidance
+   argument vs. `product` holds either way.
+2. **Cache fields placement.** Keep `cache_scope_id`/`cache_ttl` on `ai_tool`
+   as observed-declaration metadata (single home, at the cost of the
+   invariance caveat), or move them toward `api.response`?
+3. **`activity_id` derivation wording.** The draft profile guidance permits
+   hint-derived `activity_id` unless observed behavior contradicts the
+   declaration — does the working group want stronger wording (observed
+   behavior always wins) given the hints are unverified?
+4. **Transport placement.** `transport_id` sits on `ai_tool` (it describes how
+   the client reached the serving system for *this* capability); an alternative
+   is a dedicated MCP-server object carrying its own transport. The `service`
+   reuse avoids a new object now.
 
 ## References
 
-- Model Context Protocol specification — tool / resource / prompt primitives and
-  tool annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`,
-  `openWorldHint`).
-- MCP 2026-07-28 Release Candidate — `cacheScope`, `ttlMs`, Tasks extension.
+- [Model Context Protocol specification](https://modelcontextprotocol.io/specification) —
+  tool / resource / prompt primitives and tool annotations (`readOnlyHint`,
+  `destructiveHint`, `idempotentHint`, `openWorldHint`).
+- [MCP 2026-07-28 Release Candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/) —
+  `cacheScope`/`ttlMs` (SEP-2549; values `public` | `private`), Tasks extension.
 - OCSF `ai_operation` profile (current: `ai_agent`, `ai_model`, `delegation`,
-  `message_context`) and API Activity class (`6003`).
+  `message_context`) and API Activity class (`6003`), verified against
+  `ocsf-schema` `main` at `1.10.0-dev`, 2026-08-12.
+- `README.md` in this directory — file map and v1 → v2 decision log.
