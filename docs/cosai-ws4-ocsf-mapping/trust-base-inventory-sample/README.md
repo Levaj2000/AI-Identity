@@ -13,10 +13,8 @@ The `ai_agent` object already carries the identity spine the proposal needs
 ocsf-schema `main`), `fingerprint` objects are the natural carrier for every content
 digest, and applying `record_integrity` per emission needs nothing invented.
 
-Review + assessment: `docs/ocsf-1724-trust-base-review.md`. Paste-ready issue
-response: `docs/ocsf-1724-draft-issue-comment.md`. **PR-shaped class
-definition** (events/objects/dictionary files this sample's shape follows):
-`docs/ocsf-1724-class-draft/`.
+**PR-shaped class definition** (events/objects/dictionary files this
+sample's shape follows): `docs/ocsf-1724-class-draft/`.
 
 ---
 
