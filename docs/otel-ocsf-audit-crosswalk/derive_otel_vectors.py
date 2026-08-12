@@ -188,7 +188,7 @@ def derive(in_path: Path, out_path: Path) -> int:
     links_ok = links_bad = links_skipped = 0
     for sid, recs in by_stream.items():
         recs.sort(key=lambda r: r["Attributes"].get("audit.sequence.number", 0))
-        for prev_rec, rec in zip(recs, recs[1:]):
+        for prev_rec, rec in zip(recs, recs[1:], strict=False):  # pairwise; lengths differ by one
             a, pa = rec["Attributes"], prev_rec["Attributes"]
             if a.get("audit.sequence.number") != pa.get("audit.sequence.number", -2) + 1:
                 links_skipped += 1  # non-consecutive slice; predecessor not in this file
