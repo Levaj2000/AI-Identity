@@ -27,6 +27,25 @@ const offerings = [
   },
 ];
 
+const approach = [
+  {
+    title: "Make the problem legible",
+    body: "Map the agents, credentials, decisions, logs, and obligations so the team can see what is actually happening.",
+  },
+  {
+    title: "Build the proof",
+    body: "Working examples, reference architectures, and verifiable evidence instead of hand-wavy recommendations.",
+  },
+  {
+    title: "Separate verified from assumed",
+    body: "Claims arrive with receipts, and uncertainty stays visible.",
+  },
+  {
+    title: "Convert insight into structure",
+    body: "Good ideas become decisions, checkpoints, policies, and reusable tools.",
+  },
+];
+
 const receipts = [
   {
     lead: "OCSF 1.9.0",
@@ -92,16 +111,32 @@ export default function Advisory() {
 
       <div className="max-w-[900px] mx-auto px-6 md:px-12"><div className="h-px bg-white/5" /></div>
 
-      {/* How engagements work */}
+      {/* How I work */}
       <section className="py-16 px-6 md:px-12">
         <div className="max-w-[900px] mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">How Engagements Work</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">How I Work</h2>
           <p className="text-sm text-gray-400 leading-relaxed max-w-[760px]">
             Short and focused. A typical engagement starts with an assessment — your agents,
             credentials, logs, and obligations as they exist today — and ends with an architecture
             you can build, a prioritized roadmap, and working reference examples where they help.
             Hands-on implementation support is available where it makes sense. No long retainers
             pitched by default; the goal is that you stop needing me.
+          </p>
+          <ul className="mt-6 space-y-3 max-w-[760px]">
+            {approach.map((a) => (
+              <li key={a.title} className="flex items-start gap-3">
+                <span className="text-[rgb(166,218,255)] mt-0.5" aria-hidden="true">
+                  →
+                </span>
+                <p className="text-sm text-gray-300 leading-relaxed">
+                  <span className="font-semibold text-white">{a.title}.</span> {a.body}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 text-sm text-gray-400 leading-relaxed max-w-[760px]">
+            What to expect: receipts over hype, steady follow-through, and directness about
+            what&apos;s working, what isn&apos;t, and what I&apos;d do next.
           </p>
         </div>
       </section>
