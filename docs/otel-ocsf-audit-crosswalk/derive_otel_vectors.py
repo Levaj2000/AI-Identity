@@ -36,7 +36,9 @@ import json
 import sys
 from pathlib import Path
 
-BUNDLE_DIR = Path(__file__).resolve().parent.parent / "cosai-ws4-ocsf-mapping" / "ocsf-log-reference-bundle"
+BUNDLE_DIR = (
+    Path(__file__).resolve().parent.parent / "cosai-ws4-ocsf-mapping" / "ocsf-log-reference-bundle"
+)
 DEFAULT_INPUT = BUNDLE_DIR / "production-ocsf-excerpt.ocsf.ndjson"
 FULL_INPUT = BUNDLE_DIR / "production-ocsf-full-export.ocsf.ndjson"
 DEFAULT_OUTPUT = Path(__file__).resolve().parent / "otel-audit-records.sample.ndjson"
@@ -156,11 +158,22 @@ def derive(in_path: Path, out_path: Path) -> int:
     # Resource-level integrity attributes (README §2.7): the data model pins
     # algorithm + key reference at Resource scope, once per service instance.
     # Verify the fixture actually satisfies that before claiming it.
-    kids = {e["unmapped"]["signature_key_id"] for e in events if e.get("unmapped", {}).get("signature_key_id")}
-    algs = {s["algorithm"] for e in events for a in e.get("attestation_list", []) for s in a.get("signatures", [])}
+    kids = {
+        e["unmapped"]["signature_key_id"]
+        for e in events
+        if e.get("unmapped", {}).get("signature_key_id")
+    }
+    algs = {
+        s["algorithm"]
+        for e in events
+        for a in e.get("attestation_list", [])
+        for s in a.get("signatures", [])
+    }
     if len(kids) > 1 or len(algs) > 1:
-        sys.exit(f"ERROR: multiple signing keys ({len(kids)}) or algorithms ({algs}) in one export — "
-                 "cannot be represented as Resource-level audit.integrity.* (README §2.7).")
+        sys.exit(
+            f"ERROR: multiple signing keys ({len(kids)}) or algorithms ({algs}) in one export — "
+            "cannot be represented as Resource-level audit.integrity.* (README §2.7)."
+        )
     resource = {"service.name": "ai-identity-gateway"}
     if algs:
         alg = algs.pop()
@@ -197,14 +210,22 @@ def derive(in_path: Path, out_path: Path) -> int:
                 links_ok += 1
             else:
                 links_bad += 1
-                print(f"LINK BROKEN: stream {sid} seq {a.get('audit.sequence.number')}", file=sys.stderr)
+                print(
+                    f"LINK BROKEN: stream {sid} seq {a.get('audit.sequence.number')}",
+                    file=sys.stderr,
+                )
 
-    genesis = sum(1 for r in records
-                  if r["Attributes"].get("audit.sequence.number") == 1
-                  and "audit.sequence.prev_hash" not in r["Attributes"])
+    genesis = sum(
+        1
+        for r in records
+        if r["Attributes"].get("audit.sequence.number") == 1
+        and "audit.sequence.prev_hash" not in r["Attributes"]
+    )
     print(f"{len(records)} AuditRecords -> {out_path.name}")
-    print(f"chain linkage across the transform: {links_ok} verified, {links_bad} broken, "
-          f"{links_skipped} skipped (predecessor outside this file)")
+    print(
+        f"chain linkage across the transform: {links_ok} verified, {links_bad} broken, "
+        f"{links_skipped} skipped (predecessor outside this file)"
+    )
     if genesis:
         print(f"genesis records: {genesis} (prev_hash omitted — see README §2.3)")
     return 1 if links_bad else 0
@@ -214,12 +235,17 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("input", nargs="?", type=Path, default=DEFAULT_INPUT)
     ap.add_argument("-o", "--output", type=Path, default=None)
-    ap.add_argument("--full", action="store_true",
-                    help="derive from the full 236-event production export instead of the excerpt")
+    ap.add_argument(
+        "--full",
+        action="store_true",
+        help="derive from the full 236-event production export instead of the excerpt",
+    )
     args = ap.parse_args()
     in_path = FULL_INPUT if args.full else args.input
     out_path = args.output or (
-        Path(__file__).resolve().parent / "otel-audit-records.full.ndjson" if args.full else DEFAULT_OUTPUT
+        Path(__file__).resolve().parent / "otel-audit-records.full.ndjson"
+        if args.full
+        else DEFAULT_OUTPUT
     )
     return derive(in_path, out_path)
 
