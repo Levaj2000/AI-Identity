@@ -53,7 +53,7 @@ const standardsTrack = [
     name: "OpenTelemetry GenAI semconv",
     role: "Span attributes",
     detail:
-      "Tool calls, model invocations, and policy evaluations emit OTEL spans following the GenAI semconv.",
+      "The spec profiles the GenAI semconv for span attributes, and the OTel-to-OCSF field mapping is published as a crosswalk with derived test vectors. Platform span emission is planned; correlation today rides a per-request ID exposed as OCSF metadata.correlation_uid.",
     href: "https://github.com/open-telemetry/semantic-conventions/tree/main/docs/gen-ai",
   },
   {
