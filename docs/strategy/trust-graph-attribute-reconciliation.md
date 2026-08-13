@@ -251,5 +251,4 @@ should be validated against it rather than against this document.
 
 *The OTel-side requirement levels and the GenAI registry location were
 re-verified against the live sources on 2026-08-13. Corrections still welcome,
-particularly on anything mischaracterized about the POC — please correct your
-own rows, per the interop map's convention.*
+particularly on anything mischaracterized about the POC.*
