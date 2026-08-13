@@ -12,7 +12,7 @@ these are the exact revisions compared):
 |---|---|---|
 | POC | [`husky-parul/agents-identity`](https://github.com/husky-parul/agents-identity), `k8s/otel-tracing.yaml` → `set_auth_attributes` | `3b275fb` |
 | OTel audit | [`specification/audit/data-model.md`](https://github.com/apeirora/opentelemetry-specification/blob/auditing/specification/audit/data-model.md), `apeirora/opentelemetry-specification` branch `auditing` ([community#2409](https://github.com/open-telemetry/community/pull/2409)) | `663d809` |
-| OTel GenAI | `gen_ai.*` semantic conventions | as cited in crosswalk §2.5 |
+| OTel GenAI | `gen_ai.*` registry, [`open-telemetry/semantic-conventions-genai`](https://github.com/open-telemetry/semantic-conventions-genai) (`docs/registry`) | main as of 2026-08-13 — `gen_ai.agent.*` at **Development** stability |
 | OCSF | API Activity 6003 + `ai_operation` + `record_integrity` | OCSF **1.9.0** (released 2026-08-03) |
 | Token exchange | [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693) (`sub`, `act`, nested `act`) | — |
 
@@ -45,7 +45,7 @@ authorized this** and **which agent acted**. Current state:
 |---|---|---|---|
 | POC (`otel-tracing.yaml`) | `auth.subject` (+ `auth.username`) | `auth.actor` | POC-local |
 | OTel audit data model | `audit.actor.id` / `audit.actor.type` — **one slot** | *(none)* | `MUST` |
-| OTel GenAI semconv | *(none)* | `gen_ai.agent.id` / `gen_ai.agent.name` | recommended |
+| OTel GenAI semconv | *(none)* | `gen_ai.agent.id` / `gen_ai.agent.name` | Development stability |
 | OCSF 6003 + `ai_operation` | `actor.user.uid` / `actor.user.type_id` | `ai_agent.uid` / `ai_agent.name` | `actor` required; `user` recommended; `ai_agent` optional |
 
 Two structural observations fall out of the table.
@@ -72,6 +72,16 @@ tools that already understand `gen_ai.*` get nothing.
 | Acting agent | `gen_ai.agent.id` + `gen_ai.agent.name` | `ai_agent.uid` / `ai_agent.name` | crosswalk §2.5's existing transform rule; OTel tooling that understands GenAI attributes gets the agent for free |
 | Delegation depth | *derive, do not transmit* — see §3 | — | no home in any of the four |
 | Principal display name | **do not standardize** — see §5 | `actor.user.name` if needed at the record layer | PII-adjacent, and derivable from the principal id by anyone entitled to resolve it |
+
+One citation note, verified 2026-08-13: the GenAI attribute registry now lives
+in [`open-telemetry/semantic-conventions-genai`](https://github.com/open-telemetry/semantic-conventions-genai);
+the `gen_ai.agent.*` entries still visible in the main `semantic-conventions`
+repo are marked deprecated *because they moved*, not because they were retired.
+Cite the new home — a reader checking the old registry will see "deprecated"
+and draw the wrong conclusion. Both attributes sit at **Development** stability
+there, which cuts two ways: the names are not yet frozen (a pinning risk), and
+the names are not yet frozen (this group can still propose what the delegation
+story needs before they are).
 
 This is deliberately additive rather than novel: it asks the group to adopt two
 names that already exist and carry requirement levels, rather than ratify three
@@ -107,8 +117,10 @@ the token's chain as the normative source.
 
 **Monotonic counters have a poor track record in these specs.** Crosswalk §2.4
 records that OCSF [#1661](https://github.com/ocsf/ocsf-schema/pull/1661)
-dropped the draft-era `audit.sequence.number` counter, leaving the AI Identity
-fixture to carry it as `unmapped.org_chain_seq`. A per-hop integer that every
+dropped its draft-era sequence counter in review — OTel's
+`audit.sequence.number` (MAY) consequently maps to nothing on the OCSF side,
+and the AI Identity fixture carries its org counter as
+`unmapped.org_chain_seq`. A per-hop integer that every
 independent implementation must agree to increment identically is the same
 shape of proposal. Going in expecting resistance, with the derived-value
 framing ready, is a better position than discovering it in review.
@@ -237,6 +249,6 @@ should be validated against it rather than against this document.
 
 ---
 
-*Corrections welcome, particularly on the OTel-side requirement levels and on
-anything mischaracterized about the POC — please correct your own rows, per the
-interop map's convention.*
+*The OTel-side requirement levels and the GenAI registry location were
+re-verified against the live sources on 2026-08-13. Corrections still welcome,
+particularly on anything mischaracterized about the POC.*
