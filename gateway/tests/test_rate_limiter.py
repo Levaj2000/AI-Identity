@@ -360,6 +360,26 @@ class TestRateLimitMiddlewareHTTP:
         resp = client.get("/")
         assert resp.status_code == 200
 
+    def test_metrics_exempt_from_rate_limit(self, client, test_agent, test_policy):
+        """GET /metrics is not rate limited even after IP is exhausted.
+
+        GMP scrapes /metrics every 30s per pod; each non-exempt request costs
+        a 5-command Redis pipeline, so an un-exempted scrape both burns the
+        Redis quota and can 429 the collector once the IP window fills.
+        """
+        for i in range(100):
+            client.post(
+                "/gateway/enforce",
+                params={
+                    "agent_id": str(uuid.uuid4()) if i >= 50 else str(test_agent.id),
+                    "endpoint": "/v1/chat",
+                    "method": "POST",
+                },
+            )
+
+        resp = client.get("/metrics")
+        assert resp.status_code == 200
+
 
 # ── Disabled Rate Limiter ───────────────────────────────────────────────
 

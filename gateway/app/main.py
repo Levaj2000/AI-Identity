@@ -243,7 +243,9 @@ async def request_logging_middleware(request: Request, call_next):
 # ── Rate Limiting Middleware ────────────────────────────────────────────
 
 # Health/info/monitoring endpoints exempt from rate limiting
-_RATE_LIMIT_EXEMPT_PATHS = frozenset({"/health", "/health/deep", "/", "/gateway/circuit-breaker"})
+_RATE_LIMIT_EXEMPT_PATHS = frozenset(
+    {"/health", "/health/deep", "/", "/gateway/circuit-breaker", "/metrics"}
+)
 
 
 @app.middleware("http")
