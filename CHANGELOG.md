@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Ada's dependencies exact-pinned — the last open-range install is closed.** `agent/requirements.txt` was `>=` throughout, the same exposure class as the `liboqs-python` PyPI disappearance that broke GKE deploys on 2026-07-24; being off the GKE deploy path kept it out of the hermetic-build work and also hid the drift (the ranges resolved google-adk 0.4-era when written, 2.7.1 today). Pinned to today's resolution and verified empirically on Python 3.13: Ada's full ADK import surface plus all 152 agent tests pass. Deliberately exact pins rather than a hashed lockfile — Ada builds manually via `agent/cloudbuild.yaml` outside the wheelhouse machinery; the upgrade path to a lock is recorded in the requirements header and `AGENTS.md`. Also fixes an agent test red on `main` since #235 reworded the deny message without updating the assertion (invisible — agent tests don't run in CI). (#452)
+
 ### Added
 - **Roadmap gains a v0.6.0 slot — agent spend control sequenced after Enterprise Forensics.** The roadmap listed no home for the spend-control alpha (delegation breach + vendor novelty detectors) in Now, Next, or Later, while planning carried it as a September commitment — two artifacts disagreeing about the same month, with the roadmap the more recently reviewed of the two (#449). September is committed to v0.5.0 Enterprise Forensics and its Fri Sep 25 no-slip target, so the alpha is sequenced behind it rather than run alongside. This also makes v0.6.0 concrete: the Sep 7 checkpoint rule already named it as where unlanded v0.5.0 scope goes, but no section existed for it to point at. The row deliberately carries no target date — detector scoping runs first and produces the estimate the date comes from. Docs only — no product impact. (#451)
 

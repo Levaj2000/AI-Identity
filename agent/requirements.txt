@@ -1,3 +1,19 @@
-google-adk>=0.4.0
-google-cloud-aiplatform>=1.71.0
-httpx>=0.27.0
+# Ada — direct dependencies, exact-pinned (no open ranges).
+#
+# Same exposure class as the liboqs-python==0.15.0 PyPI disappearance that
+# broke GKE deploys on 2026-07-24: an open range here meant every fresh
+# venv or image build resolved whatever PyPI served that day. Pinned
+# 2026-08-17, verified on Python 3.13 (matches agent/Dockerfile) by import
+# check of Ada's full ADK surface (google.adk.agents.Agent,
+# google.adk.cli.fast_api.get_fast_api_app, google.adk.tools) plus the
+# agent test suite (152 tests).
+#
+# Deliberately exact pins, NOT a hashed lockfile: Ada is off the GKE
+# deploy path (image built manually via agent/cloudbuild.yaml, plain pip)
+# so the api/gateway/mandate wheelhouse machinery doesn't apply. If Ada
+# ever joins CI deploys, generate agent/requirements.lock per the header
+# convention in api/requirements.lock and add "agent" to
+# scripts/check_lockfiles.py SERVICES.
+google-adk==2.7.1
+google-cloud-aiplatform==1.164.0
+httpx==0.28.1

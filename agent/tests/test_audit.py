@@ -184,7 +184,9 @@ class TestBeforeToolCallback:
             result = before_tool_audit_callback(_FakeTool("read_file"), {}, None)
         assert result is not None
         assert result["status"] == "error"
-        assert "denied" in result["error_message"].lower()
+        # Message deliberately avoids policy detail (#235 de-leak); assert the
+        # de-leaked wording, not the internal "denied" decision term.
+        assert "not permitted" in result["error_message"].lower()
 
     def test_network_error_returns_error_dict(self, configured: None) -> None:  # noqa: ARG002
         with patch.object(
