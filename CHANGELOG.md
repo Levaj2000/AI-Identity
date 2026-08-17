@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Full agent test suite now runs in CI on `agent/**` changes.** The Ada Evals workflow ran only the static citation gate (deliberately no ADK install), so the other ~150 agent tests ran nowhere — how a test sat red on `main` for weeks after #235 and how the ADK 0.4→2.7 drift stayed invisible until #452. New `agent-tests` job installs from the exact-pinned `agent/requirements.txt` on Python 3.13 and runs the whole suite; separate job keeps the citation gate fast, the existing path filter keeps main CI untouched for non-agent changes, and it is deliberately not a required check (path-filtered required checks block merges when skipped). CI only — no product impact. (#453)
+
 ### Fixed
 - **Ada's dependencies exact-pinned — the last open-range install is closed.** `agent/requirements.txt` was `>=` throughout, the same exposure class as the `liboqs-python` PyPI disappearance that broke GKE deploys on 2026-07-24; being off the GKE deploy path kept it out of the hermetic-build work and also hid the drift (the ranges resolved google-adk 0.4-era when written, 2.7.1 today). Pinned to today's resolution and verified empirically on Python 3.13: Ada's full ADK import surface plus all 152 agent tests pass. Deliberately exact pins rather than a hashed lockfile — Ada builds manually via `agent/cloudbuild.yaml` outside the wheelhouse machinery; the upgrade path to a lock is recorded in the requirements header and `AGENTS.md`. Also fixes an agent test red on `main` since #235 reworded the deny message without updating the assertion (invisible — agent tests don't run in CI). (#452)
 
