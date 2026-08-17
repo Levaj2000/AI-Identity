@@ -268,19 +268,19 @@
   <header class="banner">
     <h1>AI Identity — Three-Horizon Product Roadmap</h1>
     <div class="sub">Trust Root for the Agent Economy</div>
-    <div class="date">As of 08 May 2026 • 18-month outlook through September 2027</div>
+    <div class="date">As of 17 Aug 2026 • outlook through September 2027</div>
   </header>
 
   <section class="horizons" aria-label="Strategic horizons">
     <div class="horizon h1">
       <div class="tag">Horizon 1 · Now</div>
       <div class="name">Ship the Identity Platform</div>
-      <div class="desc">Convert design partners on the horizontal control plane (P1). The hard gate before any new product spend.</div>
+      <div class="desc">Ship the horizontal control plane (P1) continuously. Hard calendar gates retired (Decision #51); GTM is relationship-led through open-standards contribution, with no public launch planned (Decision #56).</div>
     </div>
     <div class="horizon h2">
       <div class="tag">Horizon 2 · Next</div>
       <div class="name">Win the Spend &amp; Mandate Wedge</div>
-      <div class="desc">Vertical wedge into SecOps + Audit (P2) and the cryptographic mandate substrate for commerce (P3).</div>
+      <div class="desc">Vertical wedge into SecOps + Audit (P2 — sequenced behind the v0.5.0 forensics release) and the cryptographic mandate substrate for commerce (P3).</div>
     </div>
     <div class="horizon h3">
       <div class="tag">Horizon 3 · Later</div>
@@ -308,14 +308,14 @@
   <div class="legend" aria-label="Legend">
     <div class="item"><span class="swatch ice"></span> P1 Platform · shipping</div>
     <div class="item"><span class="swatch ice-soft"></span> Active build phase (P2 / P3 / P4)</div>
-    <div class="item"><span class="swatch dashed"></span> Gated or design-only phase</div>
+    <div class="item"><span class="swatch dashed"></span> Sequenced or design-only phase</div>
     <div class="item"><span class="diamond"></span> Milestone</div>
-    <div class="item"><span class="swatch amber-bar"></span> Hard gate / decision point</div>
-    <div class="item"><span class="swatch today"></span> Today (08 May 2026)</div>
+    <div class="item"><span class="swatch amber-bar"></span> Decision gate / review point</div>
+    <div class="item"><span class="swatch today"></span> Today (17 Aug 2026)</div>
   </div>
 
   <footer>
-    Last updated 2026-05-08 · Source: CEO Dashboard decisions #31–#33, #42, #43 + Mandate Service decision (2026-05-08), milestones #36–#41, #43 (design-partner deploy)
+    Last updated 2026-08-17 · Source: CEO Dashboard decisions #51, #55, #56, #58, #59, #60; milestones #31, #37–#41, #44–#46, #51 · Event-triggered milestones (#31, #37, #45, #46, #51) carry no calendar date by design — trigger credibility reviewed quarterly, first review 2026-09-30
   </footer>
 
 </div>
@@ -449,8 +449,8 @@
 
   // ===== Decision gates (drawn under bars but over grid) =====
   const gates = [
-    { date: new Date(2026, 5, 30), label: "P1 GATE", tooltip: "P1 → P2 Hard Gate", desc: "3 paid design partners required before P2 build cycles >30%" },
-    { date: new Date(2026, 8, 30), label: "P2 ALPHA REVIEW", tooltip: "P2 alpha → beta review", desc: "False-positive rate, customer fit decision" },
+    { date: new Date(2026, 8, 7),  label: "V0.5.0 SCOPE REVIEW", tooltip: "v0.5.0 mid-cycle scope review", desc: "Standing rule: anything not landed moves to v0.6.0 rather than slipping the Sep 25 ship date." },
+    { date: new Date(2026, 8, 30), label: "TRIGGER REVIEW", tooltip: "Quarterly event-trigger credibility review", desc: "First quarterly review of the event-triggered milestones (#31 design partners, #37 first revenue, #45 PQC, #46 SOC 2, #51 Mandate Stage B): is each trigger still the right event, is on_track still honest, roll the review forward." },
     { date: new Date(2027, 2, 31), label: "P3 PILOT GO/NO-GO", tooltip: "P3 partner pilot decision", desc: "Ship/no-ship on P3 partner pilot" },
   ];
   const gatesG = el("g", { id: "gates" }, svg);
@@ -469,11 +469,6 @@
     labelHit.addEventListener("mousemove", moveTip);
     labelHit.addEventListener("mouseleave", hideTip);
   });
-
-  // The most prominent gate (Jun 30 2026) gets a stronger highlight band across the chart
-  const hardGateX = dateToX(new Date(2026, 5, 30));
-  el("rect", { x: hardGateX - 10, y: HEADER_H - 4, width: 20, height: TOTAL_H - HEADER_H - 2,
-               fill: "rgba(242,169,59,0.12)" }, gatesG);
 
   // ===== Bars =====
   const barsG = el("g", { id: "bars" }, svg);
@@ -523,41 +518,49 @@
     return g;
   }
 
-  // -- P1: full timeline, two phases stacked horizontally --
+  // -- P1: gate era (retired Jun 12) -> continuous standards-led shipping,
+  // with the v0.5.0 release window highlighted on a second row --
   drawBar("P1",
     new Date(2026, 3, 25),
-    new Date(2026, 5, 30),
-    { fill: "var(--ice)", label: "Design partner conversion", title: "P1 · Design Partner Conversion",
-      desc: "Convert pilots to 3 paid design partners before unlocking P2 build budget. Hard gate Jun 30." });
+    new Date(2026, 5, 12),
+    { fill: "var(--ice)", label: "Gate retired", title: "P1 · Design-Partner Conversion — hard gate retired",
+      desc: "Original plan required 3 paid design partners by Jun 30 before P2 build cycles >30%. Decision #51 (Jun 12) retired the calendar gate: GTM is relationship-led through open-standards work, and the commercial milestones became event-triggered (#31 first agents in production, #37 first paid customer)." });
   drawBar("P1",
-    new Date(2026, 6, 1),
+    new Date(2026, 5, 12),
     new Date(2027, 8, 30),
-    { fill: "var(--ice-deep)", label: "Enterprise expansion (shipping)", lightLabel: true,
-      title: "P1 · Enterprise Expansion",
-      desc: "Ongoing expansion across enterprise. P1 ships continuously through the planning horizon." });
+    { fill: "var(--ice-deep)", label: "Enterprise platform · standards-led (shipping)", lightLabel: true,
+      title: "P1 · Enterprise Platform — continuous shipping",
+      desc: "P1 ships continuously through the planning horizon. No public launch (Decision #56) — the business runs contributor/consulting-led, with ecosystem adoption treated as distribution rather than revenue (Decision #55)." });
+  drawBar("P1",
+    new Date(2026, 7, 1),
+    new Date(2026, 8, 25),
+    { fill: "var(--amber)", translucent: true, yOffset: 46, height: 14,
+      label: "v0.5.0 Enterprise Forensics", lightLabel: true,
+      title: "P1 · v0.5.0 Enterprise Forensics release window",
+      desc: "September belongs to v0.5.0: forensic retention policies, forensic capture modes, SIEM connector, design-partner onboarding. Ship target Fri Sep 25; the Sep 7 mid-cycle scope review moves anything unlanded to v0.6.0 rather than slipping the date." });
 
-  // -- P2: discovery -> alpha (gated) -> beta -> GA --
+  // -- P2: discovery (done) -> re-scoped alpha (Q4 2026, sequenced behind v0.5.0) -> beta -> GA --
   drawBar("P2",
     new Date(2026, 4, 1),
     new Date(2026, 5, 30),
-    { fill: "var(--ice-soft)", label: "Discovery", title: "P2 · Discovery Sprint",
-      desc: "Customer + buyer discovery. Defines fit and false-positive tolerance." });
-  drawBar("P2",
-    new Date(2026, 6, 1),
-    new Date(2026, 8, 30),
-    { fill: "var(--ice-soft)", translucent: true, label: "Alpha build  [gated]", lightLabel: true,
-      title: "P2 · Alpha Build (gated by P1 hard gate)",
-      desc: "Conditional on P1 clearing 3-paid-partner gate. Build cycles >30% blocked otherwise." });
+    { fill: "var(--ice-soft)", label: "Discovery (complete)", title: "P2 · Discovery Sprint",
+      desc: "Customer + buyer discovery. Defined fit and false-positive tolerance; fed the Decision #58 re-scope." });
   drawBar("P2",
     new Date(2026, 9, 1),
     new Date(2026, 11, 31),
+    { fill: "var(--ice-soft)", translucent: true, label: "Alpha — 2 detectors (v0.6.0 · Q4)", lightLabel: true,
+      title: "P2 · Alpha Build — re-scoped, sequenced behind v0.5.0 (Milestone #38)",
+      desc: "Re-scoped to two detectors — delegation breach + vendor novelty — shadow mode default, hold/step-up flag-gated, built as a module in the existing codebase (Decision #58). Sequenced behind the v0.5.0 forensics release: detector work starts after v0.5.0 ships (Decision #59). Q4 2026 window, no public target date; the design-partner half moved to event-triggered Milestone #31." });
+  drawBar("P2",
+    new Date(2027, 0, 1),
+    new Date(2027, 2, 31),
     { fill: "var(--ice-soft)", label: "Beta", title: "P2 · Beta",
       desc: "Closed beta with selected customers. Tune detectors, baselines, case management." });
   drawBar("P2",
-    new Date(2027, 0, 1),
+    new Date(2027, 3, 1),
     new Date(2027, 5, 30),
     { fill: "var(--ice)", label: "Path to GA", title: "P2 · Path to GA",
-      desc: "Hardening, pricing, packaging. GA target Jun 2027." });
+      desc: "Hardening, pricing, packaging. GA target Jun 2027 with the full detector library (Milestone #41)." });
 
   // -- P3: issuance infrastructure in prod (2026-05-08) -> standards engagement -> verification + pilot -> beta --
   // Original plan had the Issuance API alpha as Oct-Dec 2026. Atlas startup
@@ -569,13 +572,13 @@
     new Date(2026, 10, 30),
     { fill: "var(--ice-deep)", lightLabel: true, label: "Issuance infra in prod · design-partner soak",
       title: "P3 · Issuance infrastructure in prod",
-      desc: "Mandate Service running in prod on MongoDB Atlas (peered VPC). ECDSA-P256 signing live; ML-DSA-87 PQC slot reserved in the signature schema. No external ingress or customer UI yet — design-partner search runs through Nov 2026 before any external positioning." });
+      desc: "Mandate Service running in prod on MongoDB Atlas (peered VPC). ECDSA-P256 signing live; ML-DSA-87 PQC slot reserved in the signature schema. No external ingress or customer UI yet — public exposure (Mandate Stage B, Milestone #51) is event-triggered, not calendar-gated." });
   drawBar("P3",
     new Date(2026, 6, 1),
-    new Date(2026, 8, 30),
-    { fill: "var(--ice-soft)", dashed: true, label: "Standards engagement (light)",
+    new Date(2026, 11, 31),
+    { fill: "var(--ice-soft)", dashed: true, label: "Standards engagement (active)",
       title: "P3 · Standards Engagement",
-      desc: "Light, parallel to P2 alpha. Position in mandate / agent-credential standards bodies." });
+      desc: "Now the primary GTM motion (Decision #51): record-integrity / attestation work shipped in OCSF 1.9.0; audit-logging and agent-trust engagement continues across open standards bodies. Public exposure of the Mandate Service (Stage B, Milestone #51) is event-triggered on a first named-user pull, not calendar-gated." });
   drawBar("P3",
     new Date(2027, 0, 1),
     new Date(2027, 2, 31),
@@ -604,14 +607,16 @@
       desc: "Not a separate product. SKU within P1 Enterprise. CCO/CRO buyer at regulated mid-market+." });
 
   // ===== Milestones (diamonds) =====
+  // Event-triggered milestones (#31, #37, #45, #46, #51) deliberately have no
+  // diamond: they carry no calendar date by design (Decisions #51, #60), and a
+  // dated diamond would read as a delivery commitment. Their trigger credibility
+  // is reviewed quarterly — see the TRIGGER REVIEW gate.
   const milestones = [
-    { id: "#36", title: "P2 Discovery Sprint Complete", date: new Date(2026, 5, 6),  lane: "P2", desc: "Discovery findings synthesized; alpha build scoped." },
-    { id: "#37", title: "P1: 3 Paid Design Partners (HARD GATE)", date: new Date(2026, 5, 30), lane: "P1", hard: true, desc: "Hard gate: must clear before P2 build cycles >30%." },
-    { id: "#38", title: "P2 Alpha Shipped", date: new Date(2026, 8, 30), lane: "P2", desc: "Alpha shipped to first cohort." },
-    { id: "#39", title: "P3 Issuance v1 in prod (internal)", date: new Date(2026, 4, 8), lane: "P3", desc: "Mandate Service running in prod on MongoDB Atlas. Internal-only — no external ingress or customer UI yet." },
-    { id: "#43", title: "P3: First design-partner Mandate Service deploy", date: new Date(2026, 5, 15), lane: "P3", desc: "Validation event for the H2 thesis: a signed mandate issued + verified for a non-Ada agent in a partner environment, with audit-trail attribution observable end-to-end. Until this lands, P3 stays internal-only and external positioning is held. Turns the platform thesis from code into revenue path." },
+    { id: "v0.5.0", title: "v0.5.0 Enterprise Forensics ships", date: new Date(2026, 8, 25), lane: "P1", hard: true, desc: "Committed release target (no-slip: the Sep 7 scope review moves unlanded scope to v0.6.0 instead). Builds the forensic substrate that Milestone #44 rides on." },
+    { id: "#44", title: "Forensics v2 GA — replay + behavioral anomaly intel", date: new Date(2026, 11, 31), lane: "P1", desc: "Chain-of-thought replay, root-cause attribution, ML behavioral baselines with drift detection. Stays date-bound (Decision #60) — the one year-end milestone with a 2026 engine: v0.5.0 ships its substrate, and the P2 detectors share its build shape." },
+    { id: "#39", title: "P3 Mandate Service v1 — Issuance API", date: new Date(2026, 11, 31), lane: "P3", desc: "Issue, format, sign, store, revoke — no verification endpoint yet. Issuance infrastructure has run in prod (internal-only) since 2026-05-08; v1 completes the API surface." },
     { id: "#40", title: "P3 Verification API + First Partner Pilot", date: new Date(2027, 2, 31), lane: "P3", desc: "Verification API live. First merchant/rail pilot started." },
-    { id: "#41a", title: "P2 GA + P3 Beta + P4 Design", date: new Date(2027, 5, 30), lane: "P2", spanLane: "P3", desc: "Triple convergence: P2 hits GA, P3 enters beta, P4 design complete." },
+    { id: "#41a", title: "P2 GA + P3 Beta + P4 Design", date: new Date(2027, 5, 30), lane: "P2", spanLane: "P3", desc: "Triple convergence: P2 hits GA with the full detector library, P3 enters beta, P4 design complete." },
   ];
   const msG = el("g", { id: "milestones" }, svg);
   milestones.forEach((m) => {
@@ -644,7 +649,7 @@
   }
 
   // ===== Today line =====
-  const TODAY = new Date(2026, 4, 8);
+  const TODAY = new Date(2026, 7, 17);
   const todayX = dateToX(TODAY);
   const todayG = el("g", { id: "today" }, svg);
   el("line", { x1: todayX, y1: HEADER_H - 8, x2: todayX, y2: TOTAL_H - 6, class: "today-line" }, todayG);
@@ -685,6 +690,7 @@
         "Pillars":     "All four (Identity · Policy · Forensics · Compliance)",
         "Buyer":       "Platform Engineering (bottom-up)",
         "Demarcation": "Horizontal control plane for any agent action.",
+        "GTM":         "Relationship-led via open-standards contribution (Decision #51); no public launch — contributor/consulting-led (Decision #56). Ecosystem adoption is distribution; the platform-side services are the priced layer (Decision #55).",
       }
     },
     P2: {
@@ -693,6 +699,7 @@
         "Pillars":     "All four + new (detectors, baselines, case management)",
         "Buyer":       "SecOps + Internal Audit (then Finance / Procurement)",
         "Demarcation": "Vertical app on financial events; agent-side ingestion only in alpha.",
+        "Status":      "Alpha re-scoped 2026-08-17 to two detectors — delegation breach + vendor novelty, shadow mode default, hold/step-up flag-gated (Decision #58) — and sequenced behind the v0.5.0 forensics release into Q4 2026 (Decision #59). Design-partner validation moved to event-triggered Milestone #31.",
       }
     },
     P3: {
@@ -701,7 +708,7 @@
         "Pillars":     "Identity + Policy + Forensics",
         "Buyer":       "Same as P1 (issuers) → expands to merchants / rails (verifiers)",
         "Demarcation": "Cryptographic mandate substrate. Not a payment rail. Not a fraud engine.",
-        "Status":      "Issuance infra in prod (internal-only) since 2026-05-08. No external ingress, customer UI, or marketing yet — design-partner search runs through Nov 2026 before public positioning.",
+        "Status":      "Issuance infra in prod (internal-only) since 2026-05-08; v1 API surface targeted 2026-12-31 (Milestone #39). No external ingress, customer UI, or marketing yet — public exposure (Mandate Stage B, Milestone #51) is event-triggered on a first named-user pull, not calendar-gated.",
       }
     },
     P4: {
