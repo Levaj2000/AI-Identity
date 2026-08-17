@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- **Compliance cost model verified — SOC 2 readiness is ~$15–17K first-year, not $20–50K.** The compliance-readiness tracker's cost table is filled from real quotes (2026-08-07 compliance-automation platform conversation): ~$12K/yr platform covering both SOC 2 and ISO 42001, ~$3K Type I, ~$4–5K Type II, pen test and ISO 42001 bundled at no increment. Cost is no longer the gating variable — the trigger remains the first enterprise contract requiring certification. The three-horizon map's P5 profile carries the same economics. Numbers rounded and vendor-neutral in the public tree; attributed quote record internal. Docs only — no product impact. (#454)
+
 ### Added
 - **Full agent test suite now runs in CI on `agent/**` changes.** The Ada Evals workflow ran only the static citation gate (deliberately no ADK install), so the other ~150 agent tests ran nowhere — how a test sat red on `main` for weeks after #235 and how the ADK 0.4→2.7 drift stayed invisible until #452. New `agent-tests` job installs from the exact-pinned `agent/requirements.txt` on Python 3.13 and runs the whole suite; separate job keeps the citation gate fast, the existing path filter keeps main CI untouched for non-agent changes, and it is deliberately not a required check (path-filtered required checks block merges when skipped). CI only — no product impact. (#453)
 

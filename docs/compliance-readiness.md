@@ -1,6 +1,6 @@
 # AI Identity — Compliance Readiness Tracker
 
-Last updated: 2026-08-05
+Last updated: 2026-08-17
 
 ## Quick Reference for Prospect Conversations
 
@@ -49,11 +49,11 @@ When a prospect asks "Are you SOC 2 / HIPAA / etc. certified?" — here's what t
 
 ### Gaps to Close Before Certification
 - [ ] Formal security policies documented — 3 of ~13 done (Access Management, Change Management, Incident Response in `docs/compliance/`, all v1.1 reviewed 2026-08-05); remainder via compliance-platform templates: Information Security (master), Acceptable Use, Data Classification, Cryptography, Vendor Management, BC/DR, Risk Assessment, Secure SDLC, Data Retention & Disposal, Vulnerability Management
-- [ ] Penetration test by third party
+- [ ] Penetration test by third party (bundled with the automation platform — see cost model below)
 - [ ] Business continuity / disaster recovery plan documented
 - [ ] Vendor risk assessments (Google Cloud, Neon, MongoDB Atlas, Clerk, Vercel, Render)
 - [ ] Employee security training (N/A until employees, but document the policy)
-- [ ] Engage SOC 2 auditor (estimated cost: $20-50K — unverified; replace with real quotes)
+- [ ] Engage SOC 2 auditor (real quotes on file 2026-08-07: ~$15–17K first-year all-in including the automation platform — see cost model below; supersedes the old $20–50K estimate)
 
 ### Timeline
 Trigger: first enterprise contract that requires SOC 2. Kickoff sized for a start within 6-18 months; Type II requires an observation window (typically 3-12 months) after controls are live.
@@ -180,18 +180,25 @@ Strong alignment. NIST AI RMF is voluntary — no certification needed. Referenc
 
 ---
 
-## Compliance Cost Model (to fill from vendor quotes)
+## Compliance Cost Model (verified from vendor quote, 2026-08-07)
 
-Line items for planning — replace estimates with real quotes from compliance-automation
-platform conversations (Vanta / Drata / Secureframe class):
+Line items from a compliance-automation platform conversation (Vanta / Drata /
+Secureframe class). Numbers are quoted-for-us, rounded; the attributed quote record is
+internal.
 
 | Line item | Quoted cost | Notes |
 |-----------|------------|-------|
-| Automation platform annual fee | TBD | Ask for smallest tier / early-stage pricing |
-| SOC 2 Type I audit (partner auditor) | TBD | |
-| SOC 2 Type II audit (partner auditor) | TBD | Confirm observation-window length |
-| Third-party penetration test | TBD | Required for SOC 2; ask if bundled |
-| ISO 42001 add-on (later) | TBD | Incremental cost on same platform |
+| Automation platform annual fee | ~$12K/yr | Covers SOC 2 AND ISO 42001 on the same platform |
+| SOC 2 Type I audit (partner auditor) | ~$3K | Solo-founder team size |
+| SOC 2 Type II audit (partner auditor) | ~$4–5K | Partner auditors commonly bundle Type I + II for savings |
+| Third-party penetration test | $0 incremental | Manual CREST-certified test bundled in the platform fee |
+| ISO 42001 add-on | $0 incremental | Same platform fee — the AI-management credential effectively rides along free |
+
+**First-year all-in: ~$15–17K** — below the bottom of the prior $20–50K planning
+estimate. Cost is no longer the gating variable for SOC 2 readiness; the trigger
+remains the first enterprise contract that requires it. Stack integrations (GKE,
+GitHub, Vercel) are all native to this platform class, so spin-up is fast once
+triggered.
 
 Company inputs that drive pricing: solo founder (1 employee), stack = Google Cloud (GKE),
 GitHub, GitHub Issues/Projects, Google Workspace (corporate IdP). Clerk is product-side
