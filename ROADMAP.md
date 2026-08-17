@@ -1,6 +1,6 @@
 # AI Identity — Product Roadmap
 
-Last updated: 2026-08-14
+Last updated: 2026-08-17
 
 ## Now (August 2026)
 
@@ -27,6 +27,18 @@ The forensics scope originally penciled in for v0.4.0, now scheduled for real:
 
 Checkpoint: mid-cycle scope review week of Sep 7 — anything not landed by then moves
 to v0.6.0 rather than slipping the date.
+
+## After Next — v0.6.0 (Q4 2026)
+
+The slot after Enterprise Forensics, and the landing place for anything the Sep 7
+checkpoint moves out of v0.5.0:
+
+| Feature | Priority | Description |
+|---------|----------|-------------|
+| Agent spend control — alpha (2 detectors) | High | Delegation breach detector + vendor novelty detector. Agent-platform-side ingestion only, no ERP. Shadow mode by default, hold/step-up gated behind a flag. Built as a module alongside the existing shadow-agent detection rather than a fork. |
+
+Sequenced deliberately after v0.5.0: September is committed to Enterprise Forensics.
+Detector scoping runs first and sets the date — the date does not set the scope.
 
 ## Later (Q4 2026 – Q1 2027)
 
