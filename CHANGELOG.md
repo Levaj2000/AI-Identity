@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Roadmap gains a v0.6.0 slot — agent spend control sequenced after Enterprise Forensics.** The roadmap listed no home for the spend-control alpha (delegation breach + vendor novelty detectors) in Now, Next, or Later, while planning carried it as a September commitment — two artifacts disagreeing about the same month, with the roadmap the more recently reviewed of the two (#449). September is committed to v0.5.0 Enterprise Forensics and its Fri Sep 25 no-slip target, so the alpha is sequenced behind it rather than run alongside. This also makes v0.6.0 concrete: the Sep 7 checkpoint rule already named it as where unlanded v0.5.0 scope goes, but no section existed for it to point at. The row deliberately carries no target date — detector scoping runs first and produces the estimate the date comes from. Docs only — no product impact. (#451)
+
 ## [0.4.0] — 2026-08-14
 
 ### Changed
