@@ -42,3 +42,33 @@ jobs:
       - name: Run golden-set CLI (sanity)
         working-directory: agent
         run: python -m evals.run_evals
+
+  agent-tests:
+    name: Agent — full test suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: agent/requirements.txt
+
+      - name: Install agent dependencies (exact pins)
+        # The heavy install the citation gate deliberately avoids. Kept in
+        # its own job so the gate stays fast; both only run on agent/**
+        # changes via this workflow's path filter. agent/requirements.txt is
+        # exact-pinned (#452) — this job is also what makes a bad pin bump
+        # visible before merge, the check the 2026-08-17 ADK 0.4→2.7 drift
+        # never had. test_audit.py sat red on main for weeks (#235) because
+        # nothing ran it; this job is the fix.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r agent/requirements.txt pytest
+
+      - name: Run full agent test suite
+        working-directory: agent
+        run: python -m pytest tests/ -v
