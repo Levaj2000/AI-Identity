@@ -105,7 +105,7 @@ Context: on 2026-07-24 `liboqs-python==0.15.0` vanished from PyPI and broke ever
 - **Pre-merge proof**: `image-build-check.yml` builds all three images with `--no-index` on any PR touching Dockerfiles or locks — a lock/Dockerfile mistake surfaces on the PR, not in the deploy.
 - **New/bumped pins**: after regenerating a lock, the first CI run warms the AR cache automatically when the wheelhouse step downloads the new version (runner → AR → PyPI). Nothing manual.
 - **Local image builds** need a wheelhouse first: `python3 -m pip download --only-binary=:all: --platform manylinux_2_28_x86_64 --platform manylinux_2_17_x86_64 --platform manylinux2014_x86_64 --platform manylinux1_x86_64 --python-version 311 --implementation cp -r <svc>/requirements.lock -d wheelhouse` (plain PyPI is fine locally). Day-to-day local dev is unaffected: `docker compose` uses the root `Dockerfile`, which deliberately still installs from PyPI.
-- **Known out of scope**: `agent/requirements.txt` is unpinned (`>=`) and the root `Dockerfile` is non-hermetic — both are off the GKE deploy path.
+- **Known out of scope**: the root `Dockerfile` (compose local dev) is non-hermetic — off the GKE deploy path. `agent/requirements.txt` is exact-pinned (no lock — Ada builds manually via `agent/cloudbuild.yaml`, outside the wheelhouse machinery); regenerate pins deliberately, and if Ada ever joins CI deploys, add a hashed `agent/requirements.lock` and list `agent` in `scripts/check_lockfiles.py`.
 
 ## Bootstrapping Local Env
 
