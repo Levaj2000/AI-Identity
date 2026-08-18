@@ -29,7 +29,8 @@
 use serde_json::{json, Map, Value};
 
 use cpex_core::cmf::{ContentPart, MessagePayload};
-use cpex_core::hooks::payload::Extensions;
+use cpex_core::decision::{DecisionLog, PluginAction, Verdict};
+use cpex_core::hooks::payload::{Extensions, PluginPayload};
 
 use crate::config::OcsfAuditConfig;
 
@@ -150,7 +151,24 @@ pub fn build_ai_operation(
     cfg: &OcsfAuditConfig,
     now_rfc3339: &str,
 ) -> Value {
-    let activity = activity_of(payload, ext);
+    build_event(Some(payload), ext, cfg, now_rfc3339)
+}
+
+/// Payload-optional form of [`build_ai_operation`]. The decision-audit
+/// sink fires for every hook family, and a non-CMF dispatch (delegation,
+/// identity) carries no `MessagePayload` — the event is then built from
+/// the extensions alone, with `activity_id` 0 (Unknown) and no
+/// tool/status coordinates. The extension-derived blocks (actor,
+/// ai_agent, ai_model, delegation, gap fields) are identical either way.
+pub fn build_event(
+    payload: Option<&MessagePayload>,
+    ext: &Extensions,
+    cfg: &OcsfAuditConfig,
+    now_rfc3339: &str,
+) -> Value {
+    let activity = payload
+        .map(|p| activity_of(p, ext))
+        .unwrap_or(Activity::Unknown);
 
     let mut ev = Map::new();
 
@@ -166,11 +184,12 @@ pub fn build_ai_operation(
     ev.insert("severity_id".into(), json!(SEVERITY_INFORMATIONAL));
     ev.insert("time".into(), json!(now_rfc3339));
 
-    // security_control profile: this passive post-hook stream is
-    // action_id 3 (Observed) / disposition_id 17 (Logged). The deny and
-    // modify mappings (action_id 2 / 4) arrive with the cpex-core
-    // decision event (WS-A / P1) — the plugin structurally cannot see a
-    // denial from a post hook.
+    // security_control profile defaults: a passive post-hook observation
+    // is action_id 3 (Observed) / disposition_id 17 (Logged). When this
+    // event is built by the decision-audit sink, `apply_decision`
+    // overwrites these with the pipeline's actual ruling (Denied /
+    // Modified / Allowed) — a post-hook observer structurally cannot see
+    // a denial, which is exactly what the sink path fixes.
     ev.insert("action_id".into(), json!(3));
     ev.insert("action".into(), json!("Observed"));
     ev.insert("disposition_id".into(), json!(17));
@@ -205,7 +224,7 @@ pub fn build_ai_operation(
     ev.insert("metadata".into(), metadata);
 
     // status (field map: ToolResult.is_error -> status)
-    if let Some(is_err) = first_tool_error(payload) {
+    if let Some(is_err) = payload.and_then(first_tool_error) {
         ev.insert("status_id".into(), json!(if is_err { 2 } else { 1 })); // 1=Success 2=Failure
     }
 
@@ -296,11 +315,13 @@ pub fn build_ai_operation(
     }
 
     // --- tool/prompt/resource coordinates from content ----------------
-    attach_capability_coords(&mut ev, payload);
+    if let Some(p) = payload {
+        attach_capability_coords(&mut ev, p);
+    }
 
     // --- the five gaps -> unmapped (field map §5) ---------------------
     if cfg.include_gap_fields {
-        let unmapped = build_unmapped_gaps(payload, ext);
+        let unmapped = build_unmapped_gaps(ext);
         if let Value::Object(m) = &unmapped {
             if !m.is_empty() {
                 ev.insert("unmapped".into(), unmapped);
@@ -313,7 +334,7 @@ pub fn build_ai_operation(
 
 /// Gap fields with no native OCSF home yet. Emitting them under
 /// `unmapped` keeps the evidence complete and documents the gaps.
-fn build_unmapped_gaps(payload: &MessagePayload, ext: &Extensions) -> Value {
+fn build_unmapped_gaps(ext: &Extensions) -> Value {
     let mut g = Map::new();
 
     // gap 3: completion.stop_reason
@@ -361,10 +382,180 @@ fn build_unmapped_gaps(payload: &MessagePayload, ext: &Extensions) -> Value {
         g.insert("cmf.workload_identity".into(), wl);
     }
 
-    // multimodal content kinds present (lightweight provenance of shape)
-    let _ = payload;
-
     Value::Object(g)
+}
+
+// ---------------------------------------------------------------------
+// Decision overlay — the WS-A / P1 mapping. Applies the pipeline's
+// ruling (cpex-core DecisionLog, from the PR #166 audit seam) onto an
+// event built by `build_event`, replacing the passive Observed/Logged
+// defaults with what enforcement actually did.
+// ---------------------------------------------------------------------
+
+/// The stable, queryable rendering of one [`PluginAction`]. Deliberately
+/// a fixed snake_case vocabulary (not `Debug` formatting) so SIEM
+/// queries survive upstream enum renames; `error` carries its message
+/// beside the action, not inside it.
+fn action_str(a: &PluginAction) -> &'static str {
+    match a {
+        PluginAction::Allowed => "allowed",
+        PluginAction::Denied => "denied",
+        PluginAction::ModifiedPayload => "modified_payload",
+        PluginAction::ModifiedExtensions => "modified_extensions",
+        // Never rendered as an allow — the step reflects the plugin's
+        // actual decision (a suppressed Transform-phase block), per the
+        // seam's contract on `PluginAction::DenyIgnored`.
+        PluginAction::DenyIgnored => "deny_ignored",
+        // Intentional cancellation (a concurrent sibling short-circuited
+        // the phase) — distinct from `error` so it doesn't read as a crash.
+        PluginAction::Aborted => "aborted",
+        PluginAction::Error(_) => "error",
+    }
+}
+
+/// Overlay one finalized [`DecisionLog`] onto an event from
+/// [`build_event`], turning a passive observation into a decision record:
+///
+/// * **Verdict → security_control.** Deny → `action_id` 2 (Denied) /
+///   `disposition_id` 2 (Blocked), with the violation surfaced at
+///   `status_code` / `status_detail` (`status_id` 2) — so a fail-closed
+///   panic arrives as `status_code: "plugin_panic"`, distinguishable
+///   from an ordinary `plugin_error` by code. Allow after a payload or
+///   extension modification → `action_id` 4 (Modified) /
+///   `disposition_id` 1 (Allowed). Plain allow → 1 / 1. `activity_*` /
+///   `type_uid` are untouched: they describe the operation observed, the
+///   action describes what the control did about it.
+/// * **Everything else → `unmapped.cpex.*`**, inside the hashed bytes
+///   when chaining is on, so the decision facts are tamper-evident:
+///   the ordered per-plugin steps (full vocabulary incl. `deny_ignored`
+///   and `aborted`), the invocation span, entry-taint labels, content
+///   provenance (input/output hashes), and the audit-stream stamps
+///   (`epoch` / `stream_id` / `stream_seq` / `emission_seq` — the
+///   completeness and ordering claims from the seam).
+pub fn apply_decision(ev: &mut Value, payload: Option<&MessagePayload>, decisions: &DecisionLog) {
+    let Some(map) = ev.as_object_mut() else { return };
+
+    let modified = decisions.steps().iter().any(|s| {
+        matches!(
+            s.action,
+            PluginAction::ModifiedPayload | PluginAction::ModifiedExtensions
+        )
+    });
+
+    let (action_id, action, disposition_id, disposition, verdict_json) = match decisions.verdict() {
+        Some(Verdict::Deny(v)) => {
+            // The violation is the forensic core of a deny — surface it
+            // on the base-event status fields where OCSF consumers
+            // already look, not only inside the unmapped block.
+            map.insert("status_id".into(), json!(2)); // Failure
+            map.insert("status_code".into(), json!(v.code));
+            map.insert("status_detail".into(), json!(v.reason));
+            (
+                2,
+                "Denied",
+                2,
+                "Blocked",
+                json!({ "deny": { "code": v.code, "reason": v.reason } }),
+            )
+        }
+        Some(Verdict::Allow) if modified => (4, "Modified", 1, "Allowed", json!("allow")),
+        Some(Verdict::Allow) => (1, "Allowed", 1, "Allowed", json!("allow")),
+        // The seam finalizes before invoking sinks; `None` would mean a
+        // contract break upstream. Keep the Observed/Logged defaults and
+        // say so rather than claim a ruling that never happened.
+        None => (3, "Observed", 17, "Logged", json!("pending")),
+    };
+    map.insert("action_id".into(), json!(action_id));
+    map.insert("action".into(), json!(action));
+    map.insert("disposition_id".into(), json!(disposition_id));
+    map.insert("disposition".into(), json!(disposition));
+
+    // --- unmapped.cpex.* — merged into any existing gap fields --------
+    let un = map
+        .entry("unmapped")
+        .or_insert_with(|| Value::Object(Map::new()));
+    let Some(un) = un.as_object_mut() else { return };
+
+    let steps: Vec<Value> = decisions
+        .steps()
+        .iter()
+        .map(|s| {
+            let mut step = json!({
+                "plugin": s.plugin_name,
+                "phase": s.phase.to_string(),
+                "action": action_str(&s.action),
+            });
+            if let PluginAction::Error(e) = &s.action {
+                step["error"] = json!(e);
+            }
+            step
+        })
+        .collect();
+    let mut decision = json!({ "verdict": verdict_json, "steps": steps });
+    // Flagged at the top level of the block (not only discoverable by
+    // scanning the steps array) so "every suppressed deny" is a flat
+    // SIEM query — the seam's contract is that this must never read as
+    // a plain allow.
+    if decisions
+        .steps()
+        .iter()
+        .any(|s| s.action == PluginAction::DenyIgnored)
+    {
+        decision["deny_ignored"] = json!(true);
+    }
+    un.insert("cpex.decision".into(), decision);
+
+    // The invocation's node identity in the decision graph (W3C ids;
+    // child-span model — parent is the causal edge).
+    if let Some(span) = decisions.span() {
+        un.insert(
+            "cpex.span".into(),
+            json!({
+                "trace_id": span.trace_id,
+                "span_id": span.span_id,
+                "parent_span_id": span.parent_span_id,
+            }),
+        );
+    }
+
+    // Entry-side taint. The final labels already ride at
+    // `cmf.security.labels` (gap 4); the difference is what the
+    // pipeline added.
+    if !decisions.input_labels().is_empty() {
+        un.insert(
+            "cpex.taint.input_labels".into(),
+            json!(decisions.input_labels()),
+        );
+    }
+
+    // Content provenance — gated on the executor having captured an
+    // input hash (i.e. capture_content_provenance on). Digests only.
+    if let Some(input_hash) = decisions.input_hash() {
+        let output_hash = payload
+            .and_then(|p| p.audit_bytes())
+            .map(|b| cpex_core::hooks::payload::content_hash(&b));
+        un.insert(
+            "cpex.content".into(),
+            json!({ "input_hash": input_hash, "output_hash": output_hash }),
+        );
+    }
+
+    // Audit-stream identity + counters, verbatim from the seam:
+    // `stream_seq` is the completeness claim (dense within
+    // (epoch, stream_id)); `emission_seq` is ordering-only (sparse for a
+    // single-stream consumer by design). Inside the hashed bytes, so a
+    // post-hoc renumbering breaks the fingerprint chain.
+    if decisions.stream_seq().is_some() {
+        un.insert(
+            "cpex.stream".into(),
+            json!({
+                "epoch": decisions.epoch(),
+                "stream_id": decisions.stream_id(),
+                "stream_seq": decisions.stream_seq(),
+                "emission_seq": decisions.emission_seq(),
+            }),
+        );
+    }
 }
 
 // ---------------------------------------------------------------------

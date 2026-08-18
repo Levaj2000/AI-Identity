@@ -31,15 +31,31 @@ The PR's claim that "all changes are opt-in; no behavior changes without
 explicit configuration" holds for a real out-of-tree consumer, not just the
 in-tree `audit-logger`.
 
-**Not yet exercised (next step of the port):** registering as a
-decision-audit sink (`AuditHandler` / `DecisionLog`) and mapping the
-finalized decision vocabulary — `Allowed` / `ModifiedPayload` /
-`ModifiedExtensions` / `DenyIgnored` / `Aborted` / `Error`, terminal
-verdicts, `plugin_panic` coding, and the `(epoch, stream_seq, emission_seq)`
-stamps — into OCSF records (deny/modify records, action_id 2/4). That is the
-WS-A / P1 work item already tracked in `src/lib.rs`; the vocabulary review
-on the PR thread (2026-08-18) confirmed the contract carries everything the
-mapping needs.
+**Not yet exercised at the time of the first run (delivered later the same
+day — see below):** registering as a decision-audit sink (`AuditHandler` /
+`DecisionLog`) and mapping the finalized decision vocabulary — `Allowed` /
+`ModifiedPayload` / `ModifiedExtensions` / `DenyIgnored` / `Aborted` /
+`Error`, terminal verdicts, `plugin_panic` coding, and the
+`(epoch, stream_seq, emission_seq)` stamps — into OCSF records (deny/modify
+records, action_id 2/4).
+
+## Addendum (2026-08-18, later): the decision-sink port is implemented
+
+The WS-A / P1 step above landed the same day: with no `hooks:` listed the
+plugin now auto-attaches as an `AuditHandler` (mirroring the upstream
+audit-logger's registration contract) and consumes the full `DecisionLog`
+at every verdict. Verdict → `security_control` (Denied/Blocked with the
+violation surfaced at `status_code`/`status_detail` — so `plugin_panic`
+arrives distinguishable by code; Allow-after-modification → Modified;
+plain Allow → Allowed); steps, span, entry taint, content hashes and the
+stream stamps ride under `unmapped.cpex.*` **inside the hashed bytes**, so
+the decision facts are tamper-evident in the attestation chain. 11 new
+tests (32 total, all green against the same seam head `386710a`) cover the
+registration contract, every verdict mapping, the `deny_ignored` and
+`aborted` renderings, zero-step and non-CMF dispatches, and that the
+stream stamps are bound into the fingerprint. Remaining follow-up:
+`AuditHandler::on_effect` (effect-lifecycle events want a richer OCSF
+class than 6003 — e.g. Authentication for a token mint).
 
 ## Observations for upstream (the "anything that doesn't match intent" list)
 

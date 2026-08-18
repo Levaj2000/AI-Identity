@@ -37,8 +37,8 @@
 // record_integrity when chained) and the passive stream carries
 // action_id 3 (Observed) / disposition_id 17 (Logged); and the hash
 // commits to the record's chain position — predecessor binding, not a
-// back-pointer. Remaining by design: deny/modify records (action_id
-// 2/4) wait on the cpex-core decision event (WS-A / P1).
+// back-pointer. (The deny/modify records this note deferred to WS-A /
+// P1 landed 2026-08-18 — see the decision-sink revision below.)
 //
 // Revision 2026-07-31 — MERGED #1661 SHAPE. PR #1661 merged upstream
 // 2026-07-17 (`2a244bc9`), and the emitted attestation now matches it:
@@ -64,6 +64,25 @@
 // `sign::dsse_pae`. Key custody (HSM/KMS, rotation epochs, JWKS
 // publication) is deliberately out of plugin scope — it belongs to the
 // operating authority.
+//
+// Revision 2026-08-18 — DECISION-AUDIT SINK (WS-A / P1 delivered). The
+// plugin now consumes the first-class audit seam from cpex PR #166
+// (verified against feat/audit-seam @ 386710a, post-hardening): with no
+// `hooks:` listed it auto-attaches as an AuditHandler
+// (Plugin::as_audit_handler) and fires at every pipeline verdict —
+// denials included, which the post-hook path structurally never saw.
+// The DecisionLog maps as: verdict -> security_control (Deny -> action 2
+// Denied / disposition 2 Blocked, violation at status_code/status_detail
+// so `plugin_panic` survives by code; Allow-after-modification ->
+// action 4 Modified; plain Allow -> 1/1), and the ordered per-plugin
+// steps (full vocabulary incl. deny_ignored / aborted), span, entry
+// taint, content hashes and the (epoch, stream_id, stream_seq,
+// emission_seq) stamps ride under unmapped.cpex.* — inside the hashed
+// bytes, so the decision facts are tamper-evident in the attestation
+// chain. Listing hooks still runs the legacy post-hook observer (and
+// then deliberately does NOT also attach, so one invocation never emits
+// twice). Effect-lifecycle events (AuditHandler::on_effect) are the
+// next tracked step — a token mint wants a richer OCSF class than 6003.
 
 pub mod config;
 pub mod emitter;

@@ -161,7 +161,31 @@ impl OcsfAuditEmitter {
     /// the stderr/tracing emit path.
     pub fn build(&self, payload: &MessagePayload, ext: &Extensions, now_rfc3339: &str) -> Value {
         let event = ocsf::build_ai_operation(payload, ext, &self.typed, now_rfc3339);
+        self.wrap_in_chain(event)
+    }
 
+    /// Build a decision-audit event: the same OCSF shape as `build`, with
+    /// the pipeline's ruling overlaid (verdict → action/disposition/status,
+    /// per-plugin steps, span, taint, content hashes and stream stamps
+    /// under `unmapped.cpex.*`) — then chained like any other record.
+    /// `payload` is `None` for a non-CMF dispatch (delegation, identity):
+    /// the record still emits, from the extensions alone.
+    pub fn build_decision(
+        &self,
+        payload: Option<&MessagePayload>,
+        ext: &Extensions,
+        decisions: &cpex_core::decision::DecisionLog,
+        now_rfc3339: &str,
+    ) -> Value {
+        let mut event = ocsf::build_event(payload, ext, &self.typed, now_rfc3339);
+        ocsf::apply_decision(&mut event, payload, decisions);
+        self.wrap_in_chain(event)
+    }
+
+    /// Wrap `event` in the attestation chain (no-op when `chain: false`).
+    /// Decision records and post-hook observations share one chain: the
+    /// chain orders *emissions of this emitter*, whichever path built them.
+    fn wrap_in_chain(&self, event: Value) -> Value {
         if !self.typed.chain {
             return event;
         }
@@ -279,6 +303,52 @@ impl OcsfAuditEmitter {
 impl Plugin for OcsfAuditEmitter {
     fn config(&self) -> &PluginConfig {
         &self.cfg
+    }
+
+    /// Auto-attach as a decision-audit sink when run in audit-only mode
+    /// (no `hooks:` listed) — the manager then invokes the `AuditHandler`
+    /// impl below at every pipeline verdict, denials included. If the
+    /// operator listed hooks, this runs as a CMF post-hook observer
+    /// instead and does not also auto-attach, so records aren't emitted
+    /// twice for one invocation. (Same contract as the upstream
+    /// audit-logger builtin.)
+    fn as_audit_handler(
+        self: std::sync::Arc<Self>,
+    ) -> Option<std::sync::Arc<dyn cpex_core::audit::AuditHandler>> {
+        if self.cfg.hooks.is_empty() {
+            Some(self)
+        } else {
+            None
+        }
+    }
+}
+
+/// Decision-audit consumer — the first-class path off the PR #166 audit
+/// seam. Fires at the verdict of every pipeline run with the finalized
+/// [`DecisionLog`](cpex_core::decision::DecisionLog); this is what makes
+/// denials, suppressed transform-denies, panics and modifications visible
+/// to the OCSF stream (a post-hook observer only ever saw allowed
+/// traffic). Awaited on the request path by contract — `handle` stays
+/// serialize-and-emit cheap.
+#[async_trait]
+impl cpex_core::audit::AuditHandler for OcsfAuditEmitter {
+    async fn handle(
+        &self,
+        payload: &dyn cpex_core::hooks::payload::PluginPayload,
+        ext: &Extensions,
+        decisions: &cpex_core::decision::DecisionLog,
+    ) {
+        // Downcast to the CMF payload when this dispatch carried one; a
+        // non-CMF dispatch (delegation, identity) records without the
+        // message-derived fields.
+        let msg = payload.as_any().downcast_ref::<MessagePayload>();
+        let now = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+        let event = self.build_decision(msg, ext, decisions, &now);
+        self.emit(&event);
+    }
+
+    fn name(&self) -> &str {
+        &self.cfg.name
     }
 }
 
@@ -619,9 +689,326 @@ mod tests {
     async fn handler_is_observation_only() {
         let e = OcsfAuditEmitter::new(cfg(json!({}))).unwrap();
         let mut ctx = PluginContext::default();
-        let r = e.handle(&tool_payload(), &subject_ext(), &mut ctx).await;
+        let r = HookHandler::<CmfHook>::handle(&e, &tool_payload(), &subject_ext(), &mut ctx).await;
         assert!(r.continue_processing);
         assert!(r.violation.is_none());
+    }
+
+    // --- decision-audit sink (PR #166 seam; WS-A / P1) -------------------
+
+    use cpex_core::decision::{DecisionLog, PluginAction, Span, Verdict};
+    use cpex_core::error::PluginViolation;
+
+    /// Sink-mode config: no `hooks:` — the factory registers no post-hook
+    /// handlers and the plugin auto-attaches as a decision-audit sink.
+    fn sink_cfg(extra: serde_json::Value) -> PluginConfig {
+        PluginConfig {
+            hooks: vec![],
+            ..cfg(extra)
+        }
+    }
+
+    fn finalized(steps: Vec<(&str, PluginMode, PluginAction)>, verdict: Verdict) -> DecisionLog {
+        let mut log = DecisionLog::new();
+        for (name, mode, action) in steps {
+            log.record(name, mode, action);
+        }
+        log.finalize(verdict);
+        log
+    }
+
+    /// Registration contract: audit-only mode (no hooks) attaches as a
+    /// sink; a hook-listed observer does NOT also attach, so one
+    /// invocation never emits twice.
+    #[test]
+    fn audit_handler_attaches_only_in_sink_mode() {
+        use cpex_core::plugin::Plugin;
+        let sink = Arc::new(OcsfAuditEmitter::new(sink_cfg(json!({}))).unwrap());
+        assert!(sink.as_audit_handler().is_some(), "no hooks -> sink");
+
+        let observer = Arc::new(OcsfAuditEmitter::new(cfg(json!({}))).unwrap());
+        assert!(
+            observer.as_audit_handler().is_none(),
+            "hooks listed -> post-hook observer only, no double emission"
+        );
+    }
+
+    #[test]
+    fn allow_verdict_maps_to_allowed() {
+        let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
+        let log = finalized(
+            vec![("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed)],
+            Verdict::Allow,
+        );
+        let ev = e.build_decision(
+            Some(&tool_payload()),
+            &subject_ext(),
+            &log,
+            "2026-08-18T12:00:00.000Z",
+        );
+
+        assert_eq!(ev["action_id"], 1);
+        assert_eq!(ev["action"], "Allowed");
+        assert_eq!(ev["disposition_id"], 1);
+        assert_eq!(ev["disposition"], "Allowed");
+        // The operation classification is untouched by the ruling.
+        assert_eq!(ev["class_uid"], 6003);
+        assert_eq!(ev["activity_name"], "Invoke Tool");
+        let steps = ev["unmapped"]["cpex.decision"]["steps"].as_array().unwrap();
+        assert_eq!(steps.len(), 1);
+        assert_eq!(steps[0]["plugin"], "cedar-pdp");
+        assert_eq!(steps[0]["phase"], "sequential");
+        assert_eq!(steps[0]["action"], "allowed");
+        assert_eq!(ev["unmapped"]["cpex.decision"]["verdict"], "allow");
+    }
+
+    /// The record a post-hook observer could never produce: a denial —
+    /// including the fail-closed panic contract from the hardening round
+    /// (`eda9821`): the violation code (`plugin_panic`) must survive to
+    /// `status_code`, distinguishable from an ordinary `plugin_error`.
+    #[test]
+    fn deny_verdict_maps_to_denied_with_violation_status() {
+        let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
+        let mut violation = PluginViolation::new(
+            "plugin_panic",
+            "Plugin 'minter' failed: task panicked: simulated",
+        );
+        violation.plugin_name = Some("minter".into());
+        let log = finalized(
+            vec![(
+                "minter",
+                PluginMode::Sequential,
+                PluginAction::Error("task panicked: simulated".into()),
+            )],
+            Verdict::Deny(violation),
+        );
+        let ev = e.build_decision(
+            Some(&tool_payload()),
+            &subject_ext(),
+            &log,
+            "2026-08-18T12:00:00.000Z",
+        );
+
+        assert_eq!(ev["action_id"], 2);
+        assert_eq!(ev["action"], "Denied");
+        assert_eq!(ev["disposition_id"], 2);
+        assert_eq!(ev["disposition"], "Blocked");
+        assert_eq!(ev["status_id"], 2);
+        assert_eq!(ev["status_code"], "plugin_panic");
+        assert!(ev["status_detail"]
+            .as_str()
+            .unwrap()
+            .contains("task panicked"));
+        let d = &ev["unmapped"]["cpex.decision"];
+        assert_eq!(d["verdict"]["deny"]["code"], "plugin_panic");
+        assert_eq!(d["steps"][0]["action"], "error");
+        assert!(d["steps"][0]["error"]
+            .as_str()
+            .unwrap()
+            .contains("panicked"));
+    }
+
+    #[test]
+    fn modified_allow_maps_to_modified() {
+        let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
+        let log = finalized(
+            vec![
+                (
+                    "pii-scrubber",
+                    PluginMode::Transform,
+                    PluginAction::ModifiedPayload,
+                ),
+                ("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed),
+            ],
+            Verdict::Allow,
+        );
+        let ev = e.build_decision(
+            Some(&tool_payload()),
+            &subject_ext(),
+            &log,
+            "2026-08-18T12:00:00.000Z",
+        );
+
+        assert_eq!(ev["action_id"], 4);
+        assert_eq!(ev["action"], "Modified");
+        // The request still proceeded.
+        assert_eq!(ev["disposition_id"], 1);
+        assert_eq!(
+            ev["unmapped"]["cpex.decision"]["steps"][0]["action"],
+            "modified_payload"
+        );
+    }
+
+    /// Seam contract on `PluginAction::DenyIgnored`: a suppressed
+    /// Transform-phase block must never read as a plain allow. The event
+    /// stays Allowed (enforcement DID allow it) but the step carries the
+    /// plugin's actual decision and the block is flagged flat for SIEM
+    /// queries.
+    #[test]
+    fn deny_ignored_never_reads_as_plain_allow() {
+        let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
+        let log = finalized(
+            vec![(
+                "strict-transform",
+                PluginMode::Transform,
+                PluginAction::DenyIgnored,
+            )],
+            Verdict::Allow,
+        );
+        let ev = e.build_decision(
+            Some(&tool_payload()),
+            &subject_ext(),
+            &log,
+            "2026-08-18T12:00:00.000Z",
+        );
+
+        assert_eq!(ev["action_id"], 1, "enforcement outcome was allow");
+        let d = &ev["unmapped"]["cpex.decision"];
+        assert_eq!(d["steps"][0]["action"], "deny_ignored");
+        assert_eq!(d["deny_ignored"], true, "flat flag for SIEM queries");
+    }
+
+    /// `Aborted` (a concurrent sibling short-circuited the phase) is an
+    /// intentional cancellation — it must not render as an error.
+    #[test]
+    fn aborted_step_is_not_an_error() {
+        let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
+        let log = finalized(
+            vec![
+                ("scanner-b", PluginMode::Concurrent, PluginAction::Aborted),
+                ("scanner-a", PluginMode::Concurrent, PluginAction::Denied),
+            ],
+            Verdict::Deny(PluginViolation::new("policy_deny", "blocked")),
+        );
+        let ev = e.build_decision(
+            Some(&tool_payload()),
+            &subject_ext(),
+            &log,
+            "2026-08-18T12:00:00.000Z",
+        );
+
+        let steps = ev["unmapped"]["cpex.decision"]["steps"].as_array().unwrap();
+        assert_eq!(steps[0]["action"], "aborted");
+        assert!(steps[0].get("error").is_none());
+        assert_eq!(steps[1]["action"], "denied");
+    }
+
+    /// Zero-plugin invocations emit one allow record on the seam (dense
+    /// stream); our sink renders it with an empty steps array, not a gap.
+    #[test]
+    fn zero_step_invocation_emits_allow_record() {
+        let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
+        let log = finalized(vec![], Verdict::Allow);
+        let ev = e.build_decision(
+            Some(&tool_payload()),
+            &subject_ext(),
+            &log,
+            "2026-08-18T12:00:00.000Z",
+        );
+
+        assert_eq!(ev["action_id"], 1);
+        assert_eq!(
+            ev["unmapped"]["cpex.decision"]["steps"],
+            json!([]),
+            "explicit empty steps, not absence"
+        );
+    }
+
+    /// Audit sinks fire for every hook family; a non-CMF dispatch carries
+    /// no MessagePayload and must still produce a record.
+    #[test]
+    fn non_cmf_dispatch_still_emits() {
+        let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
+        let log = finalized(
+            vec![("cedar-pdp", PluginMode::Sequential, PluginAction::Denied)],
+            Verdict::Deny(PluginViolation::new("missing_permission", "no")),
+        );
+        let ev = e.build_decision(None, &subject_ext(), &log, "2026-08-18T12:00:00.000Z");
+
+        assert_eq!(ev["class_uid"], 6003);
+        assert_eq!(ev["activity_id"], 0, "no payload -> honest Unknown");
+        assert_eq!(ev["action_id"], 2);
+        assert_eq!(ev["status_code"], "missing_permission");
+        assert!(ev.get("tool").is_none(), "no payload -> no tool coords");
+        // Extension-derived context still populates.
+        assert_eq!(ev["actor"]["user"]["uid"], "alice@corp.com");
+    }
+
+    /// Span, entry taint, content provenance and the stream stamps land
+    /// under unmapped.cpex.* — the seam's counters verbatim.
+    #[test]
+    fn provenance_and_stream_stamps_land_in_unmapped() {
+        let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
+        let mut log = finalized(
+            vec![("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed)],
+            Verdict::Allow,
+        );
+        log.set_span(Span::for_request(Some("trace-1"), Some("parent-1")));
+        log.set_input_labels(vec!["PII".into()]);
+        log.set_input_hash(Some("in-hash".into()));
+        log.set_stream(1_755_000_000_000_000_000, "decision".into(), 7, 42);
+
+        let payload = tool_payload();
+        let ev = e.build_decision(Some(&payload), &subject_ext(), &log, "2026-08-18T12:00:00.000Z");
+
+        let un = &ev["unmapped"];
+        assert_eq!(un["cpex.span"]["trace_id"], "trace-1");
+        assert_eq!(un["cpex.span"]["parent_span_id"], "parent-1");
+        assert_eq!(un["cpex.taint.input_labels"], json!(["PII"]));
+        assert_eq!(un["cpex.content"]["input_hash"], "in-hash");
+        // Output hash present iff the payload yields audit bytes; either
+        // way the key exists so the claim is explicit.
+        assert!(un["cpex.content"]
+            .as_object()
+            .unwrap()
+            .contains_key("output_hash"));
+        assert_eq!(un["cpex.stream"]["epoch"], 1_755_000_000_000_000_000u64);
+        assert_eq!(un["cpex.stream"]["stream_id"], "decision");
+        assert_eq!(un["cpex.stream"]["stream_seq"], 7);
+        assert_eq!(un["cpex.stream"]["emission_seq"], 42);
+    }
+
+    /// The decision facts sit INSIDE the hashed bytes: two otherwise
+    /// identical genesis records with different stream stamps must
+    /// fingerprint differently — renumbering the stream post-hoc breaks
+    /// the chain.
+    #[test]
+    fn decision_facts_are_bound_into_the_fingerprint() {
+        let build = |stream_seq: u64| {
+            let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": true }))).unwrap();
+            let mut log = finalized(
+                vec![("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed)],
+                Verdict::Allow,
+            );
+            log.set_stream(1, "decision".into(), stream_seq, stream_seq);
+            e.build_decision(
+                Some(&tool_payload()),
+                &subject_ext(),
+                &log,
+                "2026-08-18T12:00:00.000Z",
+            )
+        };
+        let a = build(7);
+        let b = build(8);
+        assert_ne!(
+            a["attestation_list"][0]["fingerprint"]["value"],
+            b["attestation_list"][0]["fingerprint"]["value"]
+        );
+    }
+
+    /// End-to-end through the trait object, as the executor calls it: the
+    /// dyn payload downcasts to CMF and the handler completes.
+    #[tokio::test]
+    async fn audit_handler_handles_dyn_payload() {
+        use cpex_core::audit::AuditHandler;
+        let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
+        let payload = tool_payload();
+        let log = finalized(
+            vec![("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed)],
+            Verdict::Allow,
+        );
+        AuditHandler::handle(&e, &payload, &subject_ext(), &log).await;
+        assert_eq!(AuditHandler::name(&e), "ocsf-audit");
     }
 
     // --- gap-branch coverage --------------------------------------------
