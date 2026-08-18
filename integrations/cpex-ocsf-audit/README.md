@@ -31,6 +31,30 @@ open OCSF/WS4 gaps self-documenting in the wire output.
 
 ## Wiring (APL)
 
+**Audit-only sink mode (recommended on cpex with the audit seam, PR #166):** omit
+`hooks:` entirely. The plugin then auto-attaches as a **decision-audit sink**
+(`Plugin::as_audit_handler`) and fires at every pipeline verdict — **denials
+included** — with the executor's `DecisionLog`: verdict → `action_id`/`disposition`
+(Denied/Blocked with the violation at `status_code`/`status_detail`, Modified,
+Allowed), and the ordered per-plugin steps (incl. `deny_ignored` / `aborted`),
+span, entry taint, content hashes and the `(epoch, stream_id, stream_seq,
+emission_seq)` stream stamps under `unmapped.cpex.*`, inside the hashed bytes.
+
+```yaml
+plugins:
+  - name: ocsf-audit
+    kind: audit/ocsf
+    # no `hooks:` -> decision-audit sink mode (sees denials)
+    config:
+      destination: stderr
+      chain: true
+```
+
+**Post-hook observer mode (legacy; pre-seam cpex):** list the CMF POST hooks to
+observe. This path sees allowed traffic only — it structurally cannot record a
+denial — and a hook-listed instance deliberately does **not** also attach as a
+sink, so one invocation never emits twice.
+
 ```yaml
 routes:
   - tool: get_compensation
