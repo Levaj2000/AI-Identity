@@ -1,0 +1,48 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits"
+  ],
+  "timezone": "America/Denver",
+  "schedule": ["before 7am on monday"],
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "labels": ["dependencies"],
+  "configMigration": true,
+  "osvVulnerabilityAlerts": true,
+  "pip-compile": {
+    "fileMatch": ["(^|/)requirements\\.lock$"]
+  },
+  "packageRules": [
+    {
+      "description": "Keep every workflow action SHA-pinned; Renovate updates the digest and the version comment together",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true,
+      "groupName": "github actions"
+    },
+    {
+      "description": "Weekly batch: Python non-major (api/gateway/mandate locks regenerate via the uv pip compile header)",
+      "matchManagers": ["pip_requirements", "pip-compile", "pep621"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "python non-major"
+    },
+    {
+      "description": "Weekly batch: dashboard + landing-page non-major",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm non-major"
+    },
+    {
+      "description": "Weekly batch: cpex-ocsf-audit crates non-major",
+      "matchManagers": ["cargo"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "rust non-major"
+    },
+    {
+      "description": "Majors always ride solo so each gets its own review",
+      "matchUpdateTypes": ["major"],
+      "groupName": null
+    }
+  ]
+}
