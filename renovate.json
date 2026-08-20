@@ -12,7 +12,9 @@
   "configMigration": true,
   "osvVulnerabilityAlerts": true,
   "pip-compile": {
-    "fileMatch": ["(^|/)requirements\\.lock$"]
+    "managerFilePatterns": [
+      "/(^|/)requirements\\.lock$/"
+    ]
   },
   "packageRules": [
     {
