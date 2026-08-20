@@ -153,7 +153,7 @@
 | Product Hunt copy | Apr 6 | DRAFTED |
 | Welcome email series | Apr 6 | DRAFTED |
 | Blog refresh: "Why AI Agents Need Identity" | Apr 12 | TODO |
-| EU AI Act compliance guide | Apr 19 | DRAFTED — `marketing/blog/eu-ai-act-deployer-evidence/` (blog + LinkedIn companion, 2026-08) |
+| EU AI Act compliance guide | Apr 19 | DRAFTED — `marketing/blog/eu-ai-act-deployer-evidence/` (blog + LinkedIn companion, 2026-08) + PDF lead magnet `marketing/lead-magnets/eu-ai-act-deployer-checklist/` (2026-08) |
 | Demo video (60-90 sec) | Apr 26 | TODO |
 | PH launch page finalized | Apr 26 | TODO |
 | Launch announcement email | May 3 | TODO |
