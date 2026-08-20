@@ -17,6 +17,9 @@ on:
         options: [calendar, pipeline, stale-decisions, all]
         default: all
 
+permissions:
+  contents: read
+
 jobs:
   calendar:
     # Daily run + on-demand. Pipeline-only schedule skips this job.
@@ -26,8 +29,8 @@ jobs:
         && (github.event.inputs.task == 'calendar' || github.event.inputs.task == 'all')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
       - name: Sync calendar
@@ -51,8 +54,8 @@ jobs:
     # Do NOT upload it as an Actions artifact either — artifacts on a public
     # repo are downloadable by anyone.
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
       - name: Export pipeline snapshot
@@ -73,8 +76,8 @@ jobs:
         && (github.event.inputs.task == 'stale-decisions' || github.event.inputs.task == 'all')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.11'
       - name: Sweep stale decisions
