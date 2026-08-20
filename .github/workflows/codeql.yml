@@ -1,0 +1,57 @@
+# CodeQL semantic code scanning — Python (api/gateway/mandate/common/agent/
+# cli/sdk), JavaScript/TypeScript (dashboard/landing-page/sdk), and the
+# workflow files themselves (the `actions` language catches untrusted-input
+# and injection patterns in CI config). Rust (integrations/cpex-ocsf-audit)
+# is deliberately not enrolled: CodeQL's Rust support is still maturing, and
+# the crate has its own test gate — revisit when Rust analysis goes GA.
+#
+# Findings land in the repo Security tab (free for public repos). Advanced
+# setup (this file) rather than default setup so the config is versioned,
+# SHA-pinned, and Renovate-managed like every other workflow here.
+
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '25 9 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # upload findings to code scanning
+      packages: read # CodeQL query packs
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: python
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+          - language: actions
+            build-mode: none
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@faaa5d804fc648d0fdb28822a8e36cf7d0a6132c # v4.37.7
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@faaa5d804fc648d0fdb28822a8e36cf7d0a6132c # v4.37.7
+        with:
+          category: "/language:${{ matrix.language }}"

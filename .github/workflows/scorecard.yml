@@ -1,0 +1,52 @@
+# OpenSSF Scorecard — supply-chain hygiene posture for a public repo:
+# branch protection, pinned dependencies, token permissions, dangerous
+# workflow patterns, and friends. publish_results: true feeds the public
+# score at https://scorecard.dev/viewer/?uri=github.com/Levaj2000/AI-Identity
+# (and enables the README badge). Findings also land in the Security tab
+# via SARIF upload. Same evidence posture we sell: verifiable, not asserted.
+
+name: OpenSSF Scorecard
+
+on:
+  branch_protection_rule:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '19 8 * * 2'
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write # upload SARIF to code scanning
+      id-token: write # publish_results signed attestation
+      actions: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload results artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: scorecard-sarif
+          path: results.sarif
+          retention-days: 5
+
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@faaa5d804fc648d0fdb28822a8e36cf7d0a6132c # v4.37.7
+        with:
+          sarif_file: results.sarif
