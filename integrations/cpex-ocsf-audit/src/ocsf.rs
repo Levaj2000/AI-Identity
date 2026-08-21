@@ -382,6 +382,21 @@ fn build_unmapped_gaps(ext: &Extensions) -> Value {
         g.insert("cmf.workload_identity".into(), wl);
     }
 
+    // gap 6: per-request id — the mandate draw-receipt join key. A signed
+    // draw receipt (common/biscuit/receipts.py) names the request's
+    // correlation id; carrying RequestExtension.request_id here lets a
+    // receipt-in-hand reconcile against the OCSF stream the same way it
+    // reconciles against the gateway's chained rows. Deliberately NOT
+    // metadata.correlation_uid: review C1 reserved that for the
+    // conversation-stable key (per-request ids correlate nothing across
+    // events). The token's revocation_id needs no event field — the
+    // receipt itself names it, and correlation joins the two.
+    if let Some(req) = ext.request.as_ref() {
+        if let Some(rid) = &req.request_id {
+            g.insert("cmf.request.request_id".into(), json!(rid));
+        }
+    }
+
     Value::Object(g)
 }
 
@@ -433,7 +448,9 @@ fn action_str(a: &PluginAction) -> &'static str {
 ///   (`epoch` / `stream_id` / `stream_seq` / `emission_seq` — the
 ///   completeness and ordering claims from the seam).
 pub fn apply_decision(ev: &mut Value, payload: Option<&MessagePayload>, decisions: &DecisionLog) {
-    let Some(map) = ev.as_object_mut() else { return };
+    let Some(map) = ev.as_object_mut() else {
+        return;
+    };
 
     let modified = decisions.steps().iter().any(|s| {
         matches!(
