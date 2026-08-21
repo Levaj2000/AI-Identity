@@ -9,7 +9,7 @@ setup(
     install_requires=[
         "sqlalchemy>=2.0",
         "pydantic>=2.0",
-        "pydantic-settings>=2.0",
+        "pydantic-settings>=2.14.2",
         "python-dotenv>=1.0",
         "cryptography>=44.0",
     ],

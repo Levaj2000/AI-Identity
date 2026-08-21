@@ -9,7 +9,7 @@ gunicorn==23.0.0
 uvloop==0.22.1
 orjson==3.11.7
 pydantic==2.12.5
-pydantic-settings==2.13.1
+pydantic-settings==2.14.2
 python-dotenv==1.2.2
 
 # MongoDB async driver (Atlas)
