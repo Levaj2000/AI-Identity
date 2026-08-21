@@ -5,7 +5,7 @@
 # --python-platform because Renovate's pip-compile parser rejects that flag.
 # To upgrade: update version here, test, commit.
 fastapi==0.135.1
-python-multipart==0.0.20
+python-multipart==0.0.31
 uvicorn[standard]==0.42.0
 gunicorn==23.0.0
 uvloop==0.22.1
