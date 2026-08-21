@@ -36,6 +36,6 @@ gcloud-aio-storage==9.3.0
 Pillow==11.1.0
 
 # Dev / testing
-pytest==9.0.2
+pytest==9.0.3
 httpx==0.28.1
 testcontainers[postgres]==4.7.2
