@@ -33,7 +33,7 @@ python-magic==0.4.27
 clamd==1.0.2
 aiofiles==23.2.1
 gcloud-aio-storage==9.3.0
-Pillow==11.1.0
+Pillow==12.3.0
 
 # Dev / testing
 pytest==9.0.2
