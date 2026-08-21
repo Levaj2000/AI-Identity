@@ -17,6 +17,13 @@
 //                             concurrent branch cancelled (`aborted`).
 //                             Terminal verdict Allow — the record a
 //                             post-hook observer could never produce.
+//   5. Mandate draw         — the request presents a delegated mandate;
+//                             the event carries the request id at
+//                             unmapped."cmf.request.request_id", the same
+//                             correlation id a signed draw receipt names
+//                             (common/biscuit/receipts.py) — so a
+//                             receipt-in-hand reconciles against the OCSF
+//                             stream, not only the gateway's chained rows.
 //
 //   cargo run --example decision_sink_demo
 //
@@ -32,7 +39,10 @@ use cpex_plugin_ocsf_audit::OcsfAuditEmitter;
 use cpex_core::cmf::{ContentPart, Message, MessagePayload, Role, ToolCall};
 use cpex_core::decision::{DecisionLog, PluginAction, Span, Verdict};
 use cpex_core::error::PluginViolation;
-use cpex_core::extensions::{Extensions, SecurityExtension, SubjectExtension};
+use cpex_core::extensions::{
+    DelegationExtension, DelegationHop, Extensions, RequestExtension, SecurityExtension,
+    SubjectExtension,
+};
 use cpex_core::plugin::{OnError, PluginConfig, PluginMode};
 
 /// Sink-mode emitter: `hooks` is EMPTY, which is what makes the factory
@@ -87,6 +97,40 @@ fn tool_request() -> (MessagePayload, Extensions) {
     (payload, ext)
 }
 
+/// Case 5's request: the same tool call, but presented under a delegated
+/// mandate — alice delegated `read_compensation` to agent-7, and the
+/// enforcement request carries the correlation id a signed draw receipt
+/// will name. (`revocation_id` needs no event field: the receipt names
+/// which token copy acted; the correlation id joins receipt to record.)
+fn mandate_request() -> (MessagePayload, Extensions) {
+    let (payload, base) = tool_request();
+    let delegation = DelegationExtension {
+        delegated: true,
+        depth: 1,
+        origin_subject_id: Some("alice@corp.com".into()),
+        actor_subject_id: Some("agent-7".into()),
+        chain: vec![DelegationHop {
+            subject_id: "agent-7".into(),
+            audience: Some("hr-mcp".into()),
+            scopes_granted: vec!["read_compensation".into()],
+            ttl_seconds: Some(300),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let request = RequestExtension {
+        request_id: Some("corr-7f3e2a91".into()),
+        environment: Some("production".into()),
+        ..Default::default()
+    };
+    let ext = Extensions {
+        delegation: Some(Arc::new(delegation)),
+        request: Some(Arc::new(request)),
+        ..base
+    };
+    (payload, ext)
+}
+
 /// Build a finalized DecisionLog the way the executor would: ordered
 /// per-plugin steps, a terminal verdict, the invocation span, and the
 /// seam's completeness/ordering stamps.
@@ -105,7 +149,12 @@ fn finalized(
         span_id: format!("00f067aa0ba9{:04}", emission_seq),
         parent_span_id: Some("00f067aa0ba90200".into()),
     });
-    log.set_stream(1_755_648_000_000_000_000, "gw-1/boot-7".into(), stream_seq, emission_seq);
+    log.set_stream(
+        1_755_648_000_000_000_000,
+        "gw-1/boot-7".into(),
+        stream_seq,
+        emission_seq,
+    );
     log.finalize(verdict);
     log
 }
@@ -129,7 +178,11 @@ fn main() {
     let modified = finalized(
         vec![
             ("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed),
-            ("pii-redactor", PluginMode::Transform, PluginAction::ModifiedPayload),
+            (
+                "pii-redactor",
+                PluginMode::Transform,
+                PluginAction::ModifiedPayload,
+            ),
         ],
         Verdict::Allow,
         42,
@@ -158,25 +211,86 @@ fn main() {
     let suppressed = finalized(
         vec![
             ("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed),
-            ("injection-guard", PluginMode::Transform, PluginAction::DenyIgnored),
-            ("secondary-scan", PluginMode::Transform, PluginAction::Aborted),
+            (
+                "injection-guard",
+                PluginMode::Transform,
+                PluginAction::DenyIgnored,
+            ),
+            (
+                "secondary-scan",
+                PluginMode::Transform,
+                PluginAction::Aborted,
+            ),
         ],
         Verdict::Allow,
         44,
         44,
     );
 
+    // 5. Mandate draw: allowed under delegated authority, with the
+    //    draw-receipt join key on the record.
+    let mandate_draw = finalized(
+        vec![
+            (
+                "mandate-check",
+                PluginMode::Sequential,
+                PluginAction::Allowed,
+            ),
+            ("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed),
+        ],
+        Verdict::Allow,
+        45,
+        45,
+    );
+    let (m_payload, m_ext) = mandate_request();
+
     let cases = [
-        ("1 — Allow (clean)", &allow, "2026-08-21T03:20:00.000Z"),
-        ("2 — Allow after modification", &modified, "2026-08-21T03:20:01.000Z"),
-        ("3 — Deny (policy violation)", &denied, "2026-08-21T03:20:02.000Z"),
-        ("4 — Suppressed deny + aborted branch", &suppressed, "2026-08-21T03:20:03.000Z"),
+        (
+            "1 — Allow (clean)",
+            &allow,
+            &payload,
+            &ext,
+            "2026-08-21T03:20:00.000Z",
+        ),
+        (
+            "2 — Allow after modification",
+            &modified,
+            &payload,
+            &ext,
+            "2026-08-21T03:20:01.000Z",
+        ),
+        (
+            "3 — Deny (policy violation)",
+            &denied,
+            &payload,
+            &ext,
+            "2026-08-21T03:20:02.000Z",
+        ),
+        (
+            "4 — Suppressed deny + aborted branch",
+            &suppressed,
+            &payload,
+            &ext,
+            "2026-08-21T03:20:03.000Z",
+        ),
+        (
+            "5 — Mandate draw (receipt join key)",
+            &mandate_draw,
+            &m_payload,
+            &m_ext,
+            "2026-08-21T03:20:04.000Z",
+        ),
     ];
 
-    for (title, log, ts) in cases {
-        let ev = e.build_decision(Some(&payload), &ext, log, ts);
+    for (title, log, pl, xt, ts) in cases {
+        let ev = e.build_decision(Some(pl), xt, log, ts);
         println!("// ===== Decision {title} =====");
         println!("{}", serde_json::to_string_pretty(&ev).unwrap());
         println!();
     }
+
+    // The receipt-side of the join, for the reader: a draw receipt signed
+    // by the Biscuit root key carries the SAME correlation id —
+    // receipt.correlation_id == unmapped."cmf.request.request_id" above.
+    println!("// join: receipt.correlation_id == corr-7f3e2a91 == event 5 unmapped.\"cmf.request.request_id\"");
 }

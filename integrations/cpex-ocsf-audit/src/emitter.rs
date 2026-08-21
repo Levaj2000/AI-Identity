@@ -139,7 +139,10 @@ impl OcsfAuditEmitter {
                 };
                 Box::new(
                     DsseSigner::from_pem(&pem, typed.signing_key_id.clone()).map_err(|e| {
-                        config_err(format!("plugin '{}' (cpex-plugin-ocsf-audit): {e}", cfg.name))
+                        config_err(format!(
+                            "plugin '{}' (cpex-plugin-ocsf-audit): {e}",
+                            cfg.name
+                        ))
                     })?,
                 )
             }
@@ -415,6 +418,47 @@ mod tests {
             security: Some(Arc::new(sec)),
             ..Default::default()
         }
+    }
+
+    /// Gap 6: RequestExtension.request_id — the mandate draw-receipt
+    /// join key — rides `unmapped."cmf.request.request_id"` on every
+    /// event (dispatch and decision alike), and stays absent when the
+    /// request extension is missing. Deliberately not
+    /// metadata.correlation_uid (review C1: that slot is the
+    /// conversation-stable key).
+    #[test]
+    fn request_id_rides_unmapped_as_receipt_join_key() {
+        use cpex_core::extensions::RequestExtension;
+        let e = OcsfAuditEmitter::new(cfg(json!({ "chain": false }))).unwrap();
+
+        let mut ext = subject_ext();
+        ext.request = Some(Arc::new(RequestExtension {
+            request_id: Some("corr-7f3e2a91".into()),
+            ..Default::default()
+        }));
+
+        // Dispatch event carries the join key…
+        let ev = e.build(&tool_payload(), &ext, "2026-08-21T05:00:00.000Z");
+        assert_eq!(ev["unmapped"]["cmf.request.request_id"], "corr-7f3e2a91");
+        // …and never in the conversation-correlation slot.
+        assert_ne!(ev["metadata"]["correlation_uid"], "corr-7f3e2a91");
+
+        // Decision events built from the same extensions carry it too.
+        use cpex_core::decision::{PluginAction, Verdict};
+        let mut log = cpex_core::decision::DecisionLog::new();
+        log.record("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed);
+        log.finalize(Verdict::Allow);
+        let dev = e.build_decision(
+            Some(&tool_payload()),
+            &ext,
+            &log,
+            "2026-08-21T05:00:01.000Z",
+        );
+        assert_eq!(dev["unmapped"]["cmf.request.request_id"], "corr-7f3e2a91");
+
+        // Absent request extension -> absent key (no empty scaffolding).
+        let bare = e.build(&tool_payload(), &subject_ext(), "2026-08-21T05:00:02.000Z");
+        assert!(bare["unmapped"].get("cmf.request.request_id").is_none());
     }
 
     #[test]
@@ -949,7 +993,12 @@ mod tests {
         log.set_stream(1_755_000_000_000_000_000, "decision".into(), 7, 42);
 
         let payload = tool_payload();
-        let ev = e.build_decision(Some(&payload), &subject_ext(), &log, "2026-08-18T12:00:00.000Z");
+        let ev = e.build_decision(
+            Some(&payload),
+            &subject_ext(),
+            &log,
+            "2026-08-18T12:00:00.000Z",
+        );
 
         let un = &ev["unmapped"];
         assert_eq!(un["cpex.span"]["trace_id"], "trace-1");
