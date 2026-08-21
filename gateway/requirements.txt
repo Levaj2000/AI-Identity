@@ -26,4 +26,4 @@ prometheus-client==0.25.0
 redis==5.2.1
 
 # Dev / testing
-pytest==9.0.2
+pytest==9.0.3
