@@ -16,7 +16,7 @@ pydantic==2.12.5
 pydantic-settings==2.13.1
 python-dotenv==1.2.2
 
-cryptography==46.0.5
+cryptography==50.0.0
 rfc8785==0.1.4
 # Biscuit presentation-credential verify path (common/biscuit/) — pre-1.0,
 # pinned hard; check wheel availability before bumping (see mandate note).
