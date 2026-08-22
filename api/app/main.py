@@ -562,6 +562,8 @@ from api.app.routers.compliance_exports_cron import (  # noqa: E402
     router as compliance_exports_cron_router,
 )
 from api.app.routers.credentials import router as credentials_router  # noqa: E402
+from api.app.routers.edge_ingest import ingest_router as edge_ingest_router  # noqa: E402
+from api.app.routers.edge_ingest import router as edges_router  # noqa: E402
 from api.app.routers.email_cron import router as email_cron_router  # noqa: E402
 from api.app.routers.forensic_keys import router as forensic_keys_router  # noqa: E402
 from api.app.routers.keys import router as keys_router  # noqa: E402
@@ -614,6 +616,8 @@ app.include_router(shadow_router)
 app.include_router(support_tickets_router)
 app.include_router(ticket_templates_router)
 app.include_router(verify_router)
+app.include_router(edges_router)
+app.include_router(edge_ingest_router)
 
 # ── Routes ───────────────────────────────────────────────────────────────
 
