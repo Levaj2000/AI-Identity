@@ -20,6 +20,8 @@ from common.models.compliance import (
 )
 from common.models.compliance_export import ComplianceExport
 from common.models.dismissed_shadow import DismissedShadowAgent
+from common.models.edge_deployment import EdgeDeployment, EdgeStatus
+from common.models.edge_event import EdgeAuditEvent, EdgeEventStatus
 from common.models.org_membership import OrgMembership, OrgRole
 from common.models.organization import Organization
 from common.models.policy import Policy
@@ -79,6 +81,10 @@ __all__ = [
     "ApprovalStatus",
     "BlockedAgent",
     "DismissedShadowAgent",
+    "EdgeDeployment",
+    "EdgeStatus",
+    "EdgeAuditEvent",
+    "EdgeEventStatus",
     "SupportTicket",
     "TicketComment",
     "TicketPriority",
