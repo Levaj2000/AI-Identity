@@ -3,7 +3,19 @@
 Real OCSF events produced by the mapping in [`src/ocsf.rs`](src/ocsf.rs) from the two
 demo turns in [`examples/emit_sample.rs`](examples/emit_sample.rs). Regenerated 2026-07-31
 for the **merged #1661 shape** (PR merged upstream 2026-07-17, `2a244bc9`) — the
-attestation carrier changed, so the hashes changed with it. Notes on fidelity:
+attestation carrier changed, so the hashes changed with it.
+
+**Regenerated again 2026-08-24** against cpex `feat/audit-seam` @ `5a253d4`
+(rustc 1.96.0; 33 tests green, zero source changes — the additive guarantee
+holds on this head too). The event **bodies were unchanged**, but the five
+derived values (both `fingerprint.value`s, both `signature_b64`s, and record
+2's `prev_event.fingerprint.value`) had gone stale relative to the current
+covered-bytes computation — recomputing with `sign::signing_input` over the
+committed bodies did not reproduce the committed fingerprints. Since AID-EMIT-1
+§12 names this file as a conformance vector, staleness here would fail any
+conforming verifier; the whole output block is replaced verbatim from
+`cargo run --example emit_sample`, whose `// verify` lines re-derive and check
+everything offline. Notes on fidelity:
 
 - **Host class is API Activity (6003)** with its real activity enum: a tool call without
   `readOnlyHint` is the honest `activity_id: 99` + source-defined `activity_name`
@@ -91,7 +103,7 @@ attestation carrier changed, so the hashes changed with it. Notes on fidelity:
         "encoding_id": 1,
         "serialization": "JCS",
         "serialization_id": 2,
-        "value": "25ed739d1fea4a60e64b2b61aacdc59b14a24b89e46ecedab2314917dce74d12"
+        "value": "254332470b92c69fc387bbe71f5233a76fd6065631a86c41fb1de335156a8bce"
       },
       "signatures": [
         {
@@ -171,7 +183,7 @@ attestation carrier changed, so the hashes changed with it. Notes on fidelity:
       "spiffe_id": "spiffe://corp/agent/hr-bot",
       "trust_domain": "corp"
     },
-    "signature_b64": "MEUCIQD89xutRcH/wFhwiRIIEV8mpyy3qzhPSwc4atxzSfJPYgIgD3JDploPrXZPxGGSeIF5LS5C860rccDCIMgXWtS1Vrs=",
+    "signature_b64": "MEYCIQCZaHnA2NwS9ohiCxdS/GfMUhZtXSRMFNEohhxgSEcdzAIhANxl7QJlfHm5bVYtorrd0LGKR5iBmgZJsNqgKbih1Yu6",
     "signature_key_id": "demo-key-2026-07"
   }
 }
@@ -203,7 +215,7 @@ attestation carrier changed, so the hashes changed with it. Notes on fidelity:
         "encoding_id": 1,
         "serialization": "JCS",
         "serialization_id": 2,
-        "value": "88376850d7518d2b8a2536e5e135b5e4f0235c15d1c70cb3ab8af9ba426260ca"
+        "value": "fed4e10805848335c3e9a5dd053a164094ac5594f0ec776aad83b4c86d239662"
       },
       "prev_event": {
         "fingerprint": {
@@ -213,7 +225,7 @@ attestation carrier changed, so the hashes changed with it. Notes on fidelity:
           "encoding_id": 1,
           "serialization": "JCS",
           "serialization_id": 2,
-          "value": "25ed739d1fea4a60e64b2b61aacdc59b14a24b89e46ecedab2314917dce74d12"
+          "value": "254332470b92c69fc387bbe71f5233a76fd6065631a86c41fb1de335156a8bce"
         },
         "type_uid": 600399,
         "uid": "demo-chain-org-f3576cf6-000000"
@@ -258,7 +270,7 @@ attestation carrier changed, so the hashes changed with it. Notes on fidelity:
   "type_uid": 600399,
   "unmapped": {
     "cmf.completion.stop_reason": "End",
-    "signature_b64": "MEUCIQCsNtZsEFzBcAEmp+Vkg+y4bVLTaUqCyQiR27qPHrk1GwIgcGuddgH+Z34kMcqnQMHsqS5xTi/gqx0Eyx+Yrb349wY=",
+    "signature_b64": "MEQCIBIqfsYhCX7eo8eddXEtfqtSYqsr0GJBry0OQzo0i+FSAiBt8SL7du7Ive2gWVthmcDQ3qGqvtVEuPBm8iRev8QYdQ==",
     "signature_key_id": "demo-key-2026-07"
   }
 }
