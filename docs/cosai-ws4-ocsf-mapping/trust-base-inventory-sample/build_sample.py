@@ -293,9 +293,7 @@ def declared_configuration(tool_schema_key: str, adapters: list[dict]) -> dict:
     }
 
 
-def executed_parameters(
-    tools_invoked: list[str] | None, adapters_loaded: list[dict]
-) -> dict:
+def executed_parameters(tools_invoked: list[str] | None, adapters_loaded: list[dict]) -> dict:
     """The executed half of the record, at its firing point's honesty level.
 
     Admission emissions (``tools_invoked=None``) carry values *as resolved at
