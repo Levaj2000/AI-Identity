@@ -124,3 +124,14 @@ Use `make setup` — it runs `scripts/docker-setup.sh` which generates `.env` wi
 Per `CONTRIBUTING.md`: open an issue first, wait for a maintainer to assign it, then branch from `main`. Don't open speculative PRs without a tracked issue.
 
 PRs target `main` by default. Do not ask "which branch should this merge into" as a routine question — the answer is `main` for any completed work. Only ask if the user has explicitly signaled a stacked-PR workflow (e.g. "build on top of PR #X", "this depends on the unmerged `feat/Y` branch") or if the change is genuinely a fix to an unmerged feature branch rather than a new contribution. Default behavior: branch off `main`, target `main`, merge to `main`.
+
+## Private Strategy Documents Live in Notion, Not Here
+
+Private strategy and relationship documents (commercial planning, partner
+memos, anything marked PRIVATE) are maintained in the owner's Notion
+workspace — that is their canonical home. **Never commit them to this
+repository**, including under a `private/` directory, and never quote their
+contents into public artifacts, PR bodies, or issue comments. When revising
+one, update its Notion page rather than creating a repo file; a file handed
+around in chat is an export, not the document. The public-repo CI gate
+("no confidential material") is a backstop, not the policy.
