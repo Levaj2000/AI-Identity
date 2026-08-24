@@ -1,12 +1,45 @@
 #!/usr/bin/env python3
 """Build (and verify) the agent trust-base inventory sample for ocsf-schema#1724.
 
-Three chained Discovery-style events showing the class proposed in
+Four chained Discovery-style events showing the class proposed in
 https://github.com/ocsf/ocsf-schema/issues/1724 — an agent trust-base
-inventory snapshot (declared configuration + executed parameters) with the
-merged ``record_integrity`` profile (#1661, OCSF 1.9) applied per emission.
+inventory (declared configuration + executed parameters) with the merged
+``record_integrity`` profile (#1661, OCSF 1.9) applied per emission — in the
+**admission/closure pair shape** from @rabbidave's 2026-08-21 comment on the
+issue: one record shape, two firing points. The boundary opens with an
+admission emission, mid-boundary trust-base changes land as further admission
+emissions, and the boundary closes with a closure emission carrying the
+executed half *as observed*. Divergence is a consumer-computed diff of two
+records on one chain, and an admission with no closure is a structurally
+checkable gap — the same detection primitive as an unchained trust-base
+change.
 
-Design constraints, in the spirit of the other samples in this tree:
+Rev 2 (2026-08-24) — changes from the three-event Rev 1:
+
+- **Pair firing points.** Events 1–3 are admissions (genesis + two
+  mid-boundary); event 4 is the closure. Admission emissions carry executed
+  values *as resolved at admission* (allowlist as enforced, sampling as
+  accepted, credentials reachable) and deliberately OMIT close-observable
+  fields (``tools_invoked``): absent-at-admission is a different claim from
+  empty, and Rev 1's event 2 carrying ``tools_invoked`` was itself a small
+  instance of the timing overload the pair removes. How to mark a
+  close-observable scalar explicitly (verification_id 4, "structurally
+  unavailable at this vantage point") rather than by absence is left open
+  for the class PR.
+- **``verification_id`` siblings** (the descriptive strength-of-claim
+  vocabulary from the same comment) on trust-base elements: 1 Locally
+  computed, 2 Provider asserted, 3 Third-party attested, 4 Not observable.
+  The adapter scenario now shows the 2→1 split explicitly: the declared
+  entry carries the *registry-asserted* digest (2), the loaded entry the
+  *locally computed* digest over the mapped bytes (1) — different strengths
+  of evidence, visibly different, no silent mixing.
+- **Activity mapping is provisional.** Which of Log / Collect / Change
+  carries admission vs closure is a class-PR decision; the pair is the
+  requirement, the mapping is not. This sample uses Collect (2) for the
+  genesis admission, Change (3) for mid-boundary admissions, Log (1) for
+  the closure — pick-one-and-say-so, not a proposal.
+
+Design constraints, unchanged from Rev 1:
 
 - **Stdlib only.** Every fingerprint here is unkeyed SHA-256, so anyone can
   recompute the whole chain with nothing but python3 — no keys, no secrets,
@@ -66,10 +99,28 @@ CLASS_UID = 1000005
 CATEGORY_UID = 5
 OCSF_VERSION = "1.10.0-dev"  # proposal targets v1.10.0; nothing released carries this class
 
-# 2026-08-11T09:00:00Z and two mid-session re-emissions.
+# Provisional activity mapping for the pair (see module docstring): the pair
+# is the requirement; which activity carries which firing point is the class
+# PR's decision.
+ACT_ADMISSION_GENESIS = (2, "Collect")
+ACT_ADMISSION_CHANGE = (3, "Change")
+ACT_CLOSURE = (1, "Log")
+
+# 2026-08-11T09:00:00Z; two mid-boundary admissions; boundary close at +25 min.
 T_BASELINE = 1786438800000
 T_TOOL_REFRESH = T_BASELINE + 300_000  # +5 min
 T_ADAPTER_LOAD = T_BASELINE + 540_000  # +9 min
+T_CLOSURE = T_BASELINE + 1_500_000  # +25 min
+
+# Descriptive strength-of-claim vocabulary (rabbidave, #1724 2026-08-21).
+# Descriptive, not normative: the record says what kind of claim each element
+# is; whether any kind is *sufficient* stays a relying-party policy decision.
+VERIFICATION = {
+    1: "Locally computed",
+    2: "Provider asserted",
+    3: "Third-party attested",
+    4: "Not observable",
+}
 
 # Content digests: SHA-256 over these ASCII preimages. In a real producer the
 # preimage is the artifact bytes (tools/list response, policy bundle, adapter
@@ -157,7 +208,8 @@ def ai_agent_object() -> dict:
     }
 
 
-def base_event(uid: str, time_ms: int, activity_id: int, activity_name: str) -> dict:
+def base_event(uid: str, time_ms: int, activity: tuple[int, str]) -> dict:
+    activity_id, activity_name = activity
     return {
         "activity_id": activity_id,
         "activity_name": activity_name,
@@ -170,16 +222,30 @@ def base_event(uid: str, time_ms: int, activity_id: int, activity_name: str) -> 
             "uid": uid,
             "version": OCSF_VERSION,
             "profiles": ["record_integrity"],
+            # Every emission carries the boundary's correlation_uid; on the
+            # closure this is the join key to the boundary's activity events
+            # (where stop_reason_id lives once #1704 lands) — a
+            # correlation join, not a schema overlay.
             "correlation_uid": CORRELATION_UID,
         },
         "ai_agent": ai_agent_object(),
     }
 
 
-def artifact(name: str, type_id: int, type_name: str, preimage_key: str, **extra: str) -> dict:
-    """An ``agent_artifact`` (class-draft shape): typed, digest-anchored."""
+def artifact(
+    name: str,
+    type_id: int,
+    type_name: str,
+    preimage_key: str,
+    verification_id: int,
+    **extra: str,
+) -> dict:
+    """An ``agent_artifact`` (class-draft shape): typed, digest-anchored,
+    with the descriptive strength-of-claim sibling next to the digest."""
     entry: dict = {"name": name, **extra, "type_id": type_id, "type": type_name}
     entry["fingerprint"] = content_fp(preimage_key)
+    entry["verification_id"] = verification_id
+    entry["verification"] = VERIFICATION[verification_id]
     return entry
 
 
@@ -193,12 +259,17 @@ def declared_configuration(tool_schema_key: str, adapters: list[dict]) -> dict:
     """
     return {
         # Hosted-model nuance: no local artifact to digest, so the pinned
-        # (provider, name, version) tuple IS the trust-base element. Digests
-        # apply to locally loaded artifacts (adapters, schemas, policies).
+        # (provider, name, version) tuple IS the trust-base element — a
+        # *reference*, not a byte-binding, and the served artifact can change
+        # beneath a stable version string. verification_id 2 keeps that
+        # strength-of-claim visible instead of letting the tuple read like a
+        # digest.
         "ai_model": {
             "ai_provider": "Anthropic",
             "name": "claude-sonnet-5",
             "version": "2026-06-15",
+            "verification_id": 2,
+            "verification": VERIFICATION[2],
         },
         "artifacts": [
             artifact(
@@ -206,25 +277,38 @@ def declared_configuration(tool_schema_key: str, adapters: list[dict]) -> dict:
                 3,
                 "Tool Schema",
                 tool_schema_key,
+                verification_id=1,  # digest computed locally over the tools/list bytes
                 uid="mcp://mcp.ai-identity.internal/billing-tools",
             ),
-            artifact("org-gateway-policy", 4, "Policy Bundle", "policy_v10", version="10"),
+            artifact(
+                "org-gateway-policy",
+                4,
+                "Policy Bundle",
+                "policy_v10",
+                verification_id=1,
+                version="10",
+            ),
             *adapters,
         ],
     }
 
 
-def executed_parameters(tools_invoked: list[str], adapters_loaded: list[dict]) -> dict:
-    """The trust base as *enforced/observed* in the executing process.
+def executed_parameters(
+    tools_invoked: list[str] | None, adapters_loaded: list[dict]
+) -> dict:
+    """The executed half of the record, at its firing point's honesty level.
 
-    Credentials are references + scopes only — never material. ``mandate``
-    ties to the delegation grant the agent acts under (the Mandate Service
-    shape from AI-IDENTITY-AGENTIC-IAM-EXAMPLES.md).
+    Admission emissions (``tools_invoked=None``) carry values *as resolved at
+    admission*: the allowlist as enforced, sampling as accepted, credentials
+    reachable. Close-observable fields (``tools_invoked``) are OMITTED —
+    absent-at-admission is a different claim from empty, and only the closure
+    emission may make it. Credentials are references + scopes only — never
+    material. ``mandate`` ties to the delegation grant the agent acts under
+    (the Mandate Service shape from AI-IDENTITY-AGENTIC-IAM-EXAMPLES.md).
     """
-    executed = {
+    executed: dict = {
         "tool_allowlist": ["billing.get_invoice", "billing.refund_status", "kb.search"],
         "sampling": {"temperature": 0.2, "top_p": 0.95, "max_output_tokens": 2048},
-        "tools_invoked": tools_invoked,
         "credentials": [
             {
                 "type_id": 4,
@@ -240,6 +324,8 @@ def executed_parameters(tools_invoked: list[str], adapters_loaded: list[dict]) -
             },
         ],
     }
+    if tools_invoked is not None:  # closure emission: executed as *observed*
+        executed["tools_invoked"] = tools_invoked
     if adapters_loaded:
         # Artifacts actually loaded, digests over the bytes as mapped — the
         # counterpart consumers compare against declared_configuration.artifacts.
@@ -251,43 +337,74 @@ def build_events() -> list[dict]:
     events: list[dict] = []
     prev: dict | None = None  # {"uid": ..., "type_uid": ..., "fingerprint": {...}}
 
-    # ---- Event 1: session-start baseline (activity 2, Collect) -------------
-    ev1 = base_event("tbi-0001", T_BASELINE, 2, "Collect")
-    ev1["declared_configuration"] = declared_configuration("tool_schema_v41", adapters=[])
-    ev1["executed_parameters"] = executed_parameters(tools_invoked=[], adapters_loaded=[])
-
-    # ---- Event 2: mid-session tool-schema refresh (activity 3, proposed
-    # "Change") — the MCP source re-served tools/list with a new digest
-    # (adds billing.refund_execute). Emitted BEFORE any refreshed tool
-    # serves a call (admission control, not forensics). Note the executed
-    # allowlist does NOT pick up the new tool: policy hasn't admitted it —
-    # declared/executed divergence a consumer computes from this one event.
-    ev2 = base_event("tbi-0002", T_TOOL_REFRESH, 3, "Change")
-    ev2["declared_configuration"] = declared_configuration("tool_schema_v42", adapters=[])
-    ev2["executed_parameters"] = executed_parameters(
-        tools_invoked=["kb.search", "billing.get_invoice"], adapters_loaded=[]
+    adapter_declared = artifact(
+        "refunds-tone-lora",
+        2,
+        "Adapter",
+        "adapter_registry",
+        verification_id=2,  # registry-asserted digest, unverified by the producer
+        version="1.4.0",
+    )
+    adapter_loaded = artifact(
+        "refunds-tone-lora",
+        2,
+        "Adapter",
+        "adapter_loaded",
+        verification_id=1,  # producer hashed the bytes it actually mapped
+        version="1.4.0",
     )
 
-    # ---- Event 3: adapter initialization mid-task (activity 3) — the
-    # registry-declared digest and the digest of the bytes actually mapped
-    # DISAGREE (the Sleeper-Agents scenario: artifact swapped between
-    # registry and load). The producer reports both sides without judging;
-    # the mismatch is computable downstream — and because this emission
-    # precedes the adapter's first inference, a subscribed PDP can deny
-    # before the artifact executes.
-    ev3 = base_event("tbi-0003", T_ADAPTER_LOAD, 3, "Change")
+    # ---- Event 1: ADMISSION, genesis (boundary opens) ----------------------
+    # Session-start baseline: declared and executed-as-resolved agree. No
+    # tools_invoked — nothing has run; absence is the claim, not empty.
+    ev1 = base_event("tbi-0001", T_BASELINE, ACT_ADMISSION_GENESIS)
+    ev1["declared_configuration"] = declared_configuration("tool_schema_v41", adapters=[])
+    ev1["executed_parameters"] = executed_parameters(tools_invoked=None, adapters_loaded=[])
+
+    # ---- Event 2: ADMISSION, mid-boundary (tool-schema refresh) ------------
+    # The MCP source re-served tools/list with a new digest (adds
+    # billing.refund_execute). Emitted BEFORE any refreshed tool serves a
+    # call — the record a PDP denies on. The enforced allowlist does NOT pick
+    # up the new tool: declared/executed divergence visible at admission.
+    ev2 = base_event("tbi-0002", T_TOOL_REFRESH, ACT_ADMISSION_CHANGE)
+    ev2["declared_configuration"] = declared_configuration("tool_schema_v42", adapters=[])
+    ev2["executed_parameters"] = executed_parameters(tools_invoked=None, adapters_loaded=[])
+
+    # ---- Event 3: ADMISSION, mid-boundary (adapter initialization) ---------
+    # The registry-declared digest (verification_id 2) and the digest of the
+    # bytes actually mapped (verification_id 1) DISAGREE — the Sleeper-Agents
+    # scenario. The producer reports both sides without judging; because this
+    # admission precedes the adapter's first inference, a subscribed PDP can
+    # deny before the artifact executes. The 2→1 split also shows the
+    # strength-of-claim delta explicitly: a registry assertion and a local
+    # byte-hash are different evidence, and here they differ in value too.
+    ev3 = base_event("tbi-0003", T_ADAPTER_LOAD, ACT_ADMISSION_CHANGE)
     ev3["declared_configuration"] = declared_configuration(
-        "tool_schema_v42",
-        adapters=[artifact("refunds-tone-lora", 2, "Adapter", "adapter_registry", version="1.4.0")],
+        "tool_schema_v42", adapters=[adapter_declared]
     )
     ev3["executed_parameters"] = executed_parameters(
-        tools_invoked=["kb.search", "billing.get_invoice", "billing.refund_status"],
-        adapters_loaded=[
-            artifact("refunds-tone-lora", 2, "Adapter", "adapter_loaded", version="1.4.0")
-        ],
+        tools_invoked=None, adapters_loaded=[adapter_loaded]
     )
 
-    for ev in (ev1, ev2, ev3):
+    # ---- Event 4: CLOSURE (boundary closes) --------------------------------
+    # Same declared half (final declared state); executed half as OBSERVED:
+    # tools actually invoked (all within the enforced allowlist — the
+    # declared-but-never-admitted billing.refund_execute never ran), sampling
+    # as finally applied (identical to admission here: a stable pair, the
+    # contrast case to a mid-flight rewrite), adapters as loaded. Divergence
+    # is computed downstream as a diff of admission and closure records on
+    # one chain. No verdict embedded — closure records what ran; enforcement
+    # outcomes stay with the gateway/PDP events, one correlation_uid join away.
+    ev4 = base_event("tbi-0004", T_CLOSURE, ACT_CLOSURE)
+    ev4["declared_configuration"] = declared_configuration(
+        "tool_schema_v42", adapters=[adapter_declared]
+    )
+    ev4["executed_parameters"] = executed_parameters(
+        tools_invoked=["kb.search", "billing.get_invoice", "billing.refund_status"],
+        adapters_loaded=[adapter_loaded],
+    )
+
+    for ev in (ev1, ev2, ev3, ev4):
         attestation: dict = {
             "uid": ev["metadata"]["uid"],
             "chain_uid": INSTANCE_UID,  # chain scoped to the agent *instance*
@@ -348,23 +465,49 @@ def verify() -> int:
         prev_fp = att["fingerprint"]["value"]
         prev_uid = att["uid"]
 
-    # 4. The divergence the sample exists to show: event 3's declared adapter
-    # digest (type_id 2) differs from the loaded-bytes digest.
-    ev3 = events[-1]
-
-    def adapter_digest(section: str) -> str:
-        entries = [a for a in ev3[section]["artifacts"] if a.get("type_id") == 2]
-        return entries[0]["fingerprint"]["value"]
-
-    if adapter_digest("declared_configuration") == adapter_digest("executed_parameters"):
-        print("✗ event 3: expected declared/loaded adapter digest divergence")
+    # 4. Pair discipline: admissions (all but the last) omit tools_invoked;
+    # the closure carries it. Absent-at-admission ≠ empty is structural here.
+    for idx, ev in enumerate(events[:-1], start=1):
+        if "tools_invoked" in ev["executed_parameters"]:
+            print(f"✗ event {idx}: admission emission must omit tools_invoked")
+            ok = False
+    closure = events[-1]
+    if closure["activity_id"] != ACT_CLOSURE[0]:
+        print("✗ final event: boundary must close with the closure emission")
         ok = False
+    invoked = closure["executed_parameters"].get("tools_invoked")
+    if not invoked:
+        print("✗ closure: tools_invoked (executed as observed) missing")
+        ok = False
+    # 5. Policy held: everything that ran was inside the enforced allowlist —
+    # the declared-but-never-admitted tool never executed.
+    elif not set(invoked) <= set(closure["executed_parameters"]["tool_allowlist"]):
+        print("✗ closure: tools_invoked exceeds the enforced allowlist")
+        ok = False
+
+    # 6. The divergence the sample exists to show, now visible at admission
+    # (event 3) AND closure (event 4): declared adapter digest (registry,
+    # verification_id 2) ≠ loaded-bytes digest (local, verification_id 1).
+    def adapter_entry(ev: dict, section: str) -> dict:
+        return next(a for a in ev[section]["artifacts"] if a.get("type_id") == 2)
+
+    for label, ev in (("event 3", events[2]), ("closure", events[3])):
+        declared = adapter_entry(ev, "declared_configuration")
+        loaded = adapter_entry(ev, "executed_parameters")
+        if declared["fingerprint"]["value"] == loaded["fingerprint"]["value"]:
+            print(f"✗ {label}: expected declared/loaded adapter digest divergence")
+            ok = False
+        if (declared["verification_id"], loaded["verification_id"]) != (2, 1):
+            print(f"✗ {label}: expected verification_id 2 (declared) vs 1 (loaded)")
+            ok = False
 
     if ok:
         print(
             f"✓ {len(events)} events: fingerprints recompute, chain links, "
-            "content digests resolve to named preimages, "
-            "event-3 declared≠loaded divergence present"
+            "content digests resolve to named preimages, admission/closure "
+            "discipline holds (admissions omit tools_invoked; closure carries "
+            "executed-as-observed within the allowlist), declared≠loaded "
+            "adapter divergence present with verification_id 2 vs 1"
         )
     return 0 if ok else 1
 
