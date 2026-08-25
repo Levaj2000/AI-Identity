@@ -110,6 +110,11 @@ def _sign_and_chain(event: dict, prev: tuple[str, str] | None, key) -> tuple[dic
         "value": fingerprint,
     }
     signature = key.sign(_dsse_pae(cb), ec.ECDSA(hashes.SHA256()))
+    # Signature descriptor rides attestation.signatures (outside the hashed
+    # bytes, like fingerprint) — the emitter's shape per AID-EMIT-1 §5.
+    event["attestation_list"][0]["signatures"] = [
+        {"algorithm_id": 3, "algorithm": "ECDSA", "serialization_id": 5, "serialization": "DSSE"}
+    ]
     event["unmapped"]["signature_b64"] = base64.b64encode(signature).decode()
     event["unmapped"]["signature_key_id"] = "edge-demo-key-1"
     return event, (event["metadata"]["uid"], fingerprint)
@@ -148,7 +153,7 @@ def _draw_record(seq: int, req: str, ts: str, amount: str, allowed: bool, remain
         "metadata": {
             "uid": f"draw-{seq:03d}",
             "product": {"name": "AI Identity OCSF Audit", "vendor_name": "AI Identity"},
-            "profiles": ["ai_operation", "security_control"],
+            "profiles": ["ai_operation", "security_control", "record_integrity"],
             "version": "1.9.0",
         },
         "severity_id": 1,
