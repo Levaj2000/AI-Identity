@@ -159,7 +159,7 @@ def validate_event_shape(ev: dict, line_no: int) -> list[str]:
 
 
 def verify_chain(events: list[dict]) -> tuple[int, int]:
-    """Verify prev_entry_hash linkage in org_chain_seq order.
+    """Verify prev_event.fingerprint linkage in org_chain_seq order.
 
     Returns (links_checked, first_seq). Fails hard on a broken link.
     """
