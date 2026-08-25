@@ -30,6 +30,29 @@ Everything tracked here is world-readable. Two consequences:
 - **Reply/comment drafts, outreach prep, strategy notes, and reviewer notes about named people do NOT get committed.** Deliver draft replies in chat, or write them to `private/` (gitignored). This applies to Slack replies, GitHub comment drafts, issue-filing prep, and any `*.notes.md`. `docs/` is only for artifacts meant to be linked publicly (reference bundles, class drafts, the crosswalk, specs).
 - **CHANGELOG entries describe what shipped, not why strategically.** No negotiation posture, no notes about collaborators' access or availability, no "the play here is…" framing — that context goes in `private/` session notes.
 
+## Batch Delivery for Work the User Posts Manually (Jeff's protocol, 2026-08-25)
+
+Sessions here are scoped to this repo only — cross-owner attach is refused, so
+anything destined for a repo Jeff doesn't own (OCSF, CoSAI, collaborators'
+repos) is posted by Jeff from his own terminal with `gh`. When preparing that
+kind of work, deliver in ONE batch, not a drip:
+
+- **All files at once.** Every artifact the task needs (comment bodies, patches,
+  fixtures, keys) in a single send — never referenced before delivered. Jeff's
+  browser strips hyphens from downloaded filenames, so commands must never
+  hard-code a name: find files with a pattern (`ls -t ~/Downloads/<glob> | head -1`)
+  or tell him to tab-complete.
+- **One paste-able script**, not sequential commands with narration between
+  them. No `# comments` or `<placeholders>` inside command blocks — his shell
+  executes both literally. Values discovered mid-flow (a gist URL, a SHA) get a
+  `sed` step in the script, not a hand-edit instruction.
+- **State the routing split up front.** At the start of any task touching
+  repos beyond this one, say which actions land directly from the session and
+  which route through Jeff, before starting either.
+- Author commits he will push as `Jeff Leva
+  <120221487+Levaj2000@users.noreply.github.com>` — his account blocks pushes
+  exposing the private address (GH007).
+
 ## Secrets Management (Non-Standard)
 
 **CRITICAL**: This cluster uses Google Secret Manager + GKE CSI driver, NOT k8s Secrets.
