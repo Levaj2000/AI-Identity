@@ -378,8 +378,22 @@ the initial conformance vectors:
   violation surfaced, suppressed-deny + aborted branch, and the
   delegated-mandate record carrying the join key (`decision_sink_demo`).
 
-A standalone validator answering "is this a well-formed AID-EMIT-1 record?"
-is planned; until it ships, §11 plus the vectors are the conformance check.
+A standalone validator ships at
+[`scripts/aid_emit1_validator.py`](../../scripts/aid_emit1_validator.py) —
+Python standard library only, including pure-Python ECDSA P-256 signature
+verification, so it runs anywhere `python3` does:
+
+```bash
+python3 scripts/aid_emit1_validator.py records.ndjson --key pubkey.pem
+```
+
+It implements §11 (fingerprint, signature, chain, and stream checks), the
+§3/§5/§6 well-formedness rules, and the §4 value-space enforcement; stream
+gaps are surfaced as findings per §7 (errors with `--strict-gaps`), and
+non-6003 records receive the integrity checks with class-level checks
+skipped. Its test suite exercises the §12 verifier-conformance cases:
+accept the vectors; reject a flipped payload byte, a reordered record, a
+swapped `authority_uid`, and a renumbered `stream_seq`.
 
 **Host-seam conformance:** the registration contract (§10), the decision and
 step vocabularies delivered intact (§9), stream stamps and the per-request id
