@@ -8,7 +8,7 @@ This revision tracks the **final OCSF PR #1661 attestation shape** (as merged in
 
 > **Scope / disclosure (please read):** This is a **demo/QA org** (`org_id f3576cf6…`, agents named `demo-agent-*` / `QA-*`, one synthetic user). No customer data, PII, or secrets. Identifiers are opaque UUIDs. Two integrity mechanisms appear in each event, and they are different on purpose:
 > - the **hash chain** is **HMAC-SHA-256 (keyed)** — values are real and internally consistent, but *recomputing* them requires the org's key (key-holder verifiable);
-> - the **per-event signature** is **ECDSA-P256-SHA256, publicly verifiable** — the export path signs each event's `entry_hash` with the production KMS key, and the public key is published at `https://api.ai-identity.co/.well-known/ai-identity-public-keys.json` (`kid` = the event's `unmapped.signature_key_id`). `regenerate.py` in this directory verifies every signature in the bundle against that JWKS with no secrets.
+> - the **per-event signature** is **ECDSA-P256-SHA256, publicly verifiable** — the export path signs each event's chain hash (`attestation_list[].fingerprint.value`) with the production KMS key, and the public key is published at `https://api.ai-identity.co/.well-known/ai-identity-public-keys.json` (`kid` = the event's `unmapped.signature_key_id`). `regenerate.py` in this directory verifies every signature in the bundle against that JWKS with no secrets.
 
 ---
 
@@ -40,7 +40,7 @@ One agent (`QA-eae97318`, uid `32928870…`), seven consecutive gateway events. 
 | 21 | **Allowed** | `DELETE /api/v1/agents/…` | agent decommissioned |
 | 22 | **Denied** | `POST /v1/chat/completions` | post-decommission call refused |
 
-**Each event's `attestation.prev_entry_hash.value` equals the previous event's `attestation.entry_hash.value`** — a tamper-evident chain. Verified structurally in this bundle (excerpt seq 16→22 link internally; the full export links genesis→end). Excerpt event 16's `prev_entry_hash` points at seq 15 in the full export (it starts mid-chain). The chain hashes are computed at **write time** and stored; they are identical to the values in the 2026-06-16 bundle — what changed is the *envelope* (fingerprint objects) and the *signatures* (added at export time).
+**Each event's `attestation_list[].prev_event.fingerprint.value` equals the previous event's `attestation_list[].fingerprint.value`** — a tamper-evident chain. Verified structurally in this bundle (excerpt seq 16→22 link internally; the full export links genesis→end). Excerpt event 16's `prev_event` points at seq 15 in the full export (it starts mid-chain). The chain hashes are computed at **write time** and stored; they are identical to the values in the 2026-06-16 bundle — what changed is the *envelope* (fingerprint objects) and the *signatures* (added at export time).
 
 ### Anatomy of one event (the allowed inference)
 
@@ -145,9 +145,9 @@ Field notes:
 - **`duration`** — gateway latency in ms. This is its *native* OCSF home (base `duration`), per the CMF↔OCSF crossmap — resolved from the open question in the earlier bundle; it does not ride `unmapped`.
 - **`attestation`** — record-integrity provenance, final #1661 shape:
   - `uid` — the audit row id (stable join key back to the source record);
-  - `entry_hash` / `prev_entry_hash` — **fingerprint objects**, `algorithm_id` **99 (Other)** with `algorithm: "HMAC-SHA-256"`. Deliberate: the chain hash is *keyed* HMAC, and claiming plain `SHA-256` (`algorithm_id` 3) would misstate the construction. This is exactly the kind of honesty the fingerprint `algorithm` sibling exists for;
+  - `fingerprint` / `prev_event.fingerprint` — the chain hash rides **fingerprint objects**, `algorithm_id` **99 (Other)** with `algorithm: "HMAC-SHA-256"`. Deliberate: the chain hash is *keyed* HMAC, and claiming plain `SHA-256` (`algorithm_id` 3) would misstate the construction. This is exactly the kind of honesty the fingerprint `algorithm` sibling exists for;
   - `chain_uid` — the org chain identifier;
-  - `signatures[]` — required by the final schema. One ECDSA-P256-SHA256 signature per event, computed over `bytes.fromhex(entry_hash.value)` at export time (`created_time` is the export timestamp, not the event timestamp — the signature attests the record as downloaded). Same message convention as our Evidence Anchor Merkle leaves, so one public key + one message rule covers both.
+  - `signatures[]` — required by the final schema. One ECDSA-P256-SHA256 signature per event, computed over `bytes.fromhex(fingerprint.value)` at export time (`created_time` is the export timestamp, not the event timestamp — the signature attests the record as downloaded). Same message convention as our Evidence Anchor Merkle leaves, so one public key + one message rule covers both.
 - **`unmapped.signature_b64` / `unmapped.signature_key_id`** — the actual signature bytes (base64 DER) and the KMS key resource that made them. They ride `unmapped` because OCSF's `digital_signature` object **has no field for signature bytes or key id** — a live gap worth raising (see table below). `signature_key_id` matches a `kid` in the public JWKS, which is how a third party verifies without trusting us operationally.
 - **`unmapped` (rest)** — producer facts with **no OCSF home today**: `org_chain_seq`, `policy_version`, `cost_estimate_usd`. These are exactly the signals the alignment work needs to give a first-class home.
 
@@ -180,11 +180,11 @@ This export is the evidence behind the gap list — every gap below is something
 
 ## Honest limitations (no overclaim)
 
-- **The chain and the signatures verify different things.** The ECDSA signature proves *AI Identity's signer attested to this entry hash* — publicly checkable via the JWKS. Recomputing the chain hash itself from raw row content still requires the org's HMAC key (key-holder verifiability). Structural linkage (`prev_entry_hash` → `entry_hash`) is checkable by anyone.
+- **The chain and the signatures verify different things.** The ECDSA signature proves *AI Identity's signer attested to this entry hash* — publicly checkable via the JWKS. Recomputing the chain hash itself from raw row content still requires the org's HMAC key (key-holder verifiability). Structural linkage (`prev_event.fingerprint` → `fingerprint`) is checkable by anyone.
 - **Signatures are export-time.** `signatures[0].created_time` stamps when the export was generated, not when the event occurred; event time is `time`, and the write-time integrity is the chain hash.
 - **Demo data.** Throwaway org; volumes/agent names are synthetic.
 - **`correlation_uid` / delegation** are present in the schema path but not exercised in this slice.
-- **Genesis sentinel.** The chain's first event (seq 1) carries the literal string `GENESIS` in `prev_entry_hash.value` — the stored chain-start sentinel passed through verbatim. Strictly, a fingerprint object's `value` should be a hash; we're flagging this openly rather than editing the export. The likely producer fix is to omit `prev_entry_hash` on the genesis row (it has no predecessor to point at) — and it's a useful WG data point: sentinel values inside `fingerprint` are an anti-pattern the spec text could warn about.
+- **Genesis sentinel.** The chain's first event (seq 1) carries the literal string `GENESIS` in `prev_event.fingerprint.value` — the stored chain-start sentinel passed through verbatim. Strictly, a fingerprint object's `value` should be a hash; we're flagging this openly rather than editing the export. The likely producer fix is to omit `prev_event` on the genesis row (it has no predecessor to point at, and the schema marks `prev_event` absent on a chain's first event) — and it's a useful WG data point: sentinel values inside `fingerprint` are an anti-pattern the spec text could warn about.
 
 ---
 

@@ -89,18 +89,21 @@ registration, granted a mandate, and now its actions are on the record.
 {
   "activity_id": 1, "category_uid": 6, "class_uid": 6003, "type_uid": 600301,
   "action": "Allowed", "time": 1774539159723,
-  "metadata": { "version": "1.9.0", "profiles": ["ai_operation"] },
+  "metadata": { "version": "1.9.0", "profiles": ["ai_operation", "record_integrity"] },
   "ai_agent": { "uid": "274a3fcf-480c-4630-a4a6-9f67c3ccf0cc", "name": "demo-agent-mn7msq4n" },
-  "attestation": {
-    "entry_hash": "ccc5caa486356183049476cc88c6da990d4fd970a0da7f0cb5e114ffe95fce45",
-    "prev_entry_hash": "GENESIS",
-    "chain_uid": "f3576cf6-87ff-4c07-b446-e6ac526236a5"
-  }
+  "attestation_list": [{
+    "chain_uid": "f3576cf6-87ff-4c07-b446-e6ac526236a5",
+    "fingerprint": {
+      "algorithm_id": 99, "algorithm": "HMAC-SHA-256",
+      "value": "ccc5caa486356183049476cc88c6da990d4fd970a0da7f0cb5e114ffe95fce45"
+    }
+  }]
 }
 ```
 
-- `prev_entry_hash` chains each event to the one before it — a break anywhere
-  in the chain is detectable without needing to trust the exporter.
+- `attestation_list[].prev_event.fingerprint` chains each event to the one
+  before it (omitted above — a genesis event has no predecessor) — a break
+  anywhere in the chain is detectable without needing to trust the exporter.
 - Independently, offline: `pip install` nothing extra, single stdlib-only file.
 
 ```bash
