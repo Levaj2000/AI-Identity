@@ -50,10 +50,13 @@ arrives distinguishable by code; Allow-after-modification → Modified;
 plain Allow → Allowed); steps, span, entry taint, content hashes and the
 stream stamps ride under `unmapped.cpex.*` **inside the hashed bytes**, so
 the decision facts are tamper-evident in the attestation chain. 11 new
-tests (32 total, all green against the same seam head `386710a`) cover the
-registration contract, every verdict mapping, the `deny_ignored` and
-`aborted` renderings, zero-step and non-CMF dispatches, and that the
-stream stamps are bound into the fingerprint. Remaining follow-up:
+tests (32 total at the time of this addendum, all green against the same
+seam head `386710a`) cover the registration contract, every verdict
+mapping, the `deny_ignored` and `aborted` renderings, zero-step and
+non-CMF dispatches, and that the stream stamps are bound into the
+fingerprint. The suite is **33** as of #480 (emitter 27, sign 6), which is
+the count `PRAXIS-PORT-PLAN.md` carries and the one to quote; `386710a`
+remains the verified seam head. Remaining follow-up:
 `AuditHandler::on_effect` (effect-lifecycle events want a richer OCSF
 class than 6003 — e.g. Authentication for a token mint).
 
