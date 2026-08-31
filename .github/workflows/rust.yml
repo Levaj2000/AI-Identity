@@ -1,0 +1,95 @@
+name: Rust
+
+# `integrations/cpex-ocsf-audit` had no CI at all: every other job in this
+# repo is Python, Node or CodeQL, so a change to the crate's manifest could
+# go green without anything ever compiling it. Renovate PR #497 is the
+# case in point — it bumped base64/p256/sha2 in Cargo.toml, failed to
+# regenerate Cargo.lock (its checkout has no cpex sibling for the path
+# dependency), and still showed nine green checks.
+#
+# `--locked` is the guard that closes that hole: it fails outright when
+# Cargo.toml asks for versions Cargo.lock does not carry, rather than
+# silently resolving them.
+#
+# Path-filtered on purpose. The crate changes rarely and the job costs a
+# cpex clone plus a cold Rust build; the other CI jobs should not pay that
+# on every docs PR.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "integrations/cpex-ocsf-audit/**"
+      - ".github/workflows/rust.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "integrations/cpex-ocsf-audit/**"
+      - ".github/workflows/rust.yml"
+
+permissions:
+  contents: read
+
+env:
+  # The crate's MSRV and `rust-version` pin (see Cargo.toml), and the
+  # toolchain demo/run-demo.sh builds with.
+  TOOLCHAIN: 1.96.1
+
+  # cpex-core is a path dependency on a sibling checkout, not a registry
+  # crate — the crate is deliberately not a member of the cpex workspace so
+  # it can live here as a reference implementation (see Cargo.toml).
+  #
+  # Pinned to the seam head SEAM-PORT-RESULTS.md records as the verification
+  # baseline: contextforge-org/cpex PR #166 head `386710a`, which carries the
+  # 2026-08-18 hardening round. Pinned rather than tracking `dev` so a bump
+  # in this crate is the only variable in a red run — the same reason
+  # Cargo.toml tells you to pin a rev for anything reproducible. Bump this
+  # deliberately when the crate is re-verified against a newer seam.
+  CPEX_REV: 386710ac97b5c3299b8a723428bbb8165c386334
+
+jobs:
+  cpex-ocsf-audit:
+    name: Rust — cpex-ocsf-audit build & test
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: integrations/cpex-ocsf-audit
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Check out cpex beside the repo
+        working-directory: ${{ github.workspace }}
+        # `path = "../../../cpex/crates/cpex-core"` resolves to a sibling of
+        # the repo root, which actions/checkout cannot write to (it refuses
+        # paths outside the workspace), so fetch it directly. A depth-1 fetch
+        # of the pinned SHA is ~6 MB against a full clone's several hundred.
+        run: |
+          mkdir -p ../cpex
+          cd ../cpex
+          git init -q .
+          git remote add origin https://github.com/contextforge-org/cpex
+          git fetch -q --depth 1 origin "$CPEX_REV"
+          git checkout -q FETCH_HEAD
+          test -f crates/cpex-core/Cargo.toml
+
+      - name: Install Rust ${{ env.TOOLCHAIN }}
+        # rustup ships on the runner image, so pinning the MSRV needs no
+        # third-party action — one less SHA to keep fresh.
+        working-directory: ${{ github.workspace }}
+        run: |
+          rustup toolchain install "$TOOLCHAIN" --profile minimal --no-self-update
+          rustup run "$TOOLCHAIN" rustc --version
+
+      - name: Build — lib, tests and examples
+        # --locked is the point of this job: a manifest bump that did not
+        # regenerate Cargo.lock fails here instead of going green.
+        # -D warnings holds the "clean, no warnings" bar SEAM-PORT-RESULTS.md
+        # claims for the port.
+        env:
+          RUSTFLAGS: -D warnings
+        run: cargo "+$TOOLCHAIN" check --locked --all-targets
+
+      - name: Test
+        run: cargo "+$TOOLCHAIN" test --locked
