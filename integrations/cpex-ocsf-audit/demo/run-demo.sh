@@ -75,7 +75,16 @@ printf '  %sseam cpex#166 @ %s · rustc %s · %s/%s port tests green%s\n' \
 KEY="${DEMO_KEY:-$OUT/demo-key.pem}"
 PUB="$OUT/demo-pub.pem"
 if [ ! -f "$KEY" ]; then
-  openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 -out "$KEY" 2>/dev/null
+  # `ec_param_enc:named_curve` is not optional here. LibreSSL — which is
+  # what `openssl` is on stock macOS — otherwise writes the curve as
+  # EXPLICIT parameters, and p256's PKCS#8 parser rejects that key. The
+  # demo then dies on a foreign laptop having worked on every Linux box
+  # it was built on. OpenSSL 3 already defaults to named_curve, so this
+  # is a no-op there.
+  openssl genpkey -algorithm EC \
+    -pkeyopt ec_paramgen_curve:P-256 \
+    -pkeyopt ec_param_enc:named_curve \
+    -out "$KEY" 2>/dev/null
 fi
 openssl pkey -in "$KEY" -pubout -out "$PUB" 2>/dev/null
 ok "signing key ready ($(basename "$KEY")), public key exported for the verifier"
