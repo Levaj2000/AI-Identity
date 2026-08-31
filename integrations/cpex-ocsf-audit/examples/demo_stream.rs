@@ -19,6 +19,13 @@
 //   DEMO_HOLD         when "1", park after the last record instead of
 //                     exiting, so a runner can kill -9 a live process
 //                     rather than simulating the loss of one
+//   DEMO_AGENT_ID     ai_agent.uid                (default "agent-7")
+//   DEMO_CONVERSATION_ID
+//                     the run id -> metadata.correlation_uid; stable
+//                     across the restart, since a restarted producer is
+//                     the same conversation (default "run-4bf92f35")
+//   DEMO_SESSION_ID   ai_agent.instance_uid       (default
+//                     "sess-gw-1-boot-7")
 //
 // Cases 1-5 are the same five rulings `decision_sink_demo` documents.
 // Case 6 is the fail-closed panic record: a plugin that panicked under
@@ -41,8 +48,8 @@ use cpex_core::cmf::{ContentPart, Message, MessagePayload, Role, ToolCall};
 use cpex_core::decision::{DecisionLog, PluginAction, Span, Verdict};
 use cpex_core::error::PluginViolation;
 use cpex_core::extensions::{
-    DelegationExtension, DelegationHop, Extensions, RequestExtension, SecurityExtension,
-    SubjectExtension,
+    AgentExtension, DelegationExtension, DelegationHop, Extensions, RequestExtension,
+    SecurityExtension, SubjectExtension,
 };
 use cpex_core::plugin::{OnError, PluginConfig, PluginMode};
 
@@ -121,8 +128,30 @@ fn tool_request() -> (MessagePayload, Extensions) {
     sec.subject = Some(subj);
     sec.labels.insert("PII".into());
 
+    // Agent identity. Without this the records name no agent at all:
+    // `ai_agent` is absent, and so is `metadata.correlation_uid`, which
+    // ocsf.rs maps from `conversation_id` (review C1 — the run is the
+    // multi-event-stable key; `request_id` identifies one request and
+    // correlates nothing). A consumer handed those records has to fall
+    // back to something per-event, which is exactly what the ledger side
+    // did with `corr-7f3e2a91` before this was fixed.
+    //
+    // The agent is the one already named in the delegation chain of the
+    // mandate draw — `agent-7` acting for alice@corp.com — so the two
+    // objects agree instead of one knowing the agent and the other not.
+    // The run id is stable across the kill and the epoch boundary: a
+    // restarted producer is the same conversation, which is the property
+    // that makes it worth correlating on.
+    let agent = AgentExtension {
+        agent_id: Some(env_str("DEMO_AGENT_ID", "agent-7")),
+        conversation_id: Some(env_str("DEMO_CONVERSATION_ID", "run-4bf92f35")),
+        session_id: Some(env_str("DEMO_SESSION_ID", "sess-gw-1-boot-7")),
+        ..Default::default()
+    };
+
     let ext = Extensions {
         security: Some(Arc::new(sec)),
+        agent: Some(Arc::new(agent)),
         ..Default::default()
     };
     (payload, ext)

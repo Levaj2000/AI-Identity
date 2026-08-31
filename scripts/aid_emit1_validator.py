@@ -38,6 +38,11 @@ Non-6003 records (e.g. proposed-class drafts using the same
 `record_integrity` carrier) get the integrity/chain checks with the
 AID-EMIT-1 class-level checks skipped and noted.
 
+Requires Python 3.10+ (for `zip(..., strict=True)`, which the repo's ruff
+config mandates via B905). Stdlib-only otherwise — no pip install, which
+is the point: a verifier should not have to trust our dependency tree to
+check our records.
+
 Usage:
     python3 aid_emit1_validator.py FILE [FILE ...] [--key PUBKEY.pem]
                                    [--strict-gaps] [--json]
@@ -57,7 +62,16 @@ import hashlib
 import json
 import re
 import sys
-from dataclasses import dataclass, field
+
+if sys.version_info < (3, 10):  # noqa: UP036 — the check is the point
+    sys.exit(
+        f"aid_emit1_validator requires Python 3.10+ (found "
+        f"{sys.version_info.major}.{sys.version_info.minor}). "
+        "Reported by an outside verifier on 2026-08-31, who hit the "
+        "failure as an opaque TypeError deep in a chain check."
+    )
+
+from dataclasses import dataclass, field  # noqa: E402 — after the version gate
 
 SPEC = "AID-EMIT-1 v1.0.0-draft (docs/specs/aid-emit-1.md)"
 DSSE_PAYLOAD_TYPE = b"application/vnd.ocsf.event+json"
