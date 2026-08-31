@@ -31,16 +31,16 @@ rust-version = "1.96"
 cpex-core = { path = "../../../cpex/crates/cpex-core" }
 
 async-trait = "0.1"
-base64      = "0.22"
+base64      = "0.23"
 chrono      = { version = "0.4", features = ["serde"] }
 # ECDSA P-256 for the DSSE signer — same curve as the production JWKS
 # (https://api.ai-identity.co/.well-known/ai-identity-public-keys.json).
 # RustCrypto's ecdsa signs per RFC 6979 (deterministic), which preserves
 # the crate's byte-identical-output-across-runs invariant.
-p256        = { version = "0.13", features = ["ecdsa", "pem", "pkcs8"] }
+p256        = { version = "0.14", features = ["ecdsa", "pem", "pkcs8"] }
 serde       = { version = "1", features = ["derive"] }
 serde_json  = "1"
-sha2        = "0.10"
+sha2        = "0.11"
 tracing     = "0.1"
 
 [dev-dependencies]
