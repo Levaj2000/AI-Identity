@@ -1,6 +1,6 @@
 # Evidence Contract → OCSF Mapping (CoSAI WS4)
 
-**Deliverable for [cosai-oasis/ws4-secure-design-agentic-systems#172](https://github.com/cosai-oasis/ws4-secure-design-agentic-systems/issues/172) (Q14/Q15) · Pinned to OCSF v1.9.0 · Schema facts verified 2026-08-25**
+**Deliverable for [cosai-oasis/ws4-secure-design-agentic-systems#172](https://github.com/cosai-oasis/ws4-secure-design-agentic-systems/issues/172) Q14 · Pinned to OCSF v1.9.0 · Schema facts verified 2026-08-25**
 
 The evidence contract under discussion in WS4 #172 — @imran-siddique's field list plus
 @skvcool-rgb's two additions — mapped to where each field lands in OCSF, with the gaps named and
@@ -15,6 +15,12 @@ Two scope notes up front:
   detectable") and evidence ("what lets a failure be reconstructed by someone who wasn't there
   and doesn't trust you") are different artifacts optimised for different consumers. This
   document is the evidence contract mapping; the detection table is separate follow-on work.
+  Concretely: this supplies the concrete logging schema WS4 #172 **Q14** asks for. Q14's other
+  half — whether that schema belongs in the follow-on paper or in a playbook alongside the
+  runtime-isolation guide — is a WG placement call this document does not make. It does **not**
+  answer **Q15**, the false-positive profile for normal agent behaviour and what cross-run
+  correlation requires operationally: that needs detection-side baselines this document has no
+  data for, and is unclaimed at the time of writing.
 - **Structure-independent.** WS4 #172 Q1 (bounded-authority decomposition vs. sandboxing frame)
   is unsettled. This mapping doesn't depend on the outcome — it slots into either structure.
 
@@ -88,7 +94,7 @@ the event stream cannot reconstruct the subtree from single edges. Both halves a
 | Declared configuration vs. executed | Tool-catalog version, adapter/artifact digests, declared/executed pairing | [ocsf#1724](https://github.com/ocsf/ocsf-schema/issues/1724) |
 | Delegation lineage | `parent_uid` optionality; no materialised root; DAG description vs. singular parent | [ocsf#1739](https://github.com/ocsf/ocsf-schema/issues/1739) |
 | Accounting decision | Aggregate consumed/remaining as an evidence field | Unfiled (offered in WS4 #172) |
-| Cross-boundary causal binding | Resource owner's record naming the causing tool call (adjacent — WS4 #172 Q16, not a contract row) | [ocsf#1738](https://github.com/ocsf/ocsf-schema/issues/1738) |
+| Cross-boundary causal binding | Resource owner's record naming the causing tool call (adjacent — the evidence complement of WS4 #172 §5 / Q9–Q10, not a contract row) | [ocsf#1738](https://github.com/ocsf/ocsf-schema/issues/1738) |
 
 ## Producer gaps (our own wire output, measured against this mapping)
 
