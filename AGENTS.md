@@ -148,6 +148,8 @@ Per `CONTRIBUTING.md`: open an issue first, wait for a maintainer to assign it, 
 
 PRs target `main` by default. Do not ask "which branch should this merge into" as a routine question — the answer is `main` for any completed work. Only ask if the user has explicitly signaled a stacked-PR workflow (e.g. "build on top of PR #X", "this depends on the unmerged `feat/Y` branch") or if the change is genuinely a fix to an unmerged feature branch rather than a new contribution. Default behavior: branch off `main`, target `main`, merge to `main`.
 
+**Squash merges carry the trailers forward.** GitHub credits the PR author when a PR holds commits from more than one author, and a hand-written squash body drops whatever trailers the individual commits carried. Both together erase the real provenance: #497 is the case — a session regenerated the lockfile and changed `src/sign.rs`, and the squash landed the lot as `renovate[bot]` with no `Co-Authored-By` at all, so `git blame` on `fingerprint_value` now names a bot that cannot write Rust. When writing a squash body, copy every distinct `Co-Authored-By` (and the `Claude-Session` line, where one is present) from the commits being squashed into it. The PR keeps the true history either way, but `git blame` only sees the squash.
+
 ## Private Strategy Documents Live in Notion, Not Here
 
 Private strategy and relationship documents (commercial planning, partner
