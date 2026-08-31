@@ -137,9 +137,22 @@ fn write_canonical(v: &Value, out: &mut Vec<u8>) {
 /// or reordered record changes its own fingerprint), and the signer
 /// consumes the same bytes.
 pub fn fingerprint_value(canonical_bytes: &[u8]) -> String {
+    use std::fmt::Write as _;
+
     let mut h = Sha256::new();
     h.update(canonical_bytes);
-    format!("{:x}", h.finalize())
+
+    // Hex-encoded by hand rather than `format!("{:x}", ..)`: sha2 0.11's
+    // digest returns a `hybrid_array::Array`, which does not implement
+    // `LowerHex` the way digest 0.10's `GenericArray` did. Byte-for-byte
+    // the same bare lowercase hex either way — the wire format and the
+    // committed conformance vectors are unchanged.
+    let digest = h.finalize();
+    let mut out = String::with_capacity(digest.len() * 2);
+    for b in digest {
+        let _ = write!(out, "{b:02x}");
+    }
+    out
 }
 
 /// Reconstruct, from an EMITTED event, the exact bytes its fingerprint
