@@ -50,16 +50,38 @@ def dsse_pae(payload: bytes) -> bytes:
     return b"DSSEv1 %d %s %d %s" % (len(t), t, len(payload), payload)
 
 
-def stream_stamps(event: dict) -> tuple[str | None, int | None, int | None]:
-    """(stream_id, stream_seq, emission_seq) from unmapped."cpex.stream"."""
+def stream_stamps(event: dict) -> tuple[int | None, str | None, int | None, int | None]:
+    """(epoch, stream_id, stream_seq, emission_seq) from unmapped."cpex.stream".
+
+    The epoch is not decoration: the emitter documents stream_seq as dense
+    within (epoch, stream_id), never across epochs — a producer restart
+    opens a new epoch and legitimately resets the counter. Continuity
+    checks that ignore the epoch flag every restart as a gap, which is a
+    false alarm on the one event (a crash) the stream exists to survive.
+    """
     stamps = event.get("unmapped", {})
     stamps = stamps.get("cpex.stream", {}) if isinstance(stamps, dict) else {}
     if not isinstance(stamps, dict):
         stamps = {}
     return (
+        stamps.get("epoch"),
         stamps.get("stream_id"),
         stamps.get("stream_seq"),
         stamps.get("emission_seq"),
+    )
+
+
+def _epoch_regressed(record_epoch: int | None, tail_epoch: int | None) -> bool:
+    """True when the record's epoch is strictly OLDER than the stream's.
+
+    Epochs are producer boot times (Unix nanos), so they order. A record
+    without an epoch after records that carried one (or vice versa) is not
+    orderable — treated as not-a-regression rather than inventing one,
+    since the equal-epoch density check above already covers the
+    both-missing case.
+    """
+    return (
+        isinstance(record_epoch, int) and isinstance(tail_epoch, int) and record_epoch < tail_epoch
     )
 
 
@@ -68,7 +90,7 @@ def dedupe_key_for(event: dict) -> str | None:
     metadata = event.get("metadata")
     if isinstance(metadata, dict) and isinstance(metadata.get("uid"), str) and metadata["uid"]:
         return metadata["uid"]
-    stream_id, stream_seq, _ = stream_stamps(event)
+    _, stream_id, stream_seq, _ = stream_stamps(event)
     if stream_id is not None and stream_seq is not None:
         return f"{stream_id}#{stream_seq}"
     return None
@@ -92,6 +114,7 @@ class RecordCheck:
     fingerprint: str | None = None
     metadata_uid: str | None = None
     chain_uid: str | None = None
+    epoch: int | None = None
     stream_id: str | None = None
     stream_seq: int | None = None
     emission_seq: int | None = None
@@ -131,15 +154,22 @@ class BatchVerifier:
         expected_key_id: str | None = None,
         chain_head: tuple[str | None, str] | None = None,
         chain_position: int = 0,
-        stream_tails: dict[str, int] | None = None,
-        last_emission_seq: int | None = None,
+        stream_tails: dict[str, tuple[int | None, int]] | None = None,
+        last_emission_seq: tuple[int | None, int] | None = None,
     ):
         self._key = public_key
         self._expected_chain_uid = expected_chain_uid
         self._expected_key_id = expected_key_id
         self._head = chain_head
         self._position = chain_position
+        # stream_id -> (epoch, last verified stream_seq). The epoch scopes
+        # the density check: a NEWER epoch is a producer restart and resets
+        # the counter legitimately; only within one epoch is a non-dense
+        # seq a gap. See stream_stamps() for why.
         self._tails = dict(stream_tails or {})
+        # (epoch, last verified emission_seq) — emission_seq is the
+        # producer process's global counter, so it resets with the epoch
+        # for the same reason stream_seq does.
         self._last_emission = last_emission_seq
 
     def check(self, event: dict) -> RecordCheck:
@@ -148,7 +178,7 @@ class BatchVerifier:
         metadata = event.get("metadata")
         if isinstance(metadata, dict) and isinstance(metadata.get("uid"), str):
             r.metadata_uid = metadata["uid"]
-        r.stream_id, r.stream_seq, r.emission_seq = stream_stamps(event)
+        r.epoch, r.stream_id, r.stream_seq, r.emission_seq = stream_stamps(event)
 
         att = self._attestation(event, r)
         self._verify_crypto(event, att, r)
@@ -247,16 +277,37 @@ class BatchVerifier:
             )
 
     def _check_streams(self, r: RecordCheck) -> None:
+        # Density is a per-(epoch, stream_id) property. Within one epoch a
+        # non-dense seq means records were lost — an anomaly. A NEWER epoch
+        # is a restart: the producer's boot-time epoch grew, the counters
+        # reset, and flagging that as a gap would cry wolf on the one event
+        # (a crash) the stream is designed to survive. An OLDER epoch is
+        # wrong in the other direction — epochs are boot-ordered, so going
+        # backwards means late replay of a dead process or clock trouble,
+        # and that IS worth a look.
         if r.stream_id is not None and isinstance(r.stream_seq, int):
             tail = self._tails.get(r.stream_id)
-            if tail is not None and r.stream_seq != tail + 1:
-                r.anomalies.append(
-                    f"stream_seq gap in {r.stream_id}: expected {tail + 1}, got {r.stream_seq}"
-                )
-            self._tails[r.stream_id] = r.stream_seq
+            if tail is not None:
+                tail_epoch, tail_seq = tail
+                if r.epoch == tail_epoch:
+                    if r.stream_seq != tail_seq + 1:
+                        r.anomalies.append(
+                            f"stream_seq gap in {r.stream_id}: "
+                            f"expected {tail_seq + 1}, got {r.stream_seq}"
+                        )
+                elif _epoch_regressed(r.epoch, tail_epoch):
+                    r.anomalies.append(
+                        f"epoch regression in {r.stream_id}: {r.epoch} after {tail_epoch}"
+                    )
+                # else: newer epoch — a restart; density restarts with it.
+            self._tails[r.stream_id] = (r.epoch, r.stream_seq)
         if isinstance(r.emission_seq, int):
-            if self._last_emission is not None and r.emission_seq <= self._last_emission:
-                r.anomalies.append(
-                    f"emission_seq not monotonic: {r.emission_seq} after {self._last_emission}"
-                )
-            self._last_emission = r.emission_seq
+            if self._last_emission is not None:
+                last_epoch, last_seq = self._last_emission
+                if r.epoch == last_epoch and r.emission_seq <= last_seq:
+                    r.anomalies.append(
+                        f"emission_seq not monotonic: {r.emission_seq} after {last_seq}"
+                    )
+                # A different epoch resets emission_seq with the process;
+                # regression across epochs is already reported once above.
+            self._last_emission = (r.epoch, r.emission_seq)

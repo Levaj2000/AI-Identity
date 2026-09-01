@@ -43,6 +43,8 @@ from common.schemas.edge import (
     EdgeCreatedResponse,
     EdgeListResponse,
     EdgeResponse,
+    EdgeStreamSegment,
+    EdgeStreamsResponse,
     IngestRecordResult,
     IngestResponse,
 )
@@ -182,6 +184,92 @@ def list_edges(
     return EdgeListResponse(edges=[EdgeResponse.model_validate(e) for e in edges])
 
 
+@router.get("/{edge_id}/streams", response_model=EdgeStreamsResponse)
+def edge_streams(
+    edge_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Evidence-continuity view of one edge's ingested stream.
+
+    Ingest already verifies every arriving record and writes continuity
+    anomalies on the rows — this is the read path for that work, which
+    previously went nowhere a person could see it. Segments are grouped
+    by (epoch, stream_id), the unit the emitter defines density over: a
+    dense segment means no record in it was lost, and a NEW segment on
+    the same stream is a producer restart — a boundary, not a loss. Two
+    dense segments with a reset between them is the healthy shape of a
+    stream that survived a crash.
+
+    Quarantined rows are counted but never join a segment: their stamps
+    are unauthenticated claims, so they can neither create nor repair
+    density.
+    """
+    org_id = _require_org_admin(db, user)
+    edge = (
+        db.query(EdgeDeployment)
+        .filter(EdgeDeployment.id == edge_id, EdgeDeployment.org_id == org_id)
+        .first()
+    )
+    if edge is None:
+        raise HTTPException(status_code=404, detail="Edge deployment not found")
+
+    status_counts = dict(
+        db.query(EdgeAuditEvent.verification_status, func.count())
+        .filter(EdgeAuditEvent.edge_id == edge.id)
+        .group_by(EdgeAuditEvent.verification_status)
+        .all()
+    )
+
+    rows = (
+        db.query(
+            EdgeAuditEvent.stream_id,
+            EdgeAuditEvent.epoch,
+            func.min(EdgeAuditEvent.stream_seq),
+            func.max(EdgeAuditEvent.stream_seq),
+            func.count(),
+            func.count(EdgeAuditEvent.anomalies),
+            func.max(EdgeAuditEvent.received_at),
+        )
+        .filter(
+            EdgeAuditEvent.edge_id == edge.id,
+            EdgeAuditEvent.verification_status == EdgeEventStatus.verified,
+            EdgeAuditEvent.stream_id.isnot(None),
+            EdgeAuditEvent.stream_seq.isnot(None),
+        )
+        .group_by(EdgeAuditEvent.stream_id, EdgeAuditEvent.epoch)
+        .all()
+    )
+    segments = [
+        EdgeStreamSegment(
+            stream_id=stream_id,
+            epoch=epoch,
+            first_seq=first_seq,
+            last_seq=last_seq,
+            records=records,
+            # Dedupe guarantees one row per (stream, seq) identity, so a
+            # dense segment has exactly last-first+1 rows.
+            dense=records == last_seq - first_seq + 1,
+            anomaly_records=anomaly_records,
+            last_received_at=last_received_at,
+        )
+        for stream_id, epoch, first_seq, last_seq, records, anomaly_records, last_received_at in rows
+    ]
+    # Oldest epoch first within a stream, so restarts read in story order.
+    segments.sort(key=lambda seg: (seg.stream_id, _epoch_key(seg.epoch)))
+
+    return EdgeStreamsResponse(
+        edge_id=edge.id,
+        name=edge.name,
+        chain_uid=edge.chain_uid,
+        status=edge.status,
+        last_ingest_at=edge.last_ingest_at,
+        verified=status_counts.get(EdgeEventStatus.verified, 0),
+        quarantined=status_counts.get(EdgeEventStatus.quarantined, 0),
+        segments=segments,
+    )
+
+
 @router.post("/{edge_id}/revoke", response_model=EdgeResponse)
 def revoke_edge(
     edge_id: uuid.UUID,
@@ -275,6 +363,7 @@ async def ingest_records(
                 metadata_uid=check.metadata_uid,
                 dedupe_key=check.dedupe_key,
                 fingerprint=check.fingerprint,
+                epoch=check.epoch,
                 stream_id=check.stream_id,
                 stream_seq=check.stream_seq,
                 emission_seq=check.emission_seq,
@@ -327,30 +416,58 @@ def _chain_state(db: Session, edge: EdgeDeployment) -> dict:
         .order_by(EdgeAuditEvent.id.desc())
         .first()
     )
-    tails = dict(
-        db.query(EdgeAuditEvent.stream_id, func.max(EdgeAuditEvent.stream_seq))
+    # Per stream, resume from its NEWEST epoch's tail — the density check
+    # is scoped to (epoch, stream_id), so the max seq of an older epoch is
+    # not this stream's tail any more. NULL epochs (rows from before the
+    # column existed, or epoch-less producers) sort oldest, which keeps
+    # legacy rows from shadowing a real epoch.
+    tails: dict[str, tuple[int | None, int]] = {}
+    seg_rows = (
+        db.query(
+            EdgeAuditEvent.stream_id,
+            EdgeAuditEvent.epoch,
+            func.max(EdgeAuditEvent.stream_seq),
+        )
         .filter(
             EdgeAuditEvent.edge_id == edge.id,
             EdgeAuditEvent.stream_id.isnot(None),
             EdgeAuditEvent.verification_status == EdgeEventStatus.verified,
         )
-        .group_by(EdgeAuditEvent.stream_id)
+        .group_by(EdgeAuditEvent.stream_id, EdgeAuditEvent.epoch)
         .all()
     )
-    last_emission = (
-        db.query(func.max(EdgeAuditEvent.emission_seq))
+    for stream_id, epoch, max_seq in seg_rows:
+        held = tails.get(stream_id)
+        if held is None or _epoch_key(epoch) > _epoch_key(held[0]):
+            tails[stream_id] = (epoch, max_seq)
+
+    # emission_seq resumes from the newest epoch seen on the edge, for the
+    # same reason: it is the producer process's counter and died with it.
+    emission_rows = (
+        db.query(EdgeAuditEvent.epoch, func.max(EdgeAuditEvent.emission_seq))
         .filter(
             EdgeAuditEvent.edge_id == edge.id,
+            EdgeAuditEvent.emission_seq.isnot(None),
             EdgeAuditEvent.verification_status == EdgeEventStatus.verified,
         )
-        .scalar()
+        .group_by(EdgeAuditEvent.epoch)
+        .all()
     )
+    last_emission: tuple[int | None, int] | None = None
+    for epoch, max_emission in emission_rows:
+        if last_emission is None or _epoch_key(epoch) > _epoch_key(last_emission[0]):
+            last_emission = (epoch, max_emission)
     return {
         "chain_head": (head_row.metadata_uid, head_row.fingerprint) if head_row else None,
         "chain_position": (head_row.chain_position or 0) if head_row else 0,
         "stream_tails": tails,
         "last_emission_seq": last_emission,
     }
+
+
+def _epoch_key(epoch: int | None) -> tuple[int, int]:
+    """Sort key that puts NULL/unknown epochs before any real one."""
+    return (0, 0) if epoch is None else (1, epoch)
 
 
 def _known_dedupe_keys(db: Session, edge: EdgeDeployment, candidates: set[str]) -> set[str]:
