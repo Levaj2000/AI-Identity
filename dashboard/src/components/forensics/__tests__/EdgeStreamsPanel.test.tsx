@@ -76,7 +76,14 @@ describe('EdgeStreamsPanel — restart is a boundary, not a loss', () => {
   it('surfaces a real within-epoch gap with its anomaly count', async () => {
     fetchEdgeStreams.mockResolvedValue(
       edgeWith([
-        segment({ epoch: 2, first_seq: 1, last_seq: 3, records: 2, dense: false, anomaly_records: 1 }),
+        segment({
+          epoch: 2,
+          first_seq: 1,
+          last_seq: 3,
+          records: 2,
+          dense: false,
+          anomaly_records: 1,
+        }),
       ]),
     )
     render(<EdgeStreamsPanel />)
