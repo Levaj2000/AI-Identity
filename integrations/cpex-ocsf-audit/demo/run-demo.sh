@@ -11,13 +11,15 @@
 #   03  policy deny                          (violation surfaced at status_code)
 #   04  DenyIgnored + Aborted                (the record no post-hook can produce)
 #   05  mandate draw + interrupted recovery  (join key rides here; kill -9 lands here)
-#   06  fail-closed plugin_panic             (AMBER — see below)
+#   06  fail-closed plugin_panic             (REAL — see below)
 #
-# Beat 06 is amber on purpose. The CPEX core path is live through
-# catch_unwind, finalized deny, and the awaited audit sink, but the
-# end-to-end panicking-plugin harness is still pending, so this runner
-# emits the panic RECORD rather than driving a real panic. The strip says
-# so on screen; the script does not pretend otherwise.
+# Beat 06 is GREEN as of 2026-08-31: a real plugin panics inside the CPEX
+# executor, catch_unwind contains it, it becomes a plugin_panic violation
+# on a terminal deny, and the record reaches this crate through the audit
+# seam. Earlier revisions emitted the record by hand and said so; this one
+# does not have to. See examples/panic_drive.rs for what that costs — the
+# executor owns the decision stream's identity, so beat 06 lands in its
+# own stream rather than gw-1/boot-7.
 #
 # Beat 05 crosses an epoch boundary by design. stream_seq is dense per
 # (epoch, stream_id), so the restart legitimately resets the counter.
@@ -43,7 +45,8 @@ TOOLCHAIN="${TOOLCHAIN:-1.96.1}"
 OUT="${1:-${TMPDIR:-/tmp}/cpex-ocsf-demo}"
 
 EPOCH_1=1755648000000000000
-EPOCH_2=1755649000000000000
+# No EPOCH_2 constant any more — beat 06 restarts into a real CPEX
+# executor, whose epoch is its own boot time and is not ours to choose.
 STREAM_ID="gw-1/boot-7"
 
 BOLD=$'\033[1m'; DIM=$'\033[2m'; RESET=$'\033[0m'
@@ -90,6 +93,7 @@ openssl pkey -in "$KEY" -pubout -out "$PUB" 2>/dev/null
 ok "signing key ready ($(basename "$KEY")), public key exported for the verifier"
 
 cargo "+$TOOLCHAIN" build --quiet --example demo_stream
+cargo "+$TOOLCHAIN" build --quiet --example panic_drive
 
 E1="$OUT/records-epoch1.ndjson"
 E2="$OUT/records-epoch2.ndjson"
@@ -122,16 +126,46 @@ kill -9 "$PRODUCER" 2>/dev/null || true
 wait "$PRODUCER" 2>/dev/null || true
 ok "producer killed; $(wc -l <"$E1" | tr -d ' ') records had already reached the sink and survived it"
 
-# ── Restart: new epoch, counter legitimately resets ───────────────────
-head1 "Beats 05b-06 — restart opens a new epoch"
+# ── Restart: a real CPEX executor, a real panic ───────────────────────
+#
+# The restart is a genuinely new process, so it gets a genuinely new
+# epoch — and this one is not the synthetic driver. It is the CPEX
+# executor with a plugin that panics: contained by catch_unwind, turned
+# into a plugin_panic violation on a terminal deny, and handed to this
+# crate through the audit seam. Nothing about the record is written by
+# hand, which is the whole difference from every earlier revision of this
+# demo.
+#
+# The executor owns its stream identity: stream_id is the literal
+# "decision" and epoch is its boot time in Unix nanos, neither settable
+# from outside. So beat 06 lands in the executor's own stream rather than
+# gw-1/boot-7, and its epoch changes every run. That is what real costs.
+# The alternative — rewriting the stamps to match — would be forging
+# evidence, since the stamps are inside the hashed bytes.
+#
+# What still ties it to beats 01-05 is the part that isn't the executor's:
+# ai_agent.uid and metadata.correlation_uid come from the extensions the
+# driver supplies, so agent-7 and the run id cross the boundary intact.
+#
+# The record is emitted on stderr (the OCSF sink's destination) alongside
+# Rust's panic backtrace — which is worth seeing on stage, it is the proof
+# the panic is real — so the JSON lines are filtered out of it here.
+head1 "Beat 06 — restart into a real CPEX executor, and a real panic"
 
-DEMO_SIGNING_KEY="$KEY" DEMO_EPOCH="$EPOCH_2" DEMO_BASE_SEQ=1 \
-DEMO_STREAM_ID="$STREAM_ID" DEMO_CASES="6" \
-DEMO_CHAIN_UID="demo-chain-boot-7-e2" \
-  cargo "+$TOOLCHAIN" run --quiet --example demo_stream >"$E2" 2>/dev/null
+PANIC_RAW="$OUT/beat06-stderr.log"
+DEMO_SIGNING_KEY="$KEY" DEMO_CHAIN_UID="demo-chain-boot-7-e2" \
+  cargo "+$TOOLCHAIN" run --quiet --example panic_drive >/dev/null 2>"$PANIC_RAW" || true
+grep '^{' "$PANIC_RAW" >"$E2" || die "panic drive emitted no record — see $PANIC_RAW"
 
-ok "new epoch $EPOCH_2; stream_seq resets to 1 — the EXPECTED discontinuity, not a gap"
-amber "06  fail-closed plugin_panic  ${DIM}record emitted; end-to-end panic harness still pending${RESET}"
+grep -q "panicked at" "$PANIC_RAW" \
+  || die "no panic actually occurred — beat 06 would be staged, not driven"
+PANIC_CODE="$(python3 -c "import json,sys; print(json.load(open('$E2'))['status_code'])")"
+[ "$PANIC_CODE" = "plugin_panic" ] \
+  || die "expected status_code plugin_panic, got $PANIC_CODE"
+
+ok "a plugin really panicked  ${DIM}(backtrace in $(basename "$PANIC_RAW"))${RESET}"
+ok "06  fail-closed plugin_panic  ${DIM}contained → finalized deny → audit seam → record${RESET}"
+ok "new process, new epoch; the executor's own decision stream, seq resets to 0"
 
 cat "$E1" "$E2" >"$BUNDLE"
 ok "bundle: $(wc -l <"$BUNDLE" | tr -d ' ') records → $BUNDLE"
@@ -178,7 +212,7 @@ set -e
 
 head1 "Status"
 ok    "01-05  green"
-amber "06     amber — core path live (catch_unwind → finalized deny → awaited sink); harness pending"
+ok    "06     green — a real panic, contained → finalized deny → audit seam → signed record"
 printf '  %sledger side: hand %s to the one-command wrapper for epoch-aware density + chain checks%s\n' \
   "$DIM" "$BUNDLE" "$RESET"
 
