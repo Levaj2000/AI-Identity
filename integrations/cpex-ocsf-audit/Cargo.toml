@@ -44,4 +44,7 @@ sha2        = "0.11"
 tracing     = "0.1"
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
+tokio      = { version = "1", features = ["macros", "rt", "rt-multi-thread"] }
+# Already in the lock as a cpex-core transitive: Executor::execute takes a
+# &TaskTracker, so any embedder driving the executor directly needs it named.
+tokio-util = "0.7"
