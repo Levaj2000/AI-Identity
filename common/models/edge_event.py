@@ -64,7 +64,13 @@ class EdgeAuditEvent(Base):
     # unsigned records, which are always quarantined.
     fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
-    # Seam stream stamps (unmapped."cpex.stream")
+    # Seam stream stamps (unmapped."cpex.stream"). The epoch is the
+    # producer process's boot time (Unix nanos): stream_seq is dense
+    # within (epoch, stream_id) and resets legitimately when the epoch
+    # advances — a restart is a boundary, not a loss. Rows ingested
+    # before this column existed have NULL here; their epoch is still
+    # in event."unmapped"."cpex.stream" if ever needed.
+    epoch: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     stream_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     stream_seq: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     emission_seq: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

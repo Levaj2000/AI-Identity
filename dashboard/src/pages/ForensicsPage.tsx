@@ -28,6 +28,7 @@ import {
 } from '../services/api/forensics'
 import { CaseFileVerifyPanel } from '../components/forensics/CaseFileVerifyPanel'
 import { InclusionProofPanel } from '../components/forensics/InclusionProofPanel'
+import { EdgeStreamsPanel } from '../components/forensics/EdgeStreamsPanel'
 import { ExportMenu } from '../components/forensics/ExportMenu'
 import { ForensicsTimeline } from '../components/forensics/ForensicsTimeline'
 import { IncidentReconstructModal } from '../components/forensics/IncidentReconstructModal'
@@ -906,6 +907,11 @@ export function ForensicsPage() {
       {/* Public-key-only inclusion verifier — proves a single event is committed
           to a signed checkpoint, entirely client-side (no shared secret) */}
       <InclusionProofPanel />
+
+      {/* Continuity of edge-ingested evidence streams, grouped by
+          (epoch, stream) — a restart renders as a boundary, never a gap.
+          Hidden entirely for orgs with no edge deployments. */}
+      <EdgeStreamsPanel />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

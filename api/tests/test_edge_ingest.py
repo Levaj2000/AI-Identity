@@ -46,6 +46,8 @@ def make_event(
     key=SIGNING_KEY,
     chain_uid: str = CHAIN_UID,
     key_id: str = "test-key-1",
+    epoch: int = 1,
+    emission_seq: int | None = None,
 ) -> dict:
     """A minimal OCSF 6003 record, chained and signed like the emitter."""
     event = {
@@ -63,10 +65,10 @@ def make_event(
         ],
         "unmapped": {
             "cpex.stream": {
-                "epoch": 1,
+                "epoch": epoch,
                 "stream_id": STREAM_ID,
                 "stream_seq": seq,
-                "emission_seq": seq,
+                "emission_seq": seq if emission_seq is None else emission_seq,
             }
         },
     }
@@ -306,6 +308,115 @@ def test_stream_gap_is_recorded_as_anomaly_not_quarantined(client, db_session, e
     assert "expected 3, got 5" in result["anomalies"]
     row = db_session.query(EdgeAuditEvent).filter_by(metadata_uid="rec-5").one()
     assert row.verification_status == "verified" and "stream_seq gap" in row.anomalies
+
+
+def head_of(ev: dict) -> tuple[str, str]:
+    return (ev["metadata"]["uid"], ev["attestation_list"][0]["fingerprint"]["value"])
+
+
+def test_restart_new_epoch_resets_seq_without_anomaly(client, db_session, edge):
+    """A producer restart is a boundary, not a loss.
+
+    The emitter defines stream_seq as dense within (epoch, stream_id):
+    a new epoch legitimately resets both stream_seq and emission_seq.
+    Before ingest read the epoch, this exact shape was flagged with a
+    false "stream_seq gap" + "emission_seq not monotonic" — crying wolf
+    on the one event (a crash) the stream is designed to survive.
+    """
+    edge_id, headers = edge
+    e1 = make_chain(2)
+    client.post("/api/v1/audit/ingest", headers=headers, content=ndjson(e1))
+
+    restarted = make_event(1, "e2-rec-1", head_of(e1[-1]), epoch=2, emission_seq=1)
+    data = client.post("/api/v1/audit/ingest", headers=headers, content=ndjson([restarted])).json()
+    result = data["results"][0]
+    assert result["status"] == "verified"
+    assert result["anomalies"] is None, result["anomalies"]
+    assert data["anomalies"] == 0
+
+    row = db_session.query(EdgeAuditEvent).filter_by(metadata_uid="e2-rec-1").one()
+    assert row.epoch == 2 and row.stream_seq == 1 and row.anomalies is None
+
+
+def test_restart_survives_resume_from_db(client, db_session, edge):
+    """The epoch-scoped tail must survive a round-trip through storage.
+
+    Same restart as above but in a SEPARATE batch after another resume:
+    _chain_state must hand the verifier the NEWEST epoch's tail, not the
+    max seq across all epochs (which would re-introduce the false gap the
+    moment the process ingesting the batch restarted)."""
+    edge_id, headers = edge
+    e1 = make_chain(2)
+    client.post("/api/v1/audit/ingest", headers=headers, content=ndjson(e1))
+    r1 = make_event(1, "e2-rec-1", head_of(e1[-1]), epoch=2, emission_seq=1)
+    client.post("/api/v1/audit/ingest", headers=headers, content=ndjson([r1]))
+
+    # New batch → verifier state rebuilt from rows. seq 2 in epoch 2 must
+    # be dense against epoch 2's tail (1), not epoch 1's (2).
+    r2 = make_event(2, "e2-rec-2", head_of(r1), epoch=2, emission_seq=2)
+    data = client.post("/api/v1/audit/ingest", headers=headers, content=ndjson([r2])).json()
+    assert data["results"][0]["status"] == "verified"
+    assert data["results"][0]["anomalies"] is None
+    # And a within-epoch gap is still caught after the restart.
+    gapped = make_event(9, "e2-rec-9", head_of(r2), epoch=2, emission_seq=9)
+    data = client.post("/api/v1/audit/ingest", headers=headers, content=ndjson([gapped])).json()
+    assert "stream_seq gap" in data["results"][0]["anomalies"]
+
+
+def test_epoch_regression_is_an_anomaly(client, edge):
+    """Epochs are boot-ordered; going backwards is worth a look.
+
+    A record claiming an OLDER epoch than the stream's current one is a
+    late replay of a dead process or clock trouble — verified (its
+    crypto holds) but flagged, never laundered."""
+    edge_id, headers = edge
+    e2 = make_event(1, "e2-rec-1", None, epoch=2, emission_seq=1)
+    client.post("/api/v1/audit/ingest", headers=headers, content=ndjson([e2]))
+
+    stale = make_event(7, "e1-late-7", head_of(e2), epoch=1, emission_seq=7)
+    data = client.post("/api/v1/audit/ingest", headers=headers, content=ndjson([stale])).json()
+    result = data["results"][0]
+    assert result["status"] == "verified"
+    assert "epoch regression" in result["anomalies"]
+
+
+def test_streams_endpoint_reports_segments(client, db_session, edge, auth_headers):
+    """GET /edges/{id}/streams groups by (epoch, stream_id) and scores density."""
+    edge_id, headers = edge
+    e1 = make_chain(2)  # epoch 1: seq 1..2, dense
+    client.post("/api/v1/audit/ingest", headers=headers, content=ndjson(e1))
+    r1 = make_event(1, "e2-rec-1", head_of(e1[-1]), epoch=2, emission_seq=1)
+    client.post("/api/v1/audit/ingest", headers=headers, content=ndjson([r1]))
+    gapped = make_event(3, "e2-rec-3", head_of(r1), epoch=2, emission_seq=3)  # 1 -> 3
+    client.post("/api/v1/audit/ingest", headers=headers, content=ndjson([gapped]))
+    forged = make_event(4, "e2-rec-4", head_of(gapped), key=OTHER_KEY, emission_seq=4)
+    client.post("/api/v1/audit/ingest", headers=headers, content=ndjson([forged]))
+
+    resp = client.get(f"/api/v1/edges/{edge_id}/streams", headers=auth_headers)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["verified"] == 4 and body["quarantined"] == 1
+    assert len(body["segments"]) == 2
+
+    seg1, seg2 = body["segments"]  # oldest epoch first
+    assert (seg1["epoch"], seg1["first_seq"], seg1["last_seq"]) == (1, 1, 2)
+    assert seg1["dense"] is True and seg1["anomaly_records"] == 0
+    assert (seg2["epoch"], seg2["first_seq"], seg2["last_seq"]) == (2, 1, 3)
+    assert seg2["dense"] is False and seg2["anomaly_records"] == 1
+    # The quarantined record joined no segment: 2 + 2 rows, not 5.
+    assert seg1["records"] + seg2["records"] == 4
+
+
+def test_streams_endpoint_is_org_scoped(client, edge, other_user, db_session):
+    """Another org's admin gets 404, same as the revoke surface."""
+    edge_id, _ = edge
+    db_session.add(OrgMembership(org_id=other_user.org_id, user_id=other_user.id, role="owner"))
+    db_session.commit()
+    resp = client.get(
+        f"/api/v1/edges/{edge_id}/streams",
+        headers={"X-API-Key": other_user.email},
+    )
+    assert resp.status_code == 404
 
 
 def test_chain_discontinuity_re_anchors_with_anomaly(client, edge):

@@ -48,6 +48,44 @@ class EdgeListResponse(BaseModel):
     edges: list[EdgeResponse]
 
 
+class EdgeStreamSegment(BaseModel):
+    """One (epoch, stream_id) run of verified records.
+
+    This is the unit density is defined over: the emitter guarantees
+    stream_seq dense within a segment and says nothing across segments —
+    a new epoch on the same stream is a producer restart, a boundary
+    rather than a loss. ``dense`` is therefore per-segment; two dense
+    segments with a seq reset between them is a healthy stream that
+    survived a crash.
+    """
+
+    stream_id: str
+    # Producer boot time (Unix nanos). None for rows ingested before the
+    # epoch column existed or from epoch-less producers.
+    epoch: int | None
+    first_seq: int
+    last_seq: int
+    records: int
+    dense: bool
+    # Verified rows in this segment carrying continuity anomalies
+    # (a within-epoch gap, a chain re-anchor, an epoch regression).
+    anomaly_records: int
+    last_received_at: datetime.datetime
+
+
+class EdgeStreamsResponse(BaseModel):
+    """Evidence-continuity surface for one edge deployment."""
+
+    edge_id: uuid.UUID
+    name: str
+    chain_uid: str
+    status: str
+    last_ingest_at: datetime.datetime | None
+    verified: int
+    quarantined: int
+    segments: list[EdgeStreamSegment]
+
+
 class IngestRecordResult(BaseModel):
     """Per-record outcome, in batch order."""
 
