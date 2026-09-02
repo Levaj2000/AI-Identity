@@ -22,7 +22,8 @@
 # own stream rather than gw-1/boot-7.
 #
 # Beat 05 crosses an epoch boundary by design. stream_seq is dense per
-# (epoch, stream_id), so the restart legitimately resets the counter.
+# (epoch, stream_id) and opens at 0, so the restart legitimately resets
+# the counter to 0.
 # Density is asserted WITHIN each epoch and never across the restart —
 # checking across it would report a gap on stage, which is the opposite
 # of the point.
@@ -103,7 +104,7 @@ BUNDLE="$OUT/records.ndjson"
 head1 "Beats 01-05 — one epoch, dense stream"
 
 : >"$E1"
-DEMO_SIGNING_KEY="$KEY" DEMO_EPOCH="$EPOCH_1" DEMO_BASE_SEQ=41 \
+DEMO_SIGNING_KEY="$KEY" DEMO_EPOCH="$EPOCH_1" DEMO_BASE_SEQ=0 \
 DEMO_STREAM_ID="$STREAM_ID" DEMO_CASES="1,2,3,4,5" DEMO_HOLD=1 \
 DEMO_CHAIN_UID="demo-chain-boot-7-e1" \
   cargo "+$TOOLCHAIN" run --quiet --example demo_stream >"$E1" 2>/dev/null &
@@ -185,10 +186,12 @@ for line in open(sys.argv[1]):
 bad = False
 for (epoch, sid), got in sorted(seqs.items()):
     got.sort()
-    dense = got == list(range(got[0], got[0] + len(got)))
+    # Dense AND opening at 0: an epoch's first record is stream_seq 0 (§7),
+    # so a segment that starts higher lost its head, not just its middle.
+    dense = got == list(range(0, len(got)))
     mark = "\033[92m✓\033[0m" if dense else "\033[91m✗\033[0m"
-    print(f"  {mark} epoch {epoch}  {sid}  stream_seq {got[0]}..{got[-1]}  ({len(got)} records, "
-          f"{'dense' if dense else 'GAP'})")
+    what = "dense" if dense else ("GAP at head" if got[0] != 0 else "GAP")
+    print(f"  {mark} epoch {epoch}  {sid}  stream_seq {got[0]}..{got[-1]}  ({len(got)} records, {what})")
     bad |= not dense
 print("  \033[2mtwo epochs, each dense on its own — the restart is a boundary, not a loss\033[0m")
 sys.exit(1 if bad else 0)

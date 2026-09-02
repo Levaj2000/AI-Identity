@@ -5,7 +5,7 @@
 | **Name**      | AID-EMIT-1                                                       |
 | **Version**   | 1.0.0-draft                                                      |
 | **Status**    | Draft — open for conformance review                              |
-| **Date**      | 2026-08-24                                                       |
+| **Date**      | 2026-09-02                                                       |
 | **License**   | Apache-2.0 (same as the reference implementation)                |
 | **Reference implementation** | [`integrations/cpex-ocsf-audit`](../../integrations/cpex-ocsf-audit) (adapter #1) |
 | **Conformance vectors** | [`SAMPLE-OUTPUT.md`](../../integrations/cpex-ocsf-audit/SAMPLE-OUTPUT.md), [`SAMPLE-OUTPUT-DECISIONS.md`](../../integrations/cpex-ocsf-audit/SAMPLE-OUTPUT-DECISIONS.md) |
@@ -251,10 +251,17 @@ MUST carry them at `unmapped."cpex.stream"`, **inside the hashed bytes**:
 - `epoch` identifies one host process lifetime; it changes on restart. Chains
   and sequence claims are scoped to an epoch.
 - `stream_seq` MUST be dense (increment by exactly 1) per
-  `(epoch, stream_id)`. A gap in `stream_seq` is **evidence** — a crashed
-  emitter, a dropped record, or tampering — and consumers MUST surface it,
-  not renumber or discard around it. Post-hoc renumbering is impossible by
-  construction: the stamps are inside the fingerprinted bytes.
+  `(epoch, stream_id)`, and MUST start at `0`: the first record a host emits
+  in an epoch carries `stream_seq: 0`. (The reference host stamps from a
+  zero-initialised counter, so a restart resets the sequence to 0, not 1.)
+  A gap in `stream_seq` is **evidence** — a crashed emitter, a dropped
+  record, or tampering — and consumers MUST surface it, not renumber or
+  discard around it. That includes the head: an epoch whose first observed
+  record is `stream_seq: n > 0` has lost records `0..n-1`, and a consumer
+  holding the stream's history MUST surface that exactly like an interior
+  gap. A verifier given only a slice of a stream MAY report a non-zero head
+  as unverifiable rather than as a loss. Post-hoc renumbering is impossible
+  by construction: the stamps are inside the fingerprinted bytes.
 - `emission_seq` orders emissions across streams within an epoch.
 
 ## 8. Join key
@@ -358,8 +365,8 @@ this document, a verifier:
 4. For chain verification, additionally checks that each record's
    `prev_event.uid` and `prev_event.fingerprint.value` match the predecessor's
    `metadata.uid` and recomputed fingerprint, and that `stream_seq` is dense
-   per `(epoch, stream_id)` (§7). A mismatch or gap is a finding to surface,
-   never to repair silently.
+   per `(epoch, stream_id)` and opens at `0` (§7). A mismatch, a gap, or a
+   missing head is a finding to surface, never to repair silently.
 
 The reference implementation ships this rule as running code
 (`sign::signing_input`, exercised by the `signed_event_verifies_offline` test

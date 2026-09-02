@@ -62,11 +62,13 @@ RESET = "\033[0m"
 DEMO_KEY = ec.derive_private_key(0x0100D011A2A6E27, ec.SECP256R1())
 
 # (seq, request id, time, amount, allowed, remaining after)
+# stream_seq starts at 0 per epoch (AID-EMIT-1 §7) — the reference host stamps
+# its first record 0, and ingest checks the head of every epoch against that.
 DRAWS = [
-    (1, "corr-d1a04f10", "2026-08-22T17:00:01.000Z", "40.00", True, "60.00"),
-    (2, "corr-d2b93c22", "2026-08-22T17:00:02.000Z", "35.00", True, "25.00"),
-    (3, "corr-d3c71e08", "2026-08-22T17:00:03.000Z", "20.00", True, "5.00"),
-    (4, "corr-d4e55b37", "2026-08-22T17:00:04.000Z", "15.00", False, "5.00"),
+    (0, "corr-d1a04f10", "2026-08-22T17:00:01.000Z", "40.00", True, "60.00"),
+    (1, "corr-d2b93c22", "2026-08-22T17:00:02.000Z", "35.00", True, "25.00"),
+    (2, "corr-d3c71e08", "2026-08-22T17:00:03.000Z", "20.00", True, "5.00"),
+    (3, "corr-d4e55b37", "2026-08-22T17:00:04.000Z", "15.00", False, "5.00"),
 ]
 
 
@@ -224,7 +226,7 @@ def build_tampered(story: list[dict]) -> dict:
 
 
 def build_gap_record(story: list[dict], key=DEMO_KEY) -> dict:
-    """A crypto-valid record whose predecessors were lost — seq jumps 4 → 7."""
+    """A crypto-valid record whose predecessors were lost — seq jumps 3 → 7."""
     event = _draw_record(7, "corr-d7f90a11", "2026-08-22T17:00:07.000Z", "1.00", True, "4.00")
     last = story[-1]
     prev = (last["metadata"]["uid"], last["attestation_list"][0]["fingerprint"]["value"])

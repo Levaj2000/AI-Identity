@@ -30,7 +30,8 @@ What it checks, by spec section:
   each successor's `prev_event.uid` / `.fingerprint.value` match the
   predecessor's `metadata.uid` / recomputed fingerprint; duplicate
   `metadata.uid` is reported as an idempotent-replay finding; `stream_seq`
-  must be dense per `(epoch, stream_id)` — a gap is **surfaced as a
+  must be dense per `(epoch, stream_id)` and start at 0 (a higher first
+  value is warned as `W-STREAM-HEAD`) — a gap is **surfaced as a
   finding, never repaired** (warning by default, error with
   ``--strict-gaps``); a decrease is an ordering error.
 
@@ -501,6 +502,19 @@ def check_chains(
             streams.setdefault(key, []).append((stream["stream_seq"], idx))
 
     for (_chain, epoch, stream_id), entries in streams.items():
+        # §7: the first stream_seq of an (epoch, stream_id) is 0. An input
+        # slice may legitimately start mid-epoch, so — like W-CHAIN-HEAD —
+        # this is a warning that the head is not in the input, never an
+        # error; the ingest path, which holds the whole history, records
+        # it as an anomaly.
+        head_seq, head_idx = entries[0]
+        if head_seq != 0:
+            out.warn(
+                "W-STREAM-HEAD",
+                head_idx,
+                f"stream ({epoch}, {stream_id!r}) starts at stream_seq {head_seq}, not 0: "
+                f"records 0..{head_seq - 1} not in input; head completeness unverifiable here (§7)",
+            )
         prev_seq = None
         for seq, idx in entries:
             if prev_seq is not None:

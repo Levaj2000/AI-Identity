@@ -11,7 +11,7 @@
 // genuine epoch boundary between them.
 //
 //   DEMO_EPOCH        u64 epoch stamp            (default 1755648000000000000)
-//   DEMO_BASE_SEQ     u64 first stream_seq       (default 41)
+//   DEMO_BASE_SEQ     u64 first stream_seq       (default 0 — an epoch opens at 0, §7)
 //   DEMO_STREAM_ID    stream id                  (default "gw-1/boot-7")
 //   DEMO_CASES        comma list of case numbers (default "1,2,3,4,5")
 //   DEMO_SIGNING_KEY  PKCS#8 P-256 PEM path; when set, chain + DSSE
@@ -212,7 +212,7 @@ fn finalized(
 
 fn main() {
     let epoch = env_u64("DEMO_EPOCH", 1_755_648_000_000_000_000);
-    let base_seq = env_u64("DEMO_BASE_SEQ", 41);
+    let base_seq = env_u64("DEMO_BASE_SEQ", 0);
     let stream_id = env_str("DEMO_STREAM_ID", "gw-1/boot-7");
     let cases: Vec<u32> = env_str("DEMO_CASES", "1,2,3,4,5")
         .split(',')
