@@ -71,6 +71,12 @@ def stream_stamps(event: dict) -> tuple[int | None, str | None, int | None, int 
     )
 
 
+# The first stream_seq a host emits in an epoch. The reference host (CPEX)
+# stamps records from a zero-initialized counter with fetch_add, so the
+# first record of every executor generation is 0; AID-EMIT-1 §7 pins it.
+STREAM_HEAD_SEQ = 0
+
+
 def _epoch_regressed(record_epoch: int | None, tail_epoch: int | None) -> bool:
     """True when the record's epoch is strictly OLDER than the stream's.
 
@@ -285,9 +291,19 @@ class BatchVerifier:
         # wrong in the other direction — epochs are boot-ordered, so going
         # backwards means late replay of a dead process or clock trouble,
         # and that IS worth a look.
+        #
+        # The counters reset TO ZERO (§7): the first record a host emits in
+        # an epoch is stream_seq 0. So the head of every epoch is checked
+        # too — the first record seen for a stream, and the first record of
+        # each newer epoch. Without that, a lost record 0 after a restart
+        # (the record emitted while the process is still coming up, i.e.
+        # the one most likely to be dropped) is invisible: the tail simply
+        # starts at 1 and everything after it reads as dense.
         if r.stream_id is not None and isinstance(r.stream_seq, int):
             tail = self._tails.get(r.stream_id)
-            if tail is not None:
+            if tail is None:
+                self._check_head(r)
+            else:
                 tail_epoch, tail_seq = tail
                 if r.epoch == tail_epoch:
                     if r.stream_seq != tail_seq + 1:
@@ -299,7 +315,9 @@ class BatchVerifier:
                     r.anomalies.append(
                         f"epoch regression in {r.stream_id}: {r.epoch} after {tail_epoch}"
                     )
-                # else: newer epoch — a restart; density restarts with it.
+                else:
+                    # Newer epoch — a restart; density restarts with it, from 0.
+                    self._check_head(r)
             self._tails[r.stream_id] = (r.epoch, r.stream_seq)
         if isinstance(r.emission_seq, int):
             if self._last_emission is not None:
@@ -311,3 +329,20 @@ class BatchVerifier:
                 # A different epoch resets emission_seq with the process;
                 # regression across epochs is already reported once above.
             self._last_emission = (r.epoch, r.emission_seq)
+
+    @staticmethod
+    def _check_head(r: RecordCheck) -> None:
+        """First record of an (epoch, stream_id): it must be stream_seq 0.
+
+        Anything higher means records 0..n-1 of this epoch never arrived —
+        the same completeness statement as an interior gap, made at the one
+        position the tail-based check can never see. A consumer that joined
+        the stream late gets the same anomaly, and that is correct: those
+        records are not in the ledger either way.
+        """
+        if r.stream_seq != STREAM_HEAD_SEQ:
+            r.anomalies.append(
+                f"stream_seq head gap in {r.stream_id}: expected {STREAM_HEAD_SEQ}, "
+                f"got {r.stream_seq} — records {STREAM_HEAD_SEQ}..{r.stream_seq - 1} "
+                f"of epoch {r.epoch} not ingested"
+            )

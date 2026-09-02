@@ -48,7 +48,7 @@ def test_demo_story_plays_all_four_acts(client, db_session, demo_edge):
     data = act1.json()
     assert data["verified"] == 4 and data["quarantined"] == 0 and data["anomalies"] == 0
     assert [r["chain_position"] for r in data["results"]] == [1, 2, 3, 4]
-    denied = db_session.query(EdgeAuditEvent).filter_by(metadata_uid="draw-004").one()
+    denied = db_session.query(EdgeAuditEvent).filter_by(metadata_uid="draw-003").one()
     assert denied.event["action"] == "Denied"
     assert denied.event["status_code"] == "mandate_exceeded"
     # The draw-receipt join key rides inside the verified bytes

@@ -124,6 +124,20 @@ def test_duplicate_uid_is_idempotent_replay_warning(tmp_path, story):
     assert "W-DUP-UID" in codes(findings)
 
 
+def test_stream_head_not_zero_is_warned_not_failed(tmp_path, story):
+    """§7: a stream opens at stream_seq 0. An input that starts higher may be
+    a mid-epoch slice, so the validator warns (like W-CHAIN-HEAD) rather than
+    fails; the ingest path, which holds the whole history, makes it an anomaly."""
+    records, _, _ = story
+    code, findings = run(tmp_path, records[1:])
+    assert code == 0
+    assert "W-STREAM-HEAD" in codes(findings)
+    assert not any(f["level"] == "ERROR" for f in findings)
+    # A clean, full story starts at 0 and carries no head warning.
+    code, findings = run(tmp_path, records)
+    assert "W-STREAM-HEAD" not in codes(findings)
+
+
 def test_gap_becomes_error_with_strict_gaps(tmp_path, story):
     records, _, _ = story
     code, findings = run(tmp_path, records[:2] + records[3:], extra=("--strict-gaps",))
