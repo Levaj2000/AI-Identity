@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session  # noqa: TC002 — runtime Depends target
 
 from api.app.auth import get_current_user
 from api.app.routers.audit_sinks import _require_org_admin
-from api.app.services.edge_ingest import BatchVerifier, dedupe_key_for
+from api.app.services.edge_ingest import STREAM_HEAD_SEQ, BatchVerifier, dedupe_key_for
 from common.audit import create_audit_entry
 from common.auth.keys import get_key_prefix, hash_key
 from common.models import (
@@ -247,9 +247,16 @@ def edge_streams(
             first_seq=first_seq,
             last_seq=last_seq,
             records=records,
-            # Dedupe guarantees one row per (stream, seq) identity, so a
-            # dense segment has exactly last-first+1 rows.
-            dense=records == last_seq - first_seq + 1,
+            # Dense means nothing in the epoch was lost, and an epoch opens
+            # at stream_seq 0 (AID-EMIT-1 §7; the reference host stamps from
+            # a zero-initialised counter). Dedupe guarantees one row per
+            # (stream, seq) identity, so the interior is dense when there are
+            # exactly last-first+1 rows — but a segment that opens above 0
+            # lost its head, and counting rows from wherever it starts would
+            # score the one loss ingest flags as a `head gap` as dense. Both
+            # verifiers (this and the offline validator) check the head, so
+            # the read path has to agree with them.
+            dense=first_seq == STREAM_HEAD_SEQ and records == last_seq - first_seq + 1,
             anomaly_records=anomaly_records,
             last_received_at=last_received_at,
         )

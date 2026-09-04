@@ -12,7 +12,10 @@
 //
 //   DEMO_EPOCH        u64 epoch stamp            (default 1755648000000000000)
 //   DEMO_BASE_SEQ     u64 first stream_seq       (default 0 — an epoch opens at 0, §7)
-//   DEMO_STREAM_ID    stream id                  (default "gw-1/boot-7")
+//   DEMO_STREAM_ID    stream id                  (default "gw-1:decision" —
+//                     the "<namespace>:<kind>" shape CPEX stamps when the
+//                     host sets plugin_settings.audit_stream_namespace,
+//                     so these beats share a stream with the real beat 06)
 //   DEMO_CASES        comma list of case numbers (default "1,2,3,4,5")
 //   DEMO_SIGNING_KEY  PKCS#8 P-256 PEM path; when set, chain + DSSE
 //   DEMO_KEY_ID       JWKS kid stamped on each record
@@ -28,11 +31,11 @@
 //                     "sess-gw-1-boot-7")
 //
 // Cases 1-5 are the same five rulings `decision_sink_demo` documents.
-// Case 6 is the fail-closed panic record: a plugin that panicked under
-// catch_unwind, surfacing as violation code `plugin_panic` on a terminal
-// deny. The record is real; driving CPEX to *produce* one end to end
-// still needs the panicking-plugin harness, which is why the demo shows
-// beat 06 amber.
+// Case 6 is the fail-closed panic record as this driver CONSTRUCTS it: a
+// plugin that panicked under catch_unwind, surfacing as violation code
+// `plugin_panic` on a terminal deny. The demo runner no longer uses it —
+// `panic_drive.rs` drives a real one through the PluginManager — but it
+// stays here as the reference shape of that record.
 //
 //   cargo run --example demo_stream
 
@@ -213,7 +216,7 @@ fn finalized(
 fn main() {
     let epoch = env_u64("DEMO_EPOCH", 1_755_648_000_000_000_000);
     let base_seq = env_u64("DEMO_BASE_SEQ", 0);
-    let stream_id = env_str("DEMO_STREAM_ID", "gw-1/boot-7");
+    let stream_id = env_str("DEMO_STREAM_ID", "gw-1:decision");
     let cases: Vec<u32> = env_str("DEMO_CASES", "1,2,3,4,5")
         .split(',')
         .filter_map(|c| c.trim().parse().ok())

@@ -551,3 +551,32 @@ def test_other_orgs_admin_cannot_see_or_revoke_edge(client, edge, other_user, db
     assert client.get("/api/v1/edges", headers=other_headers).json()["edges"] == []
     resp = client.post(f"/api/v1/edges/{edge_id}/revoke", headers=other_headers)
     assert resp.status_code == 404
+
+
+def test_streams_endpoint_scores_a_lost_head_as_not_dense(client, edge, auth_headers):
+    """The read path must agree with ingest and the offline validator on
+    the head rule: an epoch opens at stream_seq 0, so a segment that opens
+    higher lost its head and is NOT dense — even though its interior is.
+
+    Before this, density was scored as ``records == last - first + 1`` from
+    wherever the segment happened to start, so a restart that dropped
+    record 0 (the record emitted while the process was still coming up,
+    i.e. the one most likely to be lost) read as a clean, dense epoch on
+    the Case File page while the row beneath it carried a head-gap
+    anomaly."""
+    edge_id, headers = edge
+    e1 = make_chain(2)  # epoch 1: seq 0..1, dense
+    client.post("/api/v1/audit/ingest", headers=headers, content=ndjson(e1))
+    # Restart whose record 0 never arrived: 1..2, interior dense.
+    r1 = make_event(1, "e2-rec-1", head_of(e1[-1]), epoch=2, emission_seq=1)
+    r2 = make_event(2, "e2-rec-2", head_of(r1), epoch=2, emission_seq=2)
+    data = client.post("/api/v1/audit/ingest", headers=headers, content=ndjson([r1, r2])).json()
+    assert "stream_seq head gap" in data["results"][0]["anomalies"]
+
+    resp = client.get(f"/api/v1/edges/{edge_id}/streams", headers=auth_headers)
+    assert resp.status_code == 200, resp.text
+    seg1, seg2 = resp.json()["segments"]
+    assert seg1["dense"] is True
+    assert (seg2["epoch"], seg2["first_seq"], seg2["last_seq"], seg2["records"]) == (2, 1, 2, 2)
+    assert seg2["dense"] is False, "a segment that opens above 0 lost its head"
+    assert seg2["anomaly_records"] == 1

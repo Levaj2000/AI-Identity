@@ -41,6 +41,14 @@ span, entry taint, content hashes and the `(epoch, stream_id, stream_seq,
 emission_seq)` stream stamps under `unmapped.cpex.*`, inside the hashed bytes.
 
 ```yaml
+plugin_settings:
+  # Optional (cpex feat/audit-seam >= bd39d2c): name the host, and the
+  # executor stamps its streams as gw-1:decision / gw-1:effect instead of
+  # the bare labels — one host identity, two independently gap-free
+  # counters. The epoch is deliberately NOT a YAML value (a static file
+  # epoch cannot stay monotonic across boots); a host that supplies one
+  # sets `plugin_settings.audit_epoch` in code before `load_config`.
+  audit_stream_namespace: gw-1
 plugins:
   - name: ocsf-audit
     kind: audit/ocsf
@@ -49,6 +57,10 @@ plugins:
       destination: stderr
       chain: true
 ```
+
+`examples/panic_drive.rs` is the runnable form of this wiring — a `PluginManager`
+loading exactly this shape through `load_config`, with a plugin that panics, so the
+record it emits is a real fail-closed deny on the host-named stream.
 
 **Post-hook observer mode (legacy; pre-seam cpex):** list the CMF POST hooks to
 observe. This path sees allowed traffic only — it structurally cannot record a

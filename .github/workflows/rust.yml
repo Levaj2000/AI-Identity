@@ -40,10 +40,14 @@ env:
   # it can live here as a reference implementation (see Cargo.toml).
   #
   # Pinned to the current tip of contextforge-org/cpex `feat/audit-seam`,
-  # `5a253d4` — the head SAMPLE-OUTPUT.md was regenerated against, one commit
-  # past the `386710a` the 2026-08-18 port was measured on (the delta is a
-  # CHANGELOG entry plus a debug_assert that a stop carries a violation).
-  # The seam is still branch-only: neither `main` nor `dev` contains it.
+  # `64c8eba` — the 2026-09-02 pair of commits that made the audit stream
+  # identity host-settable (`plugin_settings.audit_stream_namespace`, the
+  # programmatic `audit_epoch`, both bridged field-by-field into
+  # `ExecutorConfig`) and dropped `Clone` from `EffectEmitterSlot`.
+  # `examples/panic_drive.rs` drives the manager path with a host
+  # namespace, so it does not compile against anything older; the pin
+  # cannot sit behind it. The seam is still branch-only: neither `main`
+  # nor `dev` contains it.
   #
   # Pinned rather than tracking the branch so a bump in this crate is the
   # only variable in a red run — the same reason Cargo.toml tells you to pin
@@ -51,7 +55,7 @@ env:
   # the crate re-verified against the newer seam: build, tests, and
   # `cargo run --example emit_sample` byte-identical (SAMPLE-OUTPUT.md is an
   # AID-EMIT-1 §12 conformance vector, so a changed byte is a real finding).
-  CPEX_REV: 5a253d43d7dd4cfe926e2dcc76ed0d4a5110c148
+  CPEX_REV: 64c8eba85fac28fa7e73b6c83d32aca7356ca23d
 
 jobs:
   cpex-ocsf-audit:
