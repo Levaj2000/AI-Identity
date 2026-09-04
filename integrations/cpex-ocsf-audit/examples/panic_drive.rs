@@ -2,35 +2,50 @@
 // Copyright 2026 AI Identity
 // SPDX-License-Identifier: Apache-2.0
 //
-// Beat 06, driven for real.
+// Beat 06, driven for real — through the PluginManager.
 //
 // `demo_stream.rs` case 6 CONSTRUCTS a plugin_panic DecisionLog and hands
-// it to the mapper. This one doesn't: it registers a plugin whose handler
-// panics, runs it through the CPEX executor, and lets the seam produce the
-// record. The panic is contained by the executor's `catch_unwind`, surfaces
-// as `PluginError::Execution { code: "panic" }`, becomes a
-// `plugin_panic` violation on a terminal deny (executor.rs, the
-// `Ok(Err(e))` arm), and reaches this crate through the audit seam like any
-// other verdict. Nothing about the record is written by hand.
+// it to the mapper. This one doesn't: it declares a plugin whose handler
+// panics and this crate's OCSF sink in a CPEX config, loads that config
+// through the `PluginManager` the way a production host does, and lets
+// the seam produce the record. The panic is contained by the executor's
+// `catch_unwind`, surfaces as `PluginError::Execution { code: "panic" }`,
+// becomes a `plugin_panic` violation on a terminal deny (executor.rs, the
+// `Ok(Err(e))` arm), and reaches this crate through the audit seam like
+// any other verdict. Nothing about the record is written by hand.
 //
-// WHAT IS DIFFERENT ABOUT A REAL RECORD, and why it is not a defect:
+// WHY THE MANAGER PATH, and not `Executor::new` directly (as the first
+// revision of this driver did):
 //
-// The executor owns the decision stream's identity. `stream_id` is the
-// literal "decision" (executor.rs `stamp_decision_stream`) and `epoch` is
-// the executor's boot time in Unix nanoseconds, captured in `Executor::new`
-// with no setter. So this record does NOT join the demo's synthetic
-// `gw-1/boot-7` stream, and its epoch changes on every run.
+// The README wires the plugin the production way — `kind: audit/ocsf` in
+// YAML, the factory builds the emitter, `Plugin::as_audit_handler` attaches
+// it — and until this driver nothing in the tree exercised `load_config`
+// end to end. Now something does: this is the one example that runs the
+// YAML surface, factory instantiation, the auto-attach of an audit-only
+// sink, and `initialize` → `invoke_named` → `shutdown` as a host would.
 //
-// That is the honest cost of the record being real, and the alternative was
-// never on the table: the stream stamps ride INSIDE the hashed bytes, so
-// rewriting them to match the synthetic stream would be forging the
-// evidence — the exact failure this crate exists to make detectable.
+// It is also what makes the record join the demo's stream. The executor
+// owns the decision stream's identity, and since cpex `bd39d2c` the host
+// can name it: `plugin_settings.audit_stream_namespace` (a YAML knob)
+// prefixes the per-type labels, so the decision stream becomes
+// `gw-1:decision`; `plugin_settings.audit_epoch` (deliberately code-only —
+// `serde(skip)`, since a static file value cannot stay monotonic across
+// boots) lets the host supply the epoch. The manager bridges both into
+// `ExecutorConfig` field-by-field (`snapshot_from_config`), the same way
+// it bridges `plugin_timeout`, so the YAML path and the direct path stamp
+// identically. With the namespace set and the epoch supplied, beat 06
+// lands on the same stream as beats 01-05, in the demo's second epoch, at
+// stream_seq 0 — one stream across a restart, which is the picture the
+// ledger side draws.
 //
-// What does carry across, and is what the ledger side correlates on:
-// `ai_agent.uid` and `metadata.correlation_uid` come from the
-// AgentExtension supplied here, not from the executor's stamping. So a real
-// beat 06 still names agent-7 and still joins the run.
+// What has NOT changed: the stamps still ride INSIDE the hashed bytes, so
+// they are the executor's to write, not ours to edit afterwards. The host
+// names the stream before the first record; it never rewrites one.
 //
+//   DEMO_EPOCH        host-supplied audit epoch (u64). Unset → the
+//                     executor's wall-clock boot epoch, as in production.
+//   DEMO_STREAM_NS    audit_stream_namespace (default "gw-1"), so the
+//                     decision stream is "<ns>:decision"
 //   DEMO_SIGNING_KEY  PKCS#8 P-256 PEM path; when set, chain + DSSE
 //   DEMO_KEY_ID       JWKS kid stamped on the record
 //   DEMO_AUTHORITY    attestation authority_uid
@@ -52,31 +67,69 @@ use std::sync::Arc;
 
 use serde_json::json;
 
-use cpex_plugin_ocsf_audit::OcsfAuditEmitter;
+use cpex_plugin_ocsf_audit::{OcsfAuditFactory, KIND as OCSF_KIND};
 
-use cpex_core::cmf::{ContentPart, CmfHook, Message, MessagePayload, Role, ToolCall};
-use cpex_core::executor::{Executor, ExecutorConfig};
-use cpex_core::extensions::{
-    AgentExtension, Extensions, SecurityExtension, SubjectExtension,
-};
+use cpex_core::cmf::{CmfHook, ContentPart, Message, MessagePayload, Role, ToolCall};
+use cpex_core::config::parse_config;
+use cpex_core::context::PluginContext;
+use cpex_core::error::PluginError;
+use cpex_core::extensions::{AgentExtension, Extensions, SecurityExtension, SubjectExtension};
+use cpex_core::factory::{PluginFactory, PluginInstance};
 use cpex_core::hooks::adapter::TypedHandlerAdapter;
 use cpex_core::hooks::trait_def::{HookHandler, PluginResult};
-use cpex_core::context::PluginContext;
-use cpex_core::plugin::{OnError, Plugin, PluginConfig, PluginMode};
-use cpex_core::registry::{AnyHookHandler, HookEntry, PluginRef};
+use cpex_core::manager::PluginManager;
+use cpex_core::plugin::{Plugin, PluginConfig};
+use cpex_core::registry::AnyHookHandler;
+
+/// `kind:` the demo config declares for the plugin that panics.
+const PANICKING_KIND: &str = "demo/panicking";
+
+/// The host's plugin config, as an operator would write it. Two plugins:
+/// the one that comes apart, and this crate's sink with no `hooks:` — which
+/// is what makes the factory hand back an audit-only sink that the manager
+/// attaches at the verdict path (`as_audit_handler`). A post-hook observer
+/// would never see this record: the request is denied, so it never reaches
+/// a post hook. That asymmetry is the reason the audit seam exists.
+///
+/// `mode: sequential` + `on_error: fail` is what makes the panic terminal:
+/// the executor's blocking branch turns a contained panic into a
+/// `plugin_panic` violation and denies. In a non-blocking phase the same
+/// panic would be recorded as an error and the request would continue,
+/// which is a different (also real) behaviour and not the one beat 06 is
+/// about.
+///
+/// `audit_stream_namespace` is a YAML value on purpose: it is a stable host
+/// identity, so it belongs in the file. The epoch does not — see `main`.
+fn config_yaml(namespace: &str) -> String {
+    format!(
+        r#"
+plugin_settings:
+  audit_stream_namespace: {namespace}
+
+plugins:
+  - name: minter
+    kind: {PANICKING_KIND}
+    hooks:
+      - cmf.tool_pre_invoke
+    mode: sequential
+    priority: 10
+    on_error: fail
+
+  - name: ocsf-decision-sink-demo
+    kind: {OCSF_KIND}
+    # no `hooks:` -> audit-only sink mode (sees denials)
+    mode: audit
+    priority: 50
+    on_error: fail
+"#
+    )
+}
 
 fn env_str(key: &str, default: &str) -> String {
     std::env::var(key).unwrap_or_else(|_| default.to_string())
 }
 
 /// A plugin that panics. That is the whole point of it.
-///
-/// Sequential mode with `on_error: Fail` is what makes the panic terminal:
-/// the executor's blocking branch turns a contained panic into a
-/// `plugin_panic` violation and denies. In a non-blocking phase the same
-/// panic would be recorded as an error and the request would continue,
-/// which is a different (also real) behaviour and not the one beat 06 is
-/// about.
 struct PanickingPlugin {
     cfg: PluginConfig,
 }
@@ -102,7 +155,36 @@ impl HookHandler<CmfHook> for PanickingPlugin {
     }
 }
 
-fn sink() -> Arc<OcsfAuditEmitter> {
+/// Factory for `demo/panicking`, shaped like the crate's own
+/// `OcsfAuditFactory`: one `TypedHandlerAdapter<CmfHook, _>` per hook the
+/// config lists. This is the contract a host registers before
+/// `load_config`, and the reason the manager never needs to know the
+/// concrete plugin type.
+struct PanickingFactory;
+
+impl PluginFactory for PanickingFactory {
+    fn create(&self, config: &PluginConfig) -> Result<PluginInstance, Box<PluginError>> {
+        let plugin = Arc::new(PanickingPlugin {
+            cfg: config.clone(),
+        });
+        let handlers: Vec<(&'static str, Arc<dyn AnyHookHandler>)> = config
+            .hooks
+            .iter()
+            .map(|h| {
+                let leaked: &'static str = Box::leak(h.clone().into_boxed_str());
+                let adapter: Arc<dyn AnyHookHandler> =
+                    Arc::new(TypedHandlerAdapter::<CmfHook, _>::new(Arc::clone(&plugin)));
+                (leaked, adapter)
+            })
+            .collect();
+        Ok(PluginInstance { plugin, handlers })
+    }
+}
+
+/// The sink's `config:` block. Built in code rather than in the YAML above
+/// only because the signing key path comes from the environment; the shape
+/// is exactly what the README shows an operator writing.
+fn sink_config() -> serde_json::Value {
     let mut cfg = json!({
         "chain": false,
         "product_name": "AI Identity OCSF Audit",
@@ -117,23 +199,7 @@ fn sink() -> Arc<OcsfAuditEmitter> {
         cfg["authority_uid"] = json!(env_str("DEMO_AUTHORITY", "org-f3576cf6"));
         cfg["chain_uid"] = json!(env_str("DEMO_CHAIN_UID", "demo-chain-boot-7-e3"));
     }
-
-    // No `hooks:` — audit-only sink mode, which is what attaches this as an
-    // AuditHandler rather than a post-hook observer. A post-hook observer
-    // would never see this record: the request is denied, so it never
-    // reaches a post hook. That asymmetry is the reason the audit seam
-    // exists.
-    let config = PluginConfig {
-        name: "ocsf-decision-sink-demo".into(),
-        kind: "audit/ocsf".into(),
-        hooks: vec![],
-        mode: PluginMode::Audit,
-        priority: 50,
-        on_error: OnError::Fail,
-        config: Some(cfg),
-        ..Default::default()
-    };
-    Arc::new(OcsfAuditEmitter::new(config).expect("valid demo config"))
+    cfg
 }
 
 fn request() -> (MessagePayload, Extensions) {
@@ -158,9 +224,8 @@ fn request() -> (MessagePayload, Extensions) {
     sec.subject = Some(subj);
     sec.labels.insert("PII".into());
 
-    // Same agent and run as the synthetic beats. These are what survive the
-    // executor's own stream stamping, so a real beat 06 still correlates
-    // with beats 01-05 on the ledger side.
+    // Same agent and run as the synthetic beats: agent-7 and the run id
+    // are what the ledger side correlates all six records on.
     let agent = AgentExtension {
         agent_id: Some(env_str("DEMO_AGENT_ID", "agent-7")),
         conversation_id: Some(env_str("DEMO_CONVERSATION_ID", "run-4bf92f35")),
@@ -180,41 +245,47 @@ fn request() -> (MessagePayload, Extensions) {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let emitter = sink();
+    let namespace = env_str("DEMO_STREAM_NS", "gw-1");
+    let host_epoch: Option<u64> = std::env::var("DEMO_EPOCH")
+        .ok()
+        .map(|v| v.parse().expect("DEMO_EPOCH must be a u64"));
 
-    let plugin_cfg = PluginConfig {
-        name: "minter".into(),
-        kind: "demo/panicking".into(),
-        hooks: vec!["cmf.tool_pre_invoke".into()],
-        mode: PluginMode::Sequential,
-        priority: 10,
-        on_error: OnError::Fail,
-        ..Default::default()
-    };
+    // 1. Parse the operator's YAML. The namespace rides in the file.
+    let mut cfg = parse_config(&config_yaml(&namespace)).expect("demo config parses");
 
-    let panicker = Arc::new(PanickingPlugin {
-        cfg: plugin_cfg.clone(),
-    });
-    let plugin_ref = Arc::new(PluginRef::new(
-        panicker.clone() as Arc<dyn Plugin>,
-        plugin_cfg,
-    ));
-    let handler: Arc<dyn AnyHookHandler> =
-        Arc::new(TypedHandlerAdapter::<CmfHook, _>::new(panicker));
-    let entry = HookEntry {
-        plugin_ref,
-        handler,
-    };
+    // 2. The epoch is set in code, after parsing, and only here. It is
+    //    `serde(skip)` upstream so that a value written in the YAML is
+    //    ignored rather than pinned: an epoch must strictly increase per
+    //    executor generation for a verifier to tell a restart from record
+    //    loss, and a static file value cannot do that. The host that
+    //    supplies one owns that monotonicity — here, the demo runner does,
+    //    by handing each process a larger epoch than the last.
+    cfg.plugin_settings.audit_epoch = host_epoch;
 
-    let mut executor = Executor::new(ExecutorConfig::default());
-    executor.push_audit_handler(emitter);
+    // 3. The sink's config block, with the signing key from the environment.
+    let sink = cfg
+        .plugins
+        .iter_mut()
+        .find(|p| p.kind == OCSF_KIND)
+        .expect("the demo config declares the ocsf sink");
+    sink.config = Some(sink_config());
 
+    // 4. Factories, then load, then initialize — the host lifecycle. The
+    //    manager instantiates both plugins through their factories, copies
+    //    the stream identity into the executor it builds, and attaches the
+    //    sink through `as_audit_handler` because it listed no hooks.
+    let manager = PluginManager::default();
+    manager.register_factory(OCSF_KIND, Box::new(OcsfAuditFactory));
+    manager.register_factory(PANICKING_KIND, Box::new(PanickingFactory));
+    manager.load_config(cfg).expect("demo config loads");
+    manager.initialize().await.expect("plugins initialize");
+
+    // 5. Dispatch, exactly as a CMF host would for a tool call.
     let (payload, ext) = request();
-    let tracker = tokio_util::task::TaskTracker::new();
-
-    let (result, _bg) = executor
-        .execute(&[entry], Box::new(payload), ext, None, &tracker)
+    let (result, _bg) = manager
+        .invoke_named::<CmfHook>("cmf.tool_pre_invoke", payload, ext, None)
         .await;
+    manager.shutdown().await;
 
     // The record has already been emitted by the audit seam at this point.
     // Assert the shape the demo claims, so a silent behaviour change
@@ -233,9 +304,34 @@ async fn main() {
     );
     assert_eq!(violation.plugin_name.as_deref(), Some("minter"));
 
+    // And the stream identity the host asked for is the one the executor
+    // stamped — inside the hashed bytes, by the executor, before the
+    // record was signed. This is the assertion that turns "one stream
+    // across a restart" from a slide into a checked fact.
+    let expected_stream = format!("{namespace}:decision");
+    assert_eq!(
+        result.decision_log.stream_id(),
+        Some(expected_stream.as_str()),
+        "the manager must bridge audit_stream_namespace into the executor"
+    );
+    if let Some(epoch) = host_epoch {
+        assert_eq!(
+            result.decision_log.epoch(),
+            Some(epoch),
+            "the manager must bridge the programmatic audit_epoch into the executor"
+        );
+    }
+
     eprintln!(
-        "// verify: real panic driven — verdict deny, violation {}, plugin {}",
+        "// verify: real panic driven through the manager path — verdict deny, violation {}, \
+         plugin {}, stream {} epoch {}",
         violation.code,
         violation.plugin_name.as_deref().unwrap_or("?"),
+        result.decision_log.stream_id().unwrap_or("?"),
+        result
+            .decision_log
+            .epoch()
+            .map(|e| e.to_string())
+            .unwrap_or_else(|| "?".into()),
     );
 }

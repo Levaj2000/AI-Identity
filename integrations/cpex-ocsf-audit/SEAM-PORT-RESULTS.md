@@ -57,11 +57,15 @@ non-CMF dispatches, and that the stream stamps are bound into the
 fingerprint. The suite is **33** as of #480 (emitter 27, sign 6), which is
 the count `PRAXIS-PORT-PLAN.md` carries and the one to quote. `386710a` is
 the head *this* port was measured on; the verified seam head has since moved
-to `5a253d4`, the branch tip `SAMPLE-OUTPUT.md` was regenerated against and
-the rev `.github/workflows/rust.yml` pins CI to — re-verified 2026-08-31 on
-rustc 1.96.1 (33 tests green, `emit_sample` byte-identical). The delta from
-`386710a` is a CHANGELOG entry plus a `debug_assert` that a stop carries a
-violation, so nothing in the results below changes. Remaining follow-up:
+to `64c8eba`, the rev `.github/workflows/rust.yml` pins CI to — re-verified
+2026-09-04 on rustc 1.96.1 (33 tests green, `emit_sample` byte-identical), as
+`5a253d4` was on 2026-08-31 before it. The delta from `386710a`: a CHANGELOG
+entry plus a `debug_assert` that a stop carries a violation (`5a253d4`), then
+host-settable audit stream identity — `plugin_settings.audit_stream_namespace`
+and a code-only `audit_epoch`, bridged into `ExecutorConfig` — and a non-Clone
+`EffectEmitterSlot` (`bd39d2c`, `64c8eba`). Additive on the seam contract, so
+nothing in the results below changes; `examples/panic_drive.rs` is the first
+consumer of the identity fields. Remaining follow-up:
 `AuditHandler::on_effect` (effect-lifecycle events want a richer OCSF
 class than 6003 — e.g. Authentication for a token mint).
 

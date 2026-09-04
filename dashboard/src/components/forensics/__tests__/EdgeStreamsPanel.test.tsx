@@ -37,8 +37,8 @@ function segment(over: Partial<edgesApi.EdgeStreamSegment>): edgesApi.EdgeStream
   return {
     stream_id: 'gw-1/boot-7',
     epoch: 1,
-    first_seq: 1,
-    last_seq: 2,
+    first_seq: 0,
+    last_seq: 1,
     records: 2,
     dense: true,
     anomaly_records: 0,
@@ -78,9 +78,9 @@ describe('EdgeStreamsPanel — restart is a boundary, not a loss', () => {
       edgeWith([
         segment({
           epoch: 2,
-          first_seq: 1,
+          first_seq: 0,
           last_seq: 3,
-          records: 2,
+          records: 3,
           dense: false,
           anomaly_records: 1,
         }),
@@ -88,8 +88,30 @@ describe('EdgeStreamsPanel — restart is a boundary, not a loss', () => {
     )
     render(<EdgeStreamsPanel />)
 
-    expect(await screen.findByText(/2 of 3 · 1 anomaly/)).toBeInTheDocument()
+    expect(await screen.findByText(/3 of 4 · 1 anomaly/)).toBeInTheDocument()
     expect(screen.queryByText(/producer restart/)).not.toBeInTheDocument()
+  })
+
+  it('scores a restart that lost its first record as a head loss, not a full set', async () => {
+    // Epoch 2 opens at seq 1: record 0 never arrived. The interior (1..2)
+    // is dense, so counting from the first seen record would print
+    // "2 of 2". The expected count is from 0, and the head loss is named.
+    fetchEdgeStreams.mockResolvedValue(
+      edgeWith([
+        segment({ epoch: 1, first_seq: 0, last_seq: 1, records: 2 }),
+        segment({
+          epoch: 2,
+          first_seq: 1,
+          last_seq: 2,
+          records: 2,
+          dense: false,
+          anomaly_records: 1,
+        }),
+      ]),
+    )
+    render(<EdgeStreamsPanel />)
+    expect(await screen.findByText(/2 of 3 · head lost · 1 anomaly/)).toBeInTheDocument()
+    expect(screen.getAllByText(/dense/)).toHaveLength(1)
   })
 
   it('shows quarantined records as their own count, outside any segment', async () => {

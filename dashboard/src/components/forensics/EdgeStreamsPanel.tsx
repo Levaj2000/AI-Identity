@@ -29,7 +29,11 @@ import {
 const tabular = { fontVariantNumeric: 'tabular-nums' as const }
 
 function SegmentRow({ seg }: { seg: EdgeStreamSegment }) {
-  const expected = seg.last_seq - seg.first_seq + 1
+  // An epoch opens at stream_seq 0, so a segment holds last+1 records when
+  // nothing was lost — counted from 0, not from wherever it happened to
+  // start, or a lost head (records 0..first-1) would read as a full set.
+  const expected = seg.last_seq + 1
+  const lostHead = seg.first_seq > 0
   return (
     <div className="flex items-center justify-between gap-3 py-1.5">
       <div className="flex min-w-0 items-center gap-2">
@@ -52,7 +56,8 @@ function SegmentRow({ seg }: { seg: EdgeStreamSegment }) {
           <span className="text-success">dense · {seg.records} records</span>
         ) : (
           <span className="text-warning">
-            {seg.records} of {expected} · {seg.anomaly_records}{' '}
+            {seg.records} of {expected}
+            {lostHead ? ' · head lost' : ''} · {seg.anomaly_records}{' '}
             {seg.anomaly_records === 1 ? 'anomaly' : 'anomalies'}
           </span>
         )}

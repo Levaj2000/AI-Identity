@@ -10,7 +10,9 @@ attestation carrier changed, so the hashes changed with it.
 holds on this head too). Re-verified 2026-08-31 on rustc 1.96.1, and again
 after the base64 0.23 / p256 0.14 / sha2 0.11 bump (#497): byte-identical
 both times, so neither the toolchain patch nor the crypto bump moves these
-vectors. `5a253d4` is the rev CI pins. The event **bodies were unchanged**, but the five
+vectors. Re-verified once more 2026-09-04 against `64c8eba` (host-settable stream
+identity + the non-Clone `EffectEmitterSlot`; rustc 1.96.1, 33 tests green,
+byte-identical again) — `64c8eba` is the rev CI pins. The event **bodies were unchanged**, but the five
 derived values (both `fingerprint.value`s, both `signature_b64`s, and record
 2's `prev_event.fingerprint.value`) had gone stale relative to the current
 covered-bytes computation — recomputing with `sign::signing_input` over the
