@@ -678,61 +678,41 @@ function footerDark(slide, n) {
     "One bounded workflow, one technical owner, one verifiable result."
   );
 
-  // The pilot request
+  // One wide card: the pilot request, stated in three constraints
+  const cx = M, cy = 1.86, cw = CW, ch = 3.34;
   s.addShape(pres.ShapeType.roundRect, {
-    x: M, y: 1.86, w: 6.1, h: 3.42, rectRadius: 0.05,
+    x: cx, y: cy, w: cw, h: ch, rectRadius: 0.05,
     fill: { color: C.card }, line: { color: C.cardEdge, width: 1 },
     shadow: softShadow(),
   });
+
   text(s, "PILOT REQUEST", {
-    x: M + 0.42, y: 2.16, w: 5.2, h: 0.28,
+    x: cx + 0.42, y: cy + 0.3, w: 5.2, h: 0.28,
     fontFace: F.mono, fontSize: 10, bold: true, color: C.iceDeep, charSpacing: 1.2,
   });
   text(s, "One city workflow, end to end", {
-    x: M + 0.42, y: 2.52, w: 5.26, h: 0.44,
-    fontFace: F.head, fontSize: 23, bold: true, color: C.navy,
+    x: cx + 0.42, y: cy + 0.66, w: 8.0, h: 0.46,
+    fontFace: F.head, fontSize: 25, bold: true, color: C.navy,
   });
 
-  const asks = [
-    ["Scope", "A single agent workflow with a real spending or data boundary."],
-    ["People", "One technical owner on the city side. No procurement cycle to start."],
-    ["Result", "Agent identity, enforced policy, and evidence a third party can verify."],
+  const terms = [
+    ["01", "Scope", "A single agent workflow with a real spending or data boundary."],
+    ["02", "People", "One technical owner on the city side. No procurement cycle to start."],
+    ["03", "Result", "Agent identity, enforced policy, and evidence a third party can verify."],
   ];
-  asks.forEach(([k, v], i) => {
-    const ay = 3.16 + i * 0.7;
-    text(s, k, {
-      x: M + 0.42, y: ay, w: 1.0, h: 0.3,
-      fontFace: F.body, fontSize: 13, bold: true, color: C.navy,
+  const colw = 3.33, pitch = 3.83;
+  terms.forEach(([n, label, body], i) => {
+    const tx = cx + 0.42 + i * pitch;
+    chip(s, n, tx, cy + 1.4);
+    text(s, label, {
+      x: tx, y: cy + 2.0, w: colw, h: 0.36,
+      fontFace: F.head, fontSize: 19, bold: true, color: C.navy,
     });
-    text(s, v, {
-      x: M + 1.5, y: ay, w: 4.2, h: 0.56,
-      fontFace: F.body, fontSize: 13, color: C.mutedLight, lineSpacing: 18,
+    text(s, body, {
+      x: tx, y: cy + 2.46, w: colw, h: 0.72,
+      fontFace: F.body, fontSize: 13, color: C.mutedLight, lineSpacing: 19,
     });
   });
-
-  // Colorado anchor — must be filled in before submitting
-  s.addShape(pres.ShapeType.roundRect, {
-    x: M + 6.52, y: 1.86, w: 5.31, h: 3.42, rectRadius: 0.05,
-    fill: { color: C.flagBg }, line: { color: C.flagEdge, width: 1.5 },
-  });
-  text(s, "COLORADO ANCHOR", {
-    x: M + 6.94, y: 2.16, w: 4.5, h: 0.28,
-    fontFace: F.mono, fontSize: 10, bold: true, color: C.flagInk, charSpacing: 1.2,
-  });
-  text(s, "[ REPLACE THIS CARD ]", {
-    x: M + 6.94, y: 2.52, w: 4.5, h: 0.4,
-    fontFace: F.head, fontSize: 17, bold: true, color: C.flagInk,
-  });
-  text(
-    s,
-    "Name the Colorado agency, department, or district you have already spoken with, the person who owns the workflow, and the workflow itself.\n\n" +
-      "If no conversation exists yet, name the specific Denver workflow you have scoped and say what you need to start it. " +
-      "Judges select for local traction — a named workflow beats a generic one.",
-    {
-      x: M + 6.94, y: 3.04, w: 4.5, h: 2.0,
-      fontFace: F.body, fontSize: 12.5, color: C.flagInk, lineSpacing: 18,
-    }
-  );
 
   // Status strip
   const stats = [
@@ -754,9 +734,9 @@ function footerDark(slide, n) {
 
   footer(s, 7);
   s.addNotes(
-    "4:15–4:40 — ACTION REQUIRED: replace the amber card before you submit or present. " +
-      "A named Colorado workflow is the single highest-value edit in this deck. " +
-      "Also decide in advance how you answer 'are you raising?' — the deck deliberately does not claim either way."
+    "4:15–4:40 — The ask, said once and plainly; do not soften it into 'we would love to explore.' " +
+      "Name the three constraints and stop. If someone asks whether a city is already using this, answer straight — " +
+      "the deck claims nothing either way. Decide in advance how you answer 'are you raising?'"
   );
 }
 

@@ -13,15 +13,15 @@
 | 4 | Procurement agent under a $5,000 delegated limit | 1:45–3:00 |
 | 5 | Three city workflows + how it deploys | 3:00–3:30 |
 | 6 | OCSF 1.9 and vendor-neutral verification | 3:30–4:15 |
-| 7 | The pilot ask + Colorado anchor | 4:15–4:40 |
+| 7 | The pilot ask | 4:15–4:40 |
 | 8 | Founder and close | 4:40–5:00 |
 
 ### Before submitting or presenting
 
-Slide 7 carries a deliberate amber placeholder card, `[ REPLACE THIS CARD ]`.
-Fill in the Colorado agency, the person who owns the workflow, and the workflow
-itself. The showcase selects Colorado companies building for cities, so a named
-local workflow is the highest-value edit in the deck.
+The deck names no city relationship, because there isn't one yet. If a Colorado
+conversation starts before the summit, slide 7 is where it goes — the agency,
+the person who owns the workflow, and the workflow itself — since the showcase
+selects for local traction. Never fill that in speculatively.
 
 The `$5,000` delegated limit and the four decisions on slide 4 describe the
 reference demonstration, not a production deployment at a named city. Keep that
