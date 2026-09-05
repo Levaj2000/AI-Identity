@@ -10,27 +10,61 @@ PIL using metric-compatible substitutes:
 
 Overflow flags are therefore pessimistic, never optimistic.
 """
+
 import sys
+
 from PIL import Image, ImageDraw, ImageFont
 from pptx import Presentation
-from pptx.util import Emu
 
 EMU = 914400.0
 DPI = 110
 
 FONTS = {
-    ("Calibri", False, False): ("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf", 1.0),
+    ("Calibri", False, False): (
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        1.0,
+    ),
     ("Calibri", True, False): ("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", 1.0),
-    ("Calibri", False, True): ("/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf", 1.0),
-    ("Calibri", True, True): ("/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf", 1.0),
-    ("Cambria", False, False): ("/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf", 1.08),
-    ("Cambria", True, False): ("/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf", 1.08),
-    ("Cambria", False, True): ("/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf", 1.08),
-    ("Cambria", True, True): ("/usr/share/fonts/truetype/liberation/LiberationSerif-BoldItalic.ttf", 1.08),
-    ("Courier New", False, False): ("/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 1.0),
-    ("Courier New", True, False): ("/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf", 1.0),
-    ("Courier New", False, True): ("/usr/share/fonts/truetype/liberation/LiberationMono-Italic.ttf", 1.0),
-    ("Courier New", True, True): ("/usr/share/fonts/truetype/liberation/LiberationMono-BoldItalic.ttf", 1.0),
+    ("Calibri", False, True): (
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf",
+        1.0,
+    ),
+    ("Calibri", True, True): (
+        "/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf",
+        1.0,
+    ),
+    ("Cambria", False, False): (
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+        1.08,
+    ),
+    ("Cambria", True, False): (
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+        1.08,
+    ),
+    ("Cambria", False, True): (
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf",
+        1.08,
+    ),
+    ("Cambria", True, True): (
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-BoldItalic.ttf",
+        1.08,
+    ),
+    ("Courier New", False, False): (
+        "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+        1.0,
+    ),
+    ("Courier New", True, False): (
+        "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf",
+        1.0,
+    ),
+    ("Courier New", False, True): (
+        "/usr/share/fonts/truetype/liberation/LiberationMono-Italic.ttf",
+        1.0,
+    ),
+    ("Courier New", True, True): (
+        "/usr/share/fonts/truetype/liberation/LiberationMono-BoldItalic.ttf",
+        1.0,
+    ),
 }
 _cache = {}
 
@@ -59,7 +93,9 @@ def rgb(color_fmt):
 def prst(shape):
     """Preset geometry name from the shape XML (python-pptx only reports AUTO_SHAPE)."""
     try:
-        el = shape._element.find(".//{http://schemas.openxmlformats.org/drawingml/2006/main}prstGeom")
+        el = shape._element.find(
+            ".//{http://schemas.openxmlformats.org/drawingml/2006/main}prstGeom"
+        )
         return el.get("prst") or ""
     except Exception:
         return ""
@@ -135,28 +171,43 @@ def main(path):
             # --- draw the shape body -------------------------------------
             fill = shape_fill(shape)
             line = shape_line(shape)
-            is_txbox = shape.has_text_frame and getattr(shape, "text", "") != "" and fill is None and line is None
             if (fill or line) and w > 0:
                 box = [px(x), px(y), px(x + w), px(y + max(h, 0.004))]
                 if h < 0.01:  # a line/hairline
-                    d.line([box[0], box[1], box[2], box[1]], fill=(line[0] if line else (150, 150, 150)),
-                           width=(line[1] if line else 1))
+                    d.line(
+                        [box[0], box[1], box[2], box[1]],
+                        fill=(line[0] if line else (150, 150, 150)),
+                        width=(line[1] if line else 1),
+                    )
                 else:
                     st = prst(shape)
                     if "ellipse" in st or "OVAL" in st:
-                        d.ellipse(box, fill=fill, outline=line[0] if line else None,
-                                  width=line[1] if line else 1)
+                        d.ellipse(
+                            box,
+                            fill=fill,
+                            outline=line[0] if line else None,
+                            width=line[1] if line else 1,
+                        )
                     else:
                         r = px(0.06) if "round" in st.lower() else 0
-                        d.rounded_rectangle(box, radius=r, fill=fill,
-                                            outline=line[0] if line else None,
-                                            width=line[1] if line else 1)
+                        d.rounded_rectangle(
+                            box,
+                            radius=r,
+                            fill=fill,
+                            outline=line[0] if line else None,
+                            width=line[1] if line else 1,
+                        )
 
             # --- bounds check --------------------------------------------
-            if w > 0 and h > 0:
-                if x < -0.01 or y < -0.01 or x + w > sw + 0.01 or y + h > sh + 0.01:
-                    problems.append(f"slide {idx}: shape out of canvas "
-                                    f"({x:.2f},{y:.2f},{w:.2f}x{h:.2f}) '{getattr(shape,'text','')[:40]}'")
+            if (
+                w > 0
+                and h > 0
+                and (x < -0.01 or y < -0.01 or x + w > sw + 0.01 or y + h > sh + 0.01)
+            ):
+                problems.append(
+                    f"slide {idx}: shape out of canvas "
+                    f"({x:.2f},{y:.2f},{w:.2f}x{h:.2f}) '{getattr(shape, 'text', '')[:40]}'"
+                )
 
             # --- draw the text -------------------------------------------
             if not shape.has_text_frame or not shape.text_frame.text.strip():
@@ -181,9 +232,9 @@ def main(path):
                 ls = para.line_spacing
                 if ls is None:
                     line_h = pt * 1.22 * DPI / 72.0
-                elif hasattr(ls, "pt"):          # Length -> exact point spacing
+                elif hasattr(ls, "pt"):  # Length -> exact point spacing
                     line_h = ls.pt * DPI / 72.0
-                else:                             # float multiple of line height
+                else:  # float multiple of line height
                     line_h = pt * float(ls) * 1.22 * DPI / 72.0
                 al = str(para.alignment or "")
                 txt = "".join(r.text for r in runs)
@@ -220,12 +271,14 @@ def main(path):
             # text taller than its declared box (only meaningful for real boxes)
             if h > 0 and total_h > box_h + px(0.06):
                 problems.append(
-                    f"slide {idx}: text taller than box by {(total_h-box_h)/DPI:.2f}\" "
-                    f"-> '{tf.text[:52]}'")
+                    f'slide {idx}: text taller than box by {(total_h - box_h) / DPI:.2f}" '
+                    f"-> '{tf.text[:52]}'"
+                )
             if start_y < px(0.28) or cy > px(sh - 0.22):
                 problems.append(
-                    f"slide {idx}: text near/past canvas edge (y {start_y/DPI:.2f}\"-{cy/DPI:.2f}\") "
-                    f"-> '{tf.text[:52]}'")
+                    f'slide {idx}: text near/past canvas edge (y {start_y / DPI:.2f}"-{cy / DPI:.2f}") '
+                    f"-> '{tf.text[:52]}'"
+                )
 
         # --- text/text overlap ------------------------------------------
         for i in range(len(text_boxes)):
@@ -235,8 +288,9 @@ def main(path):
                 oy = min(a[3], b[3]) - max(a[1], b[1])
                 if ox > px(0.04) and oy > px(0.04):
                     problems.append(
-                        f"slide {idx}: text overlap {ox/DPI:.2f}\"x{oy/DPI:.2f}\" "
-                        f"-> '{a[4]}' / '{b[4]}'")
+                        f'slide {idx}: text overlap {ox / DPI:.2f}"x{oy / DPI:.2f}" '
+                        f"-> '{a[4]}' / '{b[4]}'"
+                    )
 
         img.save(f"slide-{idx}.png")
 
