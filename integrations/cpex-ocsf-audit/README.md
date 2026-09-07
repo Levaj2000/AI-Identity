@@ -36,7 +36,8 @@ open OCSF/WS4 gaps self-documenting in the wire output.
 (`Plugin::as_audit_handler`) and fires at every pipeline verdict — **denials
 included** — with the executor's `DecisionLog`: verdict → `action_id`/`disposition`
 (Denied/Blocked with the violation at `status_code`/`status_detail`, Modified,
-Allowed), and the ordered per-plugin steps (incl. `deny_ignored` / `aborted`),
+Allowed), and the ordered per-plugin steps (incl. `deny_ignored` / `aborted`;
+on PPE a denying step also carries its violation as `detail` — AID-EMIT-1 §9.2),
 span, entry taint, content hashes and the `(epoch, stream_id, stream_seq,
 emission_seq)` stream stamps under `unmapped.cpex.*`, inside the hashed bytes.
 

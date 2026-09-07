@@ -3,7 +3,7 @@
 | Field         | Value                                                            |
 |---------------|------------------------------------------------------------------|
 | **Name**      | AID-EMIT-1                                                       |
-| **Version**   | 1.0.0-draft                                                      |
+| **Version**   | 1.1.0-draft                                                      |
 | **Status**    | Draft — open for conformance review                              |
 | **Date**      | 2026-09-02                                                       |
 | **License**   | Apache-2.0 (same as the reference implementation)                |
@@ -319,6 +319,20 @@ Two distinctions MUST be preserved:
   sibling short-circuited the phase) must not read as a crash. `error`
   carries its message beside the action, not inside it.
 
+A `denied` or `deny_ignored` step MAY carry a `detail` member naming the
+violation that produced it: `code` and `reason` always, `description` and
+`details` only when the plugin set them (the same shape the PPE reference
+`audit-logger` emits). It is present when the host seam binds the violation to
+the step (praxis-proxy/policy PR #84 and later) and absent when the seam
+records the step without it (cpex PR #166, where only the terminal verdict
+names a violation, at `status_code` / `status_detail`). A verifier MUST NOT
+require `detail`, and MUST NOT infer from its absence that no violation
+occurred — the step's action is the claim, `detail` is its provenance. For
+`deny_ignored` it is the only place the objection's code survives, since no
+verdict names a suppressed deny. Added in 1.1.0 (additive, inside the hashed
+bytes like every other step member — so the vector for the decision demo
+differs by exactly this member between the two hosts, §12).
+
 Decision records also carry, under `unmapped."cpex.decision"` /
 `unmapped."cpex.span"`, the terminal verdict, the invocation span, entry-taint
 labels, and content provenance hashes — all inside the hashed bytes, so the
@@ -384,6 +398,9 @@ the initial conformance vectors:
   — the five decision shapes: clean allow, modified-allow, denial with the
   violation surfaced, suppressed-deny + aborted branch, and the
   delegated-mandate record carrying the join key (`decision_sink_demo`).
+  Generated on the PPE host; the cpex host produces the same bytes minus the
+  `detail` member on the denying steps of records 3 and 4 (§9.2), and the
+  file shows that delta.
 
 A standalone validator ships at
 [`scripts/aid_emit1_validator.py`](../../scripts/aid_emit1_validator.py) —
@@ -423,9 +440,9 @@ rejects any vector with a flipped payload byte, a reordered record, a swapped
 
 - The spec version is `MAJOR.MINOR.PATCH`. Wire-visible changes to the
   covered-bytes rule, the canonical form, the envelope, or the vocabularies
-  are MAJOR. Additive, ignorable fields are MINOR (the pending
-  ocsf-schema#1709 relocation of the signature bytes will be the first).
-  Editorial fixes are PATCH.
+  are MAJOR. Additive, ignorable fields are MINOR — 1.1.0 added the optional
+  step `detail` (§9.2); the pending ocsf-schema#1709 relocation of the
+  signature bytes will be the next. Editorial fixes are PATCH.
 - Records do not carry a spec-version field in v1; the emitted enum
   descriptors (`fingerprint.serialization_id`, `digital_signature.*`) are the
   wire-level self-description, and the OCSF schema version rides at

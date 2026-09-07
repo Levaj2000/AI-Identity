@@ -60,10 +60,10 @@ and CMF types, `PluginFactory`/`PluginInstance`, `TypedHandlerAdapter`,
    those steps. This is the better shape: on a suppressed deny no verdict
    names the violation, so the step is the only place the objection
    survives, and PPE's `audit-logger` renders it as a per-step `detail`.
-   Rendering it in this crate's `unmapped.cpex.decision.steps[]` is the
-   next revision — it changes the bytes of the `deny_ignored` vector in
-   `SAMPLE-OUTPUT-DECISIONS.md`, so it is an AID-EMIT-1 vector change to
-   document, not a silent regeneration.
+   This crate now renders it as the step's `detail` on PPE (AID-EMIT-1
+   1.1.0, §9.2; landed the same day as the port), and the decision vector
+   in `SAMPLE-OUTPUT-DECISIONS.md` is generated on the PPE host with the
+   cpex delta shown — records 3 and 4 differ by exactly that member.
 2. **Host config model.** `plugin_settings:` is `engine_settings:` on PPE and
    the old key is rejected at load. PPE also defaults to
    `engine_settings.dispatch: policy`, under which a hook-listed plugin with
@@ -75,8 +75,9 @@ and CMF types, `PluginFactory`/`PluginInstance`, `TypedHandlerAdapter`,
 
 The crate now absorbs all three behind a `host` feature pair (`cpex`, the
 default, and `ppe`) with one alias module, `crate::host`, so the source has a
-single import root and the variant-shape difference lives in three helpers
-(`host::denied`, `host::deny_ignored`, `host::is_deny_ignored`). The PPE
+single import root and the variant-shape difference lives in four helpers
+(`host::denied`, `host::deny_ignored`, `host::is_deny_ignored`,
+`host::step_violation`). The PPE
 dependency is a git dep pinned to the PR head by full SHA, so a checkout
 with only cpex beside it still resolves.
 

@@ -170,6 +170,28 @@ pub mod host {
             matches!(action, PluginAction::DenyIgnored(_))
         }
     }
+
+    /// The violation a denying step recorded, where the host binds it to
+    /// the step. On PPE a `Denied` / `DenyIgnored` step carries the
+    /// `PluginViolation` that produced it; on cpex the step is a unit
+    /// variant and only the terminal verdict names a violation, so this
+    /// is `None` for every step. The emitter renders it as the step's
+    /// `detail` (AID-EMIT-1 §9.2) when present and omits the member when
+    /// not — a verifier must not require it.
+    pub fn step_violation(action: &PluginAction) -> Option<&PluginViolation> {
+        #[cfg(feature = "cpex")]
+        {
+            let _ = action;
+            None
+        }
+        #[cfg(feature = "ppe")]
+        {
+            match action {
+                PluginAction::Denied(v) | PluginAction::DenyIgnored(v) => Some(v),
+                _ => None,
+            }
+        }
+    }
 }
 
 pub mod config;

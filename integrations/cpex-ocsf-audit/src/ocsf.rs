@@ -407,6 +407,23 @@ fn build_unmapped_gaps(ext: &Extensions) -> Value {
 // defaults with what enforcement actually did.
 // ---------------------------------------------------------------------
 
+/// A step's violation as the `detail` member: the machine code and the
+/// reason always, the free-text description and structured details only
+/// when the plugin set them. The plugin name is not repeated — the step
+/// already carries it.
+fn violation_detail(v: &crate::host::error::PluginViolation) -> Value {
+    let mut out = Map::new();
+    out.insert("code".into(), json!(v.code));
+    out.insert("reason".into(), json!(v.reason));
+    if let Some(description) = &v.description {
+        out.insert("description".into(), json!(description));
+    }
+    if !v.details.is_empty() {
+        out.insert("details".into(), json!(v.details));
+    }
+    Value::Object(out)
+}
+
 /// The stable, queryable rendering of one [`PluginAction`]. Deliberately
 /// a fixed snake_case vocabulary (not `Debug` formatting) so SIEM
 /// queries survive upstream enum renames; `error` carries its message
@@ -513,6 +530,14 @@ pub fn apply_decision(ev: &mut Value, payload: Option<&MessagePayload>, decision
             });
             if let PluginAction::Error(e) = &s.action {
                 step["error"] = json!(e);
+            }
+            // The violation behind a `denied` / `deny_ignored` step, where
+            // the host seam binds it to the step (PPE; cpex leaves it on
+            // the verdict, so there it is absent). For `deny_ignored` this
+            // is the only place the objection's code survives — no verdict
+            // names it. Same member shape as PPE's own audit-logger.
+            if let Some(v) = crate::host::step_violation(&s.action) {
+                step["detail"] = violation_detail(v);
             }
             step
         })
