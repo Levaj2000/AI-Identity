@@ -23,13 +23,13 @@ use serde_json::json;
 
 use cpex_plugin_ocsf_audit::OcsfAuditEmitter;
 
-use cpex_core::cmf::{ContentPart, Message, MessagePayload, Role, ToolCall};
-use cpex_core::extensions::{
+use cpex_plugin_ocsf_audit::host::cmf::{ContentPart, Message, MessagePayload, Role, ToolCall};
+use cpex_plugin_ocsf_audit::host::extensions::{
     AgentExtension, CompletionExtension, DelegationExtension, DelegationHop, Extensions,
     FrameworkExtension, MCPExtension, SecurityExtension, StopReason, SubjectExtension, TokenUsage,
     ToolMetadata, WorkloadIdentity,
 };
-use cpex_core::plugin::{OnError, PluginConfig, PluginMode};
+use cpex_plugin_ocsf_audit::host::plugin::{OnError, PluginConfig, PluginMode};
 
 /// Demo signing key, generated at runtime from a fixed scalar so the
 /// sample output is byte-identical across runs (RFC 6979 deterministic
@@ -252,7 +252,9 @@ fn main() {
             let sig_ok = p256::ecdsa::Signature::from_der(&der)
                 .map(|sig| vk.verify(&dsse_pae(&bytes), &sig).is_ok())
                 .unwrap_or(false);
-            println!("// verify {label}: fingerprint recomputed -> {fp_ok} · DSSE signature -> {sig_ok}");
+            println!(
+                "// verify {label}: fingerprint recomputed -> {fp_ok} · DSSE signature -> {sig_ok}"
+            );
         }
     }
 }

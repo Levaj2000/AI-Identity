@@ -28,9 +28,9 @@
 
 use serde_json::{json, Map, Value};
 
-use cpex_core::cmf::{ContentPart, MessagePayload};
-use cpex_core::decision::{DecisionLog, PluginAction, Verdict};
-use cpex_core::hooks::payload::{Extensions, PluginPayload};
+use crate::host::cmf::{ContentPart, MessagePayload};
+use crate::host::decision::{DecisionLog, PluginAction, Verdict};
+use crate::host::hooks::payload::{Extensions, PluginPayload};
 
 use crate::config::OcsfAuditConfig;
 
@@ -414,13 +414,22 @@ fn build_unmapped_gaps(ext: &Extensions) -> Value {
 fn action_str(a: &PluginAction) -> &'static str {
     match a {
         PluginAction::Allowed => "allowed",
+        // The host decides whether a denying step carries its violation
+        // (PPE) or leaves it on the verdict (cpex); the rendered
+        // vocabulary is the same either way. See `crate::host`.
+        #[cfg(feature = "cpex")]
         PluginAction::Denied => "denied",
+        #[cfg(feature = "ppe")]
+        PluginAction::Denied(_) => "denied",
         PluginAction::ModifiedPayload => "modified_payload",
         PluginAction::ModifiedExtensions => "modified_extensions",
         // Never rendered as an allow — the step reflects the plugin's
         // actual decision (a suppressed Transform-phase block), per the
         // seam's contract on `PluginAction::DenyIgnored`.
+        #[cfg(feature = "cpex")]
         PluginAction::DenyIgnored => "deny_ignored",
+        #[cfg(feature = "ppe")]
+        PluginAction::DenyIgnored(_) => "deny_ignored",
         // Intentional cancellation (a concurrent sibling short-circuited
         // the phase) — distinct from `error` so it doesn't read as a crash.
         PluginAction::Aborted => "aborted",
@@ -516,7 +525,7 @@ pub fn apply_decision(ev: &mut Value, payload: Option<&MessagePayload>, decision
     if decisions
         .steps()
         .iter()
-        .any(|s| s.action == PluginAction::DenyIgnored)
+        .any(|s| crate::host::is_deny_ignored(&s.action))
     {
         decision["deny_ignored"] = json!(true);
     }
@@ -550,7 +559,7 @@ pub fn apply_decision(ev: &mut Value, payload: Option<&MessagePayload>, decision
     if let Some(input_hash) = decisions.input_hash() {
         let output_hash = payload
             .and_then(|p| p.audit_bytes())
-            .map(|b| cpex_core::hooks::payload::content_hash(&b));
+            .map(|b| crate::host::hooks::payload::content_hash(&b));
         un.insert(
             "cpex.content".into(),
             json!({ "input_hash": input_hash, "output_hash": output_hash }),
@@ -634,7 +643,7 @@ fn attach_capability_coords(ev: &mut Map<String, Value>, payload: &MessagePayloa
 // The following two isolate the less-obvious accessor paths to one place
 // each (both confirmed against cpex@feat/hil_apl ad666ba (2026-07-06)).
 
-fn security_labels(sec: &cpex_core::extensions::SecurityExtension) -> Vec<String> {
+fn security_labels(sec: &crate::host::extensions::SecurityExtension) -> Vec<String> {
     // MonotonicSet<String>::iter() -> impl Iterator<Item = &String>.
     // The backing HashSet iterates in randomized, seed-dependent order;
     // sort so the emitted array is canonical and the fingerprint an

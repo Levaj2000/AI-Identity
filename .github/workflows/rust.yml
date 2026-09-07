@@ -57,6 +57,15 @@ env:
   # AID-EMIT-1 §12 conformance vector, so a changed byte is a real finding).
   CPEX_REV: 64c8eba85fac28fa7e73b6c83d32aca7356ca23d
 
+  # The second host. praxis-proxy/policy PR #84 is Teryl's port of the
+  # same seam into the Praxis Policy Engine; the crate builds against it
+  # under `--no-default-features --features ppe`. That dependency is a
+  # git dep pinned by full SHA in Cargo.toml (PR #84 head `20798ae`, the
+  # rev PRAXIS-PORT-RESULTS.md was measured on), so there is nothing to
+  # clone here — Cargo fetches it, and --locked holds it to the lock.
+  # Both hosts build in this one job because the cpex path dependency
+  # has to resolve even when the `cpex` feature is off.
+
 jobs:
   cpex-ocsf-audit:
     name: Rust — cpex-ocsf-audit build & test
@@ -92,7 +101,7 @@ jobs:
           rustup toolchain install "$TOOLCHAIN" --profile minimal --no-self-update
           rustup run "$TOOLCHAIN" rustc --version
 
-      - name: Build — lib, tests and examples
+      - name: Build (cpex host) — lib, tests and examples
         # --locked is the point of this job: a manifest bump that did not
         # regenerate Cargo.lock fails here instead of going green.
         # -D warnings holds the "clean, no warnings" bar SEAM-PORT-RESULTS.md
@@ -101,5 +110,15 @@ jobs:
           RUSTFLAGS: -D warnings
         run: cargo "+$TOOLCHAIN" check --locked --all-targets
 
-      - name: Test
+      - name: Test (cpex host)
         run: cargo "+$TOOLCHAIN" test --locked
+
+      - name: Build (ppe host) — lib, tests and examples
+        # Same bar against the praxis seam. PRAXIS-PORT-RESULTS.md claims
+        # "clean, no warnings" for this host too.
+        env:
+          RUSTFLAGS: -D warnings
+        run: cargo "+$TOOLCHAIN" check --locked --all-targets --no-default-features --features ppe
+
+      - name: Test (ppe host)
+        run: cargo "+$TOOLCHAIN" test --locked --no-default-features --features ppe

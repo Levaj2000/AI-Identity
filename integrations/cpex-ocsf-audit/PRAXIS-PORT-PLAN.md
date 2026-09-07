@@ -1,8 +1,12 @@
 # Praxis port plan — cpex-plugin-ocsf-audit
 
 **Date:** 2026-08-21
-**Status:** planning — the port has not run yet; this documents what will be
-verified when it does.
+**Status:** **ran 2026-09-07** against praxis-proxy/policy PR #84 head
+`20798ae` — results in `PRAXIS-PORT-RESULTS.md`. Green on both hosts, records
+byte-identical. The plan below is kept as written; where the run diverged
+from it, the results file says so (the dependency swap was *not* the only
+change — PPE's seam is ahead of cpex's, and the crate now carries a `cpex` /
+`ppe` host feature pair rather than a single dependency).
 
 Upstream intends to move the CPEX audit seam into **praxis** (the Rust policy
 engine, "PPE"), tracked upstream as the praxis audit-seam issue (#11) and the
@@ -14,7 +18,9 @@ results reported upstream.
 ## Sequencing rule
 
 **cpex#166 stays the canonical seam until the praxis seam issue (#11) lands.**
-Confirmed with the cpex maintainer, 2026-08-21. Until then:
+Confirmed with the cpex maintainer, 2026-08-21. PR #84 is that landing in
+draft form (2026-09-07); until it merges the `cpex` feature stays the
+default and CI builds both. Until then:
 
 - All new mapping work in this crate targets cpex (`feat/audit-seam`), as
   today.

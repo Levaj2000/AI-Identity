@@ -47,14 +47,15 @@ use serde_json::json;
 
 use cpex_plugin_ocsf_audit::OcsfAuditEmitter;
 
-use cpex_core::cmf::{ContentPart, Message, MessagePayload, Role, ToolCall};
-use cpex_core::decision::{DecisionLog, PluginAction, Span, Verdict};
-use cpex_core::error::PluginViolation;
-use cpex_core::extensions::{
+use cpex_plugin_ocsf_audit::host;
+use cpex_plugin_ocsf_audit::host::cmf::{ContentPart, Message, MessagePayload, Role, ToolCall};
+use cpex_plugin_ocsf_audit::host::decision::{DecisionLog, PluginAction, Span, Verdict};
+use cpex_plugin_ocsf_audit::host::error::PluginViolation;
+use cpex_plugin_ocsf_audit::host::extensions::{
     AgentExtension, DelegationExtension, DelegationHop, Extensions, RequestExtension,
     SecurityExtension, SubjectExtension,
 };
-use cpex_core::plugin::{OnError, PluginConfig, PluginMode};
+use cpex_plugin_ocsf_audit::host::plugin::{OnError, PluginConfig, PluginMode};
 
 fn env_u64(key: &str, default: u64) -> u64 {
     std::env::var(key)
@@ -281,7 +282,14 @@ fn main() {
                 violation.plugin_name = Some("cedar-pdp".into());
                 (
                     finalized(
-                        vec![("cedar-pdp", PluginMode::Sequential, PluginAction::Denied)],
+                        vec![(
+                            "cedar-pdp",
+                            PluginMode::Sequential,
+                            host::denied(PluginViolation::new(
+                                "missing_permission",
+                                "no grant covers this tool",
+                            )),
+                        )],
                         Verdict::Deny(violation),
                         epoch,
                         &stream_id,
@@ -302,7 +310,7 @@ fn main() {
                         (
                             "injection-guard",
                             PluginMode::Transform,
-                            PluginAction::DenyIgnored,
+                            host::deny_ignored(PluginViolation::new("policy_deny", "blocked")),
                         ),
                         (
                             "secondary-scan",

@@ -84,6 +84,94 @@
 // twice). Effect-lifecycle events (AuditHandler::on_effect) are the
 // next tracked step — a token mint wants a richer OCSF class than 6003.
 
+// Revision 2026-09-07 — HOST FEATURE (the praxis port, PRAXIS-PORT-RESULTS.md).
+// The seam this crate consumes now exists on two engines: cpex PR #166
+// and praxis-proxy/policy PR #84, Teryl's port of it into the Praxis
+// Policy Engine. Exactly one is selected per build by the `cpex`
+// (default) / `ppe` feature, and every engine type this crate names is
+// reached through `crate::host::…` so the source has one import root.
+// The seam API is line-for-line the same on both (AuditHandler,
+// DecisionLog, the step vocabulary, the stream stamps) and the emitted
+// records are byte-identical. The one shape difference — PPE binds the
+// violation to a Denied / DenyIgnored step, cpex leaves it on the
+// verdict — is absorbed by the three helpers in `host`, nowhere else.
+
+#[cfg(all(feature = "cpex", feature = "ppe"))]
+compile_error!(
+    "features `cpex` and `ppe` select the host engine and are mutually exclusive: \
+     build the praxis port with `--no-default-features --features ppe`"
+);
+#[cfg(not(any(feature = "cpex", feature = "ppe")))]
+compile_error!("one host feature is required: `cpex` (the default) or `ppe`");
+
+/// The policy engine this build targets, re-exported under one name.
+///
+/// `host::decision`, `host::cmf`, `host::plugin`, … are the engine's own
+/// modules — `cpex_core` under the `cpex` feature, `praxis_policy_core`
+/// under `ppe`. The module tree is the same on both, which is why one
+/// alias is enough.
+pub mod host {
+    #[cfg(feature = "cpex")]
+    pub use cpex_core::*;
+    #[cfg(feature = "ppe")]
+    pub use praxis_policy_core::*;
+
+    use self::decision::PluginAction;
+    use self::error::PluginViolation;
+
+    /// The engine this build consumes, for logs and results docs. Not a
+    /// wire value: the `cpex.*` / `cmf.*` record prefixes are pinned by
+    /// AID-EMIT-1 and do not follow the engine.
+    #[cfg(feature = "cpex")]
+    pub const ENGINE: &str = "cpex";
+    #[cfg(feature = "ppe")]
+    pub const ENGINE: &str = "praxis-policy-core";
+
+    /// A step that denied. On PPE (PR #84 `7da262d`) the step carries
+    /// its violation; on cpex the verdict does and the step is a unit
+    /// variant, so the violation is dropped here — the verdict still
+    /// names it at `status_code` / `status_detail`.
+    pub fn denied(violation: PluginViolation) -> PluginAction {
+        #[cfg(feature = "cpex")]
+        {
+            let _ = violation;
+            PluginAction::Denied
+        }
+        #[cfg(feature = "ppe")]
+        {
+            PluginAction::Denied(Box::new(violation))
+        }
+    }
+
+    /// A step that asked to deny from a phase that cannot block and was
+    /// overruled. Same shape split as [`denied`]; on PPE this is the
+    /// only place the objection survives, since no verdict names it.
+    pub fn deny_ignored(violation: PluginViolation) -> PluginAction {
+        #[cfg(feature = "cpex")]
+        {
+            let _ = violation;
+            PluginAction::DenyIgnored
+        }
+        #[cfg(feature = "ppe")]
+        {
+            PluginAction::DenyIgnored(Box::new(violation))
+        }
+    }
+
+    /// Whether a step is a suppressed deny, whichever shape the host
+    /// gives the variant.
+    pub fn is_deny_ignored(action: &PluginAction) -> bool {
+        #[cfg(feature = "cpex")]
+        {
+            *action == PluginAction::DenyIgnored
+        }
+        #[cfg(feature = "ppe")]
+        {
+            matches!(action, PluginAction::DenyIgnored(_))
+        }
+    }
+}
+
 pub mod config;
 pub mod emitter;
 pub mod factory;

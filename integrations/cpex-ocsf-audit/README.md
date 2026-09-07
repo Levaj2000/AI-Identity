@@ -62,6 +62,16 @@ plugins:
 loading exactly this shape through `load_config`, with a plugin that panics, so the
 record it emits is a real fail-closed deny on the host-named stream.
 
+> **PPE spelling.** On the Praxis Policy Engine (`--features ppe`) the block is
+> `engine_settings:`, and it must declare `dispatch: hooks` — PPE defaults to
+> policy dispatch, which refuses a hook-listed plugin that carries a
+> `priority:`. The plugin host is `PolicyEngine`, with the same
+> `register_factory` / `load_config` / `initialize` surface. On the PR #84 head
+> this crate is pinned to, `engine_settings.audit_stream_namespace` is rejected
+> at load (the key is missing from PPE's engine-settings allowlist; reported on
+> the PR — `PRAXIS-PORT-RESULTS.md` observation 1), so `panic_drive` sets the
+> namespace in code there, next to the epoch.
+
 **Post-hook observer mode (legacy; pre-seam cpex):** list the CMF POST hooks to
 observe. This path sees allowed traffic only — it structurally cannot record a
 denial — and a hook-listed instance deliberately does **not** also attach as a
@@ -195,18 +205,26 @@ Honest inventory of what's solid vs. open:
 
 ## Building
 
+The crate builds against one of two host engines, chosen by a Cargo feature.
+Both carry the same audit seam and produce byte-identical records
+(`PRAXIS-PORT-RESULTS.md`).
+
 ```bash
-# Cargo.toml defaults to a local cpex checkout (recommended while the
-# API moves). Clone contextforge-org/cpex next to the AI-Identity repo:
+# cpex (default): a local checkout next to the AI-Identity repo, at the
+# rev .github/workflows/rust.yml pins.
 #   git clone https://github.com/contextforge-org/cpex ../../../cpex
-#
-# `dev` is the public default and carries crates/cpex-core. The crate is
-# verified green against BOTH baselines: feat/hil_apl `ad666ba` (2026-07-06,
-# not a public branch) and public dev `baa9e17` (2026-07-27) — build, all
-# 13 tests, and the example pass on each.
-#
-# To build without a local checkout, swap the dep for the git form pinned
-# to a rev (see the comment in Cargo.toml).
+#   git -C ../../../cpex checkout 64c8eba85fac28fa7e73b6c83d32aca7356ca23d
 cargo build
 cargo test
+
+# ppe: praxis-proxy/policy PR #84 (Teryl's port of the seam into the Praxis
+# Policy Engine), a git dependency pinned by rev in Cargo.toml — no sibling
+# checkout needed. Exactly one host feature per build.
+cargo test --no-default-features --features ppe
 ```
+
+Every engine type the source names goes through `crate::host::…` (`src/lib.rs`),
+which is `cpex_core` or `praxis_policy_core` depending on the feature. The one
+shape difference between the two seams — PPE binds the violation to a
+`Denied` / `DenyIgnored` step, cpex leaves it on the verdict — is absorbed by
+three helpers in that module and nowhere else.
