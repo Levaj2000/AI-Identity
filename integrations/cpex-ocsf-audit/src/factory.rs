@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use cpex_core::{
+use crate::host::{
     cmf::CmfHook,
     error::PluginError,
     factory::{PluginFactory, PluginInstance},
@@ -66,7 +66,7 @@ impl PluginFactory for OcsfAuditFactory {
             .iter()
             .map(|h| -> (&'static str, _) {
                 let leaked: &'static str = Box::leak(h.clone().into_boxed_str());
-                let adapter: Arc<dyn cpex_core::registry::AnyHookHandler> =
+                let adapter: Arc<dyn crate::host::registry::AnyHookHandler> =
                     Arc::new(TypedHandlerAdapter::<CmfHook, _>::new(Arc::clone(&emitter)));
                 (leaked, adapter)
             })

@@ -69,17 +69,27 @@ use serde_json::json;
 
 use cpex_plugin_ocsf_audit::{OcsfAuditFactory, KIND as OCSF_KIND};
 
-use cpex_core::cmf::{CmfHook, ContentPart, Message, MessagePayload, Role, ToolCall};
-use cpex_core::config::parse_config;
-use cpex_core::context::PluginContext;
-use cpex_core::error::PluginError;
-use cpex_core::extensions::{AgentExtension, Extensions, SecurityExtension, SubjectExtension};
-use cpex_core::factory::{PluginFactory, PluginInstance};
-use cpex_core::hooks::adapter::TypedHandlerAdapter;
-use cpex_core::hooks::trait_def::{HookHandler, PluginResult};
-use cpex_core::manager::PluginManager;
-use cpex_core::plugin::{Plugin, PluginConfig};
-use cpex_core::registry::AnyHookHandler;
+use cpex_plugin_ocsf_audit::host::cmf::{
+    CmfHook, ContentPart, Message, MessagePayload, Role, ToolCall,
+};
+use cpex_plugin_ocsf_audit::host::config::parse_config;
+use cpex_plugin_ocsf_audit::host::context::PluginContext;
+use cpex_plugin_ocsf_audit::host::error::PluginError;
+use cpex_plugin_ocsf_audit::host::extensions::{
+    AgentExtension, Extensions, SecurityExtension, SubjectExtension,
+};
+use cpex_plugin_ocsf_audit::host::factory::{PluginFactory, PluginInstance};
+use cpex_plugin_ocsf_audit::host::hooks::adapter::TypedHandlerAdapter;
+use cpex_plugin_ocsf_audit::host::hooks::trait_def::{HookHandler, PluginResult};
+// The engine's plugin host — the one type whose name differs between
+// the two seams. Everything else this example touches has the same
+// path under `host::…` on both.
+#[cfg(feature = "ppe")]
+use cpex_plugin_ocsf_audit::host::engine::PolicyEngine as Engine;
+#[cfg(feature = "cpex")]
+use cpex_plugin_ocsf_audit::host::manager::PluginManager as Engine;
+use cpex_plugin_ocsf_audit::host::plugin::{Plugin, PluginConfig};
+use cpex_plugin_ocsf_audit::host::registry::AnyHookHandler;
 
 /// `kind:` the demo config declares for the plugin that panics.
 const PANICKING_KIND: &str = "demo/panicking";
@@ -100,6 +110,7 @@ const PANICKING_KIND: &str = "demo/panicking";
 ///
 /// `audit_stream_namespace` is a YAML value on purpose: it is a stable host
 /// identity, so it belongs in the file. The epoch does not — see `main`.
+#[cfg(feature = "cpex")]
 fn config_yaml(namespace: &str) -> String {
     format!(
         r#"
@@ -123,6 +134,64 @@ plugins:
     on_error: fail
 "#
     )
+}
+
+/// The PPE spelling of the same document. Two differences, both host
+/// config-model, neither seam: the block is `engine_settings:` and it
+/// must say `dispatch: hooks` (PPE defaults to policy dispatch, which
+/// refuses a hook-listed plugin with a `priority:`). The namespace is
+/// set in code here rather than in the file — see `set_host_identity`.
+#[cfg(feature = "ppe")]
+fn config_yaml(_namespace: &str) -> String {
+    format!(
+        r#"
+engine_settings:
+  dispatch: hooks
+
+plugins:
+  - name: minter
+    kind: {PANICKING_KIND}
+    hooks:
+      - cmf.tool_pre_invoke
+    mode: sequential
+    priority: 10
+    on_error: fail
+
+  - name: ocsf-decision-sink-demo
+    kind: {OCSF_KIND}
+    # no `hooks:` -> audit-only sink mode (sees denials)
+    mode: audit
+    priority: 50
+    on_error: fail
+"#
+    )
+}
+
+/// Hand the executor its stream identity. The epoch is `serde(skip)` on
+/// both hosts and only ever set here; the namespace rides in the YAML on
+/// cpex. On PPE it is set in code too, because the PR #84 head this port
+/// is pinned to rejects `engine_settings.audit_stream_namespace` at load
+/// — the key is missing from the engine-settings allowlist even though
+/// `docs/auditing.md` documents it (reported on the PR; see
+/// PRAXIS-PORT-RESULTS.md). Move it back into `config_yaml` once that
+/// lands.
+#[cfg(feature = "cpex")]
+fn set_host_identity(
+    cfg: &mut cpex_plugin_ocsf_audit::host::config::CpexConfig,
+    _namespace: &str,
+    epoch: Option<u64>,
+) {
+    cfg.plugin_settings.audit_epoch = epoch;
+}
+
+#[cfg(feature = "ppe")]
+fn set_host_identity(
+    cfg: &mut cpex_plugin_ocsf_audit::host::config::PolicyConfig,
+    namespace: &str,
+    epoch: Option<u64>,
+) {
+    cfg.engine_settings.audit_epoch = epoch;
+    cfg.engine_settings.audit_stream_namespace = Some(namespace.to_owned());
 }
 
 fn env_str(key: &str, default: &str) -> String {
@@ -260,7 +329,7 @@ async fn main() {
     //    loss, and a static file value cannot do that. The host that
     //    supplies one owns that monotonicity — here, the demo runner does,
     //    by handing each process a larger epoch than the last.
-    cfg.plugin_settings.audit_epoch = host_epoch;
+    set_host_identity(&mut cfg, &namespace, host_epoch);
 
     // 3. The sink's config block, with the signing key from the environment.
     let sink = cfg
@@ -274,7 +343,7 @@ async fn main() {
     //    manager instantiates both plugins through their factories, copies
     //    the stream identity into the executor it builds, and attaches the
     //    sink through `as_audit_handler` because it listed no hooks.
-    let manager = PluginManager::default();
+    let manager = Engine::default();
     manager.register_factory(OCSF_KIND, Box::new(OcsfAuditFactory));
     manager.register_factory(PANICKING_KIND, Box::new(PanickingFactory));
     manager.load_config(cfg).expect("demo config loads");
@@ -295,7 +364,7 @@ async fn main() {
         "a panicking sequential plugin with on_error=fail must deny"
     );
     let violation = match result.decision_log.verdict() {
-        Some(cpex_core::decision::Verdict::Deny(v)) => v,
+        Some(cpex_plugin_ocsf_audit::host::decision::Verdict::Deny(v)) => v,
         other => panic!("expected a deny verdict, got {other:?}"),
     };
     assert_eq!(

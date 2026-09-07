@@ -17,12 +17,12 @@ use std::sync::Mutex;
 use async_trait::async_trait;
 use serde_json::{json, Value};
 
-use cpex_core::cmf::{CmfHook, MessagePayload};
-use cpex_core::context::PluginContext;
-use cpex_core::error::PluginError;
-use cpex_core::hooks::payload::Extensions;
-use cpex_core::hooks::trait_def::{HookHandler, PluginResult};
-use cpex_core::plugin::{Plugin, PluginConfig};
+use crate::host::cmf::{CmfHook, MessagePayload};
+use crate::host::context::PluginContext;
+use crate::host::error::PluginError;
+use crate::host::hooks::payload::Extensions;
+use crate::host::hooks::trait_def::{HookHandler, PluginResult};
+use crate::host::plugin::{Plugin, PluginConfig};
 
 use crate::config::{OcsfAuditConfig, OcsfDestination, SigningMode};
 use crate::ocsf;
@@ -177,7 +177,7 @@ impl OcsfAuditEmitter {
         &self,
         payload: Option<&MessagePayload>,
         ext: &Extensions,
-        decisions: &cpex_core::decision::DecisionLog,
+        decisions: &crate::host::decision::DecisionLog,
         now_rfc3339: &str,
     ) -> Value {
         let mut event = ocsf::build_event(payload, ext, &self.typed, now_rfc3339);
@@ -317,7 +317,7 @@ impl Plugin for OcsfAuditEmitter {
     /// audit-logger builtin.)
     fn as_audit_handler(
         self: std::sync::Arc<Self>,
-    ) -> Option<std::sync::Arc<dyn cpex_core::audit::AuditHandler>> {
+    ) -> Option<std::sync::Arc<dyn crate::host::audit::AuditHandler>> {
         if self.cfg.hooks.is_empty() {
             Some(self)
         } else {
@@ -328,18 +328,18 @@ impl Plugin for OcsfAuditEmitter {
 
 /// Decision-audit consumer — the first-class path off the PR #166 audit
 /// seam. Fires at the verdict of every pipeline run with the finalized
-/// [`DecisionLog`](cpex_core::decision::DecisionLog); this is what makes
+/// [`DecisionLog`](crate::host::decision::DecisionLog); this is what makes
 /// denials, suppressed transform-denies, panics and modifications visible
 /// to the OCSF stream (a post-hook observer only ever saw allowed
 /// traffic). Awaited on the request path by contract — `handle` stays
 /// serialize-and-emit cheap.
 #[async_trait]
-impl cpex_core::audit::AuditHandler for OcsfAuditEmitter {
+impl crate::host::audit::AuditHandler for OcsfAuditEmitter {
     async fn handle(
         &self,
-        payload: &dyn cpex_core::hooks::payload::PluginPayload,
+        payload: &dyn crate::host::hooks::payload::PluginPayload,
         ext: &Extensions,
-        decisions: &cpex_core::decision::DecisionLog,
+        decisions: &crate::host::decision::DecisionLog,
     ) {
         // Downcast to the CMF payload when this dispatch carried one; a
         // non-CMF dispatch (delegation, identity) records without the
@@ -373,9 +373,9 @@ impl HookHandler<CmfHook> for OcsfAuditEmitter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cpex_core::cmf::{ContentPart, Message, Role, ToolCall};
-    use cpex_core::extensions::{SecurityExtension, SubjectExtension};
-    use cpex_core::plugin::{OnError, PluginConfig, PluginMode};
+    use crate::host::cmf::{ContentPart, Message, Role, ToolCall};
+    use crate::host::extensions::{SecurityExtension, SubjectExtension};
+    use crate::host::plugin::{OnError, PluginConfig, PluginMode};
     use std::collections::HashMap;
     use std::sync::Arc;
 
@@ -428,7 +428,7 @@ mod tests {
     /// conversation-stable key).
     #[test]
     fn request_id_rides_unmapped_as_receipt_join_key() {
-        use cpex_core::extensions::RequestExtension;
+        use crate::host::extensions::RequestExtension;
         let e = OcsfAuditEmitter::new(cfg(json!({ "chain": false }))).unwrap();
 
         let mut ext = subject_ext();
@@ -444,8 +444,8 @@ mod tests {
         assert_ne!(ev["metadata"]["correlation_uid"], "corr-7f3e2a91");
 
         // Decision events built from the same extensions carry it too.
-        use cpex_core::decision::{PluginAction, Verdict};
-        let mut log = cpex_core::decision::DecisionLog::new();
+        use crate::host::decision::{PluginAction, Verdict};
+        let mut log = crate::host::decision::DecisionLog::new();
         log.record("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed);
         log.finalize(Verdict::Allow);
         let dev = e.build_decision(
@@ -521,7 +521,7 @@ mod tests {
 
     #[test]
     fn read_only_hint_maps_tool_call_to_read() {
-        use cpex_core::extensions::{MCPExtension, ToolMetadata};
+        use crate::host::extensions::{MCPExtension, ToolMetadata};
 
         let mut ext = subject_ext();
         ext.mcp = Some(Arc::new(MCPExtension {
@@ -544,7 +544,7 @@ mod tests {
 
     #[test]
     fn read_only_hint_for_different_tool_is_ignored() {
-        use cpex_core::extensions::{MCPExtension, ToolMetadata};
+        use crate::host::extensions::{MCPExtension, ToolMetadata};
 
         let mut ext = subject_ext();
         ext.mcp = Some(Arc::new(MCPExtension {
@@ -740,8 +740,8 @@ mod tests {
 
     // --- decision-audit sink (PR #166 seam; WS-A / P1) -------------------
 
-    use cpex_core::decision::{DecisionLog, PluginAction, Span, Verdict};
-    use cpex_core::error::PluginViolation;
+    use crate::host::decision::{DecisionLog, PluginAction, Span, Verdict};
+    use crate::host::error::PluginViolation;
 
     /// Sink-mode config: no `hooks:` — the factory registers no post-hook
     /// handlers and the plugin auto-attaches as a decision-audit sink.
@@ -766,7 +766,7 @@ mod tests {
     /// invocation never emits twice.
     #[test]
     fn audit_handler_attaches_only_in_sink_mode() {
-        use cpex_core::plugin::Plugin;
+        use crate::host::plugin::Plugin;
         let sink = Arc::new(OcsfAuditEmitter::new(sink_cfg(json!({}))).unwrap());
         assert!(sink.as_audit_handler().is_some(), "no hooks -> sink");
 
@@ -895,7 +895,7 @@ mod tests {
             vec![(
                 "strict-transform",
                 PluginMode::Transform,
-                PluginAction::DenyIgnored,
+                crate::host::deny_ignored(PluginViolation::new("policy_deny", "blocked")),
             )],
             Verdict::Allow,
         );
@@ -920,7 +920,11 @@ mod tests {
         let log = finalized(
             vec![
                 ("scanner-b", PluginMode::Concurrent, PluginAction::Aborted),
-                ("scanner-a", PluginMode::Concurrent, PluginAction::Denied),
+                (
+                    "scanner-a",
+                    PluginMode::Concurrent,
+                    crate::host::denied(PluginViolation::new("policy_deny", "blocked")),
+                ),
             ],
             Verdict::Deny(PluginViolation::new("policy_deny", "blocked")),
         );
@@ -964,7 +968,11 @@ mod tests {
     fn non_cmf_dispatch_still_emits() {
         let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
         let log = finalized(
-            vec![("cedar-pdp", PluginMode::Sequential, PluginAction::Denied)],
+            vec![(
+                "cedar-pdp",
+                PluginMode::Sequential,
+                crate::host::denied(PluginViolation::new("missing_permission", "no")),
+            )],
             Verdict::Deny(PluginViolation::new("missing_permission", "no")),
         );
         let ev = e.build_decision(None, &subject_ext(), &log, "2026-08-18T12:00:00.000Z");
@@ -1049,7 +1057,7 @@ mod tests {
     /// dyn payload downcasts to CMF and the handler completes.
     #[tokio::test]
     async fn audit_handler_handles_dyn_payload() {
-        use cpex_core::audit::AuditHandler;
+        use crate::host::audit::AuditHandler;
         let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
         let payload = tool_payload();
         let log = finalized(
@@ -1065,7 +1073,7 @@ mod tests {
     // build a fully-populated Extensions set and assert every gap field
     // lands where CMF-OCSF-FIELD-MAP.md says it should.
 
-    use cpex_core::extensions::{
+    use crate::host::extensions::{
         AgentExtension, CompletionExtension, DelegationExtension, DelegationHop,
         FrameworkExtension, MCPExtension, StopReason, TokenUsage, ToolMetadata, WorkloadIdentity,
     };

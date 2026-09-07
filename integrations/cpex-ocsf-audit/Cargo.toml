@@ -23,12 +23,37 @@ license = "Apache-2.0"
 description = "CPEX CMF plugin — emit OCSF AI Operation events (DSSE-signed attestation chain)."
 rust-version = "1.96"
 
+[features]
+# Exactly one host engine per build. Source in this crate names engine
+# types through `crate::host::…` (see lib.rs), so the choice is a
+# dependency, not a code path — the OCSF output is identical on both
+# (PRAXIS-PORT-RESULTS.md: byte-identical records).
+#
+#   cpex (default)  contextforge-org/cpex `feat/audit-seam` (PR #166), the
+#                   seam this crate was first verified on. A path dep on a
+#                   sibling checkout — see README "Building".
+#   ppe             praxis-proxy/policy PR #84, Teryl's port of the same
+#                   seam into the Praxis Policy Engine. A git dep pinned
+#                   by rev, so a cpex-only checkout still resolves.
+#
+#   cargo test                                     # cpex
+#   cargo test --no-default-features --features ppe
+default = ["cpex"]
+cpex = ["dep:cpex-core"]
+ppe = ["dep:praxis-policy-core"]
+
 [dependencies]
 # Local checkout (clone cpex next to the AI-Identity repo — see README
 # "Building"). To build without a local checkout, swap in the git dep:
 #   cpex-core = { git = "https://github.com/contextforge-org/cpex", branch = "dev" }
 # Pin a rev rather than tracking `dev` for anything reproducible.
-cpex-core = { path = "../../../cpex/crates/cpex-core" }
+cpex-core = { path = "../../../cpex/crates/cpex-core", optional = true }
+
+# The PR #84 head the port was measured on (PRAXIS-PORT-RESULTS.md). A
+# full SHA, not a branch: the PR is a draft and its branch will move.
+# Bump deliberately, with the crate re-verified — the same rule as the
+# cpex pin in .github/workflows/rust.yml.
+praxis-policy-core = { git = "https://github.com/praxis-proxy/policy", rev = "20798aef9333a46d229c8400d05abb06a9cbc95a", optional = true }
 
 async-trait = "0.1"
 base64      = "0.23"
