@@ -912,6 +912,70 @@ mod tests {
         assert_eq!(d["deny_ignored"], true, "flat flag for SIEM queries");
     }
 
+    /// A denying step names what objected — where the host binds the
+    /// violation to the step. On PPE `denied` / `deny_ignored` steps
+    /// carry `detail` (code + reason; description / details only when
+    /// set); for a suppressed deny that is the only place the objection
+    /// survives, since no verdict names it. On cpex the step is a unit
+    /// variant and the member is absent — the terminal verdict still
+    /// names the violation at `status_code` / `status_detail`. Either
+    /// way the step vocabulary and the flat flag are unchanged.
+    #[test]
+    fn denying_steps_carry_detail_where_the_host_binds_it() {
+        let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
+        let mut described = PluginViolation::new("pii_present", "unredactable field");
+        described.description = Some("ssn in free text".into());
+        let log = finalized(
+            vec![
+                (
+                    "strict-transform",
+                    PluginMode::Transform,
+                    crate::host::deny_ignored(described),
+                ),
+                (
+                    "cedar-pdp",
+                    PluginMode::Sequential,
+                    crate::host::denied(PluginViolation::new("missing_permission", "no")),
+                ),
+            ],
+            Verdict::Deny(PluginViolation::new("missing_permission", "no")),
+        );
+        let ev = e.build_decision(
+            Some(&tool_payload()),
+            &subject_ext(),
+            &log,
+            "2026-08-18T12:00:00.000Z",
+        );
+        let steps = &ev["unmapped"]["cpex.decision"]["steps"];
+        assert_eq!(steps[0]["action"], "deny_ignored");
+        assert_eq!(steps[1]["action"], "denied");
+        assert_eq!(ev["unmapped"]["cpex.decision"]["deny_ignored"], true);
+        assert_eq!(ev["status_code"], "missing_permission");
+
+        #[cfg(feature = "ppe")]
+        {
+            assert_eq!(steps[0]["detail"]["code"], "pii_present");
+            assert_eq!(steps[0]["detail"]["reason"], "unredactable field");
+            assert_eq!(steps[0]["detail"]["description"], "ssn in free text");
+            assert!(
+                steps[0]["detail"].get("details").is_none(),
+                "empty details map is omitted, not emitted as {{}}"
+            );
+            assert_eq!(steps[1]["detail"]["code"], "missing_permission");
+            assert!(
+                steps[1]["detail"].get("description").is_none(),
+                "no description set, none rendered"
+            );
+        }
+        #[cfg(feature = "cpex")]
+        {
+            assert!(
+                steps[0].get("detail").is_none() && steps[1].get("detail").is_none(),
+                "cpex steps carry no violation, so no detail member: {steps}"
+            );
+        }
+    }
+
     /// `Aborted` (a concurrent sibling short-circuited the phase) is an
     /// intentional cancellation — it must not render as an error.
     #[test]

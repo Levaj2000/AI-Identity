@@ -1,11 +1,32 @@
-# Sample output — `cargo run --example decision_sink_demo`
+# Sample output — `cargo run --no-default-features --features ppe --example decision_sink_demo`
 
 Real OCSF decision records produced by the seam consumer in
 [`src/emitter.rs`](src/emitter.rs) (`AuditHandler` / `build_decision`) from the five
 finalized `DecisionLog`s in [`examples/decision_sink_demo.rs`](examples/decision_sink_demo.rs).
-Generated 2026-08-21 against cpex `feat/audit-seam` @ `386710a` (the cpex#166 audit
-seam, post-hardening head). Deterministic — timestamps, span ids, and stream stamps
-are fixed, so a re-run reproduces this file byte-for-byte.
+First generated 2026-08-21 against cpex `feat/audit-seam` @ `386710a` (the cpex#166
+audit seam, post-hardening head). Deterministic — timestamps, span ids, and stream
+stamps are fixed, so a re-run reproduces this file byte-for-byte.
+
+**Regenerated 2026-09-07 on the PPE host** — praxis-proxy/policy PR #84 @ `20798ae`,
+`--no-default-features --features ppe` (see `PRAXIS-PORT-RESULTS.md`) — for
+AID-EMIT-1 1.1.0's optional step `detail`. That is the only host-dependent byte in
+this file: the `cpex` host (the default feature) produces the same output minus the
+two `detail` members below, because the cpex seam records a denying step without
+its violation (only the verdict names one). Everything else — every other member,
+every record, in the same order — is byte-identical across the two hosts. The delta
+in full:
+
+```text
+# record 3, step cedar-pdp (denied)            # record 4, step strict-transform (deny_ignored)
+"detail": {                                     "detail": {
+  "code": "missing_permission",                   "code": "policy_deny",
+  "reason": "no grant covers this tool"           "reason": "blocked"
+},                                              },
+```
+
+A verifier MUST NOT require `detail` (AID-EMIT-1 §9.2); it is provenance for the
+step's action, and for a suppressed deny the only place the objection's code
+survives.
 
 What each record demonstrates:
 
@@ -241,6 +262,10 @@ the seam's completeness/ordering stamps (`unmapped."cpex.stream"`:
       "steps": [
         {
           "action": "denied",
+          "detail": {
+            "code": "missing_permission",
+            "reason": "no grant covers this tool"
+          },
           "phase": "sequential",
           "plugin": "cedar-pdp"
         }
@@ -323,6 +348,10 @@ the seam's completeness/ordering stamps (`unmapped."cpex.stream"`:
         },
         {
           "action": "deny_ignored",
+          "detail": {
+            "code": "policy_deny",
+            "reason": "blocked"
+          },
           "phase": "transform",
           "plugin": "injection-guard"
         },
