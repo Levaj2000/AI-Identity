@@ -139,14 +139,14 @@ plugins:
 /// The PPE spelling of the same document. Two differences, both host
 /// config-model, neither seam: the block is `engine_settings:` and it
 /// must say `dispatch: hooks` (PPE defaults to policy dispatch, which
-/// refuses a hook-listed plugin with a `priority:`). The namespace is
-/// set in code here rather than in the file — see `set_host_identity`.
+/// refuses a hook-listed plugin with a `priority:`).
 #[cfg(feature = "ppe")]
-fn config_yaml(_namespace: &str) -> String {
+fn config_yaml(namespace: &str) -> String {
     format!(
         r#"
 engine_settings:
   dispatch: hooks
+  audit_stream_namespace: {namespace}
 
 plugins:
   - name: minter
@@ -168,13 +168,10 @@ plugins:
 }
 
 /// Hand the executor its stream identity. The epoch is `serde(skip)` on
-/// both hosts and only ever set here; the namespace rides in the YAML on
-/// cpex. On PPE it is set in code too, because the PR #84 head this port
-/// is pinned to rejects `engine_settings.audit_stream_namespace` at load
-/// — the key is missing from the engine-settings allowlist even though
-/// `docs/auditing.md` documents it (reported on the PR; see
-/// PRAXIS-PORT-RESULTS.md). Move it back into `config_yaml` once that
-/// lands.
+/// both hosts and only ever set here, since a static file epoch cannot
+/// stay monotonic across boots. The namespace rides in the YAML on both
+/// hosts: PR #84 accepts the documented `engine_settings` audit keys at
+/// load as of `3e7734e`, so the in-code PPE workaround is gone.
 #[cfg(feature = "cpex")]
 fn set_host_identity(
     cfg: &mut cpex_plugin_ocsf_audit::host::config::CpexConfig,
@@ -187,11 +184,10 @@ fn set_host_identity(
 #[cfg(feature = "ppe")]
 fn set_host_identity(
     cfg: &mut cpex_plugin_ocsf_audit::host::config::PolicyConfig,
-    namespace: &str,
+    _namespace: &str,
     epoch: Option<u64>,
 ) {
     cfg.engine_settings.audit_epoch = epoch;
-    cfg.engine_settings.audit_stream_namespace = Some(namespace.to_owned());
 }
 
 fn env_str(key: &str, default: &str) -> String {

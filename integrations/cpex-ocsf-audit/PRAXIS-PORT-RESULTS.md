@@ -83,7 +83,7 @@ with only cpex beside it still resolves.
 
 ## Observations for upstream (the "anything that doesn't match intent" list)
 
-1. **The documented `engine_settings` audit keys are rejected at load.**
+1. **The documented `engine_settings` audit keys are rejected at load.** *(Fixed upstream 2026-09-08 in PR #84 `3e7734e`, "accept the documented engine_settings audit keys at load". Verified here: the crate is pinned to that head, `panic_drive` carries `audit_stream_namespace` in the YAML again on both hosts, and the driven panic lands on `gw-1:decision` with the namespace taken from the file. The finding as originally reported follows.)*
    `ENGINE_SETTINGS_KEYS` in `crates/ppe-core/src/config.rs` lists
    `dispatch`, `plugin_timeout`, `short_circuit_on_deny` and
    `route_cache_max_entries` only, so `reject_unknown_document_keys` refuses
@@ -98,9 +98,9 @@ with only cpex beside it still resolves.
    The test that exists to catch this, `the_documented_auditing_config_loads`,
    passes because it calls `serde_yaml::from_str` directly and never goes
    through `parse_config`. Suggested fix: four `structural_key(..., KeyOwner::Core)`
-   entries, and route that test through `parse_config`. Until it lands,
-   `examples/panic_drive.rs` sets `audit_stream_namespace` in code on PPE
-   (the epoch already is, on both hosts) rather than in the YAML.
+   entries, and route that test through `parse_config`. The fix landed as
+   `3e7734e`; `examples/panic_drive.rs` now sets only the epoch in code, on
+   both hosts, and the namespace rides in the YAML as it always did on cpex.
 2. **The seams have diverged, in PPE's favour** (finding 1 above). cpex#166
    and PR #84 no longer expose the same `PluginAction`. A consumer targeting
    both needs the shape split this crate now carries; a consumer targeting
