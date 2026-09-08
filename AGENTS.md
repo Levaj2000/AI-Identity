@@ -52,6 +52,13 @@ kind of work, deliver in ONE batch, not a drip:
 - Author commits he will push as `Jeff Leva
   <120221487+Levaj2000@users.noreply.github.com>` — his account blocks pushes
   exposing the private address (GH007).
+- **No Claude identity anywhere in a commit bound for CoSAI or OCSF**: not as
+  author, not as committer, and not in a `Co-Authored-By` or `Claude-Session`
+  trailer. Those repos gate merges on a CLA that resolves every commit identity
+  to a GitHub account, and Claude cannot sign one. A commit authored by Claude
+  on ws4 PR #181 (2026-09-08) turned the CLA check red and had to be amended and
+  force-pushed under Jeff's ID. Deliver the change as a patch or a heredoc he
+  commits himself with `--author` set as above and no trailers.
 
 ## Secrets Management (Non-Standard)
 

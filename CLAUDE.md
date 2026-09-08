@@ -80,3 +80,16 @@ public, on a standards thread.
 **State the routing split before starting.** Name which actions land directly from
 the session and which he has to run himself, at the top of the task, not at the
 point where the first command fails.
+
+**No Claude identity on a commit bound for a repo with a CLA.** CoSAI and OCSF run
+CLA Assistant, which resolves every commit author, committer, and `Co-Authored-By`
+identity to a GitHub account and blocks the merge until each one has signed. Claude
+cannot sign, so a commit it authors, or a trailer naming it, turns the check red
+and the maintainer has to amend and force-push under his own ID; that happened on
+ws4 PR #181. The attribution trailers this harness adds by default are for this
+repository only. For a change he will commit elsewhere, hand him the file content
+or a patch, and write the commit step with his author string and no trailers:
+
+```bash
+git commit --author='Jeff Leva <120221487+Levaj2000@users.noreply.github.com>' -F ~/msg.txt
+```
