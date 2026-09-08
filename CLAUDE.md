@@ -41,3 +41,42 @@ do not belong in it; see `docs/security/public-repo-exposure-remediation.md` for
 that removed an earlier set of them. Records like these belong in the maintainer's Notion
 workspace, in the Outreach Log for external relationships or CoSAI Follow-ups for standards
 commitments.
+
+## Work the maintainer posts himself: write the command so it cannot miss
+
+`AGENTS.md`, "Batch Delivery for Work the User Posts Manually", is the protocol.
+Read it before preparing anything destined for a repo the maintainer does not own
+(OCSF, CoSAI, collaborators' repos). This section is the enforcement note, added
+after all three of its rules were broken inside a single session.
+
+**Default to a heredoc that writes the file, not to a file he has to find.**
+Sending a file and then naming it in a command couples that command to a filename
+his browser has already altered: downloads arrive with hyphens stripped, so
+`pr181-reply.md` lands as `pr181reply.md` and the command fails with "no such file".
+A single paste-able block that writes the content and then acts on it has no
+filename dependency at all:
+
+```bash
+cat > ~/thing.md <<'THING_EOF'
+...content...
+THING_EOF
+
+gh pr comment 123 --repo owner/repo --body-file ~/thing.md
+```
+
+Quote the heredoc delimiter so backticks, `#` and `$` reach the file literally,
+and give the file a name with no hyphens. Send the artifact as a file too when it
+is worth reading on its own, but never let the command depend on where it landed.
+
+**Never put a value in a command block that he has to replace by hand.** No
+`<placeholder>`, no `#NNNN`, no `# comment` lines: the shell executes them
+literally and he pastes whole blocks. When a value only exists after an earlier
+step (an issue number, a SHA, a gist URL), capture it into a variable in the same
+block, or split into two blocks so the first prints the value the second consumes.
+Ordering matters as much as syntax: a command that references the result of a step
+he has not run yet will run anyway and post the placeholder. That has happened, in
+public, on a standards thread.
+
+**State the routing split before starting.** Name which actions land directly from
+the session and which he has to run himself, at the top of the task, not at the
+point where the first command fails.
