@@ -77,16 +77,38 @@ Ordering matters as much as syntax: a command that references the result of a st
 he has not run yet will run anyway and post the placeholder. That has happened, in
 public, on a standards thread.
 
+**Never put `set -e` at the top level of a block he pastes into an interactive
+shell.** In interactive zsh, `set -e` persists after the block, and the first
+failing command exits the whole shell: Terminal prints "[Process completed]" and
+the window is gone, along with any output he had not yet copied. That is what a
+guard is supposed to do, stop the block, but it must not take the terminal with
+it. Wrap the block in a subshell so the option dies with it, or chain the steps
+with `&&` so a failure stops the block and returns him to the prompt:
+
+```bash
+(
+set -e
+cd ~/thing
+git fetch origin main
+git reset --hard origin/main
+)
+```
+
+Either shape returns him to a working prompt on failure. A guard that stops a
+block is a feature; a guard that closes the terminal happened on 2026-09-08 and
+cost a re-run from a fresh window.
+
 **State the routing split before starting.** Name which actions land directly from
 the session and which he has to run himself, at the top of the task, not at the
 point where the first command fails.
 
 **No Claude identity on a commit bound for a repo with a CLA.** CoSAI and OCSF run
-CLA Assistant, which resolves every commit author, committer, and `Co-Authored-By`
-identity to a GitHub account and blocks the merge until each one has signed. Claude
-cannot sign, so a commit it authors, or a trailer naming it, turns the check red
-and the maintainer has to amend and force-push under his own ID; that happened on
-ws4 PR #181. The attribution trailers this harness adds by default are for this
+CLA Assistant, which resolves every commit author to a GitHub account and blocks
+the merge until each one has signed. Claude cannot sign, so a commit it authors
+turns the check red and the maintainer has to amend and force-push under his own
+ID; that happened on ws4 PR #181. Observed on the same PR: a `Co-Authored-By`
+trailer alone did not trip the check, but keep trailers off those commits anyway,
+since the CLA bot's co-author handling is a setting the repo owner can change. The attribution trailers this harness adds by default are for this
 repository only. For a change he will commit elsewhere, hand him the file content
 or a patch, and write the commit step with his author string and no trailers:
 
