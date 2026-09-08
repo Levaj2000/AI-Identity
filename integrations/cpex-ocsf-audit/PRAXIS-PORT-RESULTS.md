@@ -108,6 +108,12 @@ with only cpex beside it still resolves.
 3. **`plugin_settings:` is a load error, not a warning**, on PPE — the
    rename is enforced. Good for operators; worth a line in the PR
    description's breaking-changes list alongside the `Clone` removals.
+   *(Answered upstream 2026-09-08: not a #84 change. The rename shipped in
+   praxis-proxy/policy #55 on 2026-08-31 and is already documented, under
+   the 0.2.0 Removed section of the upstream CHANGELOG and in
+   `docs/upgrade-apl.md`, so it does not belong in #84's breaking-changes
+   list. It is a real cpex-to-PPE delta, just an older one; it stays in
+   this document's "What changed" list, item 2, as a porting note.)*
 4. **New transitive dependencies** on the PPE build: `http` (via
    `praxis-policy-orchestration`), plus the two praxis crates. Dropped
    relative to the cpex build: `generic-array`, `version_check`. Net package
