@@ -67,11 +67,10 @@ record it emits is a real fail-closed deny on the host-named stream.
 > `engine_settings:`, and it must declare `dispatch: hooks` — PPE defaults to
 > policy dispatch, which refuses a hook-listed plugin that carries a
 > `priority:`. The plugin host is `PolicyEngine`, with the same
-> `register_factory` / `load_config` / `initialize` surface. On the PR #84 head
-> this crate is pinned to, `engine_settings.audit_stream_namespace` is rejected
-> at load (the key is missing from PPE's engine-settings allowlist; reported on
-> the PR — `PRAXIS-PORT-RESULTS.md` observation 1), so `panic_drive` sets the
-> namespace in code there, next to the epoch.
+> `register_factory` / `load_config` / `initialize` surface. The audit keys
+> `docs/auditing.md` documents, `audit_stream_namespace` among them, load from
+> the file as of PR #84 `3e7734e`, which fixed the allowlist gap reported as
+> `PRAXIS-PORT-RESULTS.md` observation 1.
 
 **Post-hook observer mode (legacy; pre-seam cpex):** list the CMF POST hooks to
 observe. This path sees allowed traffic only — it structurally cannot record a
