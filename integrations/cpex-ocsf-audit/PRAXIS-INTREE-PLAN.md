@@ -85,6 +85,36 @@ Read from `praxis-proxy/policy` at `3e7734e`: `CONTRIBUTING.md`, `AGENTS.md`,
   `ecdsa`, `pem`, `pkcs8`. `serde`, `serde_json`, `chrono`, `async-trait`,
   `tracing` and `tokio` exist. All are Apache-2.0 OR MIT, inside the
   `deny.toml` allow-list. `make audit` (`cargo deny check`) is a CI gate.
+
+  Two of the three are not clean adds, read from the manifests at
+  `3e7734e`. `sha2 = "0.11"` is already declared directly by four crates
+  (`ppe-core`, `ppe-apl-runtime`, `builtins/plugins/delegator-oauth`,
+  `builtins/session/valkey`) at the version this crate uses, the
+  inconsistency praxis-bot flagged on #84 on 2026-09-09; if Teryl lands the
+  workspace-dep half of that finding, the table entry arrives ahead of this
+  PR and the port matches it. `base64` is a version conflict rather than an
+  add: `identity-jwt`, `delegator-oauth` and `elicitation-ciba` each
+  declare `base64 = "0.22"` directly and this crate is on `0.23`, which is
+  semver-incompatible. `p256` is the only genuinely new dependency in the
+  tree.
+
+  Pinning this crate down to `0.22` is the cheaper resolution and the
+  plan's default. base64 is reached only through `Engine::encode` and
+  `Engine::decode` on `general_purpose::STANDARD` (`src/sign.rs`,
+  `src/emitter.rs`), an API unchanged across both versions, so the expected
+  cost is the manifest line, to be confirmed by the build rather than
+  assumed. Taking the tree to `0.23` instead makes this PR a base64 upgrade
+  across three builtins it has no other reason to touch. Carrying both is a
+  third option and a worse one: `deny.toml` sets `multiple-versions =
+  "warn"`, so `make audit` would not fail, but the tree has one major of
+  base64 today and this PR is not the reason to make it two.
+
+  On the version spec itself, follow the table and not the bot. The #84
+  review also asks for a patch component (`sha2 = "0.11.0"`), but
+  `[workspace.dependencies]` at `3e7734e` uses major or major.minor
+  throughout: `tokio = "1"`, `thiserror = "2"`, `hashbrown = "0.17"`,
+  `serde_yaml = "0.9"`. Expect the same comment on this PR and answer it
+  the same way.
 - **Markdown.** 80-column prose, 120 in code blocks, tables exempt
   (MD013); every fence declares a language (MD040); no bare URLs (MD034);
   asterisk emphasis (MD049). Long prose lines today: `README.md` 89,
@@ -202,6 +232,10 @@ reflow. Plan a day, verified against the acceptance list, not an hour.
 
 ## Open questions for the PR thread
 
+- Whether `base64` enters `[workspace.dependencies]` at `0.22` with this
+  crate pinned down to match the three builtins, or at `0.23` with those
+  builtins bumped in the same PR. Pinning down is the plan's default;
+  Teryl's call.
 - `doc-valid-idents` additions in `clippy.toml` for OCSF, DSSE, PAE, ECDSA,
   AID-EMIT-1, or backticks throughout; Teryl's preference.
 - Whether the praxis `demos` repository, which registers the reference
