@@ -31,6 +31,29 @@ Settled with Teryl on Slack, 2026-09-08, after he talked to Fred:
    green and `emit_sample` byte-identical. That is the baseline the in-tree
    copy is measured against.
 
+**Status 2026-09-09.** Fred requested changes on #84 with five findings.
+Two touch the sink seam this crate consumes; three are inside the effect
+log and the delegator, which the crate does not observe (`on_effect` is
+the default no-op).
+
+- *Emit once after routing and assertions.* Today `emit_audit` runs inside
+  `execute` and `apply_assertions` runs on its result (`engine.rs`), so a
+  sink can record allow for a request an assertion then denies, and a
+  route-resolution failure returns a denial with no record at all. The
+  fix is the order AID-EMIT-1 assumes, the record is the verdict the
+  caller got; it changes nothing in this crate. Route denials gaining a
+  record adds records to the decision stream and keeps it dense.
+- *Sinks get a filtered view of `Extensions`.* `emit_audit` and the effect
+  sink pass the unfiltered extensions, transport and effect slot included.
+  This crate reads only the typed fields (`request`, `mcp`, `security`,
+  `agent`, `completion`, `delegation`), so a filtered view costs nothing,
+  unless the view arrives as a new type rather than `&Extensions` with the
+  slots detached, in which case `AuditHandler::handle` changes shape and
+  the `ppe` build of this crate follows it.
+
+Either way, Teryl's next push moves the head: re-pin, re-run the bar, and
+re-read the sink signature before gate 3 is called met.
+
 ## PPE rules the copy must satisfy
 
 Read from `praxis-proxy/policy` at `3e7734e`, dependencies re-read at
