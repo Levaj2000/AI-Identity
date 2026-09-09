@@ -60,9 +60,10 @@ env:
   # The second host. praxis-proxy/policy PR #84 is Teryl's port of the
   # same seam into the Praxis Policy Engine; the crate builds against it
   # under `--no-default-features --features ppe`. That dependency is a
-  # git dep pinned by full SHA in Cargo.toml (PR #84 head `20798ae`, the
-  # rev PRAXIS-PORT-RESULTS.md was measured on), so there is nothing to
-  # clone here — Cargo fetches it, and --locked holds it to the lock.
+  # git dep pinned by full SHA in Cargo.toml (the PR #84 head the crate
+  # was last re-verified on; PRAXIS-PORT-RESULTS.md records each bump),
+  # so there is nothing to clone here: Cargo fetches it, and --locked
+  # holds it to the lock.
   # Both hosts build in this one job because the cpex path dependency
   # has to resolve even when the `cpex` feature is off.
 

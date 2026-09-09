@@ -42,6 +42,12 @@
       "groupName": "rust non-major"
     },
     {
+      "description": "cpex-ocsf-audit holds base64 at 0.22: praxis-proxy/policy is on 0.22 (jsonwebtoken 11 requires it) and the crate is copied into that tree; see the comment in its Cargo.toml",
+      "matchManagers": ["cargo"],
+      "matchPackageNames": ["base64"],
+      "allowedVersions": "<0.23"
+    },
+    {
       "description": "Majors always ride solo so each gets its own review",
       "matchUpdateTypes": ["major"],
       "groupName": null
