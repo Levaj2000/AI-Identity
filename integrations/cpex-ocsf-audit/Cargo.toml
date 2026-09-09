@@ -49,15 +49,27 @@ ppe = ["dep:praxis-policy-core"]
 # Pin a rev rather than tracking `dev` for anything reproducible.
 cpex-core = { path = "../../../cpex/crates/cpex-core", optional = true }
 
-# The PR #84 head, `3e7734e`, which accepts the documented
-# `engine_settings` audit keys at load (PRAXIS-PORT-RESULTS.md obs 1). A
-# full SHA, not a branch: the PR is a draft and its branch will move.
+# The PR #84 head, `499ee91` (2026-09-09): `3e7734e` accepted the
+# documented `engine_settings` audit keys at load (PRAXIS-PORT-RESULTS.md
+# obs 1), `ef20d8f` made `sha2` a workspace dependency, and the rest is
+# the docs reorganisation (#82) merged in, with `docs/auditing.md` now at
+# `docs/content/auditing.md`. Nothing on the seam this crate consumes
+# changed between the two heads. A full SHA, not a branch: the PR is a
+# draft and its branch will move.
 # Bump deliberately, with the crate re-verified — the same rule as the
 # cpex pin in .github/workflows/rust.yml.
-praxis-policy-core = { git = "https://github.com/praxis-proxy/policy", rev = "3e7734ed46609e337d14262aaa6d152eb5757732", optional = true }
+praxis-policy-core = { git = "https://github.com/praxis-proxy/policy", rev = "499ee91ff1e1102f3e38357450f3f9d4e213c602", optional = true }
 
 async-trait = "0.1"
-base64      = "0.23"
+# 0.22, not the current 0.23: praxis-proxy/policy holds base64 at 0.22
+# because `jsonwebtoken` 11 (identity-jwt) depends on it, and this crate
+# is copied into that tree as `reference/plugins/ocsf-audit`
+# (PRAXIS-INTREE-PLAN.md). Pinning down here keeps the copy a copy and the
+# PPE build on one base64. Only `Engine::{encode,decode}` on
+# `general_purpose::STANDARD` is used, identical across both majors;
+# the conformance vectors are byte-identical either way. Hold it here
+# until the in-tree copy lands or the PPE tree moves.
+base64      = "0.22"
 chrono      = { version = "0.4", features = ["serde"] }
 # ECDSA P-256 for the DSSE signer — same curve as the production JWKS
 # (https://api.ai-identity.co/.well-known/ai-identity-public-keys.json).

@@ -10,6 +10,11 @@ auditing", closes praxis#11), head `20798ae` — five commits on top of `main`
 `rust-toolchain.toml` says 1.96.0, its MSRV)
 **Baseline it is compared with:** the same crate on cpex `feat/audit-seam`
 `64c8eba` (the CI pin), run the same day on the same toolchain.
+**Re-verified 2026-09-09** against PR #84 head `499ee91` (`3e7734e` plus
+`ef20d8f`, sha2 as a workspace dependency, and the docs reorganisation
+from #82; no seam change), with this crate on base64 0.22: warning-free
+`--locked` builds and 34 tests green on each host, `emit_sample` and
+`decision_sink_demo` byte-identical to the committed vectors.
 
 This is the re-run `PRAXIS-PORT-PLAN.md` describes: same crate, same protocol
 as `SEAM-PORT-RESULTS.md`, retargeted at the praxis seam. The plan expected

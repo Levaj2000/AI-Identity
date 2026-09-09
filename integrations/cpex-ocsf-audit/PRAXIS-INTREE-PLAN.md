@@ -33,9 +33,11 @@ Settled with Teryl on Slack, 2026-09-08, after he talked to Fred:
 
 ## PPE rules the copy must satisfy
 
-Read from `praxis-proxy/policy` at `3e7734e`: `CONTRIBUTING.md`, `AGENTS.md`,
-`Cargo.toml` (workspace lints), `clippy.toml`, `.markdownlint.yaml`,
-`deny.toml`, `docs/port-provenance.md`.
+Read from `praxis-proxy/policy` at `3e7734e`, dependencies re-read at
+`499ee91`: `CONTRIBUTING.md`, `AGENTS.md`, `Cargo.toml` (workspace lints),
+`clippy.toml`, `.markdownlint.yaml`, `deny.toml`, `docs/port-provenance.md`.
+The auditing guide moved from `docs/auditing.md` to `docs/content/auditing.md`
+when #84 took the #82 docs reorganisation (`a1e8621`, `499ee91`).
 
 - **Commits.** Human-authored, `Signed-off-by` the human, no AI co-author or
   session trailers (`AGENTS.md`, first paragraph). Same rule as this repo's
@@ -79,42 +81,41 @@ Read from `praxis-proxy/policy` at `3e7734e`: `CONTRIBUTING.md`, `AGENTS.md`,
   bar as the library.
 - **Dependencies.** `deny.toml` has `allow-git = []`: no git dependencies,
   so the pinned `praxis-policy-core` git dep becomes
-  `praxis-policy-core = { workspace = true }`. Every third-party dependency
-  must already be in `[workspace.dependencies]`; `p256`, `sha2` and
-  `base64` are not there today and are added in the same PR, `p256` with
-  `ecdsa`, `pem`, `pkcs8`. `serde`, `serde_json`, `chrono`, `async-trait`,
-  `tracing` and `tokio` exist. All are Apache-2.0 OR MIT, inside the
-  `deny.toml` allow-list. `make audit` (`cargo deny check`) is a CI gate.
+  `praxis-policy-core = { workspace = true }`. `serde`, `serde_json`,
+  `chrono`, `async-trait`, `tracing`, `tokio` and, since `ef20d8f`, `sha2`
+  are in `[workspace.dependencies]` and are taken with `{ workspace = true }`.
+  `p256` is the one genuinely new dependency in the tree and joins the
+  table in this PR with `ecdsa`, `pem`, `pkcs8`. All are Apache-2.0 OR MIT,
+  inside the `deny.toml` allow-list. `make audit` (`cargo deny check`) is a
+  CI gate.
 
-  Two of the three are not clean adds, read from the manifests at
-  `3e7734e`. `sha2 = "0.11"` is already declared directly by four crates
-  (`ppe-core`, `ppe-apl-runtime`, `builtins/plugins/delegator-oauth`,
-  `builtins/session/valkey`) at the version this crate uses, the
-  inconsistency praxis-bot flagged on #84 on 2026-09-09; if Teryl lands the
-  workspace-dep half of that finding, the table entry arrives ahead of this
-  PR and the port matches it. `base64` is a version conflict rather than an
-  add: `identity-jwt`, `delegator-oauth` and `elicitation-ciba` each
-  declare `base64 = "0.22"` directly and this crate is on `0.23`, which is
-  semver-incompatible. `p256` is the only genuinely new dependency in the
-  tree.
+  How the other two resolved, read from the manifests at `499ee91`:
 
-  Pinning this crate down to `0.22` is the cheaper resolution and the
-  plan's default. base64 is reached only through `Engine::encode` and
-  `Engine::decode` on `general_purpose::STANDARD` (`src/sign.rs`,
-  `src/emitter.rs`), an API unchanged across both versions, so the expected
-  cost is the manifest line, to be confirmed by the build rather than
-  assumed. Taking the tree to `0.23` instead makes this PR a base64 upgrade
-  across three builtins it has no other reason to touch. Carrying both is a
-  third option and a worse one: `deny.toml` sets `multiple-versions =
-  "warn"`, so `make audit` would not fail, but the tree has one major of
-  base64 today and this PR is not the reason to make it two.
+  - `sha2`. praxis-bot flagged four crates each declaring `sha2 = "0.11"`
+    directly on #84 (2026-09-09). Teryl answered with `ef20d8f`, "make sha
+    0.11 a workspace dependency": `sha2 = "0.11"` is in the table and the
+    four crates take it from there. The port does the same and adds
+    nothing.
+  - `base64`. This crate was on `0.23`; `identity-jwt`, `delegator-oauth`
+    and `elicitation-ciba` declare `0.22` directly. Teryl settled it on the
+    same day: the tree stays on `0.22` because `jsonwebtoken` 11, which
+    `identity-jwt` depends on, requires base64 `0.22`, so `0.23` would put
+    two majors in the build (verified against the PPE lock: `jsonwebtoken
+    11.0.0` lists `base64 0.22.1`). This crate is pinned down to `0.22`
+    ahead of the port. The cost was the manifest line, confirmed by the
+    build: base64 is reached only through `Engine::encode` and
+    `Engine::decode` on `general_purpose::STANDARD` (`src/sign.rs`,
+    `src/emitter.rs`), 34 tests green on both hosts, `emit_sample` and
+    `decision_sink_demo` byte-identical. `base64` is not in the workspace
+    table at `499ee91`; the port declares `base64 = "0.22"` directly, the
+    way the three builtins do, unless Teryl prefers a table entry.
 
   On the version spec itself, follow the table and not the bot. The #84
-  review also asks for a patch component (`sha2 = "0.11.0"`), but
-  `[workspace.dependencies]` at `3e7734e` uses major or major.minor
-  throughout: `tokio = "1"`, `thiserror = "2"`, `hashbrown = "0.17"`,
-  `serde_yaml = "0.9"`. Expect the same comment on this PR and answer it
-  the same way.
+  review also asked for a patch component (`sha2 = "0.11.0"`), and
+  `ef20d8f` wrote `sha2 = "0.11"`, matching the rest of
+  `[workspace.dependencies]`: `tokio = "1"`, `thiserror = "2"`,
+  `hashbrown = "0.17"`, `serde_yaml = "0.9"`. Expect the same comment on
+  this PR and answer it the same way.
 - **Markdown.** 80-column prose, 120 in code blocks, tables exempt
   (MD013); every fence declares a language (MD040); no bare URLs (MD034);
   asterisk emphasis (MD049). Long prose lines today: `README.md` 89,
@@ -141,8 +142,8 @@ reference/plugins/ocsf-audit/
 
 Workspace edits in the same PR: add the path to `members` and
 `default-members` in the root `Cargo.toml` under the existing reference
-comment; add the three dependencies to `[workspace.dependencies]`;
-`docs/auditing.md` "PPE ships one, `audit-logger`" becomes two, with a
+comment; add `p256` to `[workspace.dependencies]`;
+`docs/content/auditing.md` "PPE ships one, `audit-logger`" becomes two, with a
 `kind: audit/ocsf` YAML block after the `audit-logger` one; `README.md`
 line 52 "two worked examples" becomes three. `kind` stays `audit/ocsf`.
 
@@ -232,10 +233,10 @@ reflow. Plan a day, verified against the acceptance list, not an hour.
 
 ## Open questions for the PR thread
 
-- Whether `base64` enters `[workspace.dependencies]` at `0.22` with this
-  crate pinned down to match the three builtins, or at `0.23` with those
-  builtins bumped in the same PR. Pinning down is the plan's default;
-  Teryl's call.
+- *(Settled 2026-09-09.)* `base64` stays at `0.22` in the tree, held there
+  by `jsonwebtoken` 11; this crate is pinned down to match. Still open is
+  only whether the port declares it directly, as the three builtins do, or
+  adds a workspace table entry.
 - `doc-valid-idents` additions in `clippy.toml` for OCSF, DSSE, PAE, ECDSA,
   AID-EMIT-1, or backticks throughout; Teryl's preference.
 - Whether the praxis `demos` repository, which registers the reference
