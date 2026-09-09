@@ -265,14 +265,13 @@ equals record N's `attestation.fingerprint.value` (OCSF shape). Current run:
 7/7 excerpt records, 6/6 internal links; full export 236 records, 235/235
 links, 1 genesis (prev omitted).
 
-> **Re-pin note (2026-09-09):** the vectors were derived against the
-> pre-`7cac2e1` data model — `derive_otel_vectors.py` still emits
-> `audit.sequence.prev_hash` and parks the predecessor id in
-> `ocsf.attestation.prev_event.uid`. A re-pin pass is needed: emit
-> `previous_hash` / `previous_record_id` natively (§2.2 closed), add the
-> §2.9 end-signal rule, and carry `audit.integrity.canonicalization`
-> (§2.1). Chain-linkage counts above are unaffected; attribute names in the
-> ndjson predate the rename.
+> **Re-pinned 2026-09-09** to data-model `25bff70e`: the script emits
+> `previous_hash` / `previous_record_id` natively (§2.2 closed), carries
+> `audit.integrity.canonicalization` with the producer's declared scheme
+> (§2.1), implements the §2.9 end-signal rule (omit; only a parked positive
+> is carried back), and the post-transform check verifies hash *and* id
+> linkage. Current run: 7/7 excerpt records, 6/6 links; full export 236
+> records, 235/235 links, 1 genesis.
 
 **What verifies without any secret:**
 
@@ -320,8 +319,10 @@ values):
     "audit.sequence.stream_id": "f3576cf6-87ff-4c07-b446-e6ac526236a5",
     "audit.sequence.number": 18,
     "audit.sequence.previous_hash": "90ba42f3b92586ff…",
+    "audit.sequence.previous_record_id": "98",
     "audit.integrity.value": "MEUCIQC7SNQRH0a8IEKO…",
     "audit.integrity.signer": "producer",
+    "audit.integrity.canonicalization": "AI-Identity audit chain v1 (sorted-compact JSON + prev hash)",
     "ocsf.attestation.entry_hash": "1d9548729d942e30…",
     "ocsf.attestation.entry_hash.algorithm": "HMAC-SHA-256",
     "ocsf.attestation.canonicalization": "AI-Identity audit chain v1 (sorted-compact JSON + prev hash)",

@@ -14,9 +14,11 @@ fixture ergonomics (NDJSON, SIEM-style).
 
 After deriving, the script re-verifies chain linkage *across the transform*:
 for consecutive ``audit.sequence.number`` values in the same
-``audit.sequence.stream_id``, record N+1's ``audit.sequence.prev_hash`` must
-equal record N's ``ocsf.attestation.entry_hash``. A transform that breaks
-this check has corrupted the integrity constructs it claims to preserve.
+``audit.sequence.stream_id``, record N+1's ``audit.sequence.previous_hash``
+must equal record N's ``ocsf.attestation.entry_hash``, and record N+1's
+``audit.sequence.previous_record_id`` must equal record N's
+``audit.record.id``. A transform that breaks either check has corrupted the
+integrity constructs it claims to preserve.
 
 ECDSA signature verification is deliberately out of scope here (not in the
 stdlib): use the bundle's ``regenerate.py`` on the OCSF side, or follow the
@@ -99,11 +101,10 @@ def ocsf_to_otel(event: dict) -> dict:
         prev = att.get("prev_event")
         if prev:
             # Genesis records omit prev_event entirely on the OCSF side and
-            # therefore omit audit.sequence.prev_hash here — a deliberate,
-            # documented divergence from the data model's SHA-256("")
-            # genesis constant (README §2.3).
-            attrs["audit.sequence.prev_hash"] = prev["fingerprint"]["value"]
-            attrs["ocsf.attestation.prev_event.uid"] = prev["uid"]
+            # therefore omit both previous-record attributes here — genesis
+            # by omission, now the data model's rule (README §2.3).
+            attrs["audit.sequence.previous_hash"] = prev["fingerprint"]["value"]
+            attrs["audit.sequence.previous_record_id"] = prev["uid"]
 
         # The signature bytes ride unmapped on the OCSF side (digital_signature
         # has no bytes field — ocsf-schema#1709); on the OTel side they ARE the
@@ -120,6 +121,19 @@ def ocsf_to_otel(event: dict) -> dict:
             attrs["ocsf.attestation.entry_hash"] = fp["value"]
             attrs["ocsf.attestation.entry_hash.algorithm"] = fp["algorithm"]
             attrs["ocsf.attestation.canonicalization"] = fp["serialization"]
+            if attrs.get("audit.integrity.value"):
+                # Native declaration of what the proof is over (README §2.1):
+                # this producer's declared scheme, NOT jcs — present whenever
+                # the proof is present, so a verifier never assumes jcs.
+                attrs["audit.integrity.canonicalization"] = fp["serialization"]
+
+        # Stream-end signal (README §2.9): the OCSF shape has no end-of-chain
+        # marker, so a plain OCSF->OTel transform omits audit.sequence.end —
+        # absence honestly means "unknown". Only if a previous transform
+        # parked the bit in unmapped is it carried back to the native
+        # attribute (and only the positive signal is ever emitted).
+        if unmapped.get("audit_sequence_end"):
+            attrs["audit.sequence.end"] = True
 
     # --- lossless remainder: fields OTel audit.* has no home for ---------
     if agent.get("uid"):
@@ -206,12 +220,15 @@ def derive(in_path: Path, out_path: Path) -> int:
             if a.get("audit.sequence.number") != pa.get("audit.sequence.number", -2) + 1:
                 links_skipped += 1  # non-consecutive slice; predecessor not in this file
                 continue
-            if a.get("audit.sequence.prev_hash") == pa.get("ocsf.attestation.entry_hash"):
+            ok_hash = a.get("audit.sequence.previous_hash") == pa.get("ocsf.attestation.entry_hash")
+            ok_id = a.get("audit.sequence.previous_record_id") == pa.get("audit.record.id")
+            if ok_hash and ok_id:
                 links_ok += 1
             else:
                 links_bad += 1
                 print(
-                    f"LINK BROKEN: stream {sid} seq {a.get('audit.sequence.number')}",
+                    f"LINK BROKEN: stream {sid} seq {a.get('audit.sequence.number')} "
+                    f"(hash_ok={ok_hash} id_ok={ok_id})",
                     file=sys.stderr,
                 )
 
@@ -219,7 +236,8 @@ def derive(in_path: Path, out_path: Path) -> int:
         1
         for r in records
         if r["Attributes"].get("audit.sequence.number") == 1
-        and "audit.sequence.prev_hash" not in r["Attributes"]
+        and "audit.sequence.previous_hash" not in r["Attributes"]
+        and "audit.sequence.previous_record_id" not in r["Attributes"]
     )
     print(f"{len(records)} AuditRecords -> {out_path.name}")
     print(
@@ -227,7 +245,7 @@ def derive(in_path: Path, out_path: Path) -> int:
         f"{links_skipped} skipped (predecessor outside this file)"
     )
     if genesis:
-        print(f"genesis records: {genesis} (prev_hash omitted — see README §2.3)")
+        print(f"genesis records: {genesis} (previous-record pointer omitted — see README §2.3)")
     return 1 if links_bad else 0
 
 
