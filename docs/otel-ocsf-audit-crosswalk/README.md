@@ -9,7 +9,7 @@ the exact revisions mapped):
 
 | Side | Source | Revision |
 |---|---|---|
-| OTel | [`specification/audit/data-model.md`](https://github.com/apeirora/opentelemetry-specification/blob/auditing/specification/audit/data-model.md), `apeirora/opentelemetry-specification` branch `auditing` | `663d809` (includes `578b930`) |
+| OTel | [`specification/audit/data-model.md`](https://github.com/apeirora/opentelemetry-specification/blob/auditing/specification/audit/data-model.md), `apeirora/opentelemetry-specification` branch `auditing` | `25bff70e` (includes `7cac2e1`, the three spec asks) |
 | OCSF | `attestation` object + `record_integrity` profile ([ocsf/ocsf-schema#1661](https://github.com/ocsf/ocsf-schema/pull/1661)), API Activity 6003 + `ai_operation` | OCSF **1.9.0** (released 2026-08-03) |
 | Fixture | [Production reference bundle](../cosai-ws4-ocsf-mapping/ocsf-log-reference-bundle/) — 236-event hash-chained export, per-event ECDSA-P256 signatures verifiable against a [public JWKS](https://api.ai-identity.co/.well-known/ai-identity-public-keys.json) | bundle of 2026-08-06 |
 
@@ -62,8 +62,9 @@ OTel data model; `required`/`recommended`/`optional` from the OCSF schema).
 |---|---|---|---|---|
 | `audit.sequence.stream_id` | MAY | `attestation.chain_uid` | recommended | **clean 1:1.** Same semantics: opaque id scoping one chain; demultiplexing key |
 | `audit.sequence.number` | MAY | *(none — `unmapped.org_chain_seq` in the fixture)* | — | #1661 dropped the draft-era counter; see §2.4 |
-| `audit.sequence.prev_hash` | MAY | `attestation.prev_event.fingerprint.value` | `prev_event` recommended; `fingerprint` within it optional | hash-only vs id+hash pointer; see §2.2, genesis in §2.3 |
-| — | | `attestation.prev_event.uid` (+ `type_uid`) | **required** within `prev_event` | the resolvable half of the chain pointer; no OTel home (§2.2) |
+| `audit.sequence.previous_hash` | MAY | `attestation.prev_event.fingerprint.value` | `prev_event` recommended; `fingerprint` within it optional | id + hash pointer, both directions; §2.2 closed |
+| `audit.sequence.previous_record_id` | MAY | `attestation.prev_event.uid` (+ `type_uid`) | **required** within `prev_event` | **clean 1:1.** the resolvable locator half of the chain pointer |
+| `audit.sequence.end` | MAY | *(none — transform parks in `unmapped.audit_sequence_end`)* | — | OTel-only end signal; see §2.9 |
 | `audit.integrity.value` | MAY | `attestation.signatures[]` *describes* it; bytes have no OCSF field (ocsf-schema#1709) — fixture: `unmapped.signature_b64` | at_least_one | §2.1 governs what the proof is *over* |
 | `audit.integrity.signer` (`producer` \| `collector`) | MAY | `attestation.authority_uid` | recommended | tier-role vs named authority; see §2.5b |
 | *(multi-valued `.0`/`.1` pairs)* | MAY | `attestation_list[]` — one entry per attester | — | OCSF's array is the cleaner multi-attester shape |
@@ -98,35 +99,47 @@ noise. The derived vectors do this with three attributes:
 Note what this means for strict conformance: a producer whose proof is over a
 non-JCS canonicalization (this fixture's is a declared producer scheme) can
 be *represented* in the OTel shape but not *conformant* to the MUST as
-written. A small spec ask that would fix it is in §4.
+written. Half fixed by the §4 ask: `audit.integrity.canonicalization` landed —
+`jcs` is the assumed default and producers SHOULD declare any other scheme,
+so verifiers no longer guess and the spurious-failure mode is named in the
+spec. But the JCS mandate ("MUST NOT use any other serialization or
+canonicalization method") still stands, so the declared-non-JCS producer is
+representable but still non-conformant. The divergence is now declared
+rather than silent — the honest half of the fix.
 
-### 2.2 The chain pointer: hash-only vs id + hash
+### 2.2 The chain pointer: hash-only vs id + hash — closed
 
-OTel `audit.sequence.prev_hash` is a bare hash. OCSF `prev_event` carries
-`uid` + `type_uid` + `fingerprint` — a *resolvable* reference plus the hash
-binding it to content. The requirement levels are the tell: within
-`prev_event`, `uid` is **required** and `fingerprint` is optional — OCSF made
-the locator the mandatory half, the exact inverse of OTel's hash-only
-pointer. A predecessor hash proves linkage but cannot locate
+`audit.sequence.previous_hash` binds the chain by content;
+`audit.sequence.previous_record_id` (`= audit.record.id` of the
+predecessor) is the resolvable locator — the §4 ask landed, so OTel now
+carries both halves, matching OCSF's `prev_event` (`uid` + `fingerprint`).
+The requirement levels still tell the story: within `prev_event`, `uid` is
+**required** and `fingerprint` optional, while on the OTel side both pointer
+attributes are MAY. A predecessor hash proves linkage but cannot locate
 the predecessor across storage, sharding, or retention boundaries (raised as
-#2409 review point; the id half is what makes a broken-chain investigation
-actionable). OCSF→OTel is lossy here: the transform parks the id in
-`ocsf.attestation.prev_event.uid`. OTel→OCSF must synthesize `prev_event.uid`
-from the predecessor's `audit.record.id` — which works, because
-`audit.record.id` is MUST-level. §4 has the one-attribute spec ask.
+a #2409 review point; the id half is what makes a broken-chain investigation
+actionable). Transform rules are now mechanical in both directions:
+OCSF→OTel maps `prev_event.uid` → `audit.sequence.previous_record_id`
+directly, and OTel→OCSF maps `previous_record_id` → `prev_event.uid` —
+synthesizable because `audit.record.id` is MUST-level. The vectors'
+`ocsf.attestation.prev_event.uid` rider becomes a native attribute once
+`derive_otel_vectors.py` is re-pinned (see §3 note).
 
-### 2.3 Genesis: SHA-256 of empty string vs omission
+### 2.3 Genesis: by omission, both sides — closed
 
-OTel: the first record of a stream "SHOULD set `audit.sequence.prev_hash` to
-the SHA-256 hash of the empty string" (`e3b0c442…`). OCSF fixture behavior:
-genesis **omits `prev_event` entirely** — there is no predecessor to point
-at. The empty-string constant is schema-safe (unlike a `"GENESIS"` string
-sentinel, which we shipped once and documented as an anti-pattern), but it is
-indistinguishable from a genuine hash of empty content and it makes "has a
-predecessor" a value comparison instead of a presence check. Transform rule
-adopted by the vectors: genesis omits `audit.sequence.prev_hash`; a receiver
-should treat the OTel constant and omission as equivalent genesis markers.
-§4 asks to align on omission.
+OTel (current): the first record of a stream **MUST omit** the
+previous-record pointer — no SHA-256-of-empty-string constant, no magic
+value. Absence is the normative genesis signal, and receivers MUST NOT
+require a constant for genesis detection. (The §4 ask landed stronger than
+written.) OCSF fixture behavior is the same: genesis **omits `prev_event`
+entirely** — there is no predecessor to point at. The old empty-string
+constant was schema-safe (unlike a `"GENESIS"` string sentinel, which we
+shipped once and documented as an anti-pattern), but it was
+indistinguishable from a genuine hash of empty content and made "has a
+predecessor" a value comparison instead of a presence check. The vectors'
+rule — genesis omits the pointer — is now the spec's rule. For back-compat,
+a receiver may still treat the old OTel constant as a genesis marker, but
+producers MUST NOT emit it.
 
 ### 2.4 Sequence number: OTel has one, final-#1661 OCSF does not
 
@@ -209,6 +222,33 @@ transform needs the table (`ES256` ↔ `ECDSA-P256-SHA256`, `EdDSA` ↔
   required. Transform drops it OCSF→OTel (the fixture's severity encodes the
   decision, already preserved); OTel→OCSF must synthesize (`Informational`).
 
+### 2.9 Stream end: OTel signals it, OCSF does not
+
+`audit.sequence.end` (bool, MAY) is `true` on the last record of a
+gracefully closed stream — the SDK SHOULD set it on the final record
+emitted during `ForceFlush`/`Shutdown`. Absence means the stream end is
+unknown (crash, forcible kill, still-running stream), and receivers MUST NOT
+treat a missing `end` as a chain violation: an ambiguous boundary, not proof
+of tampering. Once an `end: true` record is persisted, any subsequent record
+under the same `stream_id` is a chain violation. This resolves the graceful
+half of the OTEP's completeness-boundary question; crash truncation stays
+honestly "unknown."
+
+OCSF 1.9's attestation object (`authority_uid`, `chain_uid`, `fingerprint`,
+`prev_event`, `signatures`, `uid`) has no end-of-chain marker, and this
+fixture's producer emits none.
+
+Transform rules:
+
+- **OCSF→OTel: omit.** The OCSF shape cannot say whether its stream closed
+  cleanly, and OTel's absence semantics are exactly "unknown" — omitting is
+  honest, not lossy. A transform that invented an end signal would be
+  fabricating attestation.
+- **OTel→OCSF: park in `unmapped.audit_sequence_end`.** Dropping `end: true`
+  silently demotes a graceful close to "unknown" on the OCSF side — a
+  verifier-visible information loss. The rider preserves the bit for a
+  reverse transform, same as the other `unmapped` riders in this document.
+
 ---
 
 ## 3. Test vectors
@@ -220,10 +260,19 @@ transform needs the table (`ES256` ↔ `ECDSA-P256-SHA256`, `EdDSA` ↔
 | OCSF side | the [reference bundle](../cosai-ws4-ocsf-mapping/ocsf-log-reference-bundle/) — same records, origin shape, with its own verifier (`regenerate.py`) |
 
 Because both shapes are derived from the same production records, they chain
-against **each other**: record N+1's `audit.sequence.prev_hash` (OTel shape)
+against **each other**: record N+1's `audit.sequence.previous_hash` (OTel shape)
 equals record N's `attestation.fingerprint.value` (OCSF shape). Current run:
 7/7 excerpt records, 6/6 internal links; full export 236 records, 235/235
 links, 1 genesis (prev omitted).
+
+> **Re-pin note (2026-09-09):** the vectors were derived against the
+> pre-`7cac2e1` data model — `derive_otel_vectors.py` still emits
+> `audit.sequence.prev_hash` and parks the predecessor id in
+> `ocsf.attestation.prev_event.uid`. A re-pin pass is needed: emit
+> `previous_hash` / `previous_record_id` natively (§2.2 closed), add the
+> §2.9 end-signal rule, and carry `audit.integrity.canonicalization`
+> (§2.1). Chain-linkage counts above are unaffected; attribute names in the
+> ndjson predate the rename.
 
 **What verifies without any secret:**
 
@@ -270,7 +319,7 @@ values):
     "audit.schema.version": "ocsf/1.9.0",
     "audit.sequence.stream_id": "f3576cf6-87ff-4c07-b446-e6ac526236a5",
     "audit.sequence.number": 18,
-    "audit.sequence.prev_hash": "90ba42f3b92586ff…",
+    "audit.sequence.previous_hash": "90ba42f3b92586ff…",
     "audit.integrity.value": "MEUCIQC7SNQRH0a8IEKO…",
     "audit.integrity.signer": "producer",
     "ocsf.attestation.entry_hash": "1d9548729d942e30…",
@@ -292,43 +341,51 @@ values):
 ```
 
 Read it against the OCSF anatomy and every §2 rule is visible in data:
-`stream_id` = `chain_uid`, `prev_hash` = seq 17's fingerprint value, the
+`stream_id` = `chain_uid`, `previous_hash` = seq 17's fingerprint value, the
 signature carried with its origin digest and declared canonicalization, the
 human in `audit.actor.*` and the agent in `gen_ai.agent.*`, the Allowed
 decision surviving next to the derived outcome.
 
 ---
 
-## 4. What would make the mapping lossless — four small spec asks
+## 4. Spec asks — status as of 2026-09-09
 
-Each of these is one attribute or one sentence, not a redesign. OTel-side
-asks are for the audit data model; the OCSF ask is already filed.
+Asks 1–3 landed on the `auditing` branch
+([7cac2e1](https://github.com/apeirora/opentelemetry-specification/pull/6/commits/7cac2e1dcbaa028bf7941308413df0b7035972a8),
+"address the three open points from levaj2000", plus follow-ups; tip
+`25bff70e`). Note the follow-up renames: `prev_hash` → `previous_hash`,
+`prev_record_id` → `previous_record_id`.
 
-1. **`audit.integrity.canonicalization` (OTel, closes §2.1).** An optional
-   companion to `audit.integrity.value` naming the canonicalization the
-   proof is over — `jcs` (default, keeps today's MUST as the default path),
-   or a declared producer scheme. Mirrors OCSF's `fingerprint.serialization`
-   enum + sibling. Without it, "verify the signature" quietly becomes "trust
-   the producer" for every record that crossed a schema boundary.
-2. **`audit.sequence.prev_record_id` (OTel, closes §2.2).** The resolvable
-   half of the chain pointer, `= audit.record.id` of the predecessor.
-   `prev_hash` binds content; the id locates it across storage, sharding,
-   and retention boundaries. OCSF's merged shape requires both halves for
-   the same reason.
-3. **Genesis by omission (OTel, closes §2.3).** Change the SHA-256("")
-   SHOULD to: the first record of a stream omits `audit.sequence.prev_hash`.
-   Presence check beats value comparison, and no verifier has to special-case
-   a magic constant.
-4. **Signature bytes + key reference (OCSF, closes the `unmapped` riders).**
-   Already filed as [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/issues/1709):
+1. **`audit.integrity.canonicalization` (OTel, landed as written).**
+   Declaration attribute exists: `jcs` is the assumed default, producers
+   SHOULD declare any other scheme, verifiers no longer guess (§2.1's
+   spurious-failure mode is named in the spec). The JCS mandate ("MUST NOT
+   use any other serialization") still stands, so a declared non-JCS
+   producer remains representable but non-conformant — the divergence is now
+   declared rather than silent.
+2. **`audit.sequence.previous_record_id` (OTel, landed).** The resolvable
+   half of the chain pointer, `= audit.record.id` of the predecessor (§2.2
+   closed).
+3. **Genesis by omission (OTel, landed stronger than asked).** First record
+   MUST omit the previous-record pointer; receivers MUST NOT require a magic
+   constant (§2.3 closed).
+4. **Signature bytes + key reference (OCSF, still open).**
+   [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/issues/1709):
    `digital_signature` describes a signature but cannot carry its bytes or
    key id. When it lands, `audit.integrity.value` ↔ signature bytes and
    `audit.integrity.certificate` ↔ key reference become clean 1:1 rows in
    §1.2.
+5. **End-of-chain marker (OCSF, new).** `audit.sequence.end` has no OCSF
+   home (§2.9); the transform parks it in `unmapped`. For the mapping to be
+   bidirectional without escape hatches, the attestation object would need
+   an end-of-chain signal. Honest scope: the gap only bites OTel→OCSF — the
+   reverse direction is already honest, because OTel treats a missing `end`
+   as "unknown."
 
-With 1–3 in the OTel model and 4 in OCSF, every row in §1.2 is bidirectional
-without an `ocsf.*` / `unmapped` escape hatch, and a signed record survives
-OCSF → OTel → OCSF byte-identical in its integrity constructs.
+With 1–3 landed, 4 still open in OCSF, and 5 proposed, every row in §1.2 is
+bidirectional without an `ocsf.*` / `unmapped` escape hatch — except the two
+carried riders (`audit.sequence.end`, signature bytes/key id), which the
+transform preserves losslessly for the round trip.
 
 ---
 
