@@ -54,10 +54,24 @@ plugins:
   - name: ocsf-audit
     kind: audit/ocsf
     # no `hooks:` -> decision-audit sink mode (sees denials)
+    capabilities:
+      - read_agent
+      - read_delegation
+      - read_labels
     config:
       destination: stderr
       chain: true
 ```
+
+**Declare the capabilities.** A sink is filtered on the same terms as any other
+plugin: the engine hands it a view built from its own `plugins:` entry, not the
+executor's working copy. Of the typed fields this plugin maps, `request`, `mcp`
+and `completion` are ungated, but `agent`, `delegation` and security labels each
+sit behind a read capability. Omit them and the records still emit, still chain
+and still verify -- carrying no `ai_agent` block, no `delegation` block and no
+labels. That is a silent evidence loss rather than a load error: a verifier
+cannot tell "no delegation occurred" from "the sink was not permitted to see
+it". Declare all three unless a deployment deliberately withholds one.
 
 `examples/panic_drive.rs` is the runnable form of this wiring — a `PluginManager`
 loading exactly this shape through `load_config`, with a plugin that panics, so the
@@ -88,6 +102,10 @@ routes:
 plugins:
   - name: ocsf-audit
     kind: audit/ocsf
+    capabilities:                # see the capability note above
+      - read_agent
+      - read_delegation
+      - read_labels
     hooks:                       # POST hooks: result/taint/delegation resolved
       - cmf.tool_post_invoke
       - cmf.llm_output

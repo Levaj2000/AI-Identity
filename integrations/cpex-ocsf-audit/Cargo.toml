@@ -58,7 +58,7 @@ cpex-core = { path = "../../../cpex/crates/cpex-core", optional = true }
 # draft and its branch will move.
 # Bump deliberately, with the crate re-verified — the same rule as the
 # cpex pin in .github/workflows/rust.yml.
-praxis-policy-core = { git = "https://github.com/praxis-proxy/policy", rev = "499ee91ff1e1102f3e38357450f3f9d4e213c602", optional = true }
+praxis-policy-core = { git = "https://github.com/praxis-proxy/policy", rev = "5b76fa6f6cd64ff54d7237c2fe3166ba397d6999", optional = true }
 
 async-trait = "0.1"
 # 0.22, not the current 0.23: praxis-proxy/policy holds base64 at 0.22

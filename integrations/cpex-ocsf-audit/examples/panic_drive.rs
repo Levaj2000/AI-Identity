@@ -132,6 +132,10 @@ plugins:
     mode: audit
     priority: 50
     on_error: fail
+    capabilities:
+      - read_agent
+      - read_delegation
+      - read_labels
 "#
     )
 }
@@ -163,6 +167,10 @@ plugins:
     mode: audit
     priority: 50
     on_error: fail
+    capabilities:
+      - read_agent
+      - read_delegation
+      - read_labels
 "#
     )
 }

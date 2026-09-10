@@ -54,6 +54,38 @@ the default no-op).
 Either way, Teryl's next push moves the head: re-pin, re-run the bar, and
 re-read the sink signature before gate 3 is called met.
 
+**Status 2026-09-10.** He pushed `0651258` and `5b76fa6`, answering all five.
+The pin moves to `5b76fa6`.
+
+- *The seam held.* `AuditHandler::handle` and `on_effect` keep their
+  `&Extensions` signatures and `Plugin::as_audit_handler` is unchanged. The
+  filtering lands in a new `AttachedSink` wrapper that pairs a handler with its
+  capability set and calls `filter_extensions` for it; only
+  `Executor::with_audit_handlers` changed shape, which is host-side. This crate
+  compiled against the new head with zero source changes.
+- *Both halves of our comment landed.* `emit_decision` is now the single place a
+  verdict is finalized and route-resolution denials seed a decision log, so a
+  record is the verdict the caller got. On reconciliation, `emit_reconciled`
+  states that resolved effects "take their place in the current stream rather
+  than reappearing under the sequence numbers of the run that crashed", which is
+  the AID-EMIT-1 section 7 density concern answered in the terms it was raised.
+- *One finding, ours not his.* The sink is filtered against the capabilities its
+  own `plugins:` entry declares, and this crate declared none. Of the six typed
+  fields it reads, `request`, `mcp` and `completion` are ungated but `agent`
+  needs `read_agent`, `delegation` needs `read_delegation`, and security labels
+  need `read_labels`. Reproduced through `panic_drive`, which drives a real
+  engine through `load_config` (the unit tests build `Extensions` directly and
+  never reach the filter): at `499ee91` the record carries
+  `ai_agent.uid: agent-7`; at `5b76fa6` with no capabilities it carries no
+  `ai_agent` block at all and still chains, still signs, still verifies;
+  declaring the three restores it. A silent evidence loss, not a load error,
+  which is why it is worth a line in the upstream auditing guide too. The
+  examples and README now declare all three.
+
+Bar on `5b76fa6`, toolchain 1.96.1: warning-free `--locked` checks and 34 tests
+green on each host, `emit_sample` byte-identical to the section 12 conformance
+vector on both.
+
 ## PPE rules the copy must satisfy
 
 Read from `praxis-proxy/policy` at `3e7734e`, dependencies re-read at
