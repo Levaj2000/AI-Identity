@@ -68,7 +68,7 @@ not only the per-action decision.
 | 7 | Outcome | `status` / `status_id` on `base_event` | Core | — | ✘ absent (allowed implied by `action_id`; see P5) |
 | 8 | Integrity-protected sequence + timestamp | `attestation` via `record_integrity` (attached at `base_event`): `chain_uid`, `fingerprint`, `prev_event`, `signatures[]`, `authority_uid`; explicit ordinal at `metadata.sequence` | v1.9.0 | — | ✔ full `attestation_list` shape; ordinal at `unmapped.org_chain_seq` (P6) |
 | — | Canonical serialization (cross-cutting for 4 and 8) | `fingerprint.serialization`/`serialization_id`; same pair on `digital_signature` | v1.9.0 | — | ✔ `serialization_id` 99 + named serialization string |
-| 10 | Accounting decision (aggregate consumed / remaining vs. principal budget) | None — the v1.9.0 dictionary has **zero** attributes in this family (budget, quota, consumed, remaining, aggregate, spend all absent) | **Missing** | Unfiled — proposal offered in WS4 #172 if there's WG appetite | ✘ |
+| 10 | Grant terms and accounting decision (what the delegation permitted; aggregate consumed / remaining against it) | None. `delegation` carries only correlation identifiers (`uid`, `issuer_uid`, `parent_uid`, `created_time`), and the v1.9.0 dictionary has **zero** attributes in the accounting family (budget, quota, consumed, remaining, aggregate, spend all absent) | **Missing** | [ocsf#1756](https://github.com/ocsf/ocsf-schema/issues/1756), a `constraint` object covering both halves | ✘ |
 
 Legend: ✔ present in the reference bundle · ◐ partially present · ✘ absent · P*n* = producer gap
 (§ below).
@@ -93,7 +93,7 @@ the event stream cannot reconstruct the subtree from single edges. Both halves a
 | Capability invoked | Tool/resource/prompt identity, serving system, transport, request/result correlator | [ocsf#1728](https://github.com/ocsf/ocsf-schema/issues/1728) |
 | Declared configuration vs. executed | Tool-catalog version, adapter/artifact digests, declared/executed pairing | [ocsf#1724](https://github.com/ocsf/ocsf-schema/issues/1724) |
 | Delegation lineage | `parent_uid` optionality; no materialised root; DAG description vs. singular parent | [ocsf#1739](https://github.com/ocsf/ocsf-schema/issues/1739) |
-| Accounting decision | Aggregate consumed/remaining as an evidence field | Unfiled (offered in WS4 #172) |
+| Grant terms and accounting | What a delegation permitted, and consumed/remaining against it | [ocsf#1756](https://github.com/ocsf/ocsf-schema/issues/1756) |
 | Cross-boundary causal binding | Resource owner's record naming the causing tool call (adjacent — the evidence complement of WS4 #172 §5 / Q9–Q10, not a contract row) | [ocsf#1738](https://github.com/ocsf/ocsf-schema/issues/1738) |
 
 ## Producer gaps (our own wire output, measured against this mapping)
@@ -135,6 +135,7 @@ were re-checked on `main` (`1.10.0-dev`) — `attestation`, `delegation`, the `a
 profile — are attribute-identical to v1.9.0 as of the verification date. Proposed fields
 ([ocsf#1728](https://github.com/ocsf/ocsf-schema/issues/1728),
 [ocsf#1724](https://github.com/ocsf/ocsf-schema/issues/1724),
-[ocsf#1739](https://github.com/ocsf/ocsf-schema/issues/1739)) are marked as proposed and must not
+[ocsf#1739](https://github.com/ocsf/ocsf-schema/issues/1739),
+[ocsf#1756](https://github.com/ocsf/ocsf-schema/issues/1756)) are marked as proposed and must not
 be cited as landed until they merge; when 1.10 releases, every row above gets re-verified against
 the new tag before the pin moves.
