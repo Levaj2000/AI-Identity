@@ -312,6 +312,10 @@ def audit_log_to_ocsf(
             ("spend_settlement", "settlement"),
             ("spend_reference", "reference"),
             ("deny_reason", "deny_reason"),
+            # Why a conditioned grant did or did not cover this request.
+            # Present only when the mandate carried conditions at all.
+            ("mandate_conditions_checked", "conditions_checked"),
+            ("mandate_conditions_failed", "conditions_failed"),
         ):
             if md.get(src) is not None:
                 mandate_block[dst] = md[src]

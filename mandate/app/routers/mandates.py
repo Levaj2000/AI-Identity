@@ -424,6 +424,13 @@ async def record_spend(
         amount_cents=body.amount_cents,
         currency=body.currency,
         settlement=body.settlement,
+        # The grant's own terms, checked against what the caller knows about
+        # the request. Evaluated here rather than at the gateway because the
+        # check has to be atomic with the spend: a condition that fails after
+        # the draw was recorded would mean denying a request whose budget was
+        # already consumed.
+        conditions=mandate.conditions,
+        context=body.context,
     )
 
     # Persist state changes (accepted spends and/or a status flip)
@@ -485,6 +492,14 @@ async def record_spend(
         spend_meta["spend_reference"] = body.reference
     if outcome.deny_reason:
         spend_meta["deny_reason"] = outcome.deny_reason
+    if outcome.condition_results:
+        # Which condition failed, with expected vs actual. This is what makes
+        # a conditioned denial defensible in a review: the row says not just
+        # "denied" but "denied because env was staging, expected prod".
+        spend_meta["mandate_conditions_checked"] = len(outcome.condition_results)
+        failed = [r["field"] for r in outcome.condition_results if not r["match"]]
+        if failed:
+            spend_meta["mandate_conditions_failed"] = ",".join(sorted(failed))
     _write_mandate_audit(
         db,
         subject_agent_id=mandate.subject.agent_id,
@@ -500,6 +515,8 @@ async def record_spend(
         exceeded=outcome.exceeded,
         status=outcome.new_status,
         spent_cents=outcome.new_spent_cents,
+        conditions_checked=len(outcome.condition_results),
+        conditions_failed=[r["field"] for r in outcome.condition_results if not r["match"]],
         limit_cents=limit_cents,
         remaining_cents=(
             max(0, limit_cents - outcome.new_spent_cents) if limit_cents is not None else None

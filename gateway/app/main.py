@@ -550,14 +550,25 @@ def enforce_request(
 
     # ── Biscuit mandate settlement (layer 2: authoritative draw) ─────
     if mandate_token is not None:
-        from gateway.app.mandate_check import draw_receipt, settle_draw
+        from common.models.agent import Agent
+        from gateway.app.mandate_check import draw_receipt, evaluation_context, settle_draw
 
+        # The mandate's signed conditions are evaluated by the service that
+        # holds the grant, against context only the gateway has. Read a fresh
+        # agent row rather than threading it out of enforce(), matching how
+        # policy evaluation sources the same metadata.
+        settle_agent = db.query(Agent).filter(Agent.id == agent_id).first()
         settle = settle_draw(
             mandate_metadata["mandate_id"],
             amount_cents=spend_amount_cents,
             currency=spend_currency,
             settlement=spend_settlement,
             reference=spend_reference,
+            context=evaluation_context(
+                settle_agent.metadata_ if settle_agent else None,
+                endpoint=endpoint,
+                method=method,
+            ),
         )
         if not settle.allowed:
             # The Mandate Service audited the draw decision itself (denials
