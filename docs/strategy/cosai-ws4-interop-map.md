@@ -113,6 +113,10 @@ representations involved to answer, not for this document to assert.
 The second is the more general one. Any layer that timestamps an artifact it
 received rather than the artifact's own claim inherits it.
 
+A longer companion note works both questions through, alongside the one they
+lead to (whether two layer-2 credential formats are alternatives at all):
+[Mandate credentials at layer 2](./layer2-credential-composition.md).
+
 ### Where the terms of a grant live (added 2026-09-11)
 
 Every layer-2 occupant here expresses bounds on the authority it grants, and
