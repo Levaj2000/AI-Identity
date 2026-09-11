@@ -10,14 +10,15 @@ the answer turns out to depend on a distinction that neither format states.
 
 | Side | Source | Revision |
 |---|---|---|
-| Verifiable Intent | `agent-intent/verifiable-intent`, `spec/credential-format.md` 4.2-4.7 and `spec/constraints.md` | `main`, Apache-2.0, draft v0.1, read 2026-09-10 |
+| Verifiable Intent | `agent-intent/verifiable-intent`, `spec/credential-format.md` and `spec/constraints.md` | `356c296`, Apache-2.0, draft v0.1 |
 | Biscuit | `biscuit-auth`, as minted and verified in `common/biscuit/tokens.py` | this repository, 0.4.0 onward |
 | Mandate document | `mandate/app/schemas.py`, `mandate/app/constraints.py`, schema 1.2 | this repository |
-| CMF delegation | read from the sink, `integrations/cpex-ocsf-audit/src/ocsf.rs` | plugin pin |
+| CMF delegation | `contextforge-org/cpex`, `crates/cpex-core/src/extensions/delegation.rs` and `authorization.rs` | `035012f` |
+| PPE enforcement | `praxis-proxy/policy`, `crates/ppe-core/src/extensions/container.rs` | `753d3c7` |
 | OCSF `delegation` | `ocsf-schema`, four attributes, all correlation identifiers | 1.9.0 |
 
-Everything said about VI here is read from the spec at that revision, from the
-outside. Corrections from its owners beat this document.
+Every claim below is read from source at the revision named, from the outside.
+Corrections from the owners of each beat this document.
 
 ---
 
@@ -47,10 +48,10 @@ roles 1 and 2 and are silent on the rest.
 |---|---|---|---|
 | Wire format | SD-JWT (JWS + selective disclosure) | Ed25519-signed Datalog blocks | ECDSA-signed JSON, RFC 8785 canonical |
 | Holder binding | Yes, RFC 7800 `cnf` on the credential | No, bearer. The subject check binds a claimed identity the verifier asserts | N/A, not presented directly |
-| Narrowing after issue | Not that the spec shows: issuance-time | Yes, offline attenuation, append-only | N/A |
+| Narrowing after issue | No. Constraints are authored at L2 issuance and L3 is terminal | Yes, offline attenuation, append-only | N/A |
 | Bounds vocabulary | Registered, typed, quantitative | Whatever Datalog facts both ends agreed on | Namespaced types, `mandate/app/constraints.py` |
 | Selective disclosure | Yes | No | No |
-| Holds the counter | No | No | No, the service does |
+| Holds the counter | No. The spec assigns it to the payment network | No | No, the service does |
 | Verification needs network | No | No | No, but settlement does |
 
 The bearer note on Biscuit is not a criticism from outside; it is the honesty
@@ -62,6 +63,15 @@ agent independently.
 Read the columns as capability sets rather than scores. VI has the binding and
 the vocabulary and no attenuation story. Biscuit has attenuation and no binding
 and no shared vocabulary. They are close to complements.
+
+A delegation hop is the fourth thing in the room and it is further along than
+reading the sink suggests. A CMF hop carries RFC 9396 `authorization_details`
+alongside `scopes_granted`, typed as a list of entries with actions, locations,
+datatypes and privileges, plus a flattened map for API-specific fields; the
+type's own test carries an amount and a currency through that map. So the home
+for structured terms exists on the hop already. Nothing in either tree
+populates it, reads it, or maps it to a record, which makes it an empty slot
+rather than a missing one, and those are different problems.
 
 ## 3. The stateless line runs through the vocabulary, not around it
 
@@ -86,34 +96,47 @@ against it. So the second column is not an implementation detail one format got
 wrong: it is outside what any signed artifact can decide, and it belongs to
 whatever holds the writer.
 
+VI says so itself, which is the clearest confirmation that this is a property
+of the problem rather than a gap in anyone's design. Its budget constraint's
+validation algorithm reads cumulative spend from tracked state before comparing
+against the cap, and the spec requires payment networks to maintain that
+tracking per mandate pair. The counter is named and assigned. What is not
+specified anywhere is its shape, its lifetime, or how it reaches a record, and
+that is the whole of the difficulty.
+
 Which means choosing between credential formats is choosing a presentation, not
 an architecture. Two deployments can agree on the format and still disagree
 about what a grant permits, because the disagreement lives in the counter.
 
-## 4. Monotonic narrowing: the property a chain needs and nobody states
+## 4. Monotonic narrowing, and the half of it that is enforced
 
 If authority moves down a chain, the property that makes the chain checkable is
 that no hop can hold more than its parent granted. For any hop `n`,
-`bounds(n)` must be a subset of `bounds(n-1)`.
+`bounds(n)` must be a subset of `bounds(n-1)`. The four representations sit at
+three different places on it, and the distinction that matters is between
+asserting the property, enforcing history, and enforcing the bound.
 
-Where the four representations stand:
-
-- **Biscuit** enforces it structurally. Attenuation appends blocks, and every
-  block's checks must pass, so an added check can only narrow. A delegate
+- **Biscuit** enforces the bound structurally. Attenuation appends blocks and
+  every block's checks must pass, so an added check can only narrow. A delegate
   cannot widen its own token even offline, which is the point of the design.
-- **VI** does not appear to offer narrowing at all after issuance. L3 splits
-  the network-facing and merchant-facing views, but that is a split at issue
-  time, not a delegate tightening its own ceiling. Worth confirming with the
-  spec owners rather than assuming.
-- **A CMF delegation chain** can represent narrowing, since `scopes_granted`
-  is per hop, but nothing makes it monotonic. A hop listing more scopes than
-  its parent produces a record that looks exactly like a valid one.
+- **A CMF delegation chain** asserts it. The extension's own documentation says
+  the chain is append-only and a delegate cannot have more permissions than the
+  delegator, but `append_hop` pushes whatever it is handed.
+- **PPE enforces the history rather than the bound.** Its chain-extension check
+  requires a returned chain to be the canonical one plus appended hops, with
+  every existing hop identical on subject, audience, granted scopes, strategy,
+  `authorization_details`, TTL and timestamp, and its comment says dropping any
+  of those reopens a widening path. That closes rewriting the past. It does not
+  compare a new hop's bounds against its parent's, so the subset property is
+  still carried by the callers that mint hops rather than by the type.
 - **OCSF's `delegation`** cannot express bounds at all, so the question does
   not arise yet. It would arise the moment a terms field lands.
 
-This is cheap to state and checkable in a record after the fact, which is
-unusual for a security property. It is a candidate for the shortest useful
-thing a record layer could say about a delegation chain beyond its shape.
+Prefix immutability and per-hop narrowing are both worth having and only the
+first is mechanized today. The second is cheap to state and checkable in a
+record after the fact, which is unusual for a security property, and it is a
+candidate for the shortest useful thing a record layer could say about a
+delegation chain beyond its shape.
 
 ## 5. Two rules that survive whichever format wins
 
@@ -135,6 +158,14 @@ representation B and consumed by an enforcement point that cannot evaluate A's
 constraint types, treating those constraints as absent widens authority past
 what the issuer signed. That is the most likely way a composition of two
 correct systems produces an incorrect one, and it is silent when it happens.
+
+VI reaches the same rule from its own direction, which is worth more than
+either of us asserting it alone. Its default strictness mode skips constraint
+types a verifier does not recognize, but for open mandates, the autonomous
+delegation case, the spec requires rejection regardless of mode, on the grounds
+that an unevaluable constraint leaves agent authority unbounded. Two
+implementations that share no code arrived at the same answer, and it is the
+same one argued in `ocsf#1756`.
 
 ## 6. How they compose in a stack that runs
 
@@ -188,26 +219,43 @@ consumption half exists only at the enforcement point, and if it is not in the
 record, a later reader cannot tell whether a grant with a 50000 ceiling had
 49900 remaining or 100 when the agent acted.
 
+The terms half is further along at the enforcement layer than at the record
+layer, and the asymmetry is the interesting part. A CMF hop can already carry
+RFC 9396 authorization details and VI registers eight typed constraint types,
+while the record layer has no field for either. A spec that mandates a counter
+and a record layer that cannot express one is the gap stated in two places.
+
 **Receipts.** The evidence that flows back to the delegator has no proposal
 anywhere that we have found. A grant, the consumption against it, and a receipt
 the delegator can verify offline are one loop; the industry has specified the
 first third of it, is in the middle of the second, and has not started the
 third.
 
-## 8. Open questions
+## 8. What is settled and what is not
 
-For the owners of the representations involved, not assertions about them:
+Three of the questions this note started with were answered by reading the
+source rather than by asking anyone, and they are folded into the sections
+above: VI does not narrow after issuance, CMF asserts monotonic narrowing while
+PPE enforces prefix immutability, and a hop's TTL is anchored to the moment
+that hop was minted rather than to a carried credential's own issued-at. The
+third of those is the one with a correctness consequence, since two identical
+grants then expire at different moments depending on when each was observed.
 
-1. Does VI support narrowing after issuance by the holder, or is every
-   narrower authority a new credential from the issuer?
-2. In a delegation chain representation, is monotonic narrowing across hops
-   asserted, enforced, or neither?
-3. Is a hop's TTL anchored to the credential's own issued-at or to the moment
-   the carrier observed it? Those differ by the ingestion delay, so two
-   identical grants expire at different moments depending on when each was
-   seen.
-4. Would a delegation hop accept a key-binding field and a typed constraint
-   list, given a field that survives deleting the payments context is the test
-   for whether it belongs in a general model?
-5. Where should the consumption counter be recorded when two enforcement
-   points share one grant?
+What is left needs a decision from someone rather than a reading:
+
+1. Should a delegation hop carry the key its credential is bound to? Policy
+   needs it at evaluation time, and the credential may not be reachable then,
+   so this is the one field that cannot be by-reference only.
+2. Is `authorization_details` the typed constraint list, given it is already on
+   the hop and unused? If so the work is a producer, a narrowing check and a
+   mapping, not a new field.
+3. Should a hop carry a credential reference, type and identifier and hash, or
+   does a delegation record want to stay self-contained with no external
+   dereferencing?
+4. Where is the consumption counter recorded when two enforcement points share
+   one grant, and which of them is authoritative?
+
+The test proposed for the first three is whether a field survives deleting the
+payments context. Key binding, an absolute expiry, a credential reference and a
+typed constraint list all do. A payment instrument and ISO 20022 recurrence
+codes plainly do not.
