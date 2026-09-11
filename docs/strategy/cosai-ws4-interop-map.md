@@ -52,6 +52,7 @@ corrected by each owner.**
 |---|---|---|---|---|---|
 | **AI Identity** | 5 — Record/evidence | Signed OCSF events; DSSE envelopes; offline-verifiable; Evidence Anchor (inclusion proofs); `attestation` object + `record_integrity` profile, merged 2026-07-17, shipped in OCSF 1.9.0 (released 2026-08-03) | Signed, queryable OCSF event records | Identity, authority, attestation, policy signals from layers 1–4 | Maps other layers' outputs into the neutral OCSF evidence schema |
 | **ODIS** | 2 — Authority grant | Passport / Bridge / Router; "Delegation Chain Record" | Delegation grants / passports | Identity (layer 1) | Grant → recorded as an OCSF delegation event |
+| **Verifiable Intent** (Mastercard) | 2, Authority grant | Layered SD-JWT credential chain: L1 binds the user's device key (RFC 7800 `cnf`), L2 delegates to the agent with constraints, L3 splits network- and merchant-facing. Builds only on SD-JWT / JWS / JWK / RFC 7800 | L1/L2/L3 credentials; a verification result (`satisfied`, `violations`, `checked`, `skipped`); a registered constraint vocabulary (`mandate.checkout.*`, `mandate.payment.*`) | User device key; user-authored constraints | Verification result becomes an OCSF event; constraint vocabulary becomes the terms of a delegation. Spec scope excludes any record or audit layer |
 | **TrustGraph** (Red Hat) | 1 + 2 — Identity + delegation graph; **also 5** — per the group's 2026-07-02 discussion, its audit-trail / traceability output is itself record-of-evidence, currently in OTel rather than OCSF form | KeyCloak SPI + SPIFFE + AuthBridge sidecar → OTel spans → delegation DAG | OTel spans; runtime delegation graph; audit trail | Workload identity, tokens | OTel ↔ OCSF mapping (spans ↔ event records) |
 | **EQTY Lab** | 4 — Environment attestation | TEE (AMD SEV/TDX, NVIDIA CC); DIDs; model signing; RFC 9421 gateway; offline-verifiable | Hardware attestation quotes; integrity graph; signed certs | Workloads, models | Hardware quote → OCSF workload-attestation object |
 | **Agent Manifest / TRACE** | 1 + 2 — deploy-time declaration of what the agent *is*; **also 5** via TRACE, its own attestation-record format and append-only registry | Hardware-anchored manifest over deploy-time artifacts (prompt, policy bundle, model identity, tool schemas, delegation chain, provenance); TRACE claims | Signed manifest; TRACE records; registry anchors | Deploy-time artifacts; TEE attestation | Manifest hash as an attested artifact in the runtime record; TRACE claims ↔ OCSF events |
@@ -83,8 +84,48 @@ convergence point:
 - **EQTY hardware quote → OCSF** workload-attestation object
 - **CMF delegation.chain / security labels / tool context → OCSF**
 - **Agent Manifest hash → an attested artifact** in the runtime record; **TRACE claims ↔ OCSF** events
+- **VI verification result, into an OCSF** event record. Every VI verification produces a verdict and then nothing durable: the spec rules a record layer out of scope, so the result has no interoperable shape to land in
 - All of the above compose on the **layer-5 record** — one verifiable account of
   who was authorized, what ran, in what environment, and what happened.
+
+### A note on carrying one layer-2 credential through another (added 2026-09-11)
+
+Layer 2 now has several occupants, and a credential issued in one
+representation will sometimes be carried in another: a VI L2 mandate recorded
+as a CMF `delegation.chain` element, an ODIS passport recorded as an OCSF
+`delegation`. Reading VI's credential format against a delegation-chain shape
+surfaced two questions that are not specific to either pair and are worth
+settling once rather than per-integration. Both are for the owners of the
+representations involved to answer, not for this document to assert.
+
+- **Does the carrying representation hold the key the credential is bound to?**
+  VI's chain integrity rests on key confirmation at each layer. A hop that
+  records who delegated to whom, without the key, preserves the assertion and
+  drops the proof. Whether that matters depends on whether the consumer
+  re-verifies or trusts the carrier.
+- **How do an absolute expiry and a relative one reconcile?** VI carries `exp`
+  as an absolute timestamp with a hard reject rule. A representation carrying
+  a duration instead needs a defined anchor: the credential's own issued-at, or
+  the moment the carrier observed it. Those differ by the ingestion delay, so
+  two identical grants can expire at different moments depending on when they
+  were seen.
+
+The second is the more general one. Any layer that timestamps an artifact it
+received rather than the artifact's own claim inherits it.
+
+### Where the terms of a grant live (added 2026-09-11)
+
+Every layer-2 occupant here expresses bounds on the authority it grants, and
+layer 5 currently has nowhere to put them. OCSF's `delegation` object carries
+four attributes and all four are correlation identifiers, so a record can say a
+grant existed, who issued it and its ancestry, but not what it permitted. That
+is filed as [ocsf#1756](https://github.com/ocsf/ocsf-schema/issues/1756),
+proposing a `constraint` object covering both a grant's terms and the
+consumption against them, and citing VI's constraint vocabulary as prior art.
+
+Named here because it is a seam rather than one player's gap: it is the field
+an ODIS passport, a CMF delegation chain and a VI mandate would all serialize
+into.
 
 ## How to use this
 
