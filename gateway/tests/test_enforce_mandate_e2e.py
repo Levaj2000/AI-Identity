@@ -54,12 +54,17 @@ def settle_calls(monkeypatch):
     """Stub settle_draw; returns the recorded call list."""
     calls: list[dict] = []
 
-    def fake_settle(mandate_id, *, amount_cents, currency, settlement, reference=None):
+    def fake_settle(
+        mandate_id, *, amount_cents, currency, settlement, reference=None, context=None
+    ):
         calls.append(
             {
                 "mandate_id": mandate_id,
                 "amount_cents": amount_cents,
                 "settlement": settlement,
+                # Recorded so a test can assert the gateway actually sent the
+                # context the mandate's conditions are evaluated against.
+                "context": context,
             }
         )
         return MandateCheckOutcome(
@@ -102,7 +107,18 @@ def test_allow_flow_settles_and_returns_mandate(
     body = resp.json()
     assert body["decision"] == "allow"
     assert body["mandate"]["remaining_cents"] == 7_000
-    assert settle_calls == [{"mandate_id": MANDATE_ID, "amount_cents": 3_000, "settlement": False}]
+    assert settle_calls == [
+        {
+            "mandate_id": MANDATE_ID,
+            "amount_cents": 3_000,
+            "settlement": False,
+            # The gateway is the only party that sees the request, so the
+            # mandate's signed conditions cannot be evaluated unless it sends
+            # this. Asserted rather than ignored: a regression that dropped
+            # the context would silently deny every conditioned mandate.
+            "context": {"endpoint": "/v1/commerce/checkout", "method": "POST"},
+        }
+    ]
 
 
 def test_allow_receipt_verifies_and_names_the_token(

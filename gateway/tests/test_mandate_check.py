@@ -192,3 +192,51 @@ class TestSettleDraw:
         )
         assert not outcome.allowed
         assert outcome.status_code == 503
+
+
+# --- evaluation context for mandate conditions ---
+
+
+def test_evaluation_context_carries_agent_metadata():
+    """Agent metadata is the base: mandate conditions are ABAC conditions."""
+    from gateway.app.mandate_check import evaluation_context
+
+    ctx = evaluation_context({"env": "prod", "tier": "gold"}, endpoint="/v1/x", method="POST")
+    assert ctx["env"] == "prod"
+    assert ctx["tier"] == "gold"
+    assert ctx["endpoint"] == "/v1/x"
+    assert ctx["method"] == "POST"
+
+
+def test_evaluation_context_handles_no_metadata():
+    """An agent with no metadata still yields the request facts, not a crash."""
+    from gateway.app.mandate_check import evaluation_context
+
+    assert evaluation_context(None, endpoint="/v1/x", method="GET") == {
+        "endpoint": "/v1/x",
+        "method": "GET",
+    }
+
+
+def test_request_facts_win_over_stored_metadata():
+    """A stored attribute must not be able to misdescribe the live request.
+
+    An agent whose metadata carries endpoint=/v1/safe could otherwise satisfy
+    a condition pinning the mandate to that endpoint while calling another.
+    """
+    from gateway.app.mandate_check import evaluation_context
+
+    ctx = evaluation_context(
+        {"endpoint": "/v1/safe", "method": "GET"}, endpoint="/v1/danger", method="DELETE"
+    )
+    assert ctx["endpoint"] == "/v1/danger"
+    assert ctx["method"] == "DELETE"
+
+
+def test_context_does_not_mutate_the_caller_dict():
+    """The agent metadata dict comes off a live ORM row; do not edit it."""
+    from gateway.app.mandate_check import evaluation_context
+
+    metadata = {"env": "prod"}
+    evaluation_context(metadata, endpoint="/v1/x", method="POST")
+    assert metadata == {"env": "prod"}

@@ -214,6 +214,16 @@ class RecordSpendRequest(BaseModel):
     description: str | None = Field(None, max_length=200)
     reference: str | None = Field(None, max_length=100, description="e.g. order id")
     settlement: bool = False
+    context: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "What the enforcement point knows about this request: agent "
+            "metadata plus the endpoint and method. The mandate's signed "
+            "`conditions` are evaluated against it before the spend is "
+            "recorded. An empty context with a conditioned mandate denies, "
+            "because a condition whose key is absent cannot be shown to hold."
+        ),
+    )
 
 
 class RecordSpendResult(BaseModel):
@@ -225,6 +235,17 @@ class RecordSpendResult(BaseModel):
     limit_cents: int | None
     remaining_cents: int | None
     deny_reason: str | None = None
+    conditions_checked: int = Field(
+        default=0, description="How many of the mandate's conditions were evaluated"
+    )
+    conditions_failed: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Condition fields that did not hold against the submitted context. "
+            "Non-empty means the grant did not cover this request, which is a "
+            "different denial from running out of budget."
+        ),
+    )
 
 
 class MandateResponse(BaseModel):

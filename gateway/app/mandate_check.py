@@ -186,6 +186,24 @@ def draw_receipt(
         return None
 
 
+def evaluation_context(agent_metadata: dict | None, *, endpoint: str, method: str) -> dict:
+    """What the gateway knows about this request, for the mandate's conditions.
+
+    The gateway is the only party that holds this. The Mandate Service owns
+    the grant and its signed ``conditions``, but it never sees the request,
+    so the two halves have to meet somewhere: the gateway sends what it
+    knows and the service evaluates its own terms against it.
+
+    ``endpoint`` and ``method`` are reserved names and win over an agent
+    metadata key of the same name — a request fact the gateway observed is
+    more trustworthy than a stored attribute claiming otherwise.
+    """
+    context = dict(agent_metadata or {})
+    context["endpoint"] = endpoint
+    context["method"] = method
+    return context
+
+
 def settle_draw(
     mandate_id: str,
     *,
@@ -193,9 +211,15 @@ def settle_draw(
     currency: str,
     settlement: bool,
     reference: str | None = None,
+    context: dict | None = None,
     transport: httpx.BaseTransport | None = None,
 ) -> MandateCheckOutcome:
     """Layer 2 — draw against the authoritative mandate (fail-closed).
+
+    ``context`` is passed to the service so it can evaluate the mandate's
+    signed ``conditions`` before recording the spend. Omitting it on a
+    conditioned mandate denies, which is the intended direction: a condition
+    whose key is absent cannot be shown to hold.
 
     ``transport`` is a test seam (httpx.MockTransport); production callers
     leave it None.
@@ -222,13 +246,15 @@ def settle_draw(
             message="No mandate draw credential configured (MANDATE_DRAW_TOKEN[_FILE])",
         )
 
-    body = {
+    body: dict = {
         "amount_cents": amount_cents,
         "currency": currency,
         "settlement": settlement,
     }
     if reference:
         body["reference"] = reference
+    if context:
+        body["context"] = context
 
     try:
         with httpx.Client(
@@ -282,6 +308,12 @@ def settle_draw(
     }
     if draw.get("limit_cents") is not None:
         meta["mandate_limit_cents"] = draw["limit_cents"]
+    # audit_metadata is flat scalars only, so the failed-field list is joined
+    # the same way the Mandate Service writes it into its own audit row.
+    if draw.get("conditions_checked"):
+        meta["mandate_conditions_checked"] = draw["conditions_checked"]
+    if draw.get("conditions_failed"):
+        meta["mandate_conditions_failed"] = ",".join(sorted(draw["conditions_failed"]))
     if not draw.get("accepted"):
         meta["deny_reason"] = draw.get("deny_reason")
         return MandateCheckOutcome(
