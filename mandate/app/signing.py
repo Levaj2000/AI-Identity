@@ -64,14 +64,25 @@ _RUNTIME_STATE_FIELDS = ("status", "revocation", "spent_cents", "exceedance")
 # canonical bytes would differ from what was signed.
 _POST_1_0_FIELDS = ("spend_limit", "spent_cents", "exceedance")
 
+# Same rule one version on. `constraints` arrived at 1.2, so a 1.0 or 1.1
+# document re-serialized through the current model would gain an empty list
+# it was never signed over, and every existing signature would stop
+# verifying. Strip it for anything older than 1.2.
+#
+# This is the cost of putting a field inside the signed payload, and it is
+# why the version gate exists rather than being a formality: the alternative
+# is silently invalidating every mandate ever issued.
+_POST_1_1_FIELDS = ("constraints",)
+
 
 def _build_signable_payload(mandate: MandateDocument) -> bytes:
     """Extract the signable fields and canonicalize with RFC 8785.
 
     Always excluded: signatures (would be circular), updated_at (mutable
     metadata). For schema_version >= 1.1, runtime lifecycle state is also
-    excluded — see _RUNTIME_STATE_FIELDS. For 1.0 documents, fields that
-    postdate 1.0 are stripped so old signatures still verify byte-for-byte.
+    excluded — see _RUNTIME_STATE_FIELDS. Fields that postdate a document's
+    own version are stripped so old signatures still verify byte-for-byte:
+    _POST_1_0_FIELDS for 1.0, _POST_1_1_FIELDS for anything below 1.2.
     schema_version itself is inside the signed payload, so a verifier
     always knows which rule applied.
     """
@@ -83,6 +94,9 @@ def _build_signable_payload(mandate: MandateDocument) -> bytes:
             d.pop(field, None)
     else:
         for field in _RUNTIME_STATE_FIELDS:
+            d.pop(field, None)
+    if mandate.schema_version in ("1.0", "1.1"):
+        for field in _POST_1_1_FIELDS:
             d.pop(field, None)
     # Convert datetime objects to ISO strings if model_dump left them as objects
     return rfc8785.dumps(d)
