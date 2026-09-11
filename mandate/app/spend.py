@@ -20,6 +20,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from common.policy.eval import evaluate_when
+from mandate.app.constraints import Constraint, unevaluable
 from mandate.app.schemas import MandateStatus, SpendLimit
 
 # deny_reason vocabulary — flat strings, allowlisted in the audit sanitizer
@@ -27,6 +28,7 @@ DENY_MANDATE_INACTIVE = "mandate_inactive"
 DENY_CURRENCY_MISMATCH = "currency_mismatch"
 DENY_LIMIT_EXCEEDED = "spend_limit_exceeded"
 DENY_CONDITIONS_UNMET = "mandate_conditions_unmet"
+DENY_CONSTRAINT_UNEVALUABLE = "mandate_constraint_unevaluable"
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,7 @@ def evaluate_spend(
     settlement: bool,
     conditions: dict[str, Any] | None = None,
     context: dict[str, Any] | None = None,
+    constraints: list[Constraint] | None = None,
 ) -> SpendOutcome:
     """Evaluate one spend attempt. Pure — no side effects.
 
@@ -82,6 +85,22 @@ def evaluate_spend(
             new_spent_cents=spent_cents,
             new_status=status,
             deny_reason=DENY_MANDATE_INACTIVE,
+        )
+
+    # Namespaced constraints. A type can be registered before its evaluator
+    # exists, so the document parses and an operator can see what the grant
+    # carries; but spending against a bound nobody checked would assert the
+    # grant permitted it. Denied, for the same reason an unknown type is
+    # rejected at parse.
+    unchecked = unevaluable(constraints or [])
+    if unchecked:
+        return SpendOutcome(
+            accepted=False,
+            exceeded=False,
+            audit_decision="deny",
+            new_spent_cents=spent_cents,
+            new_status=status,
+            deny_reason=DENY_CONSTRAINT_UNEVALUABLE,
         )
 
     # Conditions. `evaluate_when` returns one result per condition in

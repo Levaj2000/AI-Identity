@@ -431,6 +431,7 @@ async def record_spend(
         # already consumed.
         conditions=mandate.conditions,
         context=body.context,
+        constraints=mandate.constraints,
     )
 
     # Persist state changes (accepted spends and/or a status flip)

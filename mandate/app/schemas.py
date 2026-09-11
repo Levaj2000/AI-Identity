@@ -21,6 +21,10 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+# Imported at runtime (not TYPE_CHECKING) for the same reason as datetime
+# above: Pydantic resolves the annotation when the model is built.
+from mandate.app.constraints import Constraint  # noqa: TC001
+
 # ── Enums ─────────────────────────────────────────────────────────────────
 
 
@@ -117,7 +121,7 @@ class MandateDocument(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     mandate_id: str = Field(description="Human-readable ID: mnd_<8-char-hex>")
-    schema_version: str = "1.1"
+    schema_version: str = "1.2"
     status: MandateStatus = MandateStatus.active
 
     issuer: MandateIssuer
@@ -137,6 +141,17 @@ class MandateDocument(BaseModel):
     policy_hash: str | None = Field(None, description="SHA-256 of the linked policy rules JSON")
     spend_limit: SpendLimit | None = Field(
         None, description="Monetary authority — part of the signed grant"
+    )
+    constraints: list[Constraint] = Field(
+        default_factory=list,
+        description=(
+            "Namespaced bounds on the grant beyond the spend ceiling, part of "
+            "the signed payload from schema 1.2. The ceiling itself stays on "
+            "`spend_limit`: one bound with two encodings is how the two "
+            "disagree later. An unrecognized type is rejected at parse rather "
+            "than skipped, because a bound this version cannot read may be the "
+            "one that restricts the grant."
+        ),
     )
 
     valid_from: datetime
