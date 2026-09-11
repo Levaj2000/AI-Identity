@@ -19,7 +19,7 @@ from datetime import datetime  # noqa: TC003
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # ── Enums ─────────────────────────────────────────────────────────────────
 
@@ -99,7 +99,22 @@ class MandateExceedance(BaseModel):
 
 
 class MandateDocument(BaseModel):
-    """Canonical MongoDB document shape for a mandate."""
+    """Canonical MongoDB document shape for a mandate.
+
+    `extra="forbid"`: an unrecognized top-level field is a parse error, not a
+    silently dropped one. A mandate is an authorization document, so a field
+    this version cannot evaluate might be one that *restricts* the grant, and
+    dropping it would widen authority past what the issuer signed.
+
+    Fail-closed also makes version skew diagnosable. The signature is computed
+    over `model_dump()` (see `signing._build_signable_payload`), so under the
+    old `extra="ignore"` default a mandate issued at a newer schema version
+    lost its unknown fields before canonicalization and failed with "one or
+    more signatures are invalid", indistinguishable from tampering. It now
+    fails naming the field it did not recognize.
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
     mandate_id: str = Field(description="Human-readable ID: mnd_<8-char-hex>")
     schema_version: str = "1.1"
@@ -110,7 +125,14 @@ class MandateDocument(BaseModel):
 
     scope: list[str] = Field(description="Permission scopes, e.g. ['read:audit', 'write:policies']")
     conditions: dict[str, Any] = Field(
-        default_factory=dict, description="ABAC conditions (env, tier, etc.)"
+        default_factory=dict,
+        description=(
+            "ABAC conditions (env, tier, etc.), part of the signed grant. "
+            "NOTHING IN THIS SERVICE EVALUATES THEM YET: verification reports "
+            "them as unevaluated and fails closed rather than reporting a "
+            "mandate valid while ignoring restrictions its issuer signed. "
+            "A caller that has its own evaluator passes conditions_evaluated=true."
+        ),
     )
     policy_hash: str | None = Field(None, description="SHA-256 of the linked policy rules JSON")
     spend_limit: SpendLimit | None = Field(
@@ -144,7 +166,14 @@ class MandateDocument(BaseModel):
 
 
 class IssueMandateRequest(BaseModel):
-    """Body for POST /api/v1/mandates."""
+    """Body for POST /api/v1/mandates.
+
+    `extra="forbid"` for the same reason as `MandateDocument`, one step
+    earlier: a caller that misspells a restricting field should be told, not
+    issued a broader mandate than it asked for.
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
     subject_agent_id: str
     subject_org_id: str
@@ -248,6 +277,18 @@ class VerifyMandateRequest(BaseModel):
     """Body for POST /api/v1/mandates/verify — accepts a full mandate payload."""
 
     mandate: MandateResponse
+    conditions_evaluated: bool = Field(
+        default=False,
+        description=(
+            "Set true only if the caller has already evaluated the mandate's "
+            "`conditions` against its own request context and they hold. This "
+            "service has no evaluator, so by default a mandate carrying any "
+            "condition fails verification: an unevaluable restriction cannot "
+            "bound authority, and reporting such a mandate valid would mean "
+            "answering a question about the grant while ignoring part of it. "
+            "The flag asserts the caller did the work; it is not a bypass."
+        ),
+    )
 
 
 class VerifyMandateResult(BaseModel):
@@ -256,7 +297,8 @@ class VerifyMandateResult(BaseModel):
     checks: dict[str, bool] = Field(
         description=(
             "Individual check results: signatures_valid, status_active, "
-            "not_expired, scope_sufficient, within_spend_limit"
+            "not_expired, scope_sufficient, within_spend_limit, "
+            "conditions_evaluable"
         )
     )
     error: str | None = None
