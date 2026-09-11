@@ -12,6 +12,8 @@ Checks performed:
   3. not_expired         — valid_until is None OR now < valid_until
   4. within_spend_limit  — spent_cents <= spend_limit.limit_cents (when a limit exists)
   5. scope_sufficient    — if required_scope provided, mandate.scope is a superset
+  6. conditions_evaluable: the mandate carries no condition this service
+                           cannot evaluate (the check explains why it fails closed)
 """
 
 import logging
@@ -119,6 +121,30 @@ async def verify_mandate(
             errors.append(f"Missing required scopes: {sorted(missing)}")
     else:
         checks["scope_sufficient"] = True
+
+    # 6. Conditions check: fail closed on a restriction nothing evaluated.
+    #
+    # `conditions` is part of the signed grant, so an issuer writing
+    # {"env": "staging"} has expressed a real limit on the authority. This
+    # service has no evaluator for it. Reporting `valid: true` anyway would
+    # answer "is this mandate good?" while ignoring a clause of the mandate,
+    # and a caller cannot tell that answer apart from one where the issuer
+    # imposed no conditions at all.
+    #
+    # So an unevaluated condition is a failed check, not a warning. A caller
+    # holding its own evaluator (a gateway with request context this service
+    # does not have) asserts `conditions_evaluated=true` and takes
+    # responsibility for that half of the verdict.
+    if not mandate.conditions or body.conditions_evaluated:
+        checks["conditions_evaluable"] = True
+    else:
+        checks["conditions_evaluable"] = False
+        errors.append(
+            f"Mandate carries {len(mandate.conditions)} condition(s) this service "
+            f"cannot evaluate: {sorted(mandate.conditions)}. Evaluate them against "
+            f"the request context and resubmit with conditions_evaluated=true, or "
+            f"treat the mandate as unverified."
+        )
 
     valid = all(checks.values())
     return VerifyMandateResult(
