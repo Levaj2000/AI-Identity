@@ -11,8 +11,8 @@ Article mapping:
 |---|---|
 | ``annex_iv_documentation.json`` | Art. 11 + Annex IV |
 | ``access_log.csv`` | Art. 12 (record-keeping) |
-| ``chain_integrity.json`` | Art. 12(4) (tamper-evident logs) |
-| ``attestations/*.dsse.json`` | Art. 12(4) |
+| ``chain_integrity.json`` | Art. 12 (record-keeping; integrity evidence) |
+| ``attestations/*.dsse.json`` | Art. 12 (record-keeping) |
 | ``human_oversight_log.csv`` | Art. 14 (human oversight) |
 | ``agent_risk_classification.csv`` | Art. 6 / Annex III |
 | ``policy_change_log.csv`` | Art. 9 (risk management system) |
@@ -291,7 +291,7 @@ def _write_attestations(
     audit_period_start: datetime.datetime,
     audit_period_end: datetime.datetime,
 ) -> int:
-    """Forensic attestations covering the period. Article 12(4)."""
+    """Forensic attestations covering the period. Article 12 record-keeping."""
     attestations = (
         db.query(ForensicAttestation)
         .filter(
@@ -306,7 +306,7 @@ def _write_attestations(
         bundle.write_json(
             f"attestations/{att.session_id}.dsse.json",
             att.envelope,
-            controls=["EUAI-Art.12.4"],
+            controls=["EUAI-Art.12"],
         )
     return len(attestations)
 
@@ -318,7 +318,7 @@ def _write_chain_integrity(
     org_id: uuid.UUID,
     built_at: datetime.datetime,
 ) -> dict:
-    """verify_chain() result — Article 12(4) tamper-evidence. Per-org scope."""
+    """verify_chain() result — tamper-evidence supporting Article 12 record-keeping. Per-org scope."""
     result = verify_chain(db, org_id=org_id)
     payload = {
         "verified_at": _rfc3339(built_at),
@@ -330,7 +330,7 @@ def _write_chain_integrity(
         "first_broken_id": result.first_broken_id,
         "message": result.message or "",
     }
-    bundle.write_json("chain_integrity.json", payload, controls=["EUAI-Art.12.4"])
+    bundle.write_json("chain_integrity.json", payload, controls=["EUAI-Art.12"])
     return payload
 
 
@@ -692,8 +692,8 @@ def _write_evidence_summary(
             "artifact_control_mapping": {
                 "annex_iv_documentation.json": ["EUAI-Art.11", "EUAI-Annex.IV"],
                 "access_log.csv": ["EUAI-Art.12"],
-                "chain_integrity.json": ["EUAI-Art.12.4"],
-                "attestations/*.dsse.json": ["EUAI-Art.12.4"],
+                "chain_integrity.json": ["EUAI-Art.12"],
+                "attestations/*.dsse.json": ["EUAI-Art.12"],
                 "human_oversight_log.csv": ["EUAI-Art.14"],
                 "agent_risk_classification.csv": ["EUAI-Art.6", "EUAI-Annex.III"],
                 "policy_change_log.csv": ["EUAI-Art.9"],
