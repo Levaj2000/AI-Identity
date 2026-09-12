@@ -86,6 +86,37 @@ Bar on `5b76fa6`, toolchain 1.96.1: warning-free `--locked` checks and 34 tests
 green on each host, `emit_sample` byte-identical to the section 12 conformance
 vector on both.
 
+**Status 2026-09-12.** The head moved to `e6756fe`, "docs(audit): say that a
+sink declares the slots it reads". The pin stays at `5b76fa6`, deliberately.
+
+- *Docs only, so no re-pin.* The commit touches `docs/content/auditing.md` and
+  a comment block in `reference/plugins/audit-logger/src/lib.rs`. Neither is on
+  this crate's dependency path, and no byte this crate hashes comes from a doc
+  file, so the bar recorded above stands unchanged. The rule for the rest of
+  the review: re-pin on a code push, which can move the seam silently the way
+  `5b76fa6` did, and skip a docs-only one. Gate 3 is called against the head
+  the PR merges at, not against the latest head, so an intermediate re-pin is
+  discarded on merge day.
+- *The finding above is now the upstream rule.* The new section states that a
+  sink is handed extensions filtered against its own `capabilities:`, that a
+  sink declaring none still runs, still emits, still chains and still signs
+  with the gated fields absent, and that a reader of the record cannot tell
+  "no delegation happened" from "the sink was not permitted to see the
+  delegation". That is the silent evidence loss reproduced through
+  `panic_drive`, written into the guide in the terms it was raised.
+- *Declarations checked against a normative source, not our own reading.*
+  `read_agent`, `read_delegation` and `read_labels` are the spellings in
+  `crates/ppe-apl-cmf/src/constants.rs` at `e6756fe`, and those three are
+  complete for this crate. `read_delegated_tokens`, which the new section
+  glosses as "which audience got which scopes", does not apply here: it gates
+  `raw_credentials.delegated_tokens`, the bearer material, independently of
+  `read_inbound_credentials`, while the `delegation` slot is cloned whole
+  under `read_delegation`. The `chain[].audience` and `chain[].scopes_granted`
+  this crate renders therefore arrive with what it already declares.
+
+Gate 1 is unchanged and unmet: #84 is open, waiting on Fred's review rather
+than on further pushes, per Teryl. Nothing starts until it merges.
+
 ## PPE rules the copy must satisfy
 
 Read from `praxis-proxy/policy` at `3e7734e`, dependencies re-read at
