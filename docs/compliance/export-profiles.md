@@ -202,7 +202,7 @@ Key articles with direct export implications:
 | **Art. 10** | Data and data governance | Upstream data connector inventory (out of v1 — see gap) |
 | **Art. 11** + **Annex IV** | Technical documentation | System description + architecture snapshot (see Annex IV coverage below) |
 | **Art. 12** | Record-keeping (logging) | Audit log covering decisions, subjects, outcomes |
-| **Art. 12(4)** | Logs tamper-evident + covering full lifecycle | HMAC chain + DSSE attestations |
+| **Art. 12** (integrity evidence) | Tamper-evident logs covering full lifecycle | HMAC chain + DSSE attestations |
 | **Art. 13** | Transparency / information to deployers | Agent descriptions + capability declarations |
 | **Art. 14** | Human oversight | Approval records (existing `ApprovalRequest` model) |
 | **Art. 15** | Accuracy, robustness, cybersecurity | Credential encryption evidence + auth / circuit-breaker metrics |
@@ -227,7 +227,7 @@ map to these articles; see `scripts/seed_compliance.py`.
 2. **`access_log.csv`** — same shape as SOC 2 `access_log.csv`.
    Satisfies Article 12.
 3. **`attestations/<session_id>.dsse.json`** — same as SOC 2.
-   Satisfies Article 12(4) tamper-evidence requirement.
+   Supports Article 12 record-keeping with tamper-evidence for the logs.
 4. **`human_oversight_log.csv`** — every `ApprovalRequest` row
    (approved, denied, auto-expired). Satisfies Article 14.
 5. **`agent_risk_classification.csv`** — per-agent declared risk
@@ -362,8 +362,8 @@ profile-specific, it's assembled on demand.
 |---|:---:|:---:|:---:|
 | Access log (audit_log rows) | CC6.1, CC7.2 | Art. 12 | MS-4.1 |
 | Change log (agent/policy/key) | CC8.1 | Art. 9 | GV-1.1 |
-| Forensic attestations | CC7.2 | Art. 12(4) | MS-2.5 |
-| Chain integrity verification | CC7.2 | Art. 12(4) | MS-2.5 |
+| Forensic attestations | CC7.2 | Art. 12 | MS-2.5 |
+| Chain integrity verification | CC7.2 | Art. 12 | MS-2.5 |
 | Control check results | CC6.3, CC6.7, CC9.1 | EUAI-TRANS-01 etc. | MS-4.1 |
 | Agent inventory | CC6.1 | Annex IV 1(b) | MP-4.1 |
 | Policy catalog + versions | CC6.1, CC8.1 | Art. 9 | GV-1.1 |
