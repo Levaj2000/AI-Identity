@@ -188,6 +188,10 @@ const faqs = [
     a: "Each session closes with a DSSE envelope signed by an ECDSA P-256 key held in KMS hardware. Auditors fetch the envelope, fetch our public JWKS, and run the verification CLI \u2014 no calls back to our servers, no vendor trust required. Available on Business and above.",
   },
   {
+    q: "Which tier meets California's evidence-retention requirements?",
+    a: "Enterprise. California's framework (SB 813 / AB 1405) requires ten years of evidence retention with disclosure of material gaps \u2014 Enterprise ships unlimited retention plus forensic evidence export with chain-of-custody certificates, so the evidence your auditors verify is the evidence the regulation assumes exists.",
+  },
+  {
     q: "What counts as a request?",
     a: "Every call through the AI Identity gateway counts as one request \u2014 whether it's a policy check, credential retrieval, or proxied API call. Internal dashboard actions (listing agents, viewing audit logs) don't count.",
   },
