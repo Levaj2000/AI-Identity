@@ -145,7 +145,7 @@ cp .env.example .env     # defaults to localhost:8001 API
 npm install && npm run dev
 ```
 
-The dashboard is deployed to [ai-identity.co](https://ai-identity.co) via Vercel. PR preview deploys are automatic.
+The dashboard is deployed to [dashboard.ai-identity.co](https://dashboard.ai-identity.co) via Vercel; [ai-identity.co](https://ai-identity.co) is the separate landing-page project. PR preview deploys are automatic for both.
 
 ### Running Tests
 
@@ -174,7 +174,7 @@ Key rotation supports a 24-hour grace period — both old and new keys work duri
 - **Forensics**: HMAC-SHA256 hash-chained audit logs, offline CLI verifier
 - **Integrations**: LangChain ([PyPI](https://pypi.org/project/langchain-ai-identity/))
 - **CI/CD**: GitHub Actions, Ruff (lint + format), pytest (1,000+ tests)
-- **Deployment**: GKE Autopilot (API + Gateway), Vercel (Dashboard), GitHub Actions CI/CD with Cloud Build
+- **Deployment**: GKE Autopilot (API, Gateway, Mandate Service), Vercel (Dashboard, Landing Page), GitHub Actions CI/CD with Cloud Build
 
 ## License
 

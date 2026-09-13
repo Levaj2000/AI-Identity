@@ -255,12 +255,15 @@ qa_runs (user_id FK)
 ## Infrastructure
 
 ```
-+-------------------------------------------------+
++--------------------------------------------------+
 | GKE Autopilot (us-east1)                         |
-|  +-- ai-identity-api      (api.ai-identity.co)   |
-|  +-- ai-identity-gateway  (gateway.ai-identity.co)|
-|  +-- K8s CronJobs         (email followups,      |
-|                             weekly cleanup)       |
+|  +-- ai-identity-api     (api.ai-identity.co)    |
+|  +-- ai-identity-gateway (gateway.ai-identity.co)|
+|  +-- ai-identity-mandate (internal, :8003)       |
+|  +-- K8s CronJobs        (4: evidence anchor,    |
+|                           email followups,       |
+|                           user cleanup,          |
+|                           compliance export)     |
 +--------------------------------------------------+
 | Vercel                                           |
 |  +-- dashboard.ai-identity.co (preview deploys)  |
