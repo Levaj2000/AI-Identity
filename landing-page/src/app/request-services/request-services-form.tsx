@@ -6,7 +6,7 @@ const SERVICES = [
   {
     id: "intro-call",
     name: "Intro Call",
-    price: "$50",
+    price: "$150",
     blurb: "30 minutes with Jeff. Credited toward any engagement.",
   },
   {
@@ -41,7 +41,7 @@ const GOALS = [
 
 const TIMELINES = ["ASAP", "Within a month", "1–3 months", "Just exploring"];
 
-const BUDGETS = ["$50–$500", "$500–$2,000", "$2,000–$5,000", "$5,000+"];
+const BUDGETS = ["$150–$500", "$500–$2,000", "$2,000–$5,000", "$5,000+"];
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:border-[rgb(166,218,255)]/60 focus:outline-none";
@@ -89,12 +89,17 @@ export default function RequestServicesForm() {
         }),
       });
 
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
         if (body.error === "rate_limited") {
-          throw new Error("Too many requests — please try again in an hour.");
+          throw new Error("Too many requests. Please try again in an hour.");
         }
         throw new Error("Something went wrong sending your request. Please try again.");
+      }
+      if (body.delivered !== true) {
+        throw new Error(
+          "Your request could not be delivered right now. Please email jeff@ai-identity.co directly."
+        );
       }
       setStatus("sent");
     } catch (err) {

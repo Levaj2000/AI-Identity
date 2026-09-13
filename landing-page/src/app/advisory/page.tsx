@@ -244,9 +244,9 @@ export default function Advisory() {
               </svg>
             </Link>
             <p className="mt-4 text-sm text-gray-500">
-              Prefer email?{" "}
+              Existing client?{" "}
               <a
-                href="mailto:jeff@ai-identity.co?subject=Advisory%20inquiry"
+                href="mailto:jeff@ai-identity.co?subject=Existing%20engagement"
                 className="text-[rgb(166,218,255)] hover:underline"
               >
                 jeff@ai-identity.co

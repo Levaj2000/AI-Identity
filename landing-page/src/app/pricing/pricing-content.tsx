@@ -599,7 +599,7 @@ export default function PricingContent() {
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
             <h3 className="text-xl font-bold text-white mb-3">Need hands-on help?</h3>
             <p className="text-sm text-gray-400 mb-6 max-w-[540px] mx-auto">
-              Advisory engagements help you design verifiable systems — from a $50 intro
+              Advisory engagements help you design verifiable systems — from a $150 intro
               call to a fixed-scope Evidence Architecture Review. We help you build
               verifiable systems; independent auditors verify them.
             </p>
