@@ -1,5 +1,5 @@
-# CodeQL semantic code scanning — Python (api/gateway/mandate/common/agent/
-# cli/sdk), JavaScript/TypeScript (dashboard/landing-page/sdk), and the
+# CodeQL semantic code scanning — Python (cli/sdk/scripts), JavaScript/TypeScript
+# (landing-page/sdk), and the
 # workflow files themselves (the `actions` language catches untrusted-input
 # and injection patterns in CI config). Rust (integrations/cpex-ocsf-audit)
 # is deliberately not enrolled: CodeQL's Rust support is still maturing, and

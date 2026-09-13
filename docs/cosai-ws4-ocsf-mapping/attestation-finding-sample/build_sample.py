@@ -33,13 +33,16 @@ import uuid
 import zipfile
 from pathlib import Path
 
+# Regeneration only. This script signs with the platform's checkpoint code,
+# which lives in the private platform repository since September 2026. Run it
+# from a checkout of that repository; the committed sample files here are the
+# public artifact and verify_finding.py checks them without the platform.
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
 
+from common.forensic import anchor_checkpoint  # noqa: E402
 from cryptography.hazmat.primitives import hashes, serialization  # noqa: E402
 from cryptography.hazmat.primitives.asymmetric import ec  # noqa: E402
-
-from common.forensic import anchor_checkpoint  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 BUNDLE_ZIP = REPO / "docs/cosai-ws4-ocsf-mapping/ocsf-log-reference-bundle-2026-07-03.zip"

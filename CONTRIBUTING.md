@@ -1,80 +1,55 @@
 # Contributing to AI Identity
 
-Thanks for your interest in contributing to AI Identity! This guide will help you get started.
+Thanks for your interest in contributing. This repository holds the public trust
+surface of AI Identity: the offline verifier, the SDKs, the CPEX OCSF audit plugin,
+and the OCSF, CoSAI, and OpenTelemetry mapping documents. The platform itself (API
+server, gateway, mandate service, dashboard) is developed in a private repository
+and is not open to contribution.
 
 ## Getting Started
 
 1. **Fork the repository** and clone your fork locally
-2. **Set up your development environment** — see [README.md](README.md#quick-start) for instructions
-3. **Create a feature branch** from `main`:
+2. **Create a feature branch** from `main`:
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
 ## Development Setup
 
-### Prerequisites
-
-- Python 3.11+
-- Node.js 22+
-- PostgreSQL (or use Docker)
-
-### Quick Setup with Docker
-
-```bash
-make setup   # generates .env with security keys
-make up      # builds and starts api + gateway + postgres
-```
-
-### Manual Setup
+Prerequisites: Python 3.11+ for the tooling. The verifier CLI itself runs on 3.9+.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r api/requirements.txt -r gateway/requirements.txt
-pip install -e common/
 pip install -r requirements-dev.txt
+pip install pytest httpx cryptography
 ```
+
+The TypeScript SDK and the landing page each have their own `package.json`; run
+`npm install` inside that directory when working on one of them. The CPEX plugin
+in `integrations/cpex-ocsf-audit/` is a Rust crate with its own README.
 
 ## Running Tests
 
 All tests must pass before submitting a PR:
 
 ```bash
-# Run all tests
 pytest -v
-
-# Run specific test suites
-pytest api/tests/       # API tests
-pytest gateway/tests/   # Gateway tests
-pytest common/tests/    # Shared library tests
 ```
+
+That runs the verifier CLI suite in `cli/`. The chain verifier is stdlib-only;
+the attestation and inclusion-proof tests need `cryptography`, and the `aid`
+client tests need `httpx`.
 
 ## Code Style
 
 We use **Ruff** for both linting and formatting. CI will reject PRs that don't pass these checks.
 
 ```bash
-# Check for lint errors
-ruff check .
-
-# Auto-fix lint errors
-ruff check --fix .
-
-# Check formatting
-ruff format --check .
-
-# Auto-format
-ruff format .
-```
-
-For the dashboard (React/TypeScript):
-
-```bash
-cd dashboard
-npm run lint          # ESLint
-npm run format:check  # Prettier
-npm run format        # Auto-format with Prettier
+ruff check .            # lint
+ruff check --fix .      # auto-fix
+ruff format --check .   # formatting
+ruff format .           # auto-format
 ```
 
 ## Submitting a Pull Request
@@ -91,21 +66,20 @@ npm run format        # Auto-format with Prettier
 - [ ] Tests pass locally (`pytest -v`)
 - [ ] Linting passes (`ruff check .`)
 - [ ] Formatting is clean (`ruff format --check .`)
-- [ ] Dashboard builds if frontend changes (`cd dashboard && npm run build`)
-- [ ] New features include tests
-- [ ] Database schema changes include an Alembic migration
+- [ ] New behavior includes tests
+- [ ] Changes to a record format or mapping document say which upstream standard they track
 
 ## Project Structure
 
 | Directory | What Lives Here |
 |-----------|----------------|
-| `api/` | FastAPI identity service (port 8001) |
-| `gateway/` | FastAPI proxy gateway (port 8002) |
-| `common/` | Shared models, schemas, auth, config |
-| `dashboard/` | React + TypeScript frontend |
+| `cli/` | Offline verifier and audit review CLI (MIT) |
 | `sdk/` | Python, TypeScript, and LangChain SDKs |
-| `cli/` | Offline forensic verification CLI |
-| `alembic/` | Database migrations |
+| `integrations/` | CPEX OCSF audit plugin (Apache-2.0), contributed upstream |
+| `docs/` | OCSF and CoSAI mappings, OTel crosswalk, evidence-anchor trust model, specs |
+| `landing-page/` | ai-identity.co (Next.js, deployed by Vercel) |
+| `marketing/` | Published collateral |
+| `scripts/` | Validators, the evidence-anchor mirror job, repo hygiene checks |
 
 ## Where to Help
 
@@ -113,15 +87,18 @@ Check the [issues labeled `good first issue`](https://github.com/Levaj2000/AI-Id
 
 Areas where contributions are especially welcome:
 
-- **Documentation** — SDK examples, integration guides, API usage patterns
-- **Test coverage** — Additional test cases for gateway policies and edge cases
+- **Documentation** — SDK examples, integration guides, verifier usage patterns
+- **Test coverage** — additional verifier cases, especially malformed and adversarial inputs
 - **SDK improvements** — TypeScript SDK parity with Python SDK
-- **CLI enhancements** — Additional forensic verification output formats
+- **CLI enhancements** — additional forensic verification output formats
 
 ## Questions?
 
-Open a [Discussion](https://github.com/Levaj2000/AI-Identity/discussions) or comment on an existing issue. We're happy to help you get oriented.
+Open an issue. Help with your own system is an advisory engagement; see
+[SUPPORT.md](SUPPORT.md).
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the project's existing license terms.
+By contributing, you agree that your contributions will be licensed under the license
+of the directory they land in: MIT for `cli/` and `sdk/`, Apache-2.0 for the CPEX plugin.
+See [LICENSE](LICENSE).
