@@ -684,7 +684,9 @@ Only after 2+ weeks of stable operation on GCP:
       `daily-email-followups` and `weekly-user-cleanup` CronJobs; deleted 2026-09-13)
 - [x] Update `scripts/keepalive.sh` or remove it (removed 2026-09-13)
 - [ ] Update `scripts/qa-smoke-test.sh` default URLs
-- [ ] Update `README.md` and `docs/ARCHITECTURE.md` to reflect GCP hosting
+- [x] Update `README.md` and `docs/ARCHITECTURE.md` to reflect GCP hosting
+      (no Render text remained; corrected the dashboard host, added the
+      Mandate Service and the four CronJobs; 2026-09-13)
 - [ ] Remove UptimeRobot setup script (`scripts/setup-uptimerobot.sh`) if switching to Cloud Monitoring
 
 ### 10.3 Update Documentation
