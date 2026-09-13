@@ -51,6 +51,7 @@ type ServiceRequestBody = {
   budget?: string;
   description?: string;
   heardAbout?: string;
+  website?: string;
   paidAcknowledged?: boolean;
 };
 
@@ -76,7 +77,15 @@ export async function POST(req: Request) {
   const budget = clean(body.budget, 60);
   const description = clean(body.description, 4000);
   const heardAbout = clean(body.heardAbout, 300);
+  const honeypot = clean(body.website, 200);
   const paidAcknowledged = body.paidAcknowledged === true;
+
+  // Honeypot: the "website" field is invisible to humans and never filled by
+  // the form. A populated value is a bot. Answer exactly as a delivered
+  // request would so the sender cannot tell it was dropped.
+  if (honeypot) {
+    return NextResponse.json({ ok: true, delivered: true }, { status: 200 });
+  }
 
   if (!name || !emailRegex.test(email) || !company || !description) {
     return NextResponse.json({ error: "missing_required" }, { status: 400 });
