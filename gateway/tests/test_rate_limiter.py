@@ -21,6 +21,8 @@ import time
 import uuid
 from unittest.mock import patch
 
+import pytest
+
 from gateway.app.rate_limiter import RateLimiter
 
 # ── Unit Tests: RateLimiter Class ───────────────────────────────────────
@@ -208,6 +210,7 @@ class TestThreadSafety:
 # ── HTTP Middleware Tests ───────────────────────────────────────────────
 
 
+@pytest.mark.usefixtures("wide_rate_limit_window")
 class TestRateLimitMiddlewareHTTP:
     """Test rate limiting through the full HTTP middleware stack."""
 
@@ -431,6 +434,7 @@ class TestRateLimitDisabled:
 # ── Response Format ─────────────────────────────────────────────────────
 
 
+@pytest.mark.usefixtures("wide_rate_limit_window")
 class TestRateLimitResponseFormat:
     """Verify the 429 response matches the gateway error format."""
 
@@ -466,6 +470,7 @@ class TestRateLimitResponseFormat:
 # ── X-Forwarded-For Tests ──────────────────────────────────────────────
 
 
+@pytest.mark.usefixtures("wide_rate_limit_window")
 class TestXForwardedFor:
     """Test IP extraction from X-Forwarded-For header."""
 

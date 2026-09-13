@@ -137,6 +137,36 @@ def _reset_rate_limiter():
 
 
 @pytest.fixture
+def wide_rate_limit_window():
+    """Widen the limiter's sliding window for tests that exhaust a limit.
+
+    The window defaults to one second while the per-IP limit is 100, so a test
+    that sends 100 real requests and asserts the 101st is throttled only passes
+    when all 100 round trips finish inside that second. On a loaded runner they
+    do not: the earliest timestamps fall outside the window, the count drops
+    back under the limit, and the request the test expects to be denied is
+    correctly allowed. The assertion is then about machine speed rather than
+    about rate limiting.
+
+    Widening the window removes the clock from the test without changing what
+    is being verified: the limit, the counting and the 429 path are untouched,
+    and entries simply cannot age out mid-burst. Tests that verify expiry
+    itself drive their own RateLimiter instance and must not use this fixture.
+    """
+    from gateway.app.rate_limiter import rate_limiter
+
+    backends = {id(b): b for b in (rate_limiter._backend, rate_limiter._fallback)}.values()
+    originals = [(b, b._window_seconds) for b in backends]
+    for backend, _ in originals:
+        backend._window_seconds = 3600.0
+    try:
+        yield
+    finally:
+        for backend, original in originals:
+            backend._window_seconds = original
+
+
+@pytest.fixture
 def client(db_session):
     """FastAPI TestClient with DB override."""
     from gateway.app import main as gateway_main
