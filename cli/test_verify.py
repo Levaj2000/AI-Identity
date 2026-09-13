@@ -1273,24 +1273,146 @@ class TestMissingCryptographyGuard(unittest.TestCase):
             os.unlink(envelope_path)
 
 
+# ---------------------------------------------------------------------------
+# Test-local attestation signer.
+#
+# Until September 2026 these tests imported the platform's signer
+# (common/schemas/forensic_attestation.py) so the envelope handed to the CLI
+# was produced by the same code path as production. The platform now lives in
+# a private repository, so the signing side is reproduced here and must stay
+# in step with it:
+#
+#   payload bytes  = RFC 8785 (JCS) canonical JSON of the v1 payload dict
+#   signing input  = DSSE PAE: "DSSEv1 " len(type) " " type " " len(body) " " body
+#   signature      = DER-encoded ECDSA-P256-SHA256 over the signing input
+#   envelope       = {payloadType, payload (b64), signatures: [{keyid, sig (b64)}]}
+#
+# The v1 payload holds only strings and integers, so json.dumps with sorted
+# keys, no whitespace, and ensure_ascii=False is byte-identical to JCS for it.
+# Drift between this and the platform signer surfaces as a CLI verification
+# failure against a production envelope, which is the failure we want loud.
+# ---------------------------------------------------------------------------
+
+_ATTESTATION_PAYLOAD_TYPE = "application/vnd.ai-identity.attestation+json"
+
+
+def _rfc3339_z(dt: Any) -> str:
+    """RFC 3339 with a Z suffix, microseconds dropped, as the platform emits."""
+    import datetime as _datetime
+
+    if dt.tzinfo is None:
+        raise ValueError("timestamps must be timezone-aware")
+    return (
+        dt.astimezone(_datetime.timezone.utc).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+    )
+
+
+class _AttestationPayloadV1:
+    """The signed content of a v1 forensic attestation. Every field is required."""
+
+    def __init__(
+        self,
+        *,
+        session_id: Any,
+        org_id: Any,
+        evidence_chain_hash: str,
+        first_audit_id: int,
+        last_audit_id: int,
+        event_count: int,
+        session_start: Any,
+        session_end: Any,
+        signed_at: Any,
+        signer_key_id: str,
+    ) -> None:
+        self.schema_version = 1
+        self.session_id = session_id
+        self.org_id = org_id
+        self.evidence_chain_hash = evidence_chain_hash
+        self.first_audit_id = first_audit_id
+        self.last_audit_id = last_audit_id
+        self.event_count = event_count
+        self.session_start = session_start
+        self.session_end = session_end
+        self.signed_at = signed_at
+        self.signer_key_id = signer_key_id
+
+    def to_canonical_dict(self) -> dict[str, Any]:
+        return {
+            "schema_version": self.schema_version,
+            "session_id": str(self.session_id),
+            "org_id": str(self.org_id),
+            "evidence_chain_hash": self.evidence_chain_hash,
+            "first_audit_id": self.first_audit_id,
+            "last_audit_id": self.last_audit_id,
+            "event_count": self.event_count,
+            "session_start": _rfc3339_z(self.session_start),
+            "session_end": _rfc3339_z(self.session_end),
+            "signed_at": _rfc3339_z(self.signed_at),
+            "signer_key_id": self.signer_key_id,
+        }
+
+
+def _pae(payload_type: str, payload_bytes: bytes) -> bytes:
+    """DSSE Pre-Authentication Encoding."""
+    type_bytes = payload_type.encode("utf-8")
+    return (
+        b"DSSEv1 "
+        + str(len(type_bytes)).encode("ascii")
+        + b" "
+        + type_bytes
+        + b" "
+        + str(len(payload_bytes)).encode("ascii")
+        + b" "
+        + payload_bytes
+    )
+
+
+def _local_ecdsa_signer(private_key: Any) -> Any:
+    """Wrap an in-memory P-256 private key as a (bytes) -> DER signature callable."""
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    if not isinstance(private_key.curve, ec.SECP256R1):
+        raise ValueError("test signer requires a P-256 (SECP256R1) private key")
+
+    def _sign(message: bytes) -> bytes:
+        return private_key.sign(message, ec.ECDSA(hashes.SHA256()))
+
+    return _sign
+
+
+def _sign_payload(payload: _AttestationPayloadV1, signer: Any) -> dict[str, Any]:
+    """Produce a DSSE envelope dict for ``payload`` using ``signer``."""
+    payload_bytes = json.dumps(
+        payload.to_canonical_dict(),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    signature_der = signer(_pae(_ATTESTATION_PAYLOAD_TYPE, payload_bytes))
+    return {
+        "payloadType": _ATTESTATION_PAYLOAD_TYPE,
+        "payload": base64.b64encode(payload_bytes).decode("ascii"),
+        "signatures": [
+            {
+                "keyid": payload.signer_key_id,
+                "sig": base64.b64encode(signature_der).decode("ascii"),
+            }
+        ],
+    }
+
+
 @unittest.skipUnless(_have_cryptography(), "cryptography package not installed")
 class TestAttestationVerification(unittest.TestCase):
     """End-to-end tests for the `attestation` subcommand.
 
-    These tests import the server-side signer helpers so the signed
-    envelope we hand to the CLI is produced exactly the same way
-    production signs — no divergent mock implementation.
+    The envelope handed to the CLI is produced by the test-local signer
+    defined above this class, which reproduces the platform's signing
+    algorithm step for step (see its comment for what it mirrors).
     """
 
     @classmethod
     def setUpClass(cls):
-        # Make the project importable so we can reuse the server signer.
-        import pathlib
-
-        repo_root = pathlib.Path(__file__).resolve().parent.parent
-        if str(repo_root) not in sys.path:
-            sys.path.insert(0, str(repo_root))
-
         import uuid
         from datetime import datetime as _dt
         from datetime import timezone as _tz
@@ -1298,20 +1420,14 @@ class TestAttestationVerification(unittest.TestCase):
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.primitives.asymmetric import ec
 
-        from common.schemas.forensic_attestation import (
-            AttestationPayloadV1,
-            local_ecdsa_signer,
-            sign_payload,
-        )
-
         cls._uuid = uuid
         cls._dt = _dt
         cls._tz = _tz
-        cls._AttestationPayloadV1 = AttestationPayloadV1
+        cls._AttestationPayloadV1 = _AttestationPayloadV1
         # Wrap callables in staticmethod so Python doesn't try to bind
         # them to `self` when accessed via instance attribute lookup.
-        cls._sign_payload = staticmethod(sign_payload)
-        cls._local_ecdsa_signer = staticmethod(local_ecdsa_signer)
+        cls._sign_payload = staticmethod(_sign_payload)
+        cls._local_ecdsa_signer = staticmethod(_local_ecdsa_signer)
         cls._serialization = serialization
         cls._ec = ec
 
@@ -1347,8 +1463,7 @@ class TestAttestationVerification(unittest.TestCase):
             signed_at=now,
             signer_key_id=kid or self._kid,
         )
-        envelope = self._sign_payload(payload, self._local_ecdsa_signer(self._private_key))
-        return envelope.model_dump()
+        return self._sign_payload(payload, self._local_ecdsa_signer(self._private_key))
 
     def _write_pem(self, pem_bytes: bytes) -> str:
         fd, path = tempfile.mkstemp(suffix=".pem")
