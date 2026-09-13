@@ -588,6 +588,43 @@ export default function PricingContent() {
           </div>
         </motion.div>
 
+        {/* Advisory upsell band */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mt-24 max-w-3xl mx-auto"
+        >
+          <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
+            <h3 className="text-xl font-bold text-white mb-3">Need hands-on help?</h3>
+            <p className="text-sm text-gray-400 mb-6 max-w-[540px] mx-auto">
+              Advisory engagements help you design verifiable systems — from a $50 intro
+              call to a fixed-scope Evidence Architecture Review. We help you build
+              verifiable systems; independent auditors verify them.
+            </p>
+            <a
+              href="/request-services"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors"
+            >
+              Request services
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+        </motion.div>
+
         {/* Spec attribution footer */}
         <motion.div
           initial={{ opacity: 0 }}
