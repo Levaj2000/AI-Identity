@@ -88,6 +88,27 @@ export default function Advisory() {
             questions are starting to sound like <em>who did what, under whose authority, and can
             we prove it</em> — that&apos;s the work I do every day.
           </p>
+          <div className="mt-8">
+            <Link
+              href="/request-services"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors"
+            >
+              Request services
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
         </div>
       </section>
 
