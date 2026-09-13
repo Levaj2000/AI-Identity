@@ -310,7 +310,6 @@ Post-deploy → QA smoke test (optional):
 | `generate_internal_key.py` | Generate INTERNAL_SERVICE_KEY |
 | `rotate_master_key.py` | Re-encrypt all credentials with new master key |
 | `qa-smoke-test.sh` | 15-step E2E QA |
-| `keepalive_cron.py` | (Obsolete — GKE has no idle timeout) |
 | `setup-uptimerobot.sh` | Configure monitoring |
 
 ---
