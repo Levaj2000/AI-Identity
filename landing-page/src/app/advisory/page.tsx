@@ -84,9 +84,12 @@ export default function Advisory() {
           </h1>
           <p className="text-lg text-gray-400 max-w-[720px] mx-auto leading-relaxed">
             AI Identity is a working platform, not a slide deck — and the thinking behind it is
-            available as advisory work. If your team is putting AI agents into production and the
-            questions are starting to sound like <em>who did what, under whose authority, and can
-            we prove it</em> — that&apos;s the work I do every day.
+            available as advisory work. Here&apos;s the direct version: anyone can emit an audit
+            record. What&apos;s hard is evidence that holds up under scrutiny — tamper-evident
+            chaining, signed attestations, forensic replay, retention that survives a
+            regulator&apos;s questions. I wrote the standard your auditors will measure you
+            against, and I help you build systems that pass it. I help you build it right;
+            an independent auditor verifies it.
           </p>
           <div className="mt-8">
             <Link
