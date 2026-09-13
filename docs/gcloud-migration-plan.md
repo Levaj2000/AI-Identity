@@ -680,8 +680,9 @@ Only after 2+ weeks of stable operation on GCP:
 ### 10.2 Code Cleanup
 
 - [x] Remove `render.yaml` from the repo (deleted 2026-09-13)
-- [ ] Delete `scripts/keepalive_cron.py` (replaced by Cloud Scheduler)
-- [ ] Update `scripts/keepalive.sh` or remove it
+- [x] Delete `scripts/keepalive_cron.py` (its daily and weekly jobs are the
+      `daily-email-followups` and `weekly-user-cleanup` CronJobs; deleted 2026-09-13)
+- [x] Update `scripts/keepalive.sh` or remove it (removed 2026-09-13)
 - [ ] Update `scripts/qa-smoke-test.sh` default URLs
 - [ ] Update `README.md` and `docs/ARCHITECTURE.md` to reflect GCP hosting
 - [ ] Remove UptimeRobot setup script (`scripts/setup-uptimerobot.sh`) if switching to Cloud Monitoring
