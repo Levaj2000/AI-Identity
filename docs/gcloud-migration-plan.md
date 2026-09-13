@@ -679,7 +679,7 @@ Only after 2+ weeks of stable operation on GCP:
 
 ### 10.2 Code Cleanup
 
-- [ ] Remove `render.yaml` from the repo (or archive it)
+- [x] Remove `render.yaml` from the repo (deleted 2026-09-13)
 - [ ] Delete `scripts/keepalive_cron.py` (replaced by Cloud Scheduler)
 - [ ] Update `scripts/keepalive.sh` or remove it
 - [ ] Update `scripts/qa-smoke-test.sh` default URLs

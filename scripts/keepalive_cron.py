@@ -6,7 +6,8 @@ Keepalive + daily tasks for Render cron job.
 2. Once per day (first run after 16:00 UTC), triggers the follow-up email cron
    to send 5-day check-in emails to new users.
 
-Runs every 10 minutes via Render cron job (see render.yaml).
+Runs every 10 minutes from an external scheduler. The Render cron that
+used to run it is retired; see docs/gcloud-migration-plan.md section 10.2.
 """
 
 import datetime

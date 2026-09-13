@@ -11,8 +11,8 @@
 #   # Manual test:
 #   ./scripts/keepalive.sh
 #
-#   # With Render Cron Job (render.yaml):
-#   Add a cron job entry — see render.yaml for configuration.
+#   # Scheduled runs:
+#   The Render cron that used to run this is retired; schedule it externally.
 #
 # Endpoints pinged:
 #   - AI Identity API:     https://api.ai-identity.co/health
