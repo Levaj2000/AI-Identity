@@ -85,6 +85,7 @@ export default function RequestServicesForm() {
           budget: data.get("budget"),
           description: data.get("description"),
           heardAbout: data.get("heardAbout"),
+          website: data.get("website"),
           paidAcknowledged: true,
         }),
       });
@@ -129,7 +130,7 @@ export default function RequestServicesForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="relative space-y-8">
       {/* Service selection */}
       <div>
         <span className={labelClass}>Which service do you need? *</span>
@@ -266,6 +267,28 @@ export default function RequestServicesForm() {
           How did you hear about us?
         </label>
         <input id="rs-heard" name="heardAbout" maxLength={300} className={inputClass} />
+      </div>
+
+      {/*
+        Honeypot. Humans never see this field; generic form-spam bots fill
+        every input they find. A populated value makes the API route drop the
+        submission while still answering success, so the bot learns nothing.
+        Kept off-screen rather than display:none so it survives bots that
+        skip hidden inputs, and excluded from tab order, autofill, and AT.
+      */}
+      <div
+        aria-hidden="true"
+        className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden"
+      >
+        <label htmlFor="rs-website">Website</label>
+        <input
+          id="rs-website"
+          name="website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          defaultValue=""
+        />
       </div>
 
       <label className="flex items-start gap-3 cursor-pointer">
