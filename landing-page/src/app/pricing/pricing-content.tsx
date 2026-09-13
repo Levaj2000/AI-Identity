@@ -188,6 +188,10 @@ const faqs = [
     a: "Each session closes with a DSSE envelope signed by an ECDSA P-256 key held in KMS hardware. Auditors fetch the envelope, fetch our public JWKS, and run the verification CLI \u2014 no calls back to our servers, no vendor trust required. Available on Business and above.",
   },
   {
+    q: "Which tier meets California's evidence-retention requirements?",
+    a: "Enterprise. California's framework (SB 813 / AB 1405) requires ten years of evidence retention with disclosure of material gaps \u2014 Enterprise ships unlimited retention plus forensic evidence export with chain-of-custody certificates, so the evidence your auditors verify is the evidence the regulation assumes exists.",
+  },
+  {
     q: "What counts as a request?",
     a: "Every call through the AI Identity gateway counts as one request \u2014 whether it's a policy check, credential retrieval, or proxied API call. Internal dashboard actions (listing agents, viewing audit logs) don't count.",
   },
@@ -599,7 +603,7 @@ export default function PricingContent() {
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
             <h3 className="text-xl font-bold text-white mb-3">Need hands-on help?</h3>
             <p className="text-sm text-gray-400 mb-6 max-w-[540px] mx-auto">
-              Advisory engagements help you design verifiable systems — from a $50 intro
+              Advisory engagements help you design verifiable systems — from a $150 intro
               call to a fixed-scope Evidence Architecture Review. We help you build
               verifiable systems; independent auditors verify them.
             </p>

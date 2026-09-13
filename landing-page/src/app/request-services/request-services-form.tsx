@@ -6,7 +6,7 @@ const SERVICES = [
   {
     id: "intro-call",
     name: "Intro Call",
-    price: "$50",
+    price: "$150",
     blurb: "30 minutes with Jeff. Credited toward any engagement.",
   },
   {
@@ -41,7 +41,7 @@ const GOALS = [
 
 const TIMELINES = ["ASAP", "Within a month", "1–3 months", "Just exploring"];
 
-const BUDGETS = ["$50–$500", "$500–$2,000", "$2,000–$5,000", "$5,000+"];
+const BUDGETS = ["$150–$500", "$500–$2,000", "$2,000–$5,000", "$5,000+"];
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:border-[rgb(166,218,255)]/60 focus:outline-none";
@@ -85,16 +85,22 @@ export default function RequestServicesForm() {
           budget: data.get("budget"),
           description: data.get("description"),
           heardAbout: data.get("heardAbout"),
+          website: data.get("website"),
           paidAcknowledged: true,
         }),
       });
 
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
         if (body.error === "rate_limited") {
-          throw new Error("Too many requests — please try again in an hour.");
+          throw new Error("Too many requests. Please try again in an hour.");
         }
         throw new Error("Something went wrong sending your request. Please try again.");
+      }
+      if (body.delivered !== true) {
+        throw new Error(
+          "Your request could not be delivered right now. Please email jeff@ai-identity.co directly."
+        );
       }
       setStatus("sent");
     } catch (err) {
@@ -124,7 +130,7 @@ export default function RequestServicesForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="relative space-y-8">
       {/* Service selection */}
       <div>
         <span className={labelClass}>Which service do you need? *</span>
@@ -261,6 +267,28 @@ export default function RequestServicesForm() {
           How did you hear about us?
         </label>
         <input id="rs-heard" name="heardAbout" maxLength={300} className={inputClass} />
+      </div>
+
+      {/*
+        Honeypot. Humans never see this field; generic form-spam bots fill
+        every input they find. A populated value makes the API route drop the
+        submission while still answering success, so the bot learns nothing.
+        Kept off-screen rather than display:none so it survives bots that
+        skip hidden inputs, and excluded from tab order, autofill, and AT.
+      */}
+      <div
+        aria-hidden="true"
+        className="absolute -left-[9999px] top-auto h-px w-px overflow-hidden"
+      >
+        <label htmlFor="rs-website">Website</label>
+        <input
+          id="rs-website"
+          name="website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          defaultValue=""
+        />
       </div>
 
       <label className="flex items-start gap-3 cursor-pointer">

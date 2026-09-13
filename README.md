@@ -73,108 +73,60 @@ python3 cli/ai_identity_verify.py chain export.json
 
 The CLI is a single-file, zero-dependency Python script that independently verifies HMAC-SHA256 hash chains exported from AI Identity.
 
-## Architecture
+## What is in this repository
 
 ```
-ai-identity/
-├── api/          # FastAPI API server — identity service, admin API (port 8001)
-├── gateway/      # FastAPI proxy gateway — request routing & policy enforcement (port 8002)
-├── common/       # Shared code — DB models, auth, config, schemas
-├── dashboard/    # React + TypeScript + Tailwind — agent management UI
-├── sdk/          # Client SDKs — Python, TypeScript, LangChain integration
-├── cli/          # Offline forensic verification CLI
-├── alembic/      # Database migrations
-├── scripts/      # Dev scripts — seed data, migrations
-└── pyproject.toml
+AI-Identity/
++-- cli/            Offline verifier and audit review CLI (MIT)
++-- sdk/            Python, TypeScript, and LangChain SDKs
++-- integrations/   CPEX OCSF audit plugin (Apache-2.0), contributed upstream
++-- docs/           OCSF and CoSAI mappings, OTel crosswalk, evidence-anchor trust model, specs
++-- landing-page/   ai-identity.co (Next.js, deployed by Vercel)
++-- marketing/      Published collateral
++-- scripts/        Validators, the evidence-anchor mirror job, repo hygiene checks
 ```
 
-### Components
+### Where the platform lives
 
-1. **Identity Service** (`api/`) — Agent CRUD, API key issuance (`aid_sk_` prefix), key rotation, capabilities management
-2. **Proxy Gateway** (`gateway/`) — Authenticates agent keys, evaluates policies, forwards or blocks requests, logs decisions
-3. **Shared Library** (`common/`) — SQLAlchemy models, Pydantic schemas, auth utilities, config — imported by both api/ and gateway/
-4. **Dashboard** (`dashboard/`) — React SPA for agent management, policy editor, live traffic feed, spend charts
-5. **SDKs** (`sdk/`) — Python and TypeScript client libraries, plus the [LangChain integration](https://pypi.org/project/langchain-ai-identity/)
-6. **Forensic CLI** (`cli/`) — Standalone offline audit chain verifier for DFIR and compliance
+The control plane (API server, gateway, mandate service, dashboard, and deployment
+manifests) moved to a private repository in September 2026. It is proprietary; see
+[LICENSE](LICENSE). Nothing a relying party needs in order to verify AI Identity
+evidence depends on it: the verifier, the record formats, and the checkpoint feed are
+all here or upstream in OCSF. Commit history from before the split still contains the
+platform source. That is deliberate: the repository was public so the code could be
+audited, and history is part of that record.
 
-## Quick Start
-
-### Docker (recommended)
+### Running the verifier
 
 ```bash
-git clone https://github.com/Levaj2000/AI-Identity.git
-cd AI-Identity
-make setup   # generates .env with security keys
-make up      # builds and starts api + gateway + postgres
+python3 cli/ai_identity_verify.py chain export.json
+python3 cli/ai_identity_verify.py inclusion-proof bundle.json
 ```
 
-Services start at **localhost:8001** (API), **localhost:8002** (Gateway).
+Chain verification is stdlib-only and runs on Python 3.9+. Signature checks on
+attestations and checkpoints use the `cryptography` package. See [cli/README.md](cli/README.md).
 
-Run `make help` to see all available commands (migrate, seed, logs, shell, etc.).
-
-### Manual Setup
-
-**Prerequisites:** Python 3.11+, Node.js 18+, PostgreSQL
+### Running the tests
 
 ```bash
-# 1. Create virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# 2. Install dependencies
-pip install -r api/requirements.txt
-pip install -r gateway/requirements.txt
-pip install -e common/
-
-# 3. Copy environment variables
-cp .env.example .env
-# Edit .env with your database URL and secrets
-
-# 4. Start the API server (port 8001)
-uvicorn api.app.main:app --reload --port 8001
-
-# 5. Start the gateway (port 8002) — in a separate terminal
-uvicorn gateway.app.main:app --reload --port 8002
+pip install -r requirements-dev.txt
+pip install pytest httpx cryptography
+ruff check . && ruff format --check .
+pytest -v
 ```
-
-### Dashboard
-
-```bash
-cd dashboard
-cp .env.example .env     # defaults to localhost:8001 API
-npm install && npm run dev
-```
-
-The dashboard is deployed to [ai-identity.co](https://ai-identity.co) via Vercel. PR preview deploys are automatic.
-
-### Running Tests
-
-```bash
-# All tests
-pytest
-
-# API tests only
-pytest api/tests/
-
-# Gateway tests only
-pytest gateway/tests/
-```
-
-## API Keys
-
-Agent API keys use the `aid_sk_` prefix with SHA-256 hashed storage and a show-once pattern. Keys are only displayed once at creation time.
-
-Key rotation supports a 24-hour grace period — both old and new keys work during the transition.
 
 ## Tech Stack
 
-- **Backend**: Python 3.11, FastAPI, SQLAlchemy, Alembic, Pydantic
-- **Database**: PostgreSQL (Neon)
-- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS
-- **Forensics**: HMAC-SHA256 hash-chained audit logs, offline CLI verifier
-- **Integrations**: LangChain ([PyPI](https://pypi.org/project/langchain-ai-identity/))
-- **CI/CD**: GitHub Actions, Ruff (lint + format), pytest (1,000+ tests)
-- **Deployment**: GKE Autopilot (API + Gateway), Vercel (Dashboard), GitHub Actions CI/CD with Cloud Build
+- **Verifier**: Python 3.9+ standard library; `cryptography` for Ed25519 signature checks
+- **SDKs**: Python 3.10+ (httpx, Pydantic), TypeScript, LangChain ([PyPI](https://pypi.org/project/langchain-ai-identity/))
+- **CPEX plugin**: Rust
+- **Record formats**: OCSF 1.9 `attestation` object and `record_integrity` profile, DSSE envelopes, Merkle-batched checkpoints
+- **Site**: Next.js on Vercel
+- **CI**: GitHub Actions, Ruff, pytest, CodeQL, OpenSSF Scorecard, evidence-anchor mirror every six hours
+
+## Support and advisory
+
+Bugs in the verifier, SDKs, or mapping documents go to GitHub issues. Help with your own system is a paid advisory engagement; request one at [ai-identity.co/request-services](https://www.ai-identity.co/request-services). See [SUPPORT.md](SUPPORT.md).
 
 ## License
 

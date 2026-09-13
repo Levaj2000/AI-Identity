@@ -1,4 +1,4 @@
-# AI Identity — Architecture Overview
+# AI Identity: Architecture Overview
 
 **Last Updated:** 2026-03-25
 **Status:** Current (Sprint 7)
@@ -10,80 +10,80 @@
 AI Identity is a security and compliance platform for AI agents. It provides identity management, policy enforcement, credential vaulting, and tamper-evident audit trails for organizations deploying AI agents in production.
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        CLIENT LAYER                                 │
-│                                                                     │
-│   Landing Page (Vercel)          Dashboard (Vercel)                 │
-│   ai-identity.co                 dashboard.ai-identity.co          │
-│   React + Vite                   React + Vite + Clerk Auth         │
-│   11 pages                       15 pages                          │
-└──────────┬──────────────────────────────┬───────────────────────────┘
-           │                              │
-           │ HTTPS                        │ HTTPS + JWT
-           │                              │
-┌──────────▼──────────────────────────────▼───────────────────────────┐
-│                  SERVICE LAYER (GKE Autopilot, us-east1)            │
-│                                                                     │
-│  ┌─────────────────────────┐    ┌──────────────────────────────┐   │
-│  │   API Service            │    │   Gateway Service             │   │
-│  │   ai-identity-api        │    │   ai-identity-gateway         │   │
-│  │   FastAPI :8001          │    │   FastAPI :8002                │   │
-│  │                          │    │                                │   │
-│  │   12 routers:            │    │   Enforcement pipeline:        │   │
-│  │   • agents               │    │   1. Rate limiter (100/s IP)   │   │
-│  │   • keys                 │◄───│   2. Key validation            │   │
-│  │   • policies             │    │   3. Agent status check        │   │
-│  │   • credentials          │    │   4. Policy evaluation         │   │
-│  │   • audit                │    │   5. Circuit breaker           │   │
-│  │   • billing (Stripe)     │    │   6. Audit log (HMAC)          │   │
-│  │   • compliance           │    │                                │   │
-│  │   • qa                   │    │   FAIL-CLOSED: Any error       │   │
-│  │   • usage                │    │   results in DENY              │   │
-│  │   • capabilities         │    │                                │   │
-│  │   • admin                │    │   Circuit breaker:             │   │
-│  │   • auth                 │    │   5 failures/60s → OPEN        │   │
-│  └──────────┬───────────────┘    └──────────────┬─────────────────┘   │
-│             │                                   │                    │
-│             │          HMAC-SHA256               │                    │
-│             │◄──────── service auth ────────────►│                    │
-│             │                                   │                    │
-└─────────────┼───────────────────────────────────┼────────────────────┘
-              │                                   │
-              │         SQL + SSL                 │
-              │                                   │
-┌─────────────▼───────────────────────────────────▼────────────────────┐
-│                      DATA LAYER                                      │
-│                                                                      │
-│   ┌──────────────────────────────────────────────────────────────┐   │
-│   │   Neon PostgreSQL (Oregon)                                    │   │
-│   │                                                               │   │
-│   │   9 tables:                                                   │   │
-│   │   ├── users          (Clerk ID, tier, Stripe IDs, quotas)    │   │
-│   │   ├── agents         (UUID, status, capabilities, metadata)  │   │
-│   │   ├── agent_keys     (SHA-256 hash, type, rotation, expiry)  │   │
-│   │   ├── policies       (JSONB rules, versioned, one active)    │   │
-│   │   ├── audit_log      (HMAC chain, PII-sanitized, RLS)       │   │
-│   │   ├── upstream_creds (Fernet encrypted, per-provider)        │   │
-│   │   ├── compliance_*   (frameworks, checks, reports, results)  │   │
-│   │   └── qa_runs        (15-step checklist, dual sign-off)      │   │
-│   │                                                               │   │
-│   │   Security: RLS (user_id), SSL required, append-only audit   │   │
-│   └──────────────────────────────────────────────────────────────┘   │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
++---------------------------------------------------------------------+
+|                        CLIENT LAYER                                 |
+|                                                                     |
+|   Landing Page (Vercel)          Dashboard (Vercel)                 |
+|   ai-identity.co                 dashboard.ai-identity.co          |
+|   React + Vite                   React + Vite + Clerk Auth         |
+|   11 pages                       15 pages                          |
++----------+------------------------------+---------------------------+
+           |                              |
+           | HTTPS                        | HTTPS + JWT
+           |                              |
++----------v------------------------------v---------------------------+
+|                  SERVICE LAYER (GKE Autopilot, us-east1)            |
+|                                                                     |
+|  +-------------------------+    +------------------------------+   |
+|  |   API Service            |    |   Gateway Service             |   |
+|  |   ai-identity-api        |    |   ai-identity-gateway         |   |
+|  |   FastAPI :8001          |    |   FastAPI :8002                |   |
+|  |                          |    |                                |   |
+|  |   12 routers:            |    |   Enforcement pipeline:        |   |
+|  |   * agents               |    |   1. Rate limiter (100/s IP)   |   |
+|  |   * keys                 |<---|   2. Key validation            |   |
+|  |   * policies             |    |   3. Agent status check        |   |
+|  |   * credentials          |    |   4. Policy evaluation         |   |
+|  |   * audit                |    |   5. Circuit breaker           |   |
+|  |   * billing (Stripe)     |    |   6. Audit log (HMAC)          |   |
+|  |   * compliance           |    |                                |   |
+|  |   * qa                   |    |   FAIL-CLOSED: Any error       |   |
+|  |   * usage                |    |   results in DENY              |   |
+|  |   * capabilities         |    |                                |   |
+|  |   * admin                |    |   Circuit breaker:             |   |
+|  |   * auth                |    |   5 failures/60s -> OPEN        |   |
+|  +----------+---------------+    +--------------+-----------------+   |
+|             |                                   |                    |
+|             |          HMAC-SHA256               |                    |
+|             |<-------- service auth ------------>|                    |
+|             |                                   |                    |
++-------------+-----------------------------------+--------------------+
+              |                                   |
+              |         SQL + SSL                 |
+              |                                   |
++-------------v-----------------------------------v--------------------+
+|                      DATA LAYER                                      |
+|                                                                      |
+|   +--------------------------------------------------------------+   |
+|   |   Neon PostgreSQL (Oregon)                                    |   |
+|   |                                                               |   |
+|   |   9 tables:                                                   |   |
+|   |   +-- users          (Clerk ID, tier, Stripe IDs, quotas)    |   |
+|   |   +-- agents         (UUID, status, capabilities, metadata)  |   |
+|   |   +-- agent_keys     (SHA-256 hash, type, rotation, expiry)  |   |
+|   |   +-- policies       (JSONB rules, versioned, one active)    |   |
+|   |   +-- audit_log      (HMAC chain, PII-sanitized, RLS)       |   |
+|   |   +-- upstream_creds (Fernet encrypted, per-provider)        |   |
+|   |   +-- compliance_*   (frameworks, checks, reports, results)  |   |
+|   |   +-- qa_runs        (15-step checklist, dual sign-off)      |   |
+|   |                                                               |   |
+|   |   Security: RLS (user_id), SSL required, append-only audit   |   |
+|   +--------------------------------------------------------------+   |
+|                                                                      |
++----------------------------------------------------------------------+
 
-┌──────────────────────────────────────────────────────────────────────┐
-│                      EXTERNAL SERVICES                               │
-│                                                                      │
-│   Clerk (Auth)     Stripe (Billing)    Sentry (Errors)              │
-│   JWT + JWKS       Checkout + Portal   Optional DSN                 │
-│                    Webhooks → tier                                   │
-│                    sync                                              │
-│                                                                      │
-│   UptimeRobot      GitHub Actions      K8s CronJobs                 │
-│   HEAD /health     CI/CD (lint+test+   Daily email followups        │
-│   3 monitors       build+deploy)       Weekly cleanup               │
-└──────────────────────────────────────────────────────────────────────┘
++----------------------------------------------------------------------+
+|                      EXTERNAL SERVICES                               |
+|                                                                      |
+|   Clerk (Auth)     Stripe (Billing)    Sentry (Errors)              |
+|   JWT + JWKS       Checkout + Portal   Optional DSN                 |
+|                    Webhooks -> tier                                  |
+|                    sync                                              |
+|                                                                      |
+|   UptimeRobot      GitHub Actions      K8s CronJobs                 |
+|   HEAD /health     CI/CD (lint+test+   Daily email followups        |
+|   3 monitors       build+deploy)       Weekly cleanup               |
++----------------------------------------------------------------------+
 ```
 
 ---
@@ -92,7 +92,7 @@ AI Identity is a security and compliance platform for AI agents. It provides ide
 
 ### 1. API Service (`ai-identity-api`)
 
-**Purpose:** Core business logic — CRUD for agents, keys, policies, credentials; billing; compliance; QA.
+**Purpose:** Core business logic. CRUD for agents, keys, policies, credentials; billing; compliance; QA.
 
 | Property | Value |
 |----------|-------|
@@ -133,15 +133,15 @@ AI Identity is a security and compliance platform for AI agents. It provides ide
 **Enforcement Pipeline (6 steps):**
 
 ```
-Request → Rate Limiter → Key Validation → Agent Status → Policy Match → Circuit Breaker → Audit Log
-            │                │                │              │               │              │
-            ▼                ▼                ▼              ▼               ▼              ▼
+Request -> Rate Limiter -> Key Validation -> Agent Status -> Policy Match -> Circuit Breaker -> Audit Log
+            |                |                |              |               |              |
+            v                v                v              v               v              v
          429 Too          401 Invalid      403 Agent      403 Policy      503 Circuit    200 + decision
          Many Req         Key              Inactive       Denied          Open           (allow/deny)
 ```
 
 - **Rate limiter:** 100 req/s per IP, 60 req/s per agent key
-- **Circuit breaker:** CLOSED → OPEN (5 failures/60s) → HALF_OPEN (test single request)
+- **Circuit breaker:** CLOSED -> OPEN (5 failures/60s) -> HALF_OPEN (test single request)
 - **Timeout:** 500ms max for policy evaluation (4 thread pool workers)
 - **Fail-closed:** Any exception or timeout = DENY
 
@@ -157,13 +157,13 @@ Request → Rate Limiter → Key Validation → Agent Status → Policy Match �
 | Pages | 15 |
 
 **Key Pages:**
-- **Overview** — Agent count, recent activity, health status
-- **Agents** — CRUD, key management, policy editor
-- **Forensics** — Timeline + table view, filters, HMAC chain verification, detail drawer, anomaly detection, CSV/JSON export
-- **Compliance** — Framework assessments, evidence collection, sign-off workflow
-- **QA Checklist** — 15-step E2E validation with dual sign-off
-- **Usage & Billing** — Tier status, Stripe checkout/portal
-- **Admin** — User management, platform stats
+- **Overview**: Agent count, recent activity, health status
+- **Agents**: CRUD, key management, policy editor
+- **Forensics**: Timeline + table view, filters, HMAC chain verification, detail drawer, anomaly detection, CSV/JSON export
+- **Compliance**: Framework assessments, evidence collection, sign-off workflow
+- **QA Checklist**: 15-step E2E validation with dual sign-off
+- **Usage & Billing**: Tier status, Stripe checkout/portal
+- **Admin**: User management, platform stats
 
 ### 4. Landing Page
 
@@ -200,13 +200,13 @@ The `common` package is imported by both API and Gateway services.
 ### Defense in Depth (7 layers)
 
 ```
-Layer 1: Network        → HTTPS/TLS (GKE Ingress + Cloudflare)
-Layer 2: Headers        → HSTS, CSP, X-Frame-Options, etc.
-Layer 3: Auth           → Clerk JWT or API key (SHA-256 hashed)
-Layer 4: Rate limiting  → Per-IP (100/s) + per-key (60/s)
-Layer 5: Policy         → Fail-closed gateway enforcement
-Layer 6: Data           → Fernet encryption, RLS, PII sanitization
-Layer 7: Audit          → HMAC-SHA256 chain, append-only, tamper-evident
+Layer 1: Network       -> HTTPS/TLS (GKE Ingress + Cloudflare)
+Layer 2: Headers       -> HSTS, CSP, X-Frame-Options, etc.
+Layer 3: Auth          -> Clerk JWT or API key (SHA-256 hashed)
+Layer 4: Rate limiting -> Per-IP (100/s) + per-key (60/s)
+Layer 5: Policy        -> Fail-closed gateway enforcement
+Layer 6: Data          -> Fernet encryption, RLS, PII sanitization
+Layer 7: Audit         -> HMAC-SHA256 chain, append-only, tamper-evident
 ```
 
 ### Key Security Properties
@@ -214,29 +214,29 @@ Layer 7: Audit          → HMAC-SHA256 chain, append-only, tamper-evident
 | Property | Implementation |
 |----------|---------------|
 | Keys never stored in plaintext | SHA-256 hash only; raw key shown once at creation |
-| Fail-closed enforcement | Any error → DENY (gateway default) |
+| Fail-closed enforcement | Any error -> DENY (gateway default) |
 | Tamper-evident audit | HMAC-SHA256 chain; each entry hashes previous |
 | Credential encryption | Fernet (symmetric) with master key rotation |
 | Tenant isolation | Row-level security on user_id |
 | PII redaction | 12-field sanitizer on all logs |
 | Key rotation | 24-hour grace period; old key valid during overlap |
-| Circuit breaker | Prevents cascade failures (5 failures/60s → OPEN) |
+| Circuit breaker | Prevents cascade failures (5 failures/60s -> OPEN) |
 
 ---
 
 ## Database Schema
 
 ```
-users ──────────┐
-  │              │
-  │ 1:N          │ 1:N
-  ▼              ▼
+users ----------+
+  |              |
+  | 1:N          | 1:N
+  v              v
 agents        compliance_reports
-  │              │
-  ├── 1:N → agent_keys          compliance_results
-  ├── 1:N → policies               │
-  ├── 1:N → audit_log          compliance_checks
-  └── 1:N → upstream_credentials    │
+  |              |
+  +-- 1:N -> agent_keys         compliance_results
+  +-- 1:N -> policies              |
+  +-- 1:N -> audit_log         compliance_checks
+  +-- 1:N -> upstream_credentials   |
                                 compliance_frameworks
 qa_runs (user_id FK)
 ```
@@ -248,35 +248,38 @@ qa_runs (user_id FK)
 | Free | 5 | 2 | 2,000 | 1 | 30 days |
 | Pro ($79/mo) | 50 | 10 | 75,000 | 10 | 90 days |
 | Business ($299/mo) | 200 | 25 | 500,000 | 50 | 365 days |
-| Enterprise (custom) | ∞ | ∞ | ∞ | ∞ | ∞ |
+| Enterprise (custom) | unlimited | unlimited | unlimited | unlimited | unlimited |
 
 ---
 
 ## Infrastructure
 
 ```
-┌─────────────────────────────────────────────────┐
-│ GKE Autopilot (us-east1)                         │
-│  ├── ai-identity-api      (api.ai-identity.co)   │
-│  ├── ai-identity-gateway  (gateway.ai-identity.co)│
-│  └── K8s CronJobs         (email followups,      │
-│                             weekly cleanup)       │
-├──────────────────────────────────────────────────┤
-│ Vercel                                           │
-│  ├── dashboard.ai-identity.co (preview deploys)  │
-│  └── ai-identity.co          (landing page)      │
-├──────────────────────────────────────────────────┤
-│ Neon (Oregon)                                    │
-│  └── PostgreSQL (connection pooling, SSL)        │
-├──────────────────────────────────────────────────┤
-│ External Services                                │
-│  ├── Clerk       → JWT auth, SSO-ready           │
-│  ├── Stripe      → Subscriptions, checkout       │
-│  ├── Sentry      → Error monitoring (optional)   │
-│  ├── UptimeRobot → Health checks (HEAD /health)  │
-│  └── GitHub      → CI/CD (lint, test, build,     │
-│                    deploy via Cloud Build)        │
-└──────────────────────────────────────────────────┘
++--------------------------------------------------+
+| GKE Autopilot (us-east1)                         |
+|  +-- ai-identity-api     (api.ai-identity.co)    |
+|  +-- ai-identity-gateway (gateway.ai-identity.co)|
+|  +-- ai-identity-mandate (internal, :8003)       |
+|  +-- K8s CronJobs        (4: evidence anchor,    |
+|                           email followups,       |
+|                           user cleanup,          |
+|                           compliance export)     |
++--------------------------------------------------+
+| Vercel                                           |
+|  +-- dashboard.ai-identity.co (preview deploys)  |
+|  +-- ai-identity.co          (landing page)      |
++--------------------------------------------------+
+| Neon (Oregon)                                    |
+|  +-- PostgreSQL (connection pooling, SSL)        |
++--------------------------------------------------+
+| External Services                                |
+|  +-- Clerk       -> JWT auth, SSO-ready          |
+|  +-- Stripe      -> Subscriptions, checkout      |
+|  +-- Sentry     -> Error monitoring (optional)   |
+| +-- UptimeRobot -> Health checks (HEAD /health)  |
+|  +-- GitHub     -> CI/CD (lint, test, build,     |
+|                    deploy via Cloud Build)        |
++--------------------------------------------------+
 ```
 
 ---
@@ -284,19 +287,19 @@ qa_runs (user_id FK)
 ## CI/CD Pipeline
 
 ```
-PR opened → GitHub Actions:
-  ├── Python: ruff lint + format
-  ├── Python: pytest (SQLite)
-  ├── Dashboard: ESLint + Prettier + tsc
-  └── Dashboard: Vite build
+PR opened -> GitHub Actions:
+  +-- Python: ruff lint + format
+  +-- Python: pytest (SQLite)
+  +-- Dashboard: ESLint + Prettier + tsc
+  +-- Dashboard: Vite build
 
-Merge to main → GitHub Actions + Cloud Build deploy:
-  ├── API: Docker build → push to Artifact Registry → deploy to GKE
-  ├── Gateway: Docker build → push to Artifact Registry → deploy to GKE
-  └── Alembic migrations run as part of deploy
+Merge to main -> GitHub Actions + Cloud Build deploy:
+  +-- API: Docker build -> push to Artifact Registry -> deploy to GKE
+  +-- Gateway: Docker build -> push to Artifact Registry -> deploy to GKE
+  +-- Alembic migrations run as part of deploy
 
-Post-deploy → QA smoke test (optional):
-  └── 15-step E2E checklist via POST /api/v1/qa/run
+Post-deploy -> QA smoke test (optional):
+  +-- 15-step E2E checklist via POST /api/v1/qa/run
 ```
 
 ---

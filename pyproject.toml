@@ -1,19 +1,17 @@
 [project]
 name = "ai-identity"
 version = "0.2.0"
-description = "Identity, permissions, and guardrails for AI agents"
+description = "AI Identity public trust surface: offline verifier, SDKs, OCSF and CoSAI mappings"
 requires-python = ">=3.11"
 
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-exclude = ["alembic/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "TCH"]
 ignore = [
     "E501",   # line too long (handled by formatter)
-    "B008",   # function call in default argument (FastAPI Depends pattern)
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -23,12 +21,10 @@ ignore = [
 quote-style = "double"
 
 [tool.pytest.ini_options]
-testpaths = ["api/tests", "gateway/tests", "common/tests", "mandate/tests"]
-pythonpath = ["."]
-markers = [
-    "postgres: marks tests that require a Postgres database (deselect with '-m \"not postgres\"')",
-    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
-]
+# The platform test suites (api, gateway, common, mandate) live in the private
+# platform repository. This repository tests the public verifier CLI.
+testpaths = ["cli"]
+pythonpath = ["cli"]
 
 [tool.mypy]
 python_version = "3.11"

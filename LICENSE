@@ -2,13 +2,14 @@ AI Identity — License
 
 Copyright (c) 2026 AI Identity (jeff@ai-identity.co). All rights reserved.
 
-The AI Identity platform — including the API server (api/), gateway
-(gateway/), dashboard (dashboard/), Mandate Service (mandate/), shared
-platform libraries (common/), marketing site (landing-page/), and all other
-contents of this repository not listed below — is proprietary software. No
-license, express or implied, is granted to use, copy, modify, or distribute
-it. The repository is public so the code can be read and audited, not so it
-can be reused.
+The AI Identity platform (API server, gateway, dashboard, Mandate Service,
+and shared platform libraries) is proprietary software. As of September
+2026 it is developed in a private repository. Platform source that remains
+in this repository's commit history from before that date, the marketing
+site (landing-page/), and all other contents of this repository not listed
+below are likewise proprietary. No license, express or implied, is granted
+to use, copy, modify, or distribute them. The repository is public so the
+verification surface can be read and audited, not so it can be reused.
 
 VERIFICATION TOOLS AND INTEGRATION SURFACES ARE PERMISSIVELY LICENSED.
 

@@ -116,8 +116,8 @@ if [ -n "$violations" ]; then
   printf '%s' "$violations"
   echo
   echo "  Path hits:  keep this material outside the repo (private/ is gitignored)."
-  echo "  Email hits: use a role alias, or the hash backstop in"
-  echo "              common/queries/user_cleanup.py."
+  echo "  Email hits: use a role alias. The SHA-256 backstop for protected"
+  echo "              addresses lives in the private platform repository."
   echo
   echo "  Context: docs/security/public-repo-exposure-remediation.md"
   exit 1

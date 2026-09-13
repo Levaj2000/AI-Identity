@@ -13,7 +13,7 @@ import { Resend } from "resend";
  */
 
 const SERVICES = new Map([
-  ["intro-call", "Intro Call — $50"],
+  ["intro-call", "Intro Call — $150"],
   ["evidence-review", "Evidence Architecture Review — $750"],
   ["build-advisory", "Verifiable Build Advisory — $1,500/month"],
   ["verifier-enablement", "Verifier Enablement — $2,500"],
@@ -51,6 +51,7 @@ type ServiceRequestBody = {
   budget?: string;
   description?: string;
   heardAbout?: string;
+  website?: string;
   paidAcknowledged?: boolean;
 };
 
@@ -76,7 +77,15 @@ export async function POST(req: Request) {
   const budget = clean(body.budget, 60);
   const description = clean(body.description, 4000);
   const heardAbout = clean(body.heardAbout, 300);
+  const honeypot = clean(body.website, 200);
   const paidAcknowledged = body.paidAcknowledged === true;
+
+  // Honeypot: the "website" field is invisible to humans and never filled by
+  // the form. A populated value is a bot. Answer exactly as a delivered
+  // request would so the sender cannot tell it was dropped.
+  if (honeypot) {
+    return NextResponse.json({ ok: true, delivered: true }, { status: 200 });
+  }
 
   if (!name || !emailRegex.test(email) || !company || !description) {
     return NextResponse.json({ error: "missing_required" }, { status: 400 });
@@ -132,7 +141,6 @@ export async function POST(req: Request) {
         `What they need:`,
         description,
         ``,
-        `IP (raw):   ${ip}`,
         `Timestamp:  ${now.toISOString()}`,
         ``,
         `Reply directly to this email to reach the requester.`,
