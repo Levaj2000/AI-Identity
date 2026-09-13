@@ -357,7 +357,7 @@ export default function HomeContent() {
               className="text-lg md:text-xl max-w-2xl mx-auto mb-10"
               style={{ color: "rgba(213,219,230,0.7)", letterSpacing: "-0.32px" }}
             >
-              Forensic-grade audit trails for autonomous AI. Replay any incident, prove every action, and hand auditors evidence that verifies offline — no vendor trust required.
+              Forensic-grade audit trails for autonomous AI. Replay any incident, prove every action, and hand auditors evidence that verifies offline — no vendor trust required. Anyone can emit an audit record; what&apos;s hard is evidence that holds up under scrutiny.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -426,6 +426,24 @@ export default function HomeContent() {
 
       {/* ── Built on open standards — OCSF + CoSAI WS4 (strongest, most differentiated trust signal) ── */}
       <StandardsStrip />
+
+      {/* ── California is creating the verifier market ── */}
+      <section className="w-full py-16 px-6 border-b border-[rgba(216,231,242,0.05)]">
+        <div className="max-w-[900px] mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[rgb(166,218,255)]/10 border border-[rgb(166,218,255)]/20 rounded-full mb-6">
+            <span className="text-[rgb(166,218,255)] text-sm font-medium">California SB 813 &amp; AB 1405</span>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-medium text-white mb-4 leading-[1.2]">
+            California is creating the verifier market. We arm the verifiers.
+          </h2>
+          <p className="text-sm text-gray-400 leading-relaxed max-w-[680px] mx-auto">
+            Signed in September 2026, California&apos;s framework puts independent AI verification
+            on the path from voluntary to mandatory — with ten-year evidence retention and
+            disclosure of material gaps. Every verifier needs infrastructure that holds up.
+            We build verifiable systems; independent auditors verify them.
+          </p>
+        </div>
+      </section>
 
       {/* ── Backed by — Google for Startups Cloud Program ── */}
       <GoogleForStartupsStrip />

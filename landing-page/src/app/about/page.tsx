@@ -142,6 +142,51 @@ export default function About() {
 
       <div className="max-w-[900px] mx-auto px-6 md:px-12"><div className="h-px bg-white/5" /></div>
 
+      {/* Written into the standard */}
+      <section className="py-16 px-6 md:px-12">
+        <div className="max-w-[900px] mx-auto">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Written into the standard</h2>
+          <p className="text-sm text-gray-400 leading-relaxed mb-6 max-w-[760px]">
+            AI Identity doesn&apos;t just implement open standards — we write them. Founder Jeff
+            Leva&apos;s agent-attestation work shipped in the OCSF 1.9.0 release, and he authors
+            the OCSF ↔ OpenTelemetry audit crosswalk while contributing to CoSAI WS4 (OASIS) on
+            agentic identity. When regulations assume rigorous evidence exists, the format they
+            assume is the one we authored.
+          </p>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+              <div className="text-[rgb(166,218,255)] font-mono text-sm mb-2">OCSF 1.9.0</div>
+              <h3 className="text-base font-semibold text-white mb-2">Agent attestation, merged</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Authored PRs{" "}
+                <a href="https://github.com/ocsf/ocsf-schema/pull/1661" target="_blank" rel="noopener noreferrer" className="text-[rgb(166,218,255)] hover:underline">#1661</a>,{" "}
+                <a href="https://github.com/ocsf/ocsf-schema/pull/1662" target="_blank" rel="noopener noreferrer" className="text-[rgb(166,218,255)] hover:underline">#1662</a>, and{" "}
+                <a href="https://github.com/ocsf/ocsf-schema/pull/1684" target="_blank" rel="noopener noreferrer" className="text-[rgb(166,218,255)] hover:underline">#1684</a>{" "}
+                — attestation, record integrity, and fingerprint encoding — all merged upstream.
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+              <div className="text-[rgb(166,218,255)] font-mono text-sm mb-2">OTEL CROSSWALK</div>
+              <h3 className="text-base font-semibold text-white mb-2">Audit evidence, interoperable</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Author of the OCSF ↔ OpenTelemetry audit crosswalk, so agent evidence interoperates
+                with the broader security ecosystem instead of living in a vendor silo.
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+              <div className="text-[rgb(166,218,255)] font-mono text-sm mb-2">CoSAI WS4</div>
+              <h3 className="text-base font-semibold text-white mb-2">Agentic identity, at the table</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Contributing member of the Coalition for Secure AI&apos;s agentic-systems workstream
+                (OASIS) — shaping how the industry defines agent identity and trust.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="max-w-[900px] mx-auto px-6 md:px-12"><div className="h-px bg-white/5" /></div>
+
       {/* Problems we solve */}
       <section className="py-16 px-6 md:px-12">
         <div className="max-w-[900px] mx-auto">
