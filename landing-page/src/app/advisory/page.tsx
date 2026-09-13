@@ -195,19 +195,16 @@ export default function Advisory() {
           <div className="bg-[rgb(166,218,255)]/5 border border-[rgb(166,218,255)]/20 rounded-2xl p-8 text-center">
             <h3 className="text-xl font-bold text-white mb-3">Start a conversation</h3>
             <p className="text-sm text-gray-400 mb-6 max-w-[540px] mx-auto">
-              Email{" "}
-              <a href="mailto:jeff@ai-identity.co" className="text-[rgb(166,218,255)] hover:underline">
-                jeff@ai-identity.co
-              </a>{" "}
-              with two or three sentences about your situation — what your agents do, and the
-              question you can&apos;t currently answer. I&apos;ll reply with an honest read on
-              whether I can help, and what I&apos;d look at first.
+              Tell us about your situation — what your agents do, and the question you
+              can&apos;t currently answer — and we&apos;ll reply with an honest read on
+              whether we can help, and what we&apos;d look at first. All advisory
+              engagements are paid services.
             </p>
-            <a
-              href="mailto:jeff@ai-identity.co?subject=Advisory%20inquiry"
+            <Link
+              href="/request-services"
               className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors"
             >
-              Email Jeff
+              Request services
               <svg
                 width="16"
                 height="16"
@@ -221,7 +218,16 @@ export default function Advisory() {
               >
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
-            </a>
+            </Link>
+            <p className="mt-4 text-sm text-gray-500">
+              Prefer email?{" "}
+              <a
+                href="mailto:jeff@ai-identity.co?subject=Advisory%20inquiry"
+                className="text-[rgb(166,218,255)] hover:underline"
+              >
+                jeff@ai-identity.co
+              </a>
+            </p>
           </div>
         </div>
       </section>
