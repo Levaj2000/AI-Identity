@@ -13,7 +13,7 @@ import { Resend } from "resend";
  */
 
 const SERVICES = new Map([
-  ["intro-call", "Intro Call — $50"],
+  ["intro-call", "Intro Call — $150"],
   ["evidence-review", "Evidence Architecture Review — $750"],
   ["build-advisory", "Verifiable Build Advisory — $1,500/month"],
   ["verifier-enablement", "Verifier Enablement — $2,500"],
@@ -132,7 +132,6 @@ export async function POST(req: Request) {
         `What they need:`,
         description,
         ``,
-        `IP (raw):   ${ip}`,
         `Timestamp:  ${now.toISOString()}`,
         ``,
         `Reply directly to this email to reach the requester.`,

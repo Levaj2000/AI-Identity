@@ -176,6 +176,10 @@ Key rotation supports a 24-hour grace period — both old and new keys work duri
 - **CI/CD**: GitHub Actions, Ruff (lint + format), pytest (1,000+ tests)
 - **Deployment**: GKE Autopilot (API, Gateway, Mandate Service), Vercel (Dashboard, Landing Page), GitHub Actions CI/CD with Cloud Build
 
+## Support and advisory
+
+Bugs in the verifier, SDKs, or mapping documents go to GitHub issues. Help with your own system is a paid advisory engagement; request one at [ai-identity.co/request-services](https://www.ai-identity.co/request-services). See [SUPPORT.md](SUPPORT.md).
+
 ## License
 
 **Platform: proprietary** — the API, gateway, dashboard, Mandate Service, and shared libraries are all rights reserved. The repository is public so the code can be audited, not reused.
