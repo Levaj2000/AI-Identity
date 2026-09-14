@@ -292,12 +292,12 @@ export default function DocsContent() {
                 API Reference &rarr;
               </a>
               <a
-                href="/request-services"
+                href="https://dashboard.ai-identity.co"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block px-3 py-1.5 text-sm text-gray-500 hover:text-[rgb(166,218,255)] transition-colors"
               >
-                Request services &rarr;
+                Dashboard &rarr;
               </a>
             </div>
           </nav>

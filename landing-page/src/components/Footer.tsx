@@ -15,6 +15,7 @@ const productLinks = [
   { label: "Architecture", path: "/architecture" },
   { label: "Documentation", path: "/docs" },
   { label: "EU AI Act Checklist", path: "/eu-ai-act-checklist" },
+  { label: "Dashboard", path: "https://dashboard.ai-identity.co", external: true },
 ];
 
 const solutionLinks = [

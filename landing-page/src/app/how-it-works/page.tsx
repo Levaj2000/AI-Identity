@@ -157,7 +157,7 @@ response = client.chat.completions.create(
               </Link>
             </div>
             <p className="mt-5 text-xs text-gray-500">
-              Building today? <a href="/request-services" className="text-gray-300 hover:text-[rgb(166,218,255)] underline underline-offset-2">Request services &rarr;</a>
+              Building today? <a href="https://dashboard.ai-identity.co" className="text-gray-300 hover:text-[rgb(166,218,255)] underline underline-offset-2">Spin up a free dev sandbox →</a>
             </p>
           </div>
         </div>

@@ -201,10 +201,10 @@ export default function Nav() {
             </div>
           </div>
           <a
-            href="/request-services"
+            href="https://dashboard.ai-identity.co"
             className="text-sm text-[rgba(213,219,230,0.7)] hover:text-white transition-colors"
           >
-            Request services
+            Dashboard
           </a>
         </div>
 
@@ -284,10 +284,10 @@ export default function Nav() {
             </div>
           </div>
           <a
-            href="/request-services"
+            href="https://dashboard.ai-identity.co"
             className="block text-sm py-2 text-[rgba(213,219,230,0.7)]"
           >
-            Request services
+            Dashboard
           </a>
           <Link
             href="/contact?intent=design-partner"
