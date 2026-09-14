@@ -390,8 +390,8 @@ export default function HomeContent() {
             {/* Dev self-serve secondary link */}
             <p className="mt-3 text-xs text-[rgba(213,219,230,0.35)]">
               Building today?{" "}
-              <a href="https://dashboard.ai-identity.co" className="text-[rgba(213,219,230,0.6)] hover:text-[rgb(166,218,255)] underline underline-offset-2">
-                Start a free dev sandbox →
+              <a href="/request-services" className="text-[rgba(213,219,230,0.6)] hover:text-[rgb(166,218,255)] underline underline-offset-2">
+                Request services &rarr;
               </a>
             </p>
 
@@ -817,10 +817,10 @@ export default function HomeContent() {
                 SOC 2, EU AI Act, NIST, and GDPR compliance monitoring with automated assessments and one-click reports.
               </p>
               <a
-                href="https://dashboard.ai-identity.co/demo"
+                href="/request-services"
                 className="inline-flex items-center gap-1.5 text-xs text-[rgb(166,218,255)] hover:underline"
               >
-                Try the live demo
+                Request a walkthrough
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
@@ -854,10 +854,10 @@ export default function HomeContent() {
           </div>
           <div className="text-center mt-6">
             <a
-              href="https://dashboard.ai-identity.co/demo"
+              href="/request-services"
               className="inline-flex items-center gap-2 text-sm text-[rgb(166,218,255)] hover:underline"
             >
-              Try it yourself — Interactive API Playground
+              Request a walkthrough
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
@@ -1308,8 +1308,8 @@ export default function HomeContent() {
 
           <p className="text-xs text-[rgba(213,219,230,0.4)] mb-12">
             Building today?{" "}
-            <a href="https://dashboard.ai-identity.co" className="text-[rgba(213,219,230,0.6)] hover:text-[rgb(166,218,255)] underline underline-offset-2">
-              Spin up a free dev sandbox →
+            <a href="/request-services" className="text-[rgba(213,219,230,0.6)] hover:text-[rgb(166,218,255)] underline underline-offset-2">
+              Request services &rarr;
             </a>
           </p>
 

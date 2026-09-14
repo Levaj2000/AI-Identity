@@ -414,8 +414,8 @@ export default function EUAIActChecklistContent() {
               )}
 
               <div className="border-t border-white/5 pt-6">
-                <a href="https://dashboard.ai-identity.co" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
-                  AI Identity can help close these gaps. Get started free
+                <a href="/request-services" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
+                  AI Identity can help close these gaps. Request services
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                 </a>
               </div>
@@ -500,12 +500,12 @@ export default function EUAIActChecklistContent() {
                 with less manual effort.
               </p>
               <div className="flex items-center justify-center gap-4 flex-wrap">
-                <a href="https://dashboard.ai-identity.co" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
-                  Get Started Free
+                <a href="/request-services" className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
+                  Request services
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                 </a>
-                <a href="https://dashboard.ai-identity.co/demo" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
-                  Try the Live Demo
+                <a href="/request-services" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
+                  Request a walkthrough
                 </a>
               </div>
             </div>

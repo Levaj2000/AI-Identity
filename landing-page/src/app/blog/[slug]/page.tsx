@@ -165,10 +165,10 @@ export default async function BlogPost({
             Get started with AI Identity — deploy in 15 minutes, not 15 weeks.
           </p>
           <a
-            href="https://dashboard.ai-identity.co"
+            href="/request-services"
             className="inline-flex px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors"
           >
-            Get Started Free &rarr;
+            Request services &rarr;
           </a>
         </div>
 

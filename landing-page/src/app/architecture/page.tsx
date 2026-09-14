@@ -265,10 +265,10 @@ export default function Architecture() {
       <Section>
         <div className="text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Ready to see it in action?</h2>
-          <p className="text-sm text-gray-400 max-w-[480px] mx-auto mb-8">Walk through a live demo, or verify a signed Case File yourself — no account, no trust required.</p>
+          <p className="text-sm text-gray-400 max-w-[480px] mx-auto mb-8">Request a walkthrough, or verify a signed Case File yourself — no account, no trust required.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="https://dashboard.ai-identity.co/demo" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
-              Live Demo
+            <a href="/request-services" className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors">
+              Request a walkthrough
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
             </a>
             <a href="/forensics" className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-white/20 text-white font-semibold rounded-xl hover:border-[rgb(166,218,255)]/40 hover:bg-[rgb(166,218,255)]/[0.05] transition-all">
