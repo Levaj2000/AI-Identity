@@ -5,6 +5,11 @@
       "description": "The AI capability - tool, resource, or prompt - invoked in the operation described by the event.",
       "type": "ai_tool"
     },
+    "baseline_fingerprint": {
+      "caption": "Baseline Fingerprint",
+      "description": "The fingerprint of the capability's declared contract as recorded at registration or approval time, by reference rather than by value. Compared against the contract presented at invocation to detect a declared contract that changed after approval.",
+      "type": "fingerprint"
+    },
     "cache_scope": {
       "caption": "Cache Scope",
       "description": "The cache scope, normalized to the caption of the <code>cache_scope_id</code> value. In the case of 'Other', it is defined by the event source. See specific usage.",
@@ -31,6 +36,11 @@
       "caption": "Cache TTL",
       "description": "The declared freshness window of a cacheable result, in milliseconds.",
       "type": "long_t"
+    },
+    "desc_fingerprint": {
+      "caption": "Description Fingerprint",
+      "description": "The fingerprint identifying the declared natural-language description or instructions of a capability, by reference rather than by value. The <code>ai_tool</code> object carries no <code>desc</code> attribute; this fingerprints the model-visible manifest description presented at discovery. Descriptions are ingested into agent context at discovery and are therefore part of the capability's trust surface.",
+      "type": "fingerprint"
     },
     "input_schema_fingerprint": {
       "caption": "Input Schema Fingerprint",

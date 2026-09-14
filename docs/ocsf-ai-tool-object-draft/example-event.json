@@ -76,6 +76,20 @@
       "serialization": "JCS",
       "value": "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730"
     },
+    "desc_fingerprint": {
+      "algorithm_id": 3,
+      "algorithm": "SHA-256",
+      "encoding_id": 1,
+      "value": "3e0c9a1f5d2b7c8e4a6f1b9d0c2e8a7f5b3d1c9e7a6f4b2d0c8e6a4f2b0d8c6e"
+    },
+    "baseline_fingerprint": {
+      "algorithm_id": 3,
+      "algorithm": "SHA-256",
+      "encoding_id": 1,
+      "serialization_id": 2,
+      "serialization": "JCS",
+      "value": "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c"
+    },
     "cache_scope_id": 2,
     "cache_scope": "Private",
     "cache_ttl": 300000
