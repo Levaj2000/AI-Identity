@@ -18,8 +18,8 @@ const tiers = [
       "Audit logs (30-day retention)",
       "1 upstream credential",
     ],
-    cta: "Get Started Free",
-    ctaHref: "https://dashboard.ai-identity.co",
+    cta: "Request services",
+    ctaHref: "/request-services",
     featured: false,
   },
   {
@@ -38,8 +38,8 @@ const tiers = [
       "Gateway policy enforcement",
       "Basic SSO",
     ],
-    cta: "Start Pro Trial",
-    ctaHref: "https://dashboard.ai-identity.co",
+    cta: "Request services",
+    ctaHref: "/request-services",
     featured: true,
   },
   {
@@ -59,8 +59,8 @@ const tiers = [
       "Team roles & permissions",
       "Agent-level role assignments",
     ],
-    cta: "Start Business Trial",
-    ctaHref: "https://dashboard.ai-identity.co",
+    cta: "Request services",
+    ctaHref: "/request-services",
     featured: false,
   },
   {
@@ -356,12 +356,12 @@ function UsageEstimator() {
             Heavy QA or forensics runs? Overages billed at ~$1 per 1k extra
             requests.{" "}
             <a
-              href="https://dashboard.ai-identity.co"
+              href="/request-services"
               className="text-[rgb(166,218,255)] hover:underline"
             >
-              Try the dashboard
+              Request services
             </a>{" "}
-            to simulate your exact volume.
+            and we will size your exact volume with you.
           </p>
         </div>
       </div>

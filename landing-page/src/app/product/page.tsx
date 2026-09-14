@@ -11,8 +11,8 @@ export const metadata: Metadata = generatePageMetadata({
   path: "/product",
 });
 
-const DEMO_URL = "https://dashboard.ai-identity.co/demo";
-const DASHBOARD_URL = "https://dashboard.ai-identity.co";
+const DEMO_URL = "/request-services";
+const DASHBOARD_URL = "/request-services";
 
 type Step = {
   n: string;
@@ -316,10 +316,7 @@ export default function ProductPage() {
             </div>
           </div>
           <p className="text-xs text-center text-[rgba(213,219,230,0.55)] mt-3">
-            AI Identity dashboard overview — live from{" "}
-            <a href={DASHBOARD_URL} className="text-[rgb(166,218,255)] hover:underline">
-              dashboard.ai-identity.co
-            </a>
+            AI Identity dashboard overview
           </p>
         </div>
       </section>

@@ -229,10 +229,10 @@ export default function CompareOpal() {
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <a
-                href="https://dashboard.ai-identity.co"
+                href="/request-services"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors"
               >
-                Start Free Trial
+                Request services
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
