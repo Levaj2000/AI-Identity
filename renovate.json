@@ -10,6 +10,7 @@
   "prHourlyLimit": 2,
   "labels": ["dependencies"],
   "configMigration": true,
+  "automergeStrategy": "squash",
   "osvVulnerabilityAlerts": true,
   "pip-compile": {
     "managerFilePatterns": [
@@ -21,25 +22,29 @@
       "description": "Keep every workflow action SHA-pinned; Renovate updates the digest and the version comment together",
       "matchManagers": ["github-actions"],
       "pinDigests": true,
-      "groupName": "github actions"
+      "groupName": "github actions",
+      "automerge": true
     },
     {
       "description": "Weekly batch: Python non-major (api/gateway/mandate locks regenerate via the uv pip compile header)",
       "matchManagers": ["pip_requirements", "pip-compile", "pep621"],
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "python non-major"
+      "groupName": "python non-major",
+      "automerge": true
     },
     {
       "description": "Weekly batch: dashboard + landing-page non-major",
       "matchManagers": ["npm"],
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "npm non-major"
+      "groupName": "npm non-major",
+      "automerge": true
     },
     {
       "description": "Weekly batch: cpex-ocsf-audit crates non-major",
       "matchManagers": ["cargo"],
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "rust non-major"
+      "groupName": "rust non-major",
+      "automerge": true
     },
     {
       "description": "cpex-ocsf-audit holds base64 at 0.22: praxis-proxy/policy is on 0.22 (jsonwebtoken 11 requires it) and the crate is copied into that tree; see the comment in its Cargo.toml",
@@ -48,9 +53,21 @@
       "allowedVersions": "<0.23"
     },
     {
-      "description": "Majors always ride solo so each gets its own review",
+      "description": "Digest and pin updates automerge once the required checks are green",
+      "matchUpdateTypes": ["digest", "pin", "pinDigest"],
+      "automerge": true
+    },
+    {
+      "description": "praxis-policy-core digest bumps never automerge: the pin is held deliberately (#536) and the lockfile needs the cpex sibling checkout to regenerate",
+      "matchManagers": ["cargo"],
+      "matchPackageNames": ["praxis-policy-core"],
+      "automerge": false
+    },
+    {
+      "description": "Majors always ride solo and never automerge, so each gets its own review",
       "matchUpdateTypes": ["major"],
-      "groupName": null
+      "groupName": null,
+      "automerge": false
     }
   ]
 }
