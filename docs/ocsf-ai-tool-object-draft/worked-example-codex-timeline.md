@@ -7,7 +7,9 @@
 > `cab6dc0` (`ai_tool`, `ai_operation` profile) and `main` @ `40a1511`
 > (`api_activity` 6003, `process_activity` 1007, `script_activity` 1009,
 > `ai_agent`, `script`, `api`, `metadata`), schema version `1.10.0-dev`.
-> This file doubles as the ready-to-post PR comment.
+> This file doubles as the ready-to-post PR comment. The PR head moved to
+> `efd60d1` on 2026-09-10, adding `desc_fingerprint` and `baseline_fingerprint`
+> to `ai_tool`; no shape used below changed.
 
 ---
 

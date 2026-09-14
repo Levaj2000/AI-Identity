@@ -4,7 +4,9 @@
 > the [decision log](README.md); the accompanying `objects/`, `profiles/`, and
 > `dictionary-additions.json` files are the proposal in PR-ready form, verified
 > against `ocsf-schema` `main` (`1.10.0-dev`). The v1 → v2 diff of this document
-> is the second commit on this branch.
+> is the second commit on this branch. 2026-09-10: `desc_fingerprint` and
+> `baseline_fingerprint` added on the PR (commit `efd60d1`) following review;
+> this directory tracks that head.
 
 ## Summary
 
@@ -62,6 +64,8 @@ are no anonymous inline objects.
 | `is_open_world` | Optional | Boolean | Declared `openWorldHint`. Self-declared and unverified. |
 | `input_schema_fingerprint` | Optional | `fingerprint` object *(reused)* | The declared input contract by reference: a reproducible fingerprint (`algorithm_id`, `encoding_id`, `serialization_id` — use `JCS` for canonical JSON), not the schema body. |
 | `output_schema_fingerprint` | Optional | `fingerprint` object *(reused)* | The declared structured-output contract, by reference. |
+| `desc_fingerprint` | Optional | `fingerprint` object *(reused)* | The declared natural-language description (the model-visible docstring or manifest text presented at discovery), by reference. The object carries no `desc` body. Detects description poisoning, where the description changes and the schema does not. |
+| `baseline_fingerprint` | Optional | `fingerprint` object *(reused)* | The contract fingerprint recorded at registration or approval time. Carries the approved value, not a verdict; consumers diff it against the fingerprints presented at invocation to detect a contract that changed after approval. |
 | `uri` | Optional | URL *(reused)* | For `type_id = 2` (Resource): the resource URI. |
 | `mime_type` | Optional | String *(reused)* | For `type_id = 2` (Resource): the resource MIME type. |
 | `version` | Optional | String *(reused)* | The capability's advertised version, when versioned. |
@@ -141,6 +145,13 @@ answered today:
   Reusing OCSF's `fingerprint` object (rather than an opaque string) makes the
   fingerprint reproducible: `serialization_id: JCS` pins the canonicalization,
   so independent producers converge on the same value.
+- **`desc_fingerprint` / `baseline_fingerprint`** (added 2026-09-10 from PR
+  review). A schema fingerprint alone misses description poisoning, where the
+  text the model reads is altered and the JSON Schema is not; `desc_fingerprint`
+  covers that surface by reference. And a fingerprint with nothing to compare
+  against does not detect mutation: `baseline_fingerprint` carries the
+  approval-time value in the event so a consumer can diff it against the
+  contract presented at invocation. Both carry values, not verdicts.
 - **`transaction_uid`.** Correlates a call with its result across two events at
   the capability layer (distinct from `api.request.uid`, which is
   transport-scoped), while `uid` stays what `_entity` semantics say it is: the

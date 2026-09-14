@@ -1,5 +1,5 @@
 diff --git a/dictionary.json b/dictionary.json
-index 0546ca6..7de0118 100644
+index 505ab09..cb71503 100644
 --- a/dictionary.json
 +++ b/dictionary.json
 @@ -242,6 +242,11 @@
@@ -14,7 +14,19 @@ index 0546ca6..7de0118 100644
      "aircraft": {
        "caption": "Aircraft",
        "description": "The Aircraft object represents any aircraft or otherwise airborne asset such as an unmanned system, airplane, balloon, spacecraft, or otherwise. The Aircraft object is intended to normalized data captured or otherwise logged from active radar, passive radar, multi-spectral systems, or the Automatic Dependant Broadcast - Surveillance (ADS-B), and/or Mode S systems.",
-@@ -827,6 +832,33 @@
+@@ -612,6 +617,11 @@
+       "description": "The base score as reported by the event source. See specific usage.",
+       "type": "float_t"
+     },
++    "baseline_fingerprint": {
++      "caption": "Baseline Fingerprint",
++      "description": "The fingerprint of the capability's declared contract as recorded at registration or approval time, by reference rather than by value. Compared against the contract presented at invocation to detect a declared contract that changed after approval.",
++      "type": "fingerprint"
++    },
+     "baselines": {
+       "caption": "Baselines",
+       "description": "A list of baseline measurements or normal behavior patterns used as reference points for comparison and anomaly detection. See specific usage.",
+@@ -827,6 +837,33 @@
        "description": "The number of bytes sent from the source to the destination.",
        "type": "long_t"
      },
@@ -48,7 +60,19 @@ index 0546ca6..7de0118 100644
      "campaign": {
        "caption": "Campaign",
        "description": "The campaign object describes details about the campaign that was the source of the activity.",
-@@ -3583,6 +3615,11 @@
+@@ -2132,6 +2169,11 @@
+       "description": "The description that pertains to the object or event. See specific usage.",
+       "type": "string_t"
+     },
++    "desc_fingerprint": {
++      "caption": "Description Fingerprint",
++      "description": "The fingerprint identifying the declared natural-language description or instructions of a capability, by reference rather than by value. The <code>ai_tool</code> object carries no <code>desc</code> attribute; this fingerprints the model-visible manifest description presented at discovery. Descriptions are ingested into agent context at discovery and are therefore part of the capability's trust surface.",
++      "type": "fingerprint"
++    },
+     "desktop_display": {
+       "caption": "Desktop Display",
+       "description": "The desktop display affiliated with the event",
+@@ -3583,6 +3625,11 @@
          }
        }
      },
@@ -60,7 +84,7 @@ index 0546ca6..7de0118 100644
      "install_state": {
        "caption": "Install State",
        "description": "The install state, normalized to the caption of install_state_id. In the case of 'Other', it is defined by the event source.",
-@@ -3732,6 +3769,11 @@
+@@ -3732,6 +3779,11 @@
        "description": "Indicates if the entity was deleted. See specific usage.",
        "type": "boolean_t"
      },
@@ -72,7 +96,7 @@ index 0546ca6..7de0118 100644
      "is_directed": {
        "caption": "Directed",
        "description": "Indicates if the entity has directionality. See specific usage.",
-@@ -3772,6 +3814,11 @@
+@@ -3772,6 +3824,11 @@
        "description": "This attribute prevents the cookie from being accessed via JavaScript.",
        "type": "boolean_t"
      },
@@ -84,7 +108,7 @@ index 0546ca6..7de0118 100644
      "is_locked": {
        "caption": "Locked",
        "description": "Indicates if the entity is locked. See specific usage.",
-@@ -3807,6 +3854,11 @@
+@@ -3807,6 +3864,11 @@
        "description": "Indicates whether synchronization with an on-premises directory service is enabled. For example, Microsoft Entra Connect.",
        "type": "boolean_t"
      },
@@ -96,7 +120,7 @@ index 0546ca6..7de0118 100644
      "is_personal": {
        "caption": "Personal Device",
        "description": "The event occurred on a personal device.",
-@@ -4923,6 +4975,11 @@
+@@ -4980,6 +5042,11 @@
        "description": "The alternate identifier for an entity's unique identifier. For example, its Active Directory OU DN or AWS OU ID.",
        "type": "string_t"
      },
@@ -108,7 +132,7 @@ index 0546ca6..7de0118 100644
      "overall_score": {
        "caption": "Overall Score",
        "description": "The overall score as reported by the event source. See specific usage.",
-@@ -7061,6 +7118,11 @@
+@@ -7118,6 +7185,11 @@
        "description": "The target of the event or object. See specific usage.",
        "type": "string_t"
      },
@@ -120,7 +144,7 @@ index 0546ca6..7de0118 100644
      "tcp_flags": {
        "caption": "TCP Flags",
        "description": "The network connection TCP header flags (i.e., control bits).",
-@@ -7324,6 +7386,28 @@
+@@ -7381,6 +7453,28 @@
        "description": "The event transmission time from one device to another.  See specific usage.",
        "type": "timestamp_t"
      },
@@ -149,7 +173,7 @@ index 0546ca6..7de0118 100644
      "tree_uid": {
        "caption": "Tree UID",
        "description": "The tree id is a unique SMB identifier which represents an open connection to a share.",
-@@ -7996,4 +8080,4 @@
+@@ -8053,4 +8147,4 @@
        }
      }
    }
@@ -158,16 +182,20 @@ index 0546ca6..7de0118 100644
 +}
 diff --git a/objects/ai_tool.json b/objects/ai_tool.json
 new file mode 100644
-index 0000000..e686cbb
+index 0000000..2965d76
 --- /dev/null
 +++ b/objects/ai_tool.json
-@@ -0,0 +1,202 @@
+@@ -0,0 +1,210 @@
 +{
 +  "caption": "AI Tool",
 +  "description": "The AI Tool object describes a callable capability invoked by or on behalf of an AI system: a tool, a resource, or a prompt, in the sense of the Model Context Protocol (MCP) primitives. It records the invariant, advertised description of the capability - its identity, kind, provenance, declared contracts, and declared safety hints - not the per-call argument values or results, which are carried by the transport objects (e.g., <code>api.request.data</code> / <code>api.response.data</code>). The object is protocol-neutral: MCP is the motivating binding, but a framework-native function tool or a model provider's built-in tool populates the same shape, omitting the MCP-specific attributes. Distinguished from the <code>product</code> object, which describes the security product that generated the telemetry.",
 +  "extends": "_entity",
 +  "name": "ai_tool",
 +  "attributes": {
++    "baseline_fingerprint": {
++      "description": "A fingerprint of the capability's declared contract as recorded at registration or approval time, identifying the approved contract version without embedding the contract body in the event. Compared against the contract fingerprints presented at invocation to detect a declared contract that changed after approval, such as supply-chain \"rug pull\" changes. Carries the approved value rather than a match verdict; consumers diff, the object does not assess.",
++      "requirement": "optional"
++    },
 +    "cache_scope": {
 +      "description": "The declared cache scope, normalized to the caption of <code>cache_scope_id</code>. In the case of <code>Other</code>, it is defined by the event source.",
 +      "requirement": "optional"
@@ -196,6 +224,10 @@ index 0000000..e686cbb
 +    },
 +    "cache_ttl": {
 +      "description": "The declared freshness window for this capability's results, in milliseconds, per the MCP <code>ttlMs</code> field. Bounds how long a cached result was treated as valid by the consuming system.",
++      "requirement": "optional"
++    },
++    "desc_fingerprint": {
++      "description": "A fingerprint of the capability's declared natural-language description or instructions (e.g., the tool docstring or manifest description presented at discovery), identifying the description version without embedding the description body in the event. The object carries no <code>desc</code> attribute; this fingerprints the model-visible description by reference. Enables detecting description poisoning, where the description is altered without any schema change.",
 +      "requirement": "optional"
 +    },
 +    "input_schema_fingerprint": {
@@ -243,7 +275,7 @@ index 0000000..e686cbb
 +      "requirement": "optional"
 +    },
 +    "source_id": {
-+      "description": "The normalized identifier of the mechanism through which the capability was provided to the AI system. Orthogonal to <code>type_id</code>, which is the kind of primitive: a <code>Tool</code> may be sourced via MCP, via framework-native function calling, or as a model provider's built-in.",
++      "description": "The normalized identifier of the mechanism through which the capability was provided to the AI system. Orthogonal to <code>type_id</code>, which is the kind of primitive: a <code>Tool</code> may be sourced via MCP, via framework-native function calling, or as a model provider's built-in. In the case of 'Other', it is defined by the event source and carried by the <code>source</code> attribute.",
 +      "requirement": "recommended",
 +      "enum": {
 +        "0": {
@@ -308,7 +340,7 @@ index 0000000..e686cbb
 +    },
 +    "type": {
 +      "caption": "Tool Type",
-+      "description": "The kind of capability primitive, normalized to the caption of the <code>type_id</code> value.",
++      "description": "The kind of capability primitive, normalized to the caption of the <code>type_id</code> value. In the case of 'Other', it is defined by the event source.",
 +      "requirement": "optional"
 +    },
 +    "type_id": {

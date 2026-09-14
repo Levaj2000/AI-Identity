@@ -9,6 +9,11 @@ attachment from `profiles/ai_operation.json`, dictionary collisions checked
 by name, and every attribute in the draft object cross-checked against
 `dictionary.json` (reused entries exist; new entries are in the fragment).
 
+**Sync status:** this directory tracks the head of
+[ocsf/ocsf-schema#1729](https://github.com/ocsf/ocsf-schema/pull/1729)
+(`efd60d1`, 2026-09-10; branch `Levaj2000:issue-1728-v2`). The patch was
+regenerated against `main` on 2026-09-14 and applies cleanly.
+
 **This is a draft for discussion, not a filed PR.** Requirement levels, enum
 values, and the object name itself are the working group's to decide; the
 open questions are called out at the bottom and in `proposal.md`.
@@ -75,6 +80,16 @@ second commit on this branch.
    `source_id` dictionary attribute with an object-local enum. Without it, a
    protocol-neutral object can't distinguish the bindings the proposal
    itself describes.
+
+9. **Description and baseline fingerprints (PR review, 2026-09-10).**
+   Two `fingerprint`-typed attributes joined the object: `desc_fingerprint`,
+   over the model-visible description presented at discovery, because
+   description poisoning changes the text the model reads without touching
+   the schema; and `baseline_fingerprint`, the approval-time contract
+   fingerprint, because a fingerprint with nothing to compare against does
+   not detect mutation. Both carry values rather than verdicts; the consumer
+   diffs. The `source` and `type` sibling descriptions also gained the
+   standard "In the case of 'Other'" sentence.
 
 ## Open questions for the working group
 
