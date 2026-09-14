@@ -35,7 +35,7 @@ The record formats are not ours to define, so we contributed them upstream:
 
 | | URL |
 |---|---|
-| **Dashboard** | [ai-identity.co](https://ai-identity.co) |
+| **Website** | [ai-identity.co](https://ai-identity.co) |
 | **API Docs** | [api.ai-identity.co/docs](https://api.ai-identity.co/docs) |
 | **Checkpoint feed** | [api.ai-identity.co/evidence-anchor/checkpoints](https://api.ai-identity.co/evidence-anchor/checkpoints) |
 
