@@ -532,10 +532,10 @@ export default function About() {
             </p>
             <div className="flex items-center justify-center gap-4 flex-wrap">
               <a
-                href="/request-services"
+                href="https://dashboard.ai-identity.co"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors"
               >
-                Request services
+                Get Started Free
                 <svg
                   width="16"
                   height="16"

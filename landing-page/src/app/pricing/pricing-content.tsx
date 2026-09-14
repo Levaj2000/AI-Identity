@@ -20,8 +20,8 @@ const tiers = [
       "Forensic audit chain (30-day retention)",
       "1 upstream credential",
     ],
-    cta: "Request services",
-    ctaHref: "/request-services",
+    cta: "Get Started Free",
+    ctaHref: "https://dashboard.ai-identity.co",
     featured: false,
   },
   {
@@ -41,8 +41,8 @@ const tiers = [
       "Gateway policy enforcement",
       "Basic SSO",
     ],
-    cta: "Request services",
-    ctaHref: "/request-services",
+    cta: "Start Pro Trial",
+    ctaHref: "https://dashboard.ai-identity.co",
     featured: true,
   },
   {
@@ -63,8 +63,8 @@ const tiers = [
       "Team roles & permissions",
       "Agent-level role assignments",
     ],
-    cta: "Request services",
-    ctaHref: "/request-services",
+    cta: "Start Business Trial",
+    ctaHref: "https://dashboard.ai-identity.co",
     featured: false,
   },
   {
@@ -87,8 +87,8 @@ const tiers = [
       "Agent-level role assignments",
       "99.5% uptime SLA",
     ],
-    cta: "Request services",
-    ctaHref: "/request-services",
+    cta: "Start Business+ Trial",
+    ctaHref: "https://dashboard.ai-identity.co",
     featured: false,
   },
   {
@@ -359,10 +359,10 @@ function UsageEstimator() {
           <p className="text-xs text-[rgba(213,219,230,0.35)] leading-relaxed">
             Most teams with 10-20 active agents stay under 75k requests/mo.
             Heavy QA or forensics runs? Overages billed at ~$1 per 1k extra requests.{" "}
-            <a href="/request-services" className="text-[rgb(166,218,255)] hover:underline">
-              Request services
+            <a href="https://dashboard.ai-identity.co" className="text-[rgb(166,218,255)] hover:underline">
+              Try the dashboard
             </a>{" "}
-            and we will size your exact volume with you.
+            to simulate your exact volume.
           </p>
         </div>
       </div>
