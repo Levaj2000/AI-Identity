@@ -13,10 +13,10 @@ AI Identity is a security and compliance platform for AI agents. It provides ide
 +---------------------------------------------------------------------+
 |                        CLIENT LAYER                                 |
 |                                                                     |
-|   Landing Page (Vercel)          Dashboard (Vercel)                 |
-|   ai-identity.co                 dashboard.ai-identity.co          |
-|   React + Vite                   React + Vite + Clerk Auth         |
-|   11 pages                       15 pages                          |
+|   Landing Page (Vercel)          SDKs and CLI                       |
+|   ai-identity.co                 langchain-ai-identity, verifier    |
+|   Next.js                        Python / TypeScript                |
+|                                  (dashboard UI retired Sep 2026)    |
 +----------+------------------------------+---------------------------+
            |                              |
            | HTTPS                        | HTTPS + JWT
@@ -145,25 +145,14 @@ Request -> Rate Limiter -> Key Validation -> Agent Status -> Policy Match -> Cir
 - **Timeout:** 500ms max for policy evaluation (4 thread pool workers)
 - **Fail-closed:** Any exception or timeout = DENY
 
-### 3. Dashboard (Frontend)
+### 3. Dashboard (retired September 2026)
 
-**Purpose:** Customer-facing UI for managing agents, viewing forensics, running compliance checks.
-
-| Property | Value |
-|----------|-------|
-| Framework | React + TypeScript + Vite |
-| Auth | Clerk (SSO-ready) |
-| Deploy | Vercel (preview deploys on PR) |
-| Pages | 15 |
-
-**Key Pages:**
-- **Overview**: Agent count, recent activity, health status
-- **Agents**: CRUD, key management, policy editor
-- **Forensics**: Timeline + table view, filters, HMAC chain verification, detail drawer, anomaly detection, CSV/JSON export
-- **Compliance**: Framework assessments, evidence collection, sign-off workflow
-- **QA Checklist**: 15-step E2E validation with dual sign-off
-- **Usage & Billing**: Tier status, Stripe checkout/portal
-- **Admin**: User management, platform stats
+The customer-facing dashboard (React + Vite + Clerk) and its Vercel project were
+retired in September 2026, and the dashboard.ai-identity.co domain no longer
+serves anything. Its source lives with the rest of the control plane in the
+private platform repository (see the README, "Where the platform lives").
+Agent management, forensics and compliance exports are reached through the API
+and the SDKs.
 
 ### 4. Landing Page
 
@@ -266,7 +255,6 @@ qa_runs (user_id FK)
 |                           compliance export)     |
 +--------------------------------------------------+
 | Vercel                                           |
-|  +-- dashboard.ai-identity.co (preview deploys)  |
 |  +-- ai-identity.co          (landing page)      |
 +--------------------------------------------------+
 | Neon (Oregon)                                    |
@@ -290,8 +278,6 @@ qa_runs (user_id FK)
 PR opened -> GitHub Actions:
   +-- Python: ruff lint + format
   +-- Python: pytest (SQLite)
-  +-- Dashboard: ESLint + Prettier + tsc
-  +-- Dashboard: Vite build
 
 Merge to main -> GitHub Actions + Cloud Build deploy:
   +-- API: Docker build -> push to Artifact Registry -> deploy to GKE
