@@ -77,6 +77,8 @@ Verifies the HMAC-SHA256 chain-of-custody certificate on an exported forensics r
 - `1` — Signature is invalid or the report has been tampered with.
 - `2` — Usage error (file not found, invalid JSON, HMAC key not set).
 
+A sequence gap that `--tombstones` cannot fully account for with valid retention tombstones also exits `1`.
+
 #### Example (success)
 
 ```bash
@@ -120,7 +122,7 @@ AI Identity — Report Verification
 #### Synopsis
 
 ```bash
-ai-identity-verify chain <file> [--expected-prev-hash <HEX>] [--verbose] [--json] [--no-color]
+ai-identity-verify chain <file> [--expected-prev-hash <HEX>] [--tombstones <JSON> [--jwks <JSON> | --pubkey <PEM>]] [--verbose] [--json] [--no-color]
 ```
 
 #### Description
@@ -138,6 +140,8 @@ The command accepts either a bare JSON array of audit entries or a full forensic
 |---|---|---|---|
 | `file` | string | yes | Path to a JSON file containing audit log entries |
 | `--expected-prev-hash` | string | no | For partial chains, anchor the first entry to a known prior `entry_hash` |
+| `--tombstones` | string | no | Path to `retention/tombstones.json` from the Case File bundle. In the per-org walk, a sequence gap is accounted for by retention tombstones: every missing sequence needs a tombstone whose `entry_hash` is the leaf of the cited checkpoint at the pruned row's index, the checkpoint's leaves must hash to its stated `merkle_root`, the receipt must be chained, and the last tombstone's `entry_hash_org` must link the next surviving row. Reported as `tombstoned_entries`. Without it a gap is a failure. |
+| `--jwks` / `--pubkey` | string | no | With `--tombstones`: also verify the signatures of the checkpoints the tombstones cite (JWKS file or PEM public key; mutually exclusive; needs `cryptography`). Without a key the structural checks still run and the output says the signatures were not verified. |
 | `--verbose` | flag | no | Show full hash values on mismatch |
 | `--json` | flag | no | Emit results in JSON instead of the human-readable format |
 | `--no-color` | flag | no | Disable colored terminal output |

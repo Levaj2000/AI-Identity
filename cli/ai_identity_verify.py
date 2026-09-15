@@ -41,7 +41,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 TOOL_NAME = "ai-identity-verify"
 GENESIS = "GENESIS"
 
@@ -755,6 +755,182 @@ def _cmd_chain_partial(
     return 0 if passed else 1
 
 
+# --- Retention tombstones (gap accounting) ---
+#
+# A retention policy may prune audit rows. Every pruned row leaves a
+# tombstone, every batch of tombstones is a chained receipt, and the Case
+# File bundle ships them as retention/tombstones.json (format spec:
+# docs/forensics/retention-tombstones-in-exports.md). With --tombstones the
+# per-org walk accounts for a sequence gap the same way the platform does:
+# every missing sequence needs a tombstone whose entry_hash is the leaf of
+# the cited checkpoint at the pruned row's index, the checkpoint's leaves
+# must hash to its stated root (and the root must be signed, when a key is
+# supplied), the receipt must be chained, and the last tombstone's
+# entry_hash_org must link the next surviving row. Without --tombstones a
+# gap is a failure, exactly as before; the flag never weakens the check.
+
+TOMBSTONES_FORMAT = "ai-identity-retention-tombstones/v1"
+
+
+def _merkle_root_over_leaves(leaves: list[bytes]) -> bytes:
+    """RFC 6962 Merkle Tree Hash over raw leaf data (leaf-hashed here). Stdlib only."""
+    hashes = [_merkle_leaf_hash(d) for d in leaves]
+
+    def _root(values: list[bytes]) -> bytes:
+        n = len(values)
+        if n == 1:
+            return values[0]
+        k = 1
+        while k * 2 < n:
+            k *= 2
+        return _merkle_node_hash(_root(values[:k]), _root(values[k:]))
+
+    if not hashes:
+        raise ValueError("merkle root requires at least one leaf")
+    return _root(hashes)
+
+
+def _load_tombstones(path: str, scope: dict[str, Any] | None) -> dict[str, Any]:
+    """Load and index retention/tombstones.json. Exits 2 on a malformed file."""
+    doc = _load_json(path)
+    if not isinstance(doc, dict) or doc.get("format") != TOMBSTONES_FORMAT:
+        print(
+            f"Error: {os.path.basename(path)} is not a {TOMBSTONES_FORMAT} file "
+            "(expected retention/tombstones.json from a Case File bundle).",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    scope_org = scope.get("org_id") if isinstance(scope, dict) else None
+    if scope_org and doc.get("org_id") and str(scope_org) != str(doc.get("org_id")):
+        print(
+            f"Error: tombstones file is for org {doc.get('org_id')} but the export's "
+            f"scope is org {scope_org}.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    by_seq: dict[int, dict[str, Any]] = {}
+    for item in doc.get("tombstones") or []:
+        if isinstance(item, dict) and isinstance(item.get("org_chain_seq"), int):
+            by_seq[item["org_chain_seq"]] = item
+    checkpoints = {
+        c.get("merkle_root"): c for c in (doc.get("checkpoints") or []) if isinstance(c, dict)
+    }
+    receipts = {r.get("id"): r for r in (doc.get("receipts") or []) if isinstance(r, dict)}
+    return {
+        "path": path,
+        "by_seq": by_seq,
+        "checkpoints": checkpoints,
+        "receipts": receipts,
+        "signature_ok": {},
+        "root_ok": {},
+    }
+
+
+def _account_gap_with_tombstones(
+    args: argparse.Namespace,
+    doc: dict[str, Any],
+    first_missing: int,
+    next_seq: int,
+) -> dict[str, Any]:
+    """Reconcile sequences first_missing..next_seq-1 against the tombstones.
+
+    Returns ``{"ok": True, "count": n, "last_entry_hash_org": hex}`` or
+    ``{"ok": False, "reason": str}``. The reason names the first sequence
+    that fails and why, so a report reads like the server's.
+    """
+    want_signature = bool(getattr(args, "pubkey", None) or getattr(args, "jwks", None))
+    last_org_hash: str | None = None
+    for missing in range(first_missing, next_seq):
+        tomb = doc["by_seq"].get(missing)
+        if tomb is None:
+            return {
+                "ok": False,
+                "reason": (
+                    f"sequence gap: seq {missing} has no retention tombstone "
+                    "(rows deleted from this org's history)"
+                ),
+            }
+        root = tomb.get("merkle_root") or ""
+        cp = doc["checkpoints"].get(root)
+        if cp is None:
+            return {
+                "ok": False,
+                "reason": (
+                    f"tombstone for seq {missing} cites checkpoint {root[:16]} "
+                    "which the tombstones file does not carry"
+                ),
+            }
+        if want_signature:
+            if root not in doc["signature_ok"]:
+                ok, payload = _verify_checkpoint_signature(args, cp.get("envelope") or {})
+                doc["signature_ok"][root] = bool(ok and payload.get("merkle_root") == root)
+            if not doc["signature_ok"][root]:
+                return {
+                    "ok": False,
+                    "reason": (
+                        f"tombstone for seq {missing}: checkpoint {root[:16]} signature "
+                        "invalid or signed root does not match"
+                    ),
+                }
+        if root not in doc["root_ok"]:
+            try:
+                leaf_bytes = [bytes.fromhex(h) for h in (cp.get("leaves") or [])]
+                doc["root_ok"][root] = bool(leaf_bytes) and (
+                    _merkle_root_over_leaves(leaf_bytes).hex() == root
+                )
+            except (ValueError, TypeError):
+                doc["root_ok"][root] = False
+        if not doc["root_ok"][root]:
+            return {
+                "ok": False,
+                "reason": (
+                    f"tombstone for seq {missing}: checkpoint {root[:16]} leaves do not "
+                    "hash to its stated merkle_root"
+                ),
+            }
+        ids = cp.get("audit_log_ids") or []
+        audit_id = tomb.get("audit_id")
+        if audit_id not in ids:
+            return {
+                "ok": False,
+                "reason": (
+                    f"tombstone for seq {missing}: audit row {audit_id} is not in the "
+                    f"audit_log_ids of checkpoint {root[:16]}"
+                ),
+            }
+        index = ids.index(audit_id)
+        leaves = cp.get("leaves") or []
+        if index >= len(leaves) or leaves[index] != tomb.get("entry_hash"):
+            return {
+                "ok": False,
+                "reason": (
+                    f"tombstone for seq {missing}: entry_hash does not match checkpoint "
+                    f"{root[:16]} leaf at index {index}"
+                ),
+            }
+        receipt = doc["receipts"].get(tomb.get("event_id"))
+        if (
+            receipt is None
+            or receipt.get("event_type") != "tombstone"
+            or receipt.get("audit_log_id") is None
+        ):
+            return {
+                "ok": False,
+                "reason": (
+                    f"tombstone for seq {missing}: receipt event {tomb.get('event_id')} "
+                    "is missing or not chained"
+                ),
+            }
+        org_hash = tomb.get("entry_hash_org")
+        if not isinstance(org_hash, str) or not org_hash:
+            return {
+                "ok": False,
+                "reason": f"tombstone for seq {missing} carries no entry_hash_org",
+            }
+        last_org_hash = org_hash
+    return {"ok": True, "count": next_seq - first_missing, "last_entry_hash_org": last_org_hash}
+
+
 def _cmd_chain_org(
     args: argparse.Namespace,
     keys: list[bytes],
@@ -791,6 +967,12 @@ def _cmd_chain_org(
     keymap = {_key_fingerprint(k): k for k in keys}
     verified = 0
     gaps_reanchored = 0
+    tombstones_path = getattr(args, "tombstones", None)
+    scope_for_tombstones = _load_chain_entries(args.file)[1] if tombstones_path else None
+    tombstones_doc = (
+        _load_tombstones(tombstones_path, scope_for_tombstones) if tombstones_path else None
+    )
+    tombstoned = 0
     foreign_epochs: dict[str, int] = {}  # fingerprint → entry count not covered by held keys
     break_info: dict[str, Any] | None = None
     expected_seq: int | None = None
@@ -813,14 +995,31 @@ def _cmd_chain_org(
                     gaps_reanchored += 1
                     expected_prev_hash = entry_prev
                 else:
-                    break_info = {
-                        "index": i,
-                        "entry_id": entry.get("id", "?"),
-                        "reason": "sequence gap (rows deleted from this org's history)",
-                        "expected_seq": expected_seq,
-                        "got_seq": seq,
-                    }
-                    break
+                    accounted: dict[str, Any] | None = None
+                    if tombstones_doc is not None and seq > expected_seq:
+                        accounted = _account_gap_with_tombstones(
+                            args, tombstones_doc, expected_seq, seq
+                        )
+                    if accounted is not None and accounted["ok"]:
+                        # Retention, with receipts: bridge the gap through the
+                        # tombstones and let the next row's prev_hash_org
+                        # confirm the bridge below.
+                        tombstoned += accounted["count"]
+                        expected_prev_hash = accounted["last_entry_hash_org"]
+                        expected_seq = seq
+                    else:
+                        break_info = {
+                            "index": i,
+                            "entry_id": entry.get("id", "?"),
+                            "reason": (
+                                accounted["reason"]
+                                if accounted is not None
+                                else "sequence gap (rows deleted from this org's history)"
+                            ),
+                            "expected_seq": expected_seq,
+                            "got_seq": seq,
+                        }
+                        break
             if entry_prev != expected_prev_hash:
                 break_info = {
                     "index": i,
@@ -898,6 +1097,12 @@ def _cmd_chain_org(
         }
         if agent_scoped:
             details["gaps_reanchored"] = gaps_reanchored
+        details["tombstoned_entries"] = tombstoned
+        if tombstones_doc is not None:
+            details["tombstones_file"] = os.path.basename(tombstones_doc["path"])
+            details["tombstone_checkpoint_signatures_verified"] = bool(
+                getattr(args, "pubkey", None) or getattr(args, "jwks", None)
+            )
         if foreign_epochs:
             details["uncovered_key_epochs"] = foreign_epochs
         if break_info:
@@ -929,6 +1134,13 @@ def _cmd_chain_org(
                 )
         else:
             print("  Mode:         Per-org (tenant-scoped completeness proof)")
+        if tombstoned:
+            print(f"  Pruned rows:  {tombstoned} accounted for by retention tombstones")
+            if not (getattr(args, "pubkey", None) or getattr(args, "jwks", None)):
+                print(
+                    "                (checkpoint signatures not verified: pass --jwks or\n"
+                    "                --pubkey to check the cited checkpoints' signatures)"
+                )
         print()
         if intact and not partial and not no_coverage:
             print(f"  Result:       {_green('CHAIN INTACT ✓')}")
@@ -1531,6 +1743,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  %(prog)s chain audit_export.json --verbose\n"
             "  %(prog)s chain audit_export.json --json\n"
             "  %(prog)s chain audit_export.json --key <retired-key>   # multi key-epoch\n"
+            "  %(prog)s chain case-file.json --tombstones retention/tombstones.json "
+            "--jwks keys.json\n"
             "  %(prog)s attestation envelope.json --pubkey signer.pem\n"
             "  %(prog)s attestation envelope.json --jwks keys.json\n"
             "\n"
@@ -1696,6 +1910,36 @@ def build_parser() -> argparse.ArgumentParser:
             "Anchors the export to a known position in the full chain, "
             "proving no entries were prepended or the start-point was not altered. "
             "Obtain this value from the entry immediately before your export window."
+        ),
+    )
+    chain_parser.add_argument(
+        "--tombstones",
+        metavar="JSON",
+        default=None,
+        help=(
+            "Path to retention/tombstones.json from the Case File bundle. A sequence "
+            "gap in an org-scope export is then accounted for by retention "
+            "tombstones: every missing sequence needs a tombstone whose entry_hash "
+            "is the leaf of the cited signed checkpoint, whose receipt is chained, "
+            "and whose entry_hash_org links the next surviving row. Without this "
+            "flag a gap is a failure, as before."
+        ),
+    )
+    chain_parser.add_argument(
+        "--pubkey",
+        metavar="PEM",
+        help=(
+            "With --tombstones: PEM public key used to verify the signatures of the "
+            "checkpoints the tombstones cite. Mutually exclusive with --jwks."
+        ),
+    )
+    chain_parser.add_argument(
+        "--jwks",
+        metavar="JSON",
+        help=(
+            "With --tombstones: JWKS file (/.well-known/ai-identity-public-keys.json) "
+            "used to verify the cited checkpoints' signatures. Mutually exclusive "
+            "with --pubkey. Needs the `cryptography` package."
         ),
     )
     chain_parser.add_argument(
