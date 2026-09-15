@@ -164,6 +164,27 @@ A row whose chain predecessor is a receipt anchor carries
 `prev_event.type_uid` 600507, pointing a consumer at the Datastore Activity
 store for the predecessor.
 
+### Reaper run summaries
+
+The reaper also chains one `reaper_run` summary per org tick, dry run or
+not. Its anchor row exports as Datastore Activity **activity 4 Query**
+(`type_uid` 600504): a tick selects the candidates under the witnessed
+horizon and evaluates the policy over them, and the deletes it decides on are
+the 600507 events above. A dry run is exactly that query and nothing more.
+
+| OCSF attribute | Value |
+| --- | --- |
+| `actor.app_name` / `type_id` / `table.name` | as for a receipt |
+| `duration` | the tick duration in milliseconds |
+| `status_id` / `status` / `status_detail` | 2 Failure with the tick's error when it recorded one, else 1 Success |
+| `severity_id` | 3 (Medium) on failure, 1 otherwise |
+| `metadata.correlation_uid` | the `reaper_run` retention event id |
+| `unmapped.retention_reaper_run` | `policy_version_id`, `dry_run`, `horizon_audit_id`, `mirror_commit`, `candidates`, `due`, `pruned`, `skipped_hold`, `skipped_unmirrored`, `skipped_tail`, `skipped_system`, `skipped_unchained`, `batches`, `batches_completed`, `rules_not_enforced` |
+
+A reaper run carries no `count`, so summing `count` over an org's Datastore
+Activity events is still exactly the rows pruned by receipts. A row chained
+after a reaper run anchor carries `prev_event.type_uid` 600504.
+
 **Consumer rule.** Order an org's API Activity events by
 `unmapped.org_chain_seq`. A hole with no 600507 event whose
 `unmapped.retention_tombstone.org_chain_seq_range` covers it is an
