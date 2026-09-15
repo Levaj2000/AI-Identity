@@ -135,6 +135,43 @@ or unaccounted. The response's `retention` block carries the three counts,
 the unaccounted ids, and `complete`. See `attestation-format.md`, "Retention
 coordination".
 
+## OCSF export (`format=ocsf`)
+
+The platform's OCSF export (`GET /api/v1/audit/report?format=ocsf`, NDJSON)
+renders one event per surviving `audit_log` row. A tombstone
+receipt's anchor row is one of those rows, and it exports as **Datastore
+Activity** (`class_uid` 6005, `activity_id` 7 Delete, `type_uid` 600507)
+rather than the generic API Activity `Create` it rendered as before. Ids are
+the OCSF 1.9.0 schema's (`events/application/datastore_activity.json`).
+
+| OCSF attribute | Value |
+| --- | --- |
+| `actor.app_name` | `retention-service` (the class requires an actor; no user acted) |
+| `type_id` / `table.name` | 3 (Table) / `audit_log` |
+| `count` | rows pruned by this receipt |
+| `time` | the anchor row's `created_at` |
+| `metadata.uid` | the anchor `audit_log` row id, unchanged, so `prev_event` references from the next row still resolve |
+| `metadata.correlation_uid` | the retention event id: the key into `retention/tombstones.json` |
+| `attestation_list` | the anchor's chain fingerprint, predecessor and export signature, same as any other row |
+| `unmapped.retention_tombstone` | `checkpoint_id`, `merkle_root`, `mirror_commit`, `policy_version_id`, `rule_id`, `reason`, `audit_id_range`, `org_chain_seq_range` |
+| `unmapped.org_chain_seq` | the anchor's own position, same key as every other exported row |
+
+`action_id` is not an attribute of Datastore Activity and is not emitted.
+Per-row `entries` stay out of the event: a receipt can cover 5000 rows and
+every SIEM copy would carry them; they live in `retention/tombstones.json`.
+
+A row whose chain predecessor is a receipt anchor carries
+`prev_event.type_uid` 600507, pointing a consumer at the Datastore Activity
+store for the predecessor.
+
+**Consumer rule.** Order an org's API Activity events by
+`unmapped.org_chain_seq`. A hole with no 600507 event whose
+`unmapped.retention_tombstone.org_chain_seq_range` covers it is an
+unaccounted deletion. A hole covered by one is retention, and the receipt
+names the checkpoint, policy version and rule that authorized it. The
+offline proof (leaf and signature checks) remains the CLI's
+`chain --tombstones`; the OCSF event is the pointer a SIEM can alert on.
+
 ## Verifier support
 
 `cli/ai_identity_verify.py chain --tombstones retention/tombstones.json`
