@@ -755,7 +755,7 @@ def _cmd_chain_partial(
     return 0 if passed else 1
 
 
-# ── Retention tombstones (gap accounting) ───────────────────────────────
+# --- Retention tombstones (gap accounting) ---
 #
 # A retention policy may prune audit rows. Every pruned row leaves a
 # tombstone, every batch of tombstones is a chained receipt, and the Case
