@@ -2021,3 +2021,316 @@ class TestAgentScopedSliceVerification(unittest.TestCase):
             self.assertIn("sequence gap", out)
         finally:
             os.unlink(path)
+
+
+# --- Retention tombstones: gap accounting in the per-org walk ---
+
+
+def _leaf_hash(data: bytes) -> bytes:
+    return hashlib.sha256(b"\x00" + data).digest()
+
+
+def _node_hash(left: bytes, right: bytes) -> bytes:
+    return hashlib.sha256(b"\x01" + left + right).digest()
+
+
+def _merkle_root(leaves_hex: list[str]) -> str:
+    """Independent RFC 6962 MTH over entry hashes, so the test does not lean
+    on the implementation it checks."""
+    hashes = [_leaf_hash(bytes.fromhex(h)) for h in leaves_hex]
+
+    def root(values: list[bytes]) -> bytes:
+        if len(values) == 1:
+            return values[0]
+        k = 1
+        while k * 2 < len(values):
+            k *= 2
+        return _node_hash(root(values[:k]), root(values[k:]))
+
+    return root(hashes).hex()
+
+
+_CHECKPOINT_PAYLOAD_TYPE = "application/vnd.ai-identity.anchor-checkpoint+json"
+_TOMBSTONES_FORMAT = "ai-identity-retention-tombstones/v1"
+_TOMB_ORG_ID = "f1e2d3c4-b5a6-4798-8877-66554433abcd"
+
+
+def _checkpoint_envelope(root: str, tree_size: int, first_id: int, last_id: int, signer=None):
+    """A checkpoint DSSE envelope over ``root``; signed when ``signer`` is given,
+    otherwise a placeholder signature (structural checks only)."""
+    payload = {
+        "schema_version": 1,
+        "org_id": _TOMB_ORG_ID,
+        "tree_size": tree_size,
+        "merkle_root": root,
+        "first_audit_id": first_id,
+        "last_audit_id": last_id,
+        "signed_at": "2026-09-15T02:00:00Z",
+        "signer_key_id": "local:test",
+    }
+    payload_bytes = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    sig = signer(_pae(_CHECKPOINT_PAYLOAD_TYPE, payload_bytes)) if signer is not None else b"sig"
+    return {
+        "payloadType": _CHECKPOINT_PAYLOAD_TYPE,
+        "payload": base64.b64encode(payload_bytes).decode("ascii"),
+        "signatures": [{"keyid": "local:test", "sig": base64.b64encode(sig).decode("ascii")}],
+    }
+
+
+def _pruned_export(count: int = 6, prune: tuple[int, ...] = (3,), signer=None):
+    """An org-scope report with the given sequences pruned, plus the matching
+    retention/tombstones.json document. Returns (report, tombstones_doc)."""
+    full = _build_org_chain(count)
+    root = _merkle_root([e["entry_hash"] for e in full])
+    envelope = _checkpoint_envelope(root, count, full[0]["id"], full[-1]["id"], signer=signer)
+    receipt_id = "5d0e1f2a-0000-4000-8000-000000000001"
+    tombstones = []
+    for e in full:
+        if e["org_chain_seq"] in prune:
+            tombstones.append(
+                {
+                    "audit_id": e["id"],
+                    "org_chain_seq": e["org_chain_seq"],
+                    "entry_hash": e["entry_hash"],
+                    "entry_hash_org": e["entry_hash_org"],
+                    "checkpoint_id": "9c1e0000-0000-4000-8000-000000000001",
+                    "merkle_root": root,
+                    "event_id": receipt_id,
+                    "policy_version_id": "7d0b0000-0000-4000-8000-000000000001",
+                    "rule_id": "r_catchall",
+                    "reason": "retention_elapsed",
+                    "pruned_at": "2026-09-15T02:45:00+00:00",
+                }
+            )
+    doc = {
+        "format": _TOMBSTONES_FORMAT,
+        "org_id": _TOMB_ORG_ID,
+        "range": {"first_audit_id": full[0]["id"], "last_audit_id": full[-1]["id"]},
+        "tombstones": tombstones,
+        "receipts": [
+            {
+                "id": receipt_id,
+                "event_type": "tombstone",
+                "payload": {"count": len(tombstones), "merkle_root": root},
+                "created_by": "system:retention-reaper",
+                "created_at": "2026-09-15T02:45:00+00:00",
+                "audit_log_id": full[-1]["id"] + 1,
+            }
+        ],
+        "checkpoints": [
+            {
+                "merkle_root": root,
+                "envelope": envelope,
+                "audit_log_ids": [e["id"] for e in full],
+                "leaves": [e["entry_hash"] for e in full],
+                "mirror_commit": "3f9a" * 10,
+            }
+        ],
+    }
+    survivors = [e for e in full if e["org_chain_seq"] not in prune]
+    report = _build_report(survivors)
+    report["scope"] = {"type": "org", "org_id": _TOMB_ORG_ID}
+    return report, doc
+
+
+class TestTombstoneGapAccounting(unittest.TestCase):
+    """--tombstones: a sequence gap covered by valid receipts is retention,
+    not tampering; everything short of that stays a broken chain."""
+
+    def _run(self, report, doc, *extra):
+        report_path = _write_json(report)
+        doc_path = _write_json(doc)
+        try:
+            return _run_cmd(["--no-color", "chain", report_path, "--tombstones", doc_path, *extra])
+        finally:
+            os.unlink(report_path)
+            os.unlink(doc_path)
+
+    def _run_json(self, report, doc, *extra):
+        report_path = _write_json(report)
+        doc_path = _write_json(doc)
+        try:
+            code, out, err = _run_cmd(
+                ["--json", "chain", report_path, "--tombstones", doc_path, *extra]
+            )
+            return code, json.loads(out) if out.strip().startswith("{") else None, err
+        finally:
+            os.unlink(report_path)
+            os.unlink(doc_path)
+
+    def test_gap_without_flag_still_breaks(self):
+        report, _doc = _pruned_export()
+        path = _write_json(report)
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 1)
+            self.assertIn("sequence gap", out)
+        finally:
+            os.unlink(path)
+
+    def test_gap_covered_by_tombstones_is_intact(self):
+        report, doc = _pruned_export()
+        code, out, _ = self._run(report, doc)
+        self.assertEqual(code, 0, out)
+        self.assertIn("CHAIN INTACT", out)
+        self.assertIn("Pruned rows:  1 accounted for by retention tombstones", out)
+        self.assertIn("signatures not verified", out)
+
+        code, result, _ = self._run_json(report, doc)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["result"], "valid")
+        self.assertEqual(result["details"]["tombstoned_entries"], 1)
+        self.assertEqual(result["details"]["entries_verified"], 5)
+        self.assertFalse(result["details"]["tombstone_checkpoint_signatures_verified"])
+
+    def test_multi_row_gap_and_two_gaps(self):
+        report, doc = _pruned_export(count=8, prune=(2, 3, 6))
+        code, result, _ = self._run_json(report, doc)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["details"]["tombstoned_entries"], 3)
+        self.assertEqual(result["details"]["entries_verified"], 5)
+
+    def test_missing_tombstone_in_gap_breaks(self):
+        report, doc = _pruned_export(count=6, prune=(2, 3))
+        doc["tombstones"] = [t for t in doc["tombstones"] if t["org_chain_seq"] != 2]
+        code, out, _ = self._run(report, doc)
+        self.assertEqual(code, 1)
+        self.assertIn("CHAIN BROKEN", out)
+        self.assertIn("seq 2 has no retention tombstone", out)
+
+    def test_leaf_mismatch_breaks(self):
+        report, doc = _pruned_export()
+        doc["tombstones"][0]["entry_hash"] = "0" * 64
+        code, out, _ = self._run(report, doc)
+        self.assertEqual(code, 1)
+        self.assertIn("entry_hash does not match checkpoint", out)
+
+    def test_tampered_leaves_do_not_hash_to_root(self):
+        report, doc = _pruned_export()
+        doc["checkpoints"][0]["leaves"][0] = "1" * 64
+        code, out, _ = self._run(report, doc)
+        self.assertEqual(code, 1)
+        self.assertIn("leaves do not hash to its stated merkle_root", out)
+
+    def test_unchained_receipt_breaks(self):
+        report, doc = _pruned_export()
+        doc["receipts"][0]["audit_log_id"] = None
+        code, out, _ = self._run(report, doc)
+        self.assertEqual(code, 1)
+        self.assertIn("receipt event", out)
+        self.assertIn("not chained", out)
+
+    def test_unknown_checkpoint_breaks(self):
+        report, doc = _pruned_export()
+        doc["checkpoints"] = []
+        code, out, _ = self._run(report, doc)
+        self.assertEqual(code, 1)
+        self.assertIn("which the tombstones file does not carry", out)
+
+    def test_wrong_entry_hash_org_fails_at_the_bridge(self):
+        """A tombstone that passes every leaf check but carries a wrong
+        entry_hash_org cannot link the next surviving row."""
+        report, doc = _pruned_export()
+        doc["tombstones"][0]["entry_hash_org"] = "a" * 64
+        code, out, _ = self._run(report, doc)
+        self.assertEqual(code, 1)
+        self.assertIn("prev_hash_org mismatch", out)
+
+    def test_malformed_file_is_usage_error(self):
+        report, _doc = _pruned_export()
+        code, _out, err = self._run(report, {"format": "something-else"})
+        self.assertEqual(code, 2)
+        self.assertIn("not a ai-identity-retention-tombstones/v1 file", err)
+
+    def test_org_mismatch_is_usage_error(self):
+        report, doc = _pruned_export()
+        doc["org_id"] = "00000000-0000-4000-8000-00000000dead"
+        code, _out, err = self._run(report, doc)
+        self.assertEqual(code, 2)
+        self.assertIn("scope is org", err)
+
+    def test_agent_scope_ignores_tombstones(self):
+        report, doc = _pruned_export()
+        report["scope"] = {"type": "agent", "agent_id": TEST_AGENT_ID, "org_id": _TOMB_ORG_ID}
+        code, result, _ = self._run_json(report, doc)
+        self.assertEqual(code, 0)
+        self.assertEqual(result["details"]["mode"], "per-org-agent-slice")
+        self.assertEqual(result["details"]["tombstoned_entries"], 0)
+        self.assertEqual(result["details"]["gaps_reanchored"], 1)
+
+
+@unittest.skipUnless(_have_cryptography(), "cryptography package not installed")
+class TestTombstoneCheckpointSignatures(unittest.TestCase):
+    """--tombstones with --jwks/--pubkey also verifies the cited checkpoints."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+
+        cls._private_key = ec.generate_private_key(ec.SECP256R1())
+        cls._pub_pem = cls._private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        cls._signer = staticmethod(_local_ecdsa_signer(cls._private_key))
+
+    def _write_pem(self, pem_bytes: bytes) -> str:
+        fd, path = tempfile.mkstemp(suffix=".pem")
+        with os.fdopen(fd, "wb") as f:
+            f.write(pem_bytes)
+        return path
+
+    def _run(self, report, doc, *extra):
+        report_path = _write_json(report)
+        doc_path = _write_json(doc)
+        try:
+            return _run_cmd(["--json", "chain", report_path, "--tombstones", doc_path, *extra])
+        finally:
+            os.unlink(report_path)
+            os.unlink(doc_path)
+
+    def test_signed_checkpoint_verifies(self):
+        report, doc = _pruned_export(signer=self._signer)
+        pem = self._write_pem(self._pub_pem)
+        try:
+            code, out, _ = self._run(report, doc, "--pubkey", pem)
+            self.assertEqual(code, 0, out)
+            result = json.loads(out)
+            self.assertEqual(result["details"]["tombstoned_entries"], 1)
+            self.assertTrue(result["details"]["tombstone_checkpoint_signatures_verified"])
+        finally:
+            os.unlink(pem)
+
+    def test_wrong_key_breaks(self):
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+
+        report, doc = _pruned_export(signer=self._signer)
+        other = ec.generate_private_key(ec.SECP256R1()).public_key()
+        pem = self._write_pem(
+            other.public_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PublicFormat.SubjectPublicKeyInfo,
+            )
+        )
+        try:
+            code, out, _ = self._run(report, doc, "--pubkey", pem)
+            self.assertEqual(code, 1)
+            self.assertIn("signature invalid", out)
+        finally:
+            os.unlink(pem)
+
+    def test_signed_root_must_match_cited_root(self):
+        """The envelope signs a different root than the one the tombstone
+        cites: a valid signature over the wrong thing is still a failure."""
+        report, doc = _pruned_export(signer=self._signer)
+        cp = doc["checkpoints"][0]
+        cp["envelope"] = _checkpoint_envelope("ab" * 32, 6, 1, 6, signer=self._signer)
+        pem = self._write_pem(self._pub_pem)
+        try:
+            code, out, _ = self._run(report, doc, "--pubkey", pem)
+            self.assertEqual(code, 1)
+            self.assertIn("signed root does not match", out)
+        finally:
+            os.unlink(pem)

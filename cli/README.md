@@ -244,11 +244,38 @@ AI Identity — Audit Chain Verification
     Got:        c3b8e91f7d4a2b3c...
 ```
 
+**Pruned rows (retention tombstones).** An organization's retention policy may have
+pruned audit rows inside an export's range. Every pruned row leaves a tombstone and a
+chained receipt, and the Case File bundle ships them as `retention/tombstones.json`.
+Pass that file with `--tombstones` and a sequence gap in an org-scope export is accounted
+for instead of failing: every missing sequence needs a tombstone whose `entry_hash` is the
+leaf of the cited checkpoint at the pruned row's index, the checkpoint's leaves must hash
+to its stated root, the receipt must be chained, and the last tombstone's `entry_hash_org`
+must link the next surviving row. Add `--jwks` or `--pubkey` to also verify the cited
+checkpoints' signatures (needs `pip install cryptography`).
+
+```bash
+python ai_identity_verify.py chain case-file-*.json \
+    --tombstones retention/tombstones.json --jwks jwks.json
+```
+
+```
+  Verified:     1244/1244 entries
+  Pruned rows:  4 accounted for by retention tombstones
+```
+
+Without `--tombstones` a gap is a failure, exactly as before. A missing sequence with no
+tombstone, or a tombstone that fails any check, still reports `CHAIN BROKEN` with the
+reason. The file format is specified in
+[`../docs/forensics/retention-tombstones-in-exports.md`](../docs/forensics/retention-tombstones-in-exports.md).
+
 ## Flags
 
 | Flag | Description |
 |------|-------------|
 | `--verbose`, `-v` | Show detailed output (full hash values, per-entry info) |
+| `--tombstones <file>` | (`chain`) Account for sequence gaps with `retention/tombstones.json` from the bundle |
+| `--jwks <file>`, `--pubkey <pem>` | (`chain`, with `--tombstones`) Also verify the cited checkpoints' signatures |
 | `--json` | Output results as JSON for CI/automation pipelines |
 | `--no-color` | Disable colored terminal output |
 | `--version` | Print tool version and exit |

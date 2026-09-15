@@ -216,30 +216,45 @@ ambiguous after the first rotation.
 
 ## Retention coordination
 
-An attestation commits to a range of `audit_log` rows by ID. If those
-rows are purged before the attestation is verified, the envelope
-remains cryptographically valid but becomes *unverifiable* against the
-chain — the whole point of the attestation evaporates.
+An attestation commits to a range of `audit_log` rows by ID. Retention
+policies (v0.5.0) prune `audit_log` rows on a schedule, so some of the
+rows an attestation committed to will, in time, no longer exist. The
+envelope stays cryptographically valid either way; the question is
+whether the chain it commits to is still accountable.
 
-Two guardrails, enforced in the signing pipeline (#263), close this:
+Two mechanisms keep it accountable:
 
 1. **Eager resolution at sign time.** The signer resolves the
    `[first_audit_id, last_audit_id]` range to a concrete list of row
-   IDs at the moment of signing and stores that list (or a Merkle root
-   over those row hashes — TBD per perf) alongside the envelope. This
-   means a later verifier can detect "the chain existed at sign time
-   but N rows are now missing" rather than seeing a plausible but
-   unreachable range.
-2. **Retention policy is a hard constraint.** Any audit-log retention
-   policy MUST be at least as long as the attestation retention
-   policy. Operators who shorten audit retention without shortening
-   attestation retention are creating silently-broken evidence, and
-   the compliance export work (#272) will surface this as a policy
-   conflict.
+   IDs at the moment of signing and stores that list (`audit_log_ids`)
+   alongside the envelope. It is the frozen statement of what existed
+   when the attestation was made.
+2. **Cross-check against tombstones on every read.** Every prune leaves
+   a tombstone (`retention_tombstones`, one row per pruned audit row)
+   and a chained receipt event. Reading an attestation reconciles its
+   frozen list against the live table: each ID is *present* (its row
+   survives), *tombstoned* (a tombstone covers it whose `entry_hash`
+   matches the leaf of the signed checkpoint it cites and whose receipt
+   is itself chained), or *unaccounted*. The `retention` block on the
+   attestation response carries the three counts, the unaccounted IDs,
+   and `complete`, which is true only when nothing is unaccounted.
 
-The attestation table itself holds the envelope indefinitely — it is
-small (~1 KB) and is the artifact customers and auditors reference. Row
-purges happen against `audit_log`, not against attestations.
+An unaccounted ID is a deletion under a signed statement that no
+receipt explains. That is what unauthorized deletion looks like, and it
+is reported as such rather than as a plausible but unreachable range.
+
+This replaces the earlier guardrail that audit-log retention had to be
+at least as long as attestation retention. Retention may be shorter
+than an attestation's life, because the attestation stays verifiable
+through the receipts: the rows are gone, the proof that they existed
+with those hashes under a signed checkpoint is not. The offline
+equivalent lives in Case File bundles as `retention/tombstones.json`
+(see `retention-tombstones-in-exports.md`).
+
+The attestation table itself holds the envelope indefinitely; it is
+small (about 1 KB) and is the artifact customers and auditors reference.
+Tombstones and receipts are likewise retained indefinitely. Row purges
+happen against `audit_log`, never against attestations or receipts.
 
 ## Retroactive attestation
 
