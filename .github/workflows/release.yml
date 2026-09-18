@@ -31,7 +31,11 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install pytest httpx cryptography
+        # Mirror ci.yml: ruff comes from requirements-dev.txt; the verifier CLI
+        # is stdlib-only, its tests pull pytest/httpx/cryptography.
+        run: |
+          pip install -r requirements-dev.txt
+          pip install pytest httpx cryptography
 
       - name: Ruff lint
         run: ruff check .
