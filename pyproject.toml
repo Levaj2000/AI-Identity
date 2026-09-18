@@ -1,6 +1,6 @@
 [project]
 name = "ai-identity"
-version = "0.2.0"
+version = "0.5.0"
 description = "AI Identity public trust surface: offline verifier, SDKs, OCSF and CoSAI mappings"
 requires-python = ">=3.11"
 
