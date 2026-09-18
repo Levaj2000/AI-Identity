@@ -1,0 +1,44 @@
+name: Changelog Gate
+
+# House style (and now policy under Decision #61): every feature or fix that lands
+# must be visible in CHANGELOG.md. The 2026-09-17 reconciliation found dozens of
+# merged PRs that never appeared on the board; this gate stops that class of
+# invisible work at the source. docs/chore/CI-only PRs are exempt by convention —
+# title them accordingly.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: feat/fix PRs must update CHANGELOG.md
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0 # need both refs to diff PR vs base
+
+      - name: Enforce the changelog
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          case "$TITLE" in
+            feat\(*|feat:*|fix\(*|fix:*)
+              if ! git diff --name-only "$BASE" "$HEAD" | grep -qx "CHANGELOG.md"; then
+                echo "::error ::PR title declares a feature/fix, but CHANGELOG.md is unchanged."
+                echo "Add one bullet under '## [Unreleased]' in the matching section,"
+                echo "ending with the PR number, per the house style."
+                exit 1
+              fi
+              ;;
+            *)
+              echo "PR is not feat/fix (docs, chore, CI, ...) — changelog not required."
+              ;;
+          esac

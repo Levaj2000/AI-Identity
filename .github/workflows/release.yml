@@ -1,0 +1,92 @@
+name: Release
+
+# Every sprint close cuts a release (Decision #61, hybrid train): scripts/release.py
+# promotes the changelog, bumps versions, tags vX.Y.Z, and pushes. This workflow is
+# the publish half: the tag push re-runs the suite against the exact tagged commit,
+# verifies the tag/CHANGELOG/pyproject triple agrees, and creates the GitHub Release
+# with the changelog section as its notes. A manually-created tag triggers it too —
+# the consistency check is the backstop for tags that were never cut properly.
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"   # strict X.Y.Z; prereleases (vX.Y.Z-rcN) intentionally bypass
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Verify, then publish v${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # gh release create
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install pytest httpx cryptography
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Ruff format check
+        run: ruff format --check .
+
+      - name: Run the suite
+        # The public repo's suite is the verifier CLI (pyproject testpaths = ["cli"]).
+        run: pytest -v
+
+      - name: Verify tag matches CHANGELOG and pyproject
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          if ! grep -qE "^## \[${version//./\.}\]" CHANGELOG.md; then
+            echo "::error ::CHANGELOG.md has no '## [$version]' section for tag $TAG."
+            echo "Cut the release with scripts/release.py, never by tagging manually."
+            exit 1
+          fi
+          if ! grep -qE '^version = "'"$version"'"' pyproject.toml; then
+            echo "::error ::pyproject.toml version is not '$version' for tag $TAG."
+            exit 1
+          fi
+          echo "Tag, CHANGELOG header, and pyproject all agree on $version."
+
+      - name: Extract release notes from CHANGELOG
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          awk -v tag="$version" '
+            /^## \[/ {
+              if (index($0, "## [" tag "]") == 1) { insection = 1; next }
+              if (insection) exit
+            }
+            insection { print }
+          ' CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "::error ::release_notes.md is empty — changelog section $version has no body."
+            exit 1
+          fi
+          echo "--- release notes preview ---"
+          head -20 release_notes.md
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "v$version" \
+            --notes-file release_notes.md
+          echo "Published $TAG:"
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url --jq .url
