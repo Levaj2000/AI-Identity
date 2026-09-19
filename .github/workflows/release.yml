@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   publish:
-    name: Verify, then publish v${{ github.ref_name }}
+    name: Verify, then publish ${{ github.ref_name }}
     runs-on: ubuntu-latest
     permissions:
       contents: write   # gh release create
@@ -88,9 +88,17 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           version="${TAG#v}"
-          gh release create "$TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "v$version" \
-            --notes-file release_notes.md
-          echo "Published $TAG:"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — refreshing its notes from the CHANGELOG."
+            gh release edit "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "v$version" \
+              --notes-file release_notes.md
+          else
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "v$version" \
+              --notes-file release_notes.md
+            echo "Published $TAG:"
+          fi
           gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url --jq .url
