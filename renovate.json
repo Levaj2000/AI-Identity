@@ -11,6 +11,8 @@
   "labels": ["dependencies"],
   "configMigration": true,
   "automergeStrategy": "squash",
+  "platformAutomerge": false,
+  "semanticCommitType": "chore",
   "osvVulnerabilityAlerts": true,
   "pip-compile": {
     "managerFilePatterns": [
@@ -53,14 +55,14 @@
       "allowedVersions": "<0.23"
     },
     {
-      "description": "Digest and pin updates automerge once the required checks are green",
+      "description": "Digest and pin updates automerge once every check is green (platformAutomerge is off, so Renovate merges on its own run and waits for all checks, not only the required ones)",
       "matchUpdateTypes": ["digest", "pin", "pinDigest"],
       "automerge": true
     },
     {
-      "description": "praxis-policy-core digest bumps never automerge: the pin is held deliberately (#536) and the lockfile needs the cpex sibling checkout to regenerate",
+      "description": "praxis-policy-core digest bumps never automerge: the pin is held deliberately (#536) and the lockfile needs the cpex sibling checkout to regenerate. matchDepNames, not matchPackageNames: for a cargo git dependency Renovate's packageName is the repository URL, and the old rule never matched (#564)",
       "matchManagers": ["cargo"],
-      "matchPackageNames": ["praxis-policy-core"],
+      "matchDepNames": ["praxis-policy-core"],
       "automerge": false
     },
     {

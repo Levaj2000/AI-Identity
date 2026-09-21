@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Renovate merged a praxis-policy-core rev bump with two red checks and turned main red.** #564 moved the git rev in `integrations/cpex-ocsf-audit/Cargo.toml` to `8b28974` without regenerating `Cargo.lock` (Renovate has no cpex sibling checkout), the Rust job failed on `--locked` exactly as its header comment predicts, and GitHub native auto-merge merged anyway because neither the Rust job nor the CHANGELOG gate is a required status check. The #555 rule meant to hold this dependency never matched: for a cargo git dependency Renovate's `packageName` is the repository URL, so `matchPackageNames: ["praxis-policy-core"]` was a no-op and the generic digest automerge rule applied. Three changes: the bump is reverted so the pin is back at `5b76fa6`, where `Cargo.lock` still is; the rule uses `matchDepNames`; and `platformAutomerge` is off, so Renovate merges on its own run only when every check is green rather than handing the merge to GitHub, which looks at required checks alone. `semanticCommitType` is `chore` so Renovate PRs no longer title themselves `fix(deps)` and trip the CHANGELOG gate that Decision #61 added for feature and fix work. Cost: an automerge waits for the next Renovate run instead of landing the moment checks pass. (#566)
+
 ## [0.5.0] - 2026-09-18
 
 ### Fixed
