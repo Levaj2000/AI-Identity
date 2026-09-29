@@ -32,8 +32,8 @@ from langchain_ai_identity import create_ai_identity_agent
 
 agent = create_ai_identity_agent(
     tools=[DuckDuckGoSearchRun()],
-    agent_id="your-agent-uuid",          # from AI Identity dashboard
-    ai_identity_api_key="aid_sk_...",    # show-once key from agent creation
+    agent_id="your-agent-uuid",  # from AI Identity dashboard
+    ai_identity_api_key="aid_sk_...",  # show-once key from agent creation
     openai_api_key="sk-...",
 )
 
@@ -86,8 +86,8 @@ client.policies.create(
     agent_id="your-agent-uuid",
     rules=[
         {"endpoint": "/v1/chat/completions", "method": "POST", "effect": "allow"},
-        {"endpoint": "/tools/search",         "method": "POST", "effect": "allow"},
-        {"endpoint": "/tools/send_email",     "method": "POST", "effect": "deny"},
+        {"endpoint": "/tools/search", "method": "POST", "effect": "allow"},
+        {"endpoint": "/tools/send_email", "method": "POST", "effect": "deny"},
     ],
 )
 ```
@@ -104,7 +104,7 @@ The gateway enforces key type separation automatically. A compromised runtime ke
 ```python
 agent = create_ai_identity_agent(
     ...,
-    fail_closed=True,   # default — gateway error or denial raises an exception
+    fail_closed=True,  # default — gateway error or denial raises an exception
     fail_closed=False,  # fail-open — gateway error logs a warning and continues
 )
 ```
@@ -118,10 +118,12 @@ Swap `ChatOpenAI` for `AIIdentityChatOpenAI` in any existing LangChain chain:
 ```python
 # Before
 from langchain_openai import ChatOpenAI
+
 llm = ChatOpenAI(model="gpt-4o", openai_api_key="sk-...")
 
 # After — adds gateway enforcement and automatic audit logging
 from langchain_ai_identity import AIIdentityChatOpenAI
+
 llm = AIIdentityChatOpenAI(
     model="gpt-4o",
     openai_api_key="sk-...",
@@ -258,10 +260,12 @@ researcher = Agent(
     tools=toolkit.get_tools(),  # enforced tools
     llm=ChatOpenAI(
         model="gpt-4o",
-        callbacks=[AIIdentityCallbackHandler(
-            agent_id="your-agent-uuid",
-            api_key="aid_sk_...",
-        )],
+        callbacks=[
+            AIIdentityCallbackHandler(
+                agent_id="your-agent-uuid",
+                api_key="aid_sk_...",
+            )
+        ],
     ),
 )
 ```
