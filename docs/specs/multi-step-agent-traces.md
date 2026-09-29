@@ -167,6 +167,7 @@ trace headers will have `NULL` values.
 
 from sqlalchemy import ForeignKey
 
+
 class AuditLog(Base):
     # ... existing columns ...
 
@@ -311,7 +312,7 @@ def enforce_request(
             trace_id = None  # Silently ignore malformed trace IDs
 
     # Validate step_name (alphanumeric + hyphens + underscores, max 128)
-    if step_name and (len(step_name) > 128 or not re.match(r'^[a-zA-Z0-9_-]+$', step_name)):
+    if step_name and (len(step_name) > 128 or not re.match(r"^[a-zA-Z0-9_-]+$", step_name)):
         step_name = None
 
     result = enforce(
@@ -546,6 +547,7 @@ New schemas added to `common/schemas/agent.py`:
 ```python
 class TraceStepResponse(BaseModel):
     """A single step within a trace."""
+
     id: int
     parent_request_id: int | None = None
     step_name: str | None = None
@@ -564,6 +566,7 @@ class TraceStepResponse(BaseModel):
 
 class TraceTreeNode(BaseModel):
     """Nested tree node for DAG rendering."""
+
     id: int
     step_name: str | None = None
     decision: str
@@ -572,6 +575,7 @@ class TraceTreeNode(BaseModel):
 
 class TraceDetailResponse(BaseModel):
     """Full trace with all steps and tree structure."""
+
     trace_id: str
     agent_id: uuid.UUID
     agent_name: str | None = None
@@ -587,6 +591,7 @@ class TraceDetailResponse(BaseModel):
 
 class TraceSummaryResponse(BaseModel):
     """Summary of a trace for list views."""
+
     trace_id: str
     agent_id: uuid.UUID
     agent_name: str | None = None
@@ -602,6 +607,7 @@ class TraceSummaryResponse(BaseModel):
 
 class TraceListResponse(BaseModel):
     """Paginated list of trace summaries."""
+
     items: list[TraceSummaryResponse]
     total: int
     limit: int
@@ -760,12 +766,14 @@ def trace_context(name: str = ""):
     """
     state = _get_trace_state()
     trace_id = str(uuid.uuid4())
-    state.append({
-        "trace_id": trace_id,
-        "name": name,
-        "last_request_id": None,
-        "step_index": 0,
-    })
+    state.append(
+        {
+            "trace_id": trace_id,
+            "name": name,
+            "last_request_id": None,
+            "step_index": 0,
+        }
+    )
     try:
         yield trace_id
     finally:
