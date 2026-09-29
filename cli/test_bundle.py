@@ -59,6 +59,44 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+class _WitnessServer:
+    """A local stand-in for the public feed and its mirror. Unknown paths get
+    ``default`` (503: a source that cannot answer). Records every request."""
+
+    def __init__(self, routes: dict[str, tuple[int, bytes]], default=(503, b"")) -> None:
+        import http.server
+        import threading
+
+        outer = self
+        self.routes, self.default, self.requests = routes, default, []
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):  # noqa: N802 - http.server's naming
+                outer.requests.append(self.path)
+                status, body = outer.routes.get(self.path, outer.default)
+                self.send_response(status)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                pass
+
+        self.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.url = f"http://127.0.0.1:{self.httpd.server_address[1]}"
+        self.thread = threading.Thread(
+            target=self.httpd.serve_forever, kwargs={"poll_interval": 0.02}, daemon=True
+        )
+
+    def __enter__(self) -> _WitnessServer:
+        self.thread.start()
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        self.httpd.shutdown()
+        self.httpd.server_close()
+
+
 @unittest.skipUnless(_have_cryptography(), "cryptography package not installed")
 class TestBundleVerification(unittest.TestCase):
     @classmethod
@@ -446,6 +484,136 @@ class TestBundleVerification(unittest.TestCase):
             chain_valid=False, total_entries=6, entries_verified=6
         )
         self._assert_rejected(self._files(parts), "K", "reports invalid")
+
+    # -- Tier W (--online) ------------------------------------------------
+
+    def _online(self, files, routes, *extra, online=True):
+        no_proxy = {"NO_PROXY": "127.0.0.1", "no_proxy": "127.0.0.1"}
+        with _WitnessServer(routes) as srv, patch.dict(os.environ, no_proxy):
+            args = ["--feed-url", srv.url + "/feed", "--mirror-url", srv.url + "/mirror", *extra]
+            code, result, err = self._run(
+                self._zip(files), *args, *(["--online"] if online else [])
+            )
+        return code, result, srv.requests
+
+    @staticmethod
+    def _feed(entry: dict[str, Any]) -> dict[str, tuple[int, bytes]]:
+        path = f"/feed/evidence-anchor/checkpoints/{entry['merkle_root']}"
+        return {path: (200, json.dumps({**entry, "signed_at": "2026-09-15T02:00:00Z"}).encode())}
+
+    @staticmethod
+    def _mirror(entries: list[dict[str, Any]], mirrored_at: str) -> dict[str, tuple[int, bytes]]:
+        ndjson = "".join(json.dumps(e) + "\n" for e in entries).encode()
+        state = json.dumps({"mirrored_at": mirrored_at, "checkpoints_held": len(entries)}).encode()
+        return {
+            "/mirror/checkpoints.ndjson": (200, ndjson),
+            "/mirror/mirror-state.json": (200, state),
+        }
+
+    def test_online_checkpoint_witnessed_by_feed(self):
+        parts = self._parts()
+        code, result, requests = self._online(self._files(parts), self._feed(parts[CHECKPOINTS][0]))
+        self.assertEqual(code, 0)
+        w = result["tiers"]["W"]
+        self.assertEqual(w["outcome"], "VERIFIED")
+        self.assertEqual((w["witnessed"], w["via_feed"], w["via_mirror"]), (1, 1, 0))
+        self.assertEqual(len(requests), 1)  # the mirror is not consulted
+
+    def test_feed_serving_a_different_envelope_is_a_split_view(self):
+        parts = self._parts()
+        forked = json.loads(json.dumps(parts[CHECKPOINTS][0]))
+        forked["envelope"]["signatures"][0]["sig"] = base64.b64encode(b"other").decode()
+        code, result, _ = self._online(self._files(parts), self._feed(forked))
+        self.assertEqual(code, 1)
+        self.assertEqual(result["tiers"]["W"]["outcome"], "REJECTED")
+        self.assertIn("split view", result["tiers"]["W"]["reason"])
+        self.assertIn("security@ai-identity.co", result["tiers"]["W"]["reason"])
+
+    def test_feed_404_for_a_verified_root_is_a_split_view(self):
+        parts = self._parts()
+        root = parts[CHECKPOINTS][0]["merkle_root"]
+        routes = {f"/feed/evidence-anchor/checkpoints/{root}": (404, b"")}
+        code, result, _ = self._online(self._files(parts), routes)
+        self.assertEqual(code, 1)
+        self.assertIn("has no checkpoint", result["tiers"]["W"]["reason"])
+
+    def test_feed_down_falls_back_to_the_mirror(self):
+        parts = self._parts()
+        routes = self._mirror([parts[CHECKPOINTS][0]], "2026-09-29T12:00:00+00:00")
+        code, result, _ = self._online(self._files(parts), routes)
+        self.assertEqual(code, 0)
+        w = result["tiers"]["W"]
+        self.assertEqual(w["outcome"], "VERIFIED")
+        self.assertEqual((w["via_feed"], w["via_mirror"]), (0, 1))
+
+    def test_mirror_holding_a_different_envelope_is_a_split_view(self):
+        parts = self._parts()
+        forked = json.loads(json.dumps(parts[CHECKPOINTS][0]))
+        forked["envelope"]["payload"] = base64.b64encode(b"{}").decode()
+        code, result, _ = self._online(
+            self._files(parts), self._mirror([forked], "2026-09-29T12:00:00+00:00")
+        )
+        self.assertEqual(code, 1)
+        self.assertIn("mirror holds a different envelope", result["tiers"]["W"]["reason"])
+
+    def test_checkpoint_too_recent_for_the_mirror_is_not_yet_witnessed(self):
+        # Signed 02:00, snapshot 04:00: inside one 6-hour mirror interval.
+        routes = self._mirror([], "2026-09-15T04:00:00+00:00")
+        code, result, _ = self._online(self._files(self._parts()), routes)
+        self.assertEqual(code, 0)
+        w = result["tiers"]["W"]
+        self.assertEqual(w["outcome"], "UNAVAILABLE")
+        self.assertEqual(w["checkpoints"][0]["result"], "NOT YET WITNESSED")
+        self.assertIn("1 not yet in the mirror", w["reason"])
+
+    def test_old_checkpoint_missing_from_the_mirror_is_a_split_view(self):
+        routes = self._mirror([], "2026-09-22T00:00:00+00:00")
+        code, result, _ = self._online(self._files(self._parts()), routes)
+        self.assertEqual(code, 1)
+        self.assertIn("which does not hold it", result["tiers"]["W"]["reason"])
+
+    def test_no_reachable_source_is_unavailable_not_rejected(self):
+        code, result, _ = self._online(self._files(self._parts()), {})
+        self.assertEqual(code, 0)
+        w = result["tiers"]["W"]
+        self.assertEqual(w["outcome"], "UNAVAILABLE")
+        self.assertIn("1 with no reachable source", w["reason"])
+
+    def test_tombstone_checkpoints_are_witnessed_too(self):
+        parts = self._parts(count=8, prune=(3,))
+        entry = {"merkle_root": parts[CHECKPOINTS][0]["merkle_root"], **parts[CHECKPOINTS][0]}
+        del parts[CHECKPOINTS], parts[PROOFS]  # nothing anchored: only the tombstone cites it
+        code, result, _ = self._online(self._files(parts), self._feed(entry))
+        self.assertEqual(code, 0)
+        self.assertEqual(result["tiers"]["P"]["anchored"], 0)
+        self.assertEqual(result["tiers"]["W"]["outcome"], "VERIFIED")
+        self.assertEqual(result["tiers"]["W"]["total"], 1)
+
+    def test_offline_by_default_makes_no_requests(self):
+        parts = self._parts()
+        code, result, requests = self._online(
+            self._files(parts), self._feed(parts[CHECKPOINTS][0]), online=False
+        )
+        self.assertEqual(code, 0)
+        self.assertEqual(requests, [])
+        self.assertIn("--online", result["tiers"]["W"]["reason"])
+
+    def test_rejected_bundle_is_not_witnessed(self):
+        parts = self._parts()
+        files = self._files(parts)
+        files["notes.txt"] = b"added after issuance"
+        code, result, requests = self._online(files, self._feed(parts[CHECKPOINTS][0]))
+        self.assertEqual(code, 1)
+        self.assertEqual(requests, [])
+        self.assertIn("Tier P did not verify", result["tiers"]["W"]["reason"])
+
+    def test_non_http_witness_url_is_a_usage_error(self):
+        path = self._zip(self._files(self._parts()))
+        code, _, err = _run_cmd(
+            ["bundle", path, "--jwks", self.jwks_path, "--online", "--feed-url", "file:///etc"]
+        )
+        self.assertEqual(code, 2)
+        self.assertIn("not an http(s) URL", err)
 
     # -- Container and usage ----------------------------------------------
 

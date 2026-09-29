@@ -1,9 +1,9 @@
 # AI Identity Case File bundle format (v1)
 
 **Status:** Specified. The verifier side is implemented in CLI 1.6.0: the
-`bundle` command and the standalone-command rules (section 10.2 items 1 to 5).
-The platform side (section 10.1) is not, so every issued bundle is still
-pre-v1 (section 8.2).
+`bundle` command, the standalone-command rules and the online witness check
+(section 10.2). The platform side (section 10.1) is not, so every issued
+bundle is still pre-v1 (section 8.2).
 **Owner:** CTO
 **Last reviewed:** 2026-09-29
 
@@ -511,10 +511,14 @@ count of rows not covered travels with the result.
 ### 7.3 Tier W: witness check (optional, online)
 
 For each checkpoint root the bundle relies on (step 4, plus the checkpoints
-tombstones cite), query either source:
+tombstones cite), query the public record. Ask the live feed first, and fall
+back to the mirror only when the feed gives no usable answer (unreachable, a
+5xx or other non-404 status, or an unreadable body). The fallback is what keeps
+Tier W working in the disappearance case (section 2):
 
 - the live feed: `GET https://api.ai-identity.co/evidence-anchor/checkpoints/<merkle_root>`
-- the `evidence-anchor-mirror` branch of this repository, `checkpoints.ndjson`
+- the `evidence-anchor-mirror` branch of this repository: `checkpoints.ndjson`
+  for the entries and `mirror-state.json` (`mirrored_at`) to date the snapshot
 
 | Response | Result |
 |---|---|
@@ -524,6 +528,10 @@ tombstones cite), query either source:
 | Mirror lacks the root, and its `signed_at` is within one mirror interval (6 hours) of the mirror's newest snapshot | `NOT YET WITNESSED`: not a failure; re-check later |
 | Mirror lacks the root, and its `signed_at` is older than that | REJECT |
 | Source unreachable | UNAVAILABLE |
+
+The tier's outcome sums these up: REJECTED if any checkpoint is a split view,
+VERIFIED if every checkpoint is WITNESSED, and otherwise UNAVAILABLE, with the
+counts of checkpoints not yet in the mirror and with no reachable source.
 
 With a clone of the mirror, a verifier MAY also confirm that each tombstone
 checkpoint is present at its `mirror_commit`, and that the commit predates the
@@ -702,8 +710,9 @@ exist today; the changes are these.
 
 ### 10.2 Verifier (`cli/ai_identity_verify.py`, maintainer sign-off required)
 
-Items 1 to 5 shipped in CLI 1.6.0, with tests for each REJECT path they
-add. Item 6 is open.
+All of items 1 to 7 shipped in CLI 1.6.0, with tests for each REJECT path
+they add. The optional `mirror_commit` check in section 7.3 is not
+implemented: it needs a clone of the mirror rather than its published files.
 
 1. **`bundle` subcommand.** It accepts a ZIP or an extracted directory and
    implements sections 7.1 to 7.5. All new strictness lives here: the existing
