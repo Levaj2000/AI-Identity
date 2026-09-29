@@ -1,8 +1,8 @@
 # AI Identity Case File bundle format (v1)
 
-**Status:** Specified, not yet implemented. Section 10 lists the builder and
-verifier changes it requires; until they ship, every issued bundle is pre-v1
-(section 8.2).
+**Status:** Specified. The verifier side is implemented in CLI 1.6.0 as the
+`bundle` command (section 10.2 items 1, 2 and 5); the platform side (section
+10.1) is not, so every issued bundle is still pre-v1 (section 8.2).
 **Owner:** CTO
 **Last reviewed:** 2026-09-29
 
@@ -700,6 +700,11 @@ exist today; the changes are these.
    `bundle` command and describe the tiers in section 9's terms.
 
 ### 10.2 Verifier (`cli/ai_identity_verify.py`, maintainer sign-off required)
+
+Items 1, 2 and 5 shipped in CLI 1.6.0, with tests for each REJECT path they
+add. Items 3, 4 and 6 are open: the `bundle` command already applies the
+rules of items 3 and 4 itself, and the standalone `inclusion-proof` and
+`chain` commands do not yet.
 
 1. **`bundle` subcommand.** It accepts a ZIP or an extracted directory and
    implements sections 7.1 to 7.5. All new strictness lives here: the existing
