@@ -1,8 +1,9 @@
 # AI Identity Case File bundle format (v1)
 
-**Status:** Specified. The verifier side is implemented in CLI 1.6.0 as the
-`bundle` command (section 10.2 items 1, 2 and 5); the platform side (section
-10.1) is not, so every issued bundle is still pre-v1 (section 8.2).
+**Status:** Specified. The verifier side is implemented in CLI 1.6.0: the
+`bundle` command and the standalone-command rules (section 10.2 items 1 to 5).
+The platform side (section 10.1) is not, so every issued bundle is still
+pre-v1 (section 8.2).
 **Owner:** CTO
 **Last reviewed:** 2026-09-29
 
@@ -701,10 +702,8 @@ exist today; the changes are these.
 
 ### 10.2 Verifier (`cli/ai_identity_verify.py`, maintainer sign-off required)
 
-Items 1, 2 and 5 shipped in CLI 1.6.0, with tests for each REJECT path they
-add. Items 3, 4 and 6 are open: the `bundle` command already applies the
-rules of items 3 and 4 itself, and the standalone `inclusion-proof` and
-`chain` commands do not yet.
+Items 1 to 5 shipped in CLI 1.6.0, with tests for each REJECT path they
+add. Item 6 is open.
 
 1. **`bundle` subcommand.** It accepts a ZIP or an extracted directory and
    implements sections 7.1 to 7.5. All new strictness lives here: the existing
@@ -713,8 +712,9 @@ rules of items 3 and 4 itself, and the standalone `inclusion-proof` and
    to 3).
 3. **`inclusion-proof`.**
    - Reject a checkpoint payload whose `schema_version` is not 1.
-     `evidence-anchor-reference-notes.md` already states this rule; the CLI
-     does not enforce it today.
+     `evidence-anchor-reference-notes.md` already states this rule. From
+     1.6.0 the CLI enforces it wherever it verifies a checkpoint, which
+     includes `chain --tombstones` with `--jwks` or `--pubkey`.
    - Bind `tree_size` to the signed payload.
 
    These change verdicts only for malformed inputs.

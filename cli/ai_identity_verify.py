@@ -938,7 +938,7 @@ def _cmd_chain_org(
     keys: list[bytes],
     entries: list[dict[str, Any]],
     total: int,
-    agent_scoped: bool = False,
+    slice_scope: str | None = None,
 ) -> int:
     """Verify the per-org HMAC chain from an exported report.
 
@@ -947,8 +947,9 @@ def _cmd_chain_org(
     sequence must be contiguous (no gaps = no deletions) and the chain
     linkage must hold via ``prev_hash_org``/``entry_hash_org``.
 
-    Agent-scoped export (``agent_scoped=True``): a *sparse* slice — other
-    agents legitimately own the intervening sequence numbers, so a gap is
+    Agent- or incident-scoped export (``slice_scope`` is "agent" or
+    "incident"): a *sparse* slice. Other agents or unrelated activity
+    legitimately own the intervening sequence numbers, so a gap is
     NOT evidence of deletion. Mirrors the server-side rule
     (common/audit/writer.py verify_chain): per-row hash recomputation
     always runs; linkage is enforced only across consecutive sequence
@@ -991,9 +992,9 @@ def _cmd_chain_org(
             expected_prev_hash = entry_prev
         else:
             if seq != expected_seq:
-                if agent_scoped:
-                    # Rows in between belong to other agents in the org —
-                    # re-anchor the window at this entry.
+                if slice_scope:
+                    # Rows in between belong to other agents or other
+                    # activity in the org: re-anchor the window here.
                     gaps_reanchored += 1
                     expected_prev_hash = entry_prev
                 else:
@@ -1091,13 +1092,13 @@ def _cmd_chain_org(
             "entries_verified": verified,
             "entries_not_covered_by_keys": unverified,
             "chain_intact": intact,
-            "mode": "per-org-agent-slice" if agent_scoped else "per-org",
+            "mode": f"per-org-{slice_scope}-slice" if slice_scope else "per-org",
             "supplied_key_fingerprints": sorted(keymap),
             "seq_range": (
                 [entries[0]["org_chain_seq"], entries[-1]["org_chain_seq"]] if entries else None
             ),
         }
-        if agent_scoped:
+        if slice_scope:
             details["gaps_reanchored"] = gaps_reanchored
         details["tombstoned_entries"] = tombstoned
         if tombstones_doc is not None:
@@ -1126,13 +1127,17 @@ def _cmd_chain_org(
         print(f"  Entries:      {total}")
         if entries:
             print(f"  Seq range:    {entries[0]['org_chain_seq']} → {entries[-1]['org_chain_seq']}")
-        if agent_scoped:
-            print("  Mode:         Agent slice (row integrity + intra-run linkage;")
+        if slice_scope:
+            print(
+                f"  Mode:         {slice_scope.capitalize()} slice (row integrity + "
+                "intra-run linkage;"
+            )
             print("                completeness proof requires an org-scope export)")
             if gaps_reanchored:
+                owners = "other agents own" if slice_scope == "agent" else "other activity owns"
                 print(
                     f"  Note:         {gaps_reanchored} sequence gap(s) re-anchored — "
-                    "other agents own those rows"
+                    f"{owners} those rows"
                 )
         else:
             print("  Mode:         Per-org (tenant-scoped completeness proof)")
@@ -1196,7 +1201,10 @@ def cmd_chain(args: argparse.Namespace) -> int:
     keys = _get_hmac_keys(args)
     entries, scope = _load_chain_entries(args.file)
     total = len(entries)
-    agent_scoped = isinstance(scope, dict) and scope.get("type") == "agent"
+    # agent and incident exports are sparse slices of the org chain; only an
+    # org-scope export claims completeness (export-bundle-format.md 7.1 step 6).
+    scope_type = scope.get("type") if isinstance(scope, dict) else None
+    slice_scope = scope_type if scope_type in ("agent", "incident") else None
 
     if total == 0:
         if args.json:
@@ -1231,7 +1239,7 @@ def cmd_chain(args: argparse.Namespace) -> int:
     # tenant-scoped completeness proof. Older exports without the
     # org-chain fields fall through to the legacy global path.
     if not getattr(args, "global_chain", False) and _entries_have_org_chain(entries):
-        return _cmd_chain_org(args, keys, entries, total, agent_scoped=agent_scoped)
+        return _cmd_chain_org(args, keys, entries, total, slice_scope=slice_scope)
 
     # Legacy / fallback: global chain. Detect partial export (first
     # entry's prev_hash is not GENESIS) → use partial verify.
@@ -1671,6 +1679,10 @@ def _verify_checkpoint_signature(args: argparse.Namespace, envelope: dict):
     except json.JSONDecodeError:
         print(_red("  ✗ checkpoint payload is not valid JSON"))
         return False, {}
+    if not isinstance(payload, dict) or payload.get("schema_version") != 1:
+        version = payload.get("schema_version") if isinstance(payload, dict) else None
+        print(_red(f"  x unsupported checkpoint schema_version {version!r} (expected 1)"))
+        return False, {}
     return True, payload
 
 
@@ -1689,6 +1701,7 @@ def cmd_inclusion_proof(args: argparse.Namespace) -> int:
     # Verify each checkpoint's signature ONCE, and bind the signed root to the
     # root the proofs reference (a signature over a different root is useless).
     verified_roots: dict[str, bool] = {}
+    signed_tree_sizes: dict[str, Any] = {}
     for cp in checkpoints:
         root = cp.get("merkle_root", "")
         print(_bold(f"Checkpoint {root[:16]}…"))
@@ -1698,6 +1711,7 @@ def cmd_inclusion_proof(args: argparse.Namespace) -> int:
             ok = False
         if ok:
             print(_green("  ✓ signature valid"))
+            signed_tree_sizes[root] = payload.get("tree_size")
         verified_roots[root] = ok
 
     all_ok = True
@@ -1705,7 +1719,9 @@ def cmd_inclusion_proof(args: argparse.Namespace) -> int:
     for p in proofs:
         root = p.get("merkle_root", "")
         sig_ok = verified_roots.get(root, False)
-        incl_ok = sig_ok and _merkle_verify_inclusion(
+        # The proof's tree_size is unsigned; it must be the size the checkpoint signed.
+        size_ok = sig_ok and p["tree_size"] == signed_tree_sizes.get(root)
+        incl_ok = size_ok and _merkle_verify_inclusion(
             bytes.fromhex(p["entry_hash"]),
             p["index"],
             p["tree_size"],
@@ -1713,6 +1729,8 @@ def cmd_inclusion_proof(args: argparse.Namespace) -> int:
             bytes.fromhex(root),
         )
         label = f"event #{p.get('audit_id')} (entry {p['entry_hash'][:12]}…)"
+        if sig_ok and not size_ok:
+            label += " - tree_size differs from the signed checkpoint"
         print(f"  {_green('✓ VERIFIED') if incl_ok else _red('✗ NOT VERIFIED')}  {label}")
         all_ok = all_ok and incl_ok
 

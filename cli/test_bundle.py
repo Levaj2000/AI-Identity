@@ -27,12 +27,12 @@ import ai_identity_verify as cli
 from test_verify import (
     _TOMB_ORG_ID,
     TEST_HMAC_KEY,
+    _audit_path,
     _build_org_chain,
     _have_cryptography,
     _local_ecdsa_signer,
     _make_entry_hash,
     _make_report_signature,
-    _merkle_root,
     _pae,
     _pruned_export,
     _run_cmd,
@@ -53,18 +53,6 @@ ROLES = {
     PROOFS: "proofs",
     TOMBSTONES: "tombstones",
 }
-
-
-def _audit_path(index: int, leaves_hex: list[str]) -> list[str]:
-    """RFC 6962 section 2.1.1 PATH(m, D[n]), independent of the CLI's code."""
-    if len(leaves_hex) == 1:
-        return []
-    k = 1
-    while k * 2 < len(leaves_hex):
-        k *= 2
-    if index < k:
-        return [*_audit_path(index, leaves_hex[:k]), _merkle_root(leaves_hex[k:])]
-    return [*_audit_path(index - k, leaves_hex[k:]), _merkle_root(leaves_hex[:k])]
 
 
 def _sha256(data: bytes) -> str:
