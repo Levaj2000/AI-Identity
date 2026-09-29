@@ -143,6 +143,10 @@ Layout rules:
 - **ZIP hygiene.** Entry paths MUST be relative, MUST NOT contain `..`
   segments, and MUST NOT be symlinks or duplicates. A verifier MUST reject a
   ZIP that violates any of these before extracting anything.
+- **Extracted directories.** A verifier MAY accept the directory a bundle was
+  extracted into. The same inventory rule applies, except that desktop
+  metadata files named `.DS_Store` are ignored, because opening the folder is
+  enough to create one. Symlinks in the directory are a REJECT.
 
 ## 4. `manifest.json` (signed)
 
@@ -203,13 +207,15 @@ Rules:
   iff their folders are.
 - **Cross-binding.** The manifest's `org_id`, `scope` and `range` MUST equal
   the case file's. The case file's `range` is `[min(id), max(id)]` over its
-  events. Every checkpoint payload's `org_id` MUST equal the manifest's.
-  `retention/tombstones.json`'s `org_id` and `range` MUST equal the manifest's.
-  Any mismatch is a REJECT.
+  events, or `null` when there are none. Every checkpoint payload's `org_id`
+  MUST equal the manifest's. `retention/tombstones.json`'s `org_id` and `range`
+  MUST equal the manifest's. Any mismatch is a REJECT.
 - **Counts.** `counts.events` is the number of exported events.
   `counts.anchored` and `counts.pending` are the lengths of `proofs` and
-  `pending`, and they sum to `counts.events`. `counts.tombstoned` is the
-  number of tombstones shipped. Each MUST equal what the verifier counts.
+  `pending`, and they sum to `counts.events`. Without `evidence-anchor/`,
+  `counts.anchored` is 0 and every event is pending. `counts.tombstoned` is
+  the number of tombstones shipped, 0 without `retention/`. Each MUST equal
+  what the verifier counts.
 - **Scope.** `scope.type` is one of `org`, `agent` or `incident`. Any other
   value is a REJECT: a verifier that guesses the scope guesses the
   completeness rule (section 7.1 step 6).
@@ -289,10 +295,17 @@ section 3:
 
 The format is `ai-identity-retention-tombstones/v1`, fully specified in
 `retention-tombstones-in-exports.md`. This spec incorporates it by reference
-and adds three v1 rules:
+and adds four v1 rules:
 
 - The checkpoint signature check on cited checkpoints is **mandatory** for a
   Tier P result. In 1.5.0, `chain --tombstones` makes it optional (`--jwks`).
+  The cited checkpoint also passes the section 7.1 step 4 checks
+  (`schema_version`, `org_id`).
+- The frozen `leaves` and `audit_log_ids` have the same length, and that
+  length equals the checkpoint's signed `tree_size`. Each tombstone's
+  `audit_id` lies within the checkpoint's signed
+  `[first_audit_id, last_audit_id]`. The frozen lists are unsigned; these
+  bind them to what was signed.
 - `org_id` and `range` MUST equal the manifest's.
 - A tombstone whose `org_chain_seq` is also a surviving exported row is a
   contradiction, and a REJECT.
@@ -587,6 +600,14 @@ A v1 verifier reports them as `PRE-V1: bundle integrity unsigned`. It runs
 Tier P steps 4 to 7 over the unsigned files, locating the case file by glob.
 It reports Tier P as PRE-V1, never VERIFIED: without the manifest, nothing
 binds the exported rows to the anchored hashes. Tier K runs as usual.
+
+Two older shapes are handled the way the 1.5.0 `chain` command handles them:
+
+- **No `scope` in the report:** treated as `org` scope, so a gap still needs
+  a tombstone.
+- **No per-org chain fields:** there is no org-slice structure to check. The
+  result says so, and Tier K is UNAVAILABLE with a pointer to
+  `chain --global`.
 
 The existing subcommands (`report`, `chain`, `inclusion-proof`, `attestation`)
 keep working on pre-v1 bundles exactly as in 1.5.0.
