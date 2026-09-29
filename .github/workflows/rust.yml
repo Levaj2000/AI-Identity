@@ -15,17 +15,16 @@ name: Rust
 # cpex clone plus a cold Rust build; the other CI jobs should not pay that
 # on every docs PR.
 
+# No `paths:` filter here, on purpose. The job below is a required status
+# check, and a workflow skipped by a path filter never reports, so every PR
+# that does not touch the crate would wait on it forever. The job always runs
+# and reports under the same name; its first step decides whether the build
+# and tests are needed (see "Detect crate changes").
 on:
   push:
     branches: [main]
-    paths:
-      - "integrations/cpex-ocsf-audit/**"
-      - ".github/workflows/rust.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "integrations/cpex-ocsf-audit/**"
-      - ".github/workflows/rust.yml"
 
 permissions:
   contents: read
@@ -78,8 +77,32 @@ jobs:
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Two commits are enough to see the change. On a pull_request run
+          # HEAD is GitHub's merge commit, whose first parent is the base tip,
+          # so HEAD^1..HEAD is exactly the PR; on a push to main it is the
+          # merge or squash commit that landed.
+          fetch-depth: 2
+
+      - name: Detect crate changes
+        id: changes
+        working-directory: ${{ github.workspace }}
+        # Builds unless the diff proves nothing relevant changed: a diff that
+        # cannot be computed (no parent commit) builds, it never skips.
+        run: |
+          if ! changed=$(git diff --name-only HEAD^1 HEAD); then
+            echo "Could not diff HEAD^1..HEAD; building to be safe."
+            echo "rust=true" >> "$GITHUB_OUTPUT"
+          elif printf '%s\n' "$changed" | grep -qE '^(integrations/cpex-ocsf-audit/|\.github/workflows/rust\.yml$)'; then
+            echo "rust=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Nothing under integrations/cpex-ocsf-audit/ and no change to rust.yml:"
+            echo "build and tests skipped, and the required check reports success."
+            echo "rust=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Check out cpex beside the repo
+        if: steps.changes.outputs.rust == 'true'
         working-directory: ${{ github.workspace }}
         # `path = "../../../cpex/crates/cpex-core"` resolves to a sibling of
         # the repo root, which actions/checkout cannot write to (it refuses
@@ -95,6 +118,7 @@ jobs:
           test -f crates/cpex-core/Cargo.toml
 
       - name: Install Rust ${{ env.TOOLCHAIN }}
+        if: steps.changes.outputs.rust == 'true'
         # rustup ships on the runner image, so pinning the MSRV needs no
         # third-party action — one less SHA to keep fresh.
         working-directory: ${{ github.workspace }}
@@ -103,6 +127,7 @@ jobs:
           rustup run "$TOOLCHAIN" rustc --version
 
       - name: Build (cpex host) — lib, tests and examples
+        if: steps.changes.outputs.rust == 'true'
         # --locked is the point of this job: a manifest bump that did not
         # regenerate Cargo.lock fails here instead of going green.
         # -D warnings holds the "clean, no warnings" bar SEAM-PORT-RESULTS.md
@@ -112,9 +137,11 @@ jobs:
         run: cargo "+$TOOLCHAIN" check --locked --all-targets
 
       - name: Test (cpex host)
+        if: steps.changes.outputs.rust == 'true'
         run: cargo "+$TOOLCHAIN" test --locked
 
       - name: Build (ppe host) — lib, tests and examples
+        if: steps.changes.outputs.rust == 'true'
         # Same bar against the praxis seam. PRAXIS-PORT-RESULTS.md claims
         # "clean, no warnings" for this host too.
         env:
@@ -122,4 +149,5 @@ jobs:
         run: cargo "+$TOOLCHAIN" check --locked --all-targets --no-default-features --features ppe
 
       - name: Test (ppe host)
+        if: steps.changes.outputs.rust == 'true'
         run: cargo "+$TOOLCHAIN" test --locked --no-default-features --features ppe
