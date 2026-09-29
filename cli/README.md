@@ -109,7 +109,7 @@ chmod +x /usr/local/bin/ai_identity_verify
 **Requirements:**
 
 - **`report` and `chain` commands:** Python 3.9+, stdlib only — no `pip install` needed.
-- **`attestation` and `inclusion-proof` commands:** additionally require the [`cryptography`](https://cryptography.io) package for ECDSA verification. Install with `pip install cryptography`. `report` and `chain` continue to work without it.
+- **`attestation`, `inclusion-proof` and `bundle` commands:** additionally require the [`cryptography`](https://cryptography.io) package for ECDSA verification. Install with `pip install cryptography`. `report` and `chain` continue to work without it.
 
 ## Quick Start
 
@@ -131,6 +131,47 @@ python ai_identity_verify.py report forensics_report.json --json
 ```
 
 ## Commands
+
+### `bundle` - Verify a Whole Case File
+
+The one command for a Case File bundle. Point it at the ZIP, or at the folder it was
+extracted into, and it runs every check in the
+[bundle format spec](../docs/forensics/export-bundle-format.md), reporting three tiers
+separately rather than one blended "valid":
+
+| Tier | Needs | Checks |
+|------|-------|--------|
+| P (public) | `--jwks` or `--pubkey` | Signed manifest and exact file inventory; checkpoint signatures; inclusion proofs tied to the exported rows; org-slice sequence and linkage; retention tombstones |
+| K (key-holder) | `AI_IDENTITY_HMAC_KEY` and/or `--key` | Every row's `entry_hash_org` recomputed under its key epoch; report signature |
+| W (witness) | network | Not run by this release; reported `UNAVAILABLE` |
+
+```bash
+python ai_identity_verify.py bundle ai-identity-case-file-*.zip --jwks jwks.json
+```
+
+```
+AI Identity - Case File Bundle Verification
+===========================================
+  Bundle:   ai-identity-case-file-0f2c-2026-09-29.zip
+  Format:   ai-identity-case-file/v1 (manifest signature valid)
+  Scope:    org (completeness claimed)
+
+  Tier P:   VERIFIED     4800 anchored, 190 pending, 10 tombstoned
+  Tier K:   VERIFIED     4990/4990 rows under supplied keys
+  Tier W:   UNAVAILABLE  not run: this release verifies offline only
+```
+
+- **No key needed for Tier P.** An auditor or counterparty who holds only the bundle
+  and a saved copy of the JWKS gets a complete Tier P result; Tier K then reads
+  `UNAVAILABLE`.
+- **Pre-v1 bundles.** A bundle without `manifest.json` reports `PRE-V1` and exits 3.
+  The Tier P checks still run over its files, but nothing binds the rows to the
+  anchored hashes, so it is never `VERIFIED`. The platform does not sign manifests yet,
+  so today's bundles are pre-v1.
+- **Scopes.** Only an `org` export claims completeness. `agent` and `incident` exports
+  are slices: a sequence gap there is other activity, not a deletion.
+- **Machine-readable output.** `--json` gives a `result` of `verified`, `rejected` or
+  `pre_v1` and a `tiers` object with each tier's outcome and counts.
 
 ### `attestation` — Verify a Forensic Attestation Envelope
 
@@ -276,6 +317,8 @@ reason. The file format is specified in
 | `--verbose`, `-v` | Show detailed output (full hash values, per-entry info) |
 | `--tombstones <file>` | (`chain`) Account for sequence gaps with `retention/tombstones.json` from the bundle |
 | `--jwks <file>`, `--pubkey <pem>` | (`chain`, with `--tombstones`) Also verify the cited checkpoints' signatures |
+| `--jwks <file>`, `--pubkey <pem>` | (`bundle`) Required: verifies the manifest and checkpoint signatures |
+| `--key <key>` | (`report`, `chain`, `bundle`) Extra HMAC key for an earlier key epoch; repeatable |
 | `--json` | Output results as JSON for CI/automation pipelines |
 | `--no-color` | Disable colored terminal output |
 | `--version` | Print tool version and exit |
@@ -329,6 +372,7 @@ This creates a sequential chain: modifying, inserting, or deleting any entry cau
 | `0` | Verification passed — signature valid or chain intact |
 | `1` | Verification failed — invalid signature or broken chain |
 | `2` | Usage error — missing file, invalid JSON, missing HMAC key |
+| `3` | `bundle` only: nothing rejected, but Tier P is not `VERIFIED` (a pre-v1 bundle) |
 
 ## Environment Variables
 
@@ -341,7 +385,7 @@ This creates a sequential chain: modifying, inserting, or deleting any entry cau
 
 ```bash
 cd cli
-python -m unittest test_verify -v
+python -m unittest test_verify test_bundle -v
 ```
 
 All tests use only the Python standard library.
