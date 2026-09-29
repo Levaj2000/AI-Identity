@@ -2160,6 +2160,7 @@ def _bundle_bind(files: dict[str, bytes], keyring: _PublicKeyRing) -> dict[str, 
         "events": events,
         "scope": scope,
         "org_id": org_id,
+        "witness": {},  # root -> held envelope and signed_at, for Tier W
     }
 
 
@@ -2186,6 +2187,10 @@ def _bundle_anchor(ctx: dict[str, Any], keyring: _PublicKeyRing) -> tuple[int, i
     for entry in checkpoints:
         root, payload = _bundle_checkpoint(entry, keyring, ctx["org_id"], cp_path)
         signed[root] = payload
+        ctx["witness"][root] = {
+            "envelope": entry["envelope"],
+            "signed_at": payload.get("signed_at"),
+        }
 
     doc = _bundle_json(files, proofs_path)
     proofs = doc.get("proofs") if isinstance(doc, dict) else None
@@ -2408,6 +2413,14 @@ def _bundle_structure(ctx: dict[str, Any], keyring: _PublicKeyRing) -> tuple[int
             raise _BundleRejectError(
                 report_path, f"seq {seq}: prev_hash_org does not link to its predecessor"
             )
+    for root, payload in (tombs["signed"] if tombs else {}).items():
+        ctx["witness"].setdefault(
+            root,
+            {
+                "envelope": tombs["checkpoints"][root]["envelope"],
+                "signed_at": payload.get("signed_at"),
+            },
+        )
     return tombstoned, True
 
 
@@ -2486,6 +2499,185 @@ def _bundle_tier_k(ctx: dict[str, Any], keys: list[bytes]) -> dict[str, Any]:
     return {"outcome": "VERIFIED", "entries_verified": verified, "entries_not_covered": not_covered}
 
 
+# -- Tier W: the online witness check (spec section 7.3) -------------------
+#
+# The only network code in this tool, and off unless --online is passed.
+# Each checkpoint the bundle relied on is looked up in the public record: the
+# live feed first, then the GitHub mirror when the feed cannot answer (the
+# disappearance case in spec section 2). A source that cannot answer is
+# UNAVAILABLE, never evidence; a source that answers differently is a split
+# view and a rejection.
+
+DEFAULT_FEED_URL = "https://api.ai-identity.co"
+DEFAULT_MIRROR_URL = (
+    "https://raw.githubusercontent.com/Levaj2000/AI-Identity/evidence-anchor-mirror"
+)
+MIRROR_INTERVAL_SECONDS = 6 * 3600  # evidence-anchor-mirror.yml runs every 6 hours
+WITNESS_TIMEOUT_SECONDS = 15
+_SPLIT_VIEW_ADVICE = "report to security@ai-identity.co and keep the bundle"
+
+
+class _WitnessUnreachableError(Exception):
+    """The source gave no usable answer; that is not evidence either way."""
+
+
+def _witness_get(url: str) -> tuple[int, bytes]:
+    """GET ``url``; (status, body) for any HTTP answer, else _WitnessUnreachableError."""
+    import http.client
+    import urllib.error
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(url, timeout=WITNESS_TIMEOUT_SECONDS) as resp:
+            return resp.status, resp.read()
+    except urllib.error.HTTPError as exc:
+        return exc.code, b""
+    except (urllib.error.URLError, http.client.HTTPException, OSError, ValueError) as exc:
+        raise _WitnessUnreachableError(str(getattr(exc, "reason", exc))) from None
+
+
+def _parse_rfc3339(value: Any) -> datetime | None:
+    """Parse a feed or mirror timestamp; None when it cannot be dated."""
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value[:-1] + "+00:00" if value.endswith("Z") else value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+
+
+class _WitnessMirror:
+    """The mirror branch's checkpoints.ndjson and mirror-state.json, fetched once."""
+
+    def __init__(self, base_url: str) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.entries: dict[str, Any] | None = None
+        self.mirrored_at: datetime | None = None
+        self.error = ""
+        self._loaded = False
+
+    def load(self) -> None:
+        if self._loaded:
+            return
+        self._loaded = True
+        try:
+            status, body = _witness_get(f"{self.base_url}/checkpoints.ndjson")
+            if status != 200:
+                raise _WitnessUnreachableError(f"HTTP {status}")
+            entries: dict[str, Any] = {}
+            for line in body.decode("utf-8").splitlines():
+                entry = json.loads(line) if line.strip() else None
+                if isinstance(entry, dict) and isinstance(entry.get("merkle_root"), str):
+                    entries[entry["merkle_root"]] = entry
+        except (_WitnessUnreachableError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            self.error = str(exc) or type(exc).__name__
+            return
+        self.entries = entries
+        try:
+            status, body = _witness_get(f"{self.base_url}/mirror-state.json")
+            state = json.loads(body) if status == 200 else None
+        except (_WitnessUnreachableError, UnicodeDecodeError, json.JSONDecodeError):
+            state = None
+        if isinstance(state, dict):
+            self.mirrored_at = _parse_rfc3339(state.get("mirrored_at"))
+
+
+def _witness_root(
+    root: str, held: dict[str, Any], feed_url: str, mirror: _WitnessMirror
+) -> dict[str, Any]:
+    """Look one verified checkpoint up in the public record.
+
+    Returns {merkle_root, result, source|detail} with result WITNESSED,
+    NOT YET WITNESSED or UNAVAILABLE; raises _BundleRejectError on a split view.
+    """
+    import urllib.parse
+
+    short = root[:16]
+    url = f"{feed_url.rstrip('/')}/evidence-anchor/checkpoints/{urllib.parse.quote(root, safe='')}"
+    try:
+        status, body = _witness_get(url)
+        feed_note = f"feed answered HTTP {status}"
+    except _WitnessUnreachableError as exc:
+        status, body, feed_note = None, b"", f"feed unreachable ({exc})"
+    if status == 404:
+        raise _BundleRejectError(
+            "witness",
+            f"split view: the public feed has no checkpoint {short}, which verifies "
+            f"offline; {_SPLIT_VIEW_ADVICE}",
+        )
+    if status == 200:
+        try:
+            served = json.loads(body)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            served = None
+        if isinstance(served, dict) and "envelope" in served:
+            if served.get("merkle_root") == root and served["envelope"] == held["envelope"]:
+                return {"merkle_root": root, "result": "WITNESSED", "source": "feed"}
+            raise _BundleRejectError(
+                "witness",
+                f"split view: the public feed serves a different envelope for checkpoint "
+                f"{short}; {_SPLIT_VIEW_ADVICE}",
+            )
+        feed_note = "feed answered HTTP 200 with an unreadable body"
+
+    mirror.load()
+    if mirror.entries is None:
+        detail = f"{feed_note}; mirror unreachable ({mirror.error})"
+        return {"merkle_root": root, "result": "UNAVAILABLE", "detail": detail}
+    entry = mirror.entries.get(root)
+    if entry is not None:
+        if entry.get("envelope") == held["envelope"]:
+            return {"merkle_root": root, "result": "WITNESSED", "source": "mirror"}
+        raise _BundleRejectError(
+            "witness",
+            f"split view: the public mirror holds a different envelope for checkpoint "
+            f"{short}; {_SPLIT_VIEW_ADVICE}",
+        )
+    signed_at = _parse_rfc3339(held.get("signed_at"))
+    if signed_at is None or mirror.mirrored_at is None:
+        detail = f"{feed_note}; mirror lacks it and the snapshot cannot be dated against it"
+        return {"merkle_root": root, "result": "UNAVAILABLE", "detail": detail}
+    horizon = mirror.mirrored_at.timestamp() - MIRROR_INTERVAL_SECONDS
+    if signed_at.timestamp() > horizon:
+        detail = f"{feed_note}; signed too recently for the mirror snapshot to hold it"
+        return {"merkle_root": root, "result": "NOT YET WITNESSED", "detail": detail}
+    raise _BundleRejectError(
+        "witness",
+        f"split view: checkpoint {short} was signed at {held.get('signed_at')}, more than "
+        f"one mirror interval before the mirror snapshot of {mirror.mirrored_at.isoformat()}, "
+        f"which does not hold it; {_SPLIT_VIEW_ADVICE}",
+    )
+
+
+def _bundle_tier_w(ctx: dict[str, Any], feed_url: str, mirror_url: str) -> dict[str, Any]:
+    """Spec section 7.3 over every checkpoint Tier P verified, anchor and tombstone alike."""
+    roots = ctx.get("witness") or {}
+    if not roots:
+        return {"outcome": "UNAVAILABLE", "reason": "no verified checkpoints to witness"}
+    mirror = _WitnessMirror(mirror_url)
+    results = [_witness_root(root, held, feed_url, mirror) for root, held in sorted(roots.items())]
+    witnessed = [r for r in results if r["result"] == "WITNESSED"]
+    tier: dict[str, Any] = {
+        "checkpoints": results,
+        "witnessed": len(witnessed),
+        "via_feed": sum(1 for r in witnessed if r["source"] == "feed"),
+        "via_mirror": sum(1 for r in witnessed if r["source"] == "mirror"),
+        "total": len(results),
+    }
+    if len(witnessed) == len(results):
+        tier["outcome"] = "VERIFIED"
+        return tier
+    not_yet = sum(1 for r in results if r["result"] == "NOT YET WITNESSED")
+    unreachable = len(results) - len(witnessed) - not_yet
+    tier["outcome"] = "UNAVAILABLE"
+    tier["reason"] = (
+        f"{len(witnessed)} of {len(results)} checkpoints witnessed; {not_yet} not yet in "
+        f"the mirror, {unreachable} with no reachable source (re-check later)"
+    )
+    return tier
+
+
 def _bundle_rejected(exc: _BundleRejectError) -> dict[str, Any]:
     return {"outcome": "REJECTED", "artifact": exc.artifact, "reason": exc.reason}
 
@@ -2517,6 +2709,11 @@ def _print_bundle_result(path: str, ctx: dict[str, Any] | None, tiers: dict[str,
             )
             if not tier.get("structure_checked", True):
                 detail += " (no per-org chain: structure not checked)"
+        elif name == "W" and outcome == "VERIFIED":
+            detail = (
+                f"{tier['witnessed']} checkpoint(s) in the public record "
+                f"({tier['via_feed']} feed, {tier['via_mirror']} mirror)"
+            )
         elif name == "K" and outcome == "VERIFIED":
             total = tier["entries_verified"] + tier["entries_not_covered"]
             detail = f"{tier['entries_verified']}/{total} rows under supplied keys"
@@ -2539,12 +2736,16 @@ def cmd_bundle(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 2
+    for url in (args.feed_url, args.mirror_url):
+        if not url.startswith(("https://", "http://")):
+            print(f"Error: {url!r} is not an http(s) URL.", file=sys.stderr)
+            return 2
     keyring = _PublicKeyRing(args)
 
     tiers: dict[str, Any] = {
         "P": {"outcome": "REJECTED"},
         "K": {"outcome": "UNAVAILABLE"},
-        "W": {"outcome": "UNAVAILABLE", "reason": "not run: this release verifies offline only"},
+        "W": {"outcome": "UNAVAILABLE", "reason": "not run: offline (pass --online to check)"},
     }
     ctx: dict[str, Any] | None = None
     try:
@@ -2580,6 +2781,14 @@ def cmd_bundle(args: argparse.Namespace) -> int:
                 tiers["K"] = _bundle_tier_k(ctx, keys)
             except _BundleRejectError as exc:
                 tiers["K"] = _bundle_rejected(exc)
+
+    if args.online and (ctx is None or tiers["P"]["outcome"] == "REJECTED"):
+        tiers["W"]["reason"] = "not run: Tier P did not verify the checkpoints"
+    elif args.online:
+        try:
+            tiers["W"] = _bundle_tier_w(ctx, args.feed_url, args.mirror_url)
+        except _BundleRejectError as exc:
+            tiers["W"] = _bundle_rejected(exc)
 
     outcomes = [tier["outcome"] for tier in tiers.values()]
     if "REJECTED" in outcomes:
@@ -2773,8 +2982,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Tier P (public: manifest signature, checkpoints, inclusion proofs, org-slice "
             "structure, tombstones) needs only --jwks or --pubkey; Tier K (key-holder: "
             "per-row HMAC and report signature) runs when AI_IDENTITY_HMAC_KEY or --key "
-            "is supplied; Tier W (online witness) is not run by this release. Requires "
-            "the `cryptography` package."
+            "is supplied; Tier W (the checkpoints appear, identical, in the public feed or "
+            "its mirror) runs only with --online. Requires the `cryptography` package."
         ),
     )
     bundle_parser.add_argument(
@@ -2803,6 +3012,30 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "HMAC key for Tier K (repeatable), in addition to AI_IDENTITY_HMAC_KEY: "
             "retired epoch keys go here. Without any key, Tier K is UNAVAILABLE."
+        ),
+    )
+    bundle_parser.add_argument(
+        "--online",
+        action="store_true",
+        help=(
+            "Run Tier W: look each verified checkpoint up in the public feed, falling back "
+            "to the GitHub mirror when the feed cannot answer. The only network access "
+            "this tool makes; off by default."
+        ),
+    )
+    bundle_parser.add_argument(
+        "--feed-url",
+        metavar="URL",
+        default=DEFAULT_FEED_URL,
+        help=f"Base URL of the public checkpoint feed (default {DEFAULT_FEED_URL}).",
+    )
+    bundle_parser.add_argument(
+        "--mirror-url",
+        metavar="URL",
+        default=DEFAULT_MIRROR_URL,
+        help=(
+            "Base URL of a mirror holding checkpoints.ndjson and mirror-state.json "
+            "(default: the evidence-anchor-mirror branch of this repository)."
         ),
     )
 

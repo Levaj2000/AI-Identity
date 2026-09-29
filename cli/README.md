@@ -143,7 +143,7 @@ separately rather than one blended "valid":
 |------|-------|--------|
 | P (public) | `--jwks` or `--pubkey` | Signed manifest and exact file inventory; checkpoint signatures; inclusion proofs tied to the exported rows; org-slice sequence and linkage; retention tombstones |
 | K (key-holder) | `AI_IDENTITY_HMAC_KEY` and/or `--key` | Every row's `entry_hash_org` recomputed under its key epoch; report signature |
-| W (witness) | network | Not run by this release; reported `UNAVAILABLE` |
+| W (witness) | `--online` | Each verified checkpoint appears, with an identical envelope, in the public feed (or its GitHub mirror when the feed cannot answer) |
 
 ```bash
 python ai_identity_verify.py bundle ai-identity-case-file-*.zip --jwks jwks.json
@@ -158,7 +158,7 @@ AI Identity - Case File Bundle Verification
 
   Tier P:   VERIFIED     4800 anchored, 190 pending, 10 tombstoned
   Tier K:   VERIFIED     4990/4990 rows under supplied keys
-  Tier W:   UNAVAILABLE  not run: this release verifies offline only
+  Tier W:   UNAVAILABLE  not run: offline (pass --online to check)
 ```
 
 - **No key needed for Tier P.** An auditor or counterparty who holds only the bundle
@@ -172,6 +172,11 @@ AI Identity - Case File Bundle Verification
   are slices: a sequence gap there is other activity, not a deletion.
 - **Machine-readable output.** `--json` gives a `result` of `verified`, `rejected` or
   `pre_v1` and a `tiers` object with each tier's outcome and counts.
+- **Tier W is the only network access, and only with `--online`.** A checkpoint the
+  public record holds with a different envelope, or that the live feed answers 404
+  for, is a split view: `REJECTED`, and worth reporting to security@ai-identity.co.
+  A source that cannot answer is `UNAVAILABLE`, never a failure. `--feed-url` and
+  `--mirror-url` point it at another feed or at your own copy of the mirror.
 
 ### `attestation` — Verify a Forensic Attestation Envelope
 
@@ -319,6 +324,8 @@ reason. The file format is specified in
 | `--jwks <file>`, `--pubkey <pem>` | (`chain`, with `--tombstones`) Also verify the cited checkpoints' signatures |
 | `--jwks <file>`, `--pubkey <pem>` | (`bundle`) Required: verifies the manifest and checkpoint signatures |
 | `--key <key>` | (`report`, `chain`, `bundle`) Extra HMAC key for an earlier key epoch; repeatable |
+| `--online` | (`bundle`) Run Tier W against the public feed, falling back to the mirror |
+| `--feed-url <url>`, `--mirror-url <url>` | (`bundle`, with `--online`) Use another feed or mirror |
 | `--json` | Output results as JSON for CI/automation pipelines |
 | `--no-color` | Disable colored terminal output |
 | `--version` | Print tool version and exit |
