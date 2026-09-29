@@ -12,14 +12,16 @@ tool is the proof. (Full text: LICENSE in this directory, or
 https://opensource.org/license/mit when this file ships alone inside
 a Case File bundle.)
 
-Four verification modes:
-  report           — verify the HMAC chain-of-custody certificate on an exported report
-  chain            — verify the full sequential HMAC audit chain from exported entries
-  attestation      — verify an ECDSA-signed forensic attestation DSSE envelope
-  inclusion-proof  — verify Merkle inclusion proofs against signed checkpoints
+Five verification modes:
+  report           - verify the HMAC chain-of-custody certificate on an exported report
+  chain            - verify the full sequential HMAC audit chain from exported entries
+  attestation      - verify an ECDSA-signed forensic attestation DSSE envelope
+  inclusion-proof  - verify Merkle inclusion proofs against signed checkpoints
+  bundle           - verify a whole Case File bundle, reporting each tier separately
+                     (docs/forensics/export-bundle-format.md)
 
 Requires: Python 3.9+ for `report` and `chain` (stdlib only). The
-`attestation` and `inclusion-proof` commands additionally require the
+`attestation`, `inclusion-proof` and `bundle` commands additionally require the
 `cryptography` package (`pip install cryptography`) for ECDSA verification.
 
 HMAC key (report/chain): set AI_IDENTITY_HMAC_KEY environment variable.
@@ -41,7 +43,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 TOOL_NAME = "ai-identity-verify"
 GENESIS = "GENESIS"
 
@@ -1728,6 +1730,868 @@ def cmd_inclusion_proof(args: argparse.Namespace) -> int:
     return 1
 
 
+# -- Case File bundle verification (bundle format v1) ---------------------
+#
+# Implements docs/forensics/export-bundle-format.md sections 7.1 to 7.5: one
+# command that reads a whole Case File (ZIP or extracted directory) and reports
+# each verification tier separately. Every v1-only rule lives here; the
+# report/chain/attestation/inclusion-proof subcommands keep their verdicts.
+
+BUNDLE_FORMAT = "ai-identity-case-file/v1"
+MANIFEST_PAYLOAD_TYPE = "application/vnd.ai-identity.case-file-manifest+json"
+MANIFEST_PATH = "manifest.json"
+BUNDLE_SCOPES = ("org", "agent", "incident")
+EXIT_NOT_VERIFIED = 3  # nothing rejected, but Tier P is not VERIFIED (pre-v1)
+
+# Roles with a fixed path inside the ZIP. The report's name varies
+# (case-file-<short>-<date>.json), so it is matched by pattern instead.
+_BUNDLE_ROLE_PATHS = {
+    "verifier": "ai_identity_verify.py",
+    "runner": "verify.command",
+    "readme": "README.md",
+    "checkpoints": "evidence-anchor/checkpoints.json",
+    "proofs": "evidence-anchor/inclusion-proofs.json",
+    "tombstones": "retention/tombstones.json",
+}
+
+# OS metadata a desktop adds to an extracted folder. Ignored in directory
+# mode only; a ZIP must match the signed inventory exactly.
+_BUNDLE_DIR_IGNORED = (".DS_Store",)
+
+
+class _BundleRejectError(Exception):
+    """A failed check: the tier is REJECTED, naming the artifact and why."""
+
+    def __init__(self, artifact: str, reason: str) -> None:
+        super().__init__(f"{artifact}: {reason}")
+        self.artifact = artifact
+        self.reason = reason
+
+
+def _is_case_file_name(path: str) -> bool:
+    return "/" not in path and path.startswith("case-file-") and path.endswith(".json")
+
+
+def _check_bundle_member_name(name: str) -> None:
+    """Spec section 3, ZIP hygiene: relative paths only, no traversal."""
+    segments = name.split("/")
+    if (
+        not name
+        or name.startswith("/")
+        or "\\" in name
+        or ":" in segments[0]
+        or any(seg in ("", ".", "..") for seg in segments)
+    ):
+        raise _BundleRejectError("container", f"unsafe entry path {name!r}")
+
+
+def _read_bundle(path: str) -> dict[str, bytes]:
+    """Read every file of a Case File bundle (ZIP or extracted directory) into memory.
+
+    Nothing is extracted to disk, so a hostile entry name can never write
+    outside the working directory; the hygiene rules are still enforced so
+    a malformed bundle is rejected rather than tolerated. Usage problems
+    (missing path, not a ZIP) exit 2; hygiene violations raise _BundleRejectError.
+    """
+    import stat
+    import zipfile
+
+    files: dict[str, bytes] = {}
+    if os.path.isdir(path):
+        root = os.path.abspath(path)
+        for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+            for name in dirnames + filenames:
+                full = os.path.join(dirpath, name)
+                rel = os.path.relpath(full, root).replace(os.sep, "/")
+                if os.path.islink(full):
+                    raise _BundleRejectError("container", f"symlink {rel!r} in bundle directory")
+            dirnames.sort()
+            for name in sorted(filenames):
+                if name in _BUNDLE_DIR_IGNORED:
+                    continue
+                full = os.path.join(dirpath, name)
+                rel = os.path.relpath(full, root).replace(os.sep, "/")
+                with open(full, "rb") as f:
+                    files[rel] = f.read()
+        return files
+
+    if not os.path.exists(path):
+        print(f"Error: Bundle not found: {path}", file=sys.stderr)
+        sys.exit(2)
+    try:
+        archive = zipfile.ZipFile(path)
+    except zipfile.BadZipFile:
+        print(
+            f"Error: {path} is neither a ZIP file nor a directory (expected a Case File bundle).",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    with archive:
+        for info in archive.infolist():
+            name = info.filename
+            if name.endswith("/"):
+                continue
+            _check_bundle_member_name(name)
+            if stat.S_ISLNK(info.external_attr >> 16):
+                raise _BundleRejectError("container", f"symlink entry {name!r}")
+            if name in files:
+                raise _BundleRejectError("container", f"duplicate entry {name!r}")
+            files[name] = archive.read(info)
+    return files
+
+
+def _bundle_json(files: dict[str, bytes], path: str) -> Any:
+    try:
+        return json.loads(files[path].decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise _BundleRejectError(path, f"not valid JSON ({exc})") from None
+
+
+def _hex_bytes(value: Any, artifact: str, field: str, length: int | None = 32) -> bytes:
+    """Decode a hex digest field; a malformed one is a rejection, not a crash."""
+    try:
+        raw = bytes.fromhex(value) if isinstance(value, str) else None
+    except ValueError:
+        raw = None
+    if raw is None or (length is not None and len(raw) != length):
+        raise _BundleRejectError(artifact, f"{field} is not a {length}-byte hex digest")
+    return raw
+
+
+class _PublicKeyRing:
+    """Public keys for the bundle's DSSE checks: a JWKS matched by kid, or one pinned PEM.
+
+    Loaded once per run. Configuration problems exit 2 (usage); an envelope
+    naming a kid the JWKS does not hold is a rejection of that envelope.
+    """
+
+    def __init__(self, args: argparse.Namespace) -> None:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+
+        self._ec = ec
+        self._pinned = None
+        self._jwks: dict[str, dict[str, Any]] = {}
+        if args.pubkey and args.jwks:
+            print("Error: --pubkey and --jwks are mutually exclusive; pick one.", file=sys.stderr)
+            sys.exit(2)
+        if args.pubkey:
+            try:
+                with open(args.pubkey, "rb") as f:
+                    pinned = serialization.load_pem_public_key(f.read())
+            except FileNotFoundError:
+                print(f"Error: Public key file not found: {args.pubkey}", file=sys.stderr)
+                sys.exit(2)
+            except ValueError as exc:
+                print(f"Error: Could not parse PEM public key: {exc}", file=sys.stderr)
+                sys.exit(2)
+            if not isinstance(pinned, ec.EllipticCurvePublicKey):
+                print("Error: Public key is not an EC P-256 key.", file=sys.stderr)
+                sys.exit(2)
+            self._pinned = pinned
+            return
+        jwks = _load_json(args.jwks)
+        if not isinstance(jwks, dict) or not isinstance(jwks.get("keys"), list):
+            print(
+                "Error: JWKS file does not look like a JWK Set "
+                "(expected an object with a 'keys' array).",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        for jwk in jwks["keys"]:
+            if isinstance(jwk, dict) and isinstance(jwk.get("kid"), str):
+                self._jwks[jwk["kid"]] = jwk
+
+    def resolve(self, kid: Any, artifact: str):
+        if self._pinned is not None:
+            return self._pinned
+        jwk = self._jwks.get(kid) if isinstance(kid, str) else None
+        if jwk is None:
+            raise _BundleRejectError(artifact, f"signature keyid {kid!r} is not in the JWKS")
+        if jwk.get("kty") != "EC" or jwk.get("crv") != "P-256":
+            raise _BundleRejectError(artifact, f"JWKS key {kid!r} is not EC P-256")
+        try:
+            x = base64.urlsafe_b64decode(jwk["x"] + "=" * (-len(jwk["x"]) % 4))
+            y = base64.urlsafe_b64decode(jwk["y"] + "=" * (-len(jwk["y"]) % 4))
+            numbers = self._ec.EllipticCurvePublicNumbers(
+                x=int.from_bytes(x, "big"), y=int.from_bytes(y, "big"), curve=self._ec.SECP256R1()
+            )
+            return numbers.public_key()
+        except (KeyError, TypeError, ValueError) as exc:
+            raise _BundleRejectError(artifact, f"JWKS key {kid!r} is malformed ({exc})") from None
+
+
+def _bundle_dsse_payload(
+    envelope: Any, payload_type: str, keyring: _PublicKeyRing, artifact: str
+) -> dict[str, Any]:
+    """Verify a single-signature DSSE envelope and return its payload object.
+
+    The signature is checked over the payload bytes exactly as shipped (no
+    re-canonicalization), and the payload is parsed only after it verifies.
+    """
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    if not isinstance(envelope, dict):
+        raise _BundleRejectError(artifact, "envelope is not a JSON object")
+    if envelope.get("payloadType") != payload_type:
+        raise _BundleRejectError(
+            artifact, f"payloadType {envelope.get('payloadType')!r}, expected {payload_type!r}"
+        )
+    signatures = envelope.get("signatures")
+    if not isinstance(signatures, list) or len(signatures) != 1:
+        raise _BundleRejectError(artifact, "expected exactly one signature")
+    sig_entry = signatures[0] if isinstance(signatures[0], dict) else {}
+    try:
+        payload_bytes = base64.b64decode(envelope.get("payload") or "", validate=True)
+        signature_der = base64.b64decode(sig_entry.get("sig") or "", validate=True)
+    except (TypeError, ValueError):
+        raise _BundleRejectError(artifact, "payload or signature is not valid base64") from None
+    public_key = keyring.resolve(sig_entry.get("keyid"), artifact)
+    try:
+        public_key.verify(
+            signature_der,
+            _dsse_pae(payload_type, payload_bytes),
+            ec.ECDSA(hashes.SHA256()),
+        )
+    except (InvalidSignature, ValueError):
+        raise _BundleRejectError(artifact, "signature does not verify") from None
+    try:
+        payload = json.loads(payload_bytes)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise _BundleRejectError(artifact, "signed payload is not valid JSON") from None
+    if not isinstance(payload, dict):
+        raise _BundleRejectError(artifact, "signed payload is not a JSON object")
+    return payload
+
+
+def _bundle_checkpoint(
+    entry: Any, keyring: _PublicKeyRing, org_id: Any, artifact: str
+) -> tuple[str, dict[str, Any]]:
+    """Spec section 7.1 step 4 for one checkpoint entry; returns (root, signed payload)."""
+    if not isinstance(entry, dict) or not isinstance(entry.get("merkle_root"), str):
+        raise _BundleRejectError(artifact, "checkpoint entry has no merkle_root")
+    root = entry["merkle_root"]
+    payload = _bundle_dsse_payload(
+        entry.get("envelope"), CHECKPOINT_PAYLOAD_TYPE, keyring, artifact
+    )
+    if payload.get("schema_version") != 1:
+        raise _BundleRejectError(
+            artifact,
+            f"checkpoint {root[:16]} has schema_version {payload.get('schema_version')!r}, "
+            "this verifier understands 1",
+        )
+    if payload.get("merkle_root") != root:
+        raise _BundleRejectError(
+            artifact, f"checkpoint {root[:16]}: signed root differs from entry"
+        )
+    if org_id is not None and str(payload.get("org_id")) != str(org_id):
+        raise _BundleRejectError(
+            artifact, f"checkpoint {root[:16]} is for org {payload.get('org_id')!r}, not {org_id!r}"
+        )
+    for field in ("tree_size", "first_audit_id", "last_audit_id"):
+        if not isinstance(payload.get(field), int):
+            raise _BundleRejectError(artifact, f"checkpoint {root[:16]}: signed {field} missing")
+    return root, payload
+
+
+def _bundle_manifest(files: dict[str, bytes], keyring: _PublicKeyRing) -> dict[str, Any]:
+    """Spec section 7.1 step 2: signature, versions, and the exact file inventory."""
+    manifest = _bundle_dsse_payload(
+        _bundle_json(files, MANIFEST_PATH), MANIFEST_PAYLOAD_TYPE, keyring, MANIFEST_PATH
+    )
+    if manifest.get("schema_version") != 1:
+        raise _BundleRejectError(
+            MANIFEST_PATH,
+            f"schema_version {manifest.get('schema_version')!r}, this verifier understands 1",
+        )
+    if manifest.get("format") != BUNDLE_FORMAT:
+        raise _BundleRejectError(
+            MANIFEST_PATH,
+            f"format {manifest.get('format')!r}, this verifier understands {BUNDLE_FORMAT!r}",
+        )
+
+    entries = manifest.get("files")
+    if not isinstance(entries, list):
+        raise _BundleRejectError(MANIFEST_PATH, "files is not a list")
+    inventory: dict[str, dict[str, Any]] = {}
+    for item in entries:
+        if not isinstance(item, dict) or not all(
+            isinstance(item.get(k), str) for k in ("path", "sha256", "role")
+        ):
+            raise _BundleRejectError(
+                MANIFEST_PATH, "files[] entries need string path, sha256, role"
+            )
+        if item["path"] in inventory or item["path"] == MANIFEST_PATH:
+            raise _BundleRejectError(
+                MANIFEST_PATH, f"files[] lists {item['path']!r} twice or itself"
+            )
+        inventory[item["path"]] = item
+    present = set(files) - {MANIFEST_PATH}
+    unlisted = sorted(present - set(inventory))
+    if unlisted:
+        raise _BundleRejectError(
+            "container", f"{unlisted[0]} is not in the signed manifest inventory"
+        )
+    missing = sorted(set(inventory) - present)
+    if missing:
+        raise _BundleRejectError("container", f"{missing[0]} is listed in the manifest but missing")
+    for path in sorted(inventory):
+        if hashlib.sha256(files[path]).hexdigest() != inventory[path]["sha256"]:
+            raise _BundleRejectError(path, "SHA-256 does not match the signed manifest")
+
+    by_role: dict[str, list[str]] = {}
+    for path, item in inventory.items():
+        by_role.setdefault(item["role"], []).append(path)
+    for role in ("report", "verifier"):
+        if len(by_role.get(role, [])) != 1:
+            raise _BundleRejectError(MANIFEST_PATH, f"expected exactly one file with role {role!r}")
+    if not _is_case_file_name(by_role["report"][0]):
+        raise _BundleRejectError(MANIFEST_PATH, "the report is not a top-level case-file-*.json")
+    for role, fixed in _BUNDLE_ROLE_PATHS.items():
+        if by_role.get(role, [fixed]) != [fixed]:
+            raise _BundleRejectError(
+                MANIFEST_PATH, f"role {role!r} must be the single file {fixed}"
+            )
+    if ("checkpoints" in by_role) != ("proofs" in by_role):
+        raise _BundleRejectError(
+            MANIFEST_PATH, "evidence-anchor/ needs both checkpoints and proofs"
+        )
+
+    counts = manifest.get("counts")
+    if not isinstance(counts, dict) or not all(
+        isinstance(counts.get(k), int) and counts[k] >= 0
+        for k in ("events", "anchored", "pending", "tombstoned")
+    ):
+        raise _BundleRejectError(
+            MANIFEST_PATH, "counts needs non-negative events/anchored/pending/tombstoned"
+        )
+    if not isinstance(manifest.get("scope"), dict) or not isinstance(manifest.get("org_id"), str):
+        raise _BundleRejectError(MANIFEST_PATH, "scope or org_id missing")
+    manifest["_by_role"] = {role: paths[0] for role, paths in by_role.items()}
+    return manifest
+
+
+def _bundle_bind(files: dict[str, bytes], keyring: _PublicKeyRing) -> dict[str, Any]:
+    """Spec section 7.1 steps 1 to 3: find the artifacts and bind them to the manifest.
+
+    A bundle without manifest.json is pre-v1 (section 8.2): its artifacts are
+    located by the fixed layout, and nothing binds them.
+    """
+    manifest: dict[str, Any] | None = None
+    if MANIFEST_PATH in files:
+        manifest = _bundle_manifest(files, keyring)
+        roles = manifest["_by_role"]
+    else:
+        reports = sorted(p for p in files if _is_case_file_name(p))
+        if len(reports) != 1:
+            raise _BundleRejectError(
+                "container", f"expected one case-file-*.json, found {len(reports)}"
+            )
+        roles = {role: p for role, p in _BUNDLE_ROLE_PATHS.items() if p in files}
+        roles["report"] = reports[0]
+        if ("checkpoints" in roles) != ("proofs" in roles):
+            raise _BundleRejectError(
+                "container", "evidence-anchor/ needs both checkpoints and proofs"
+            )
+
+    report_path = roles["report"]
+    report = _bundle_json(files, report_path)
+    if not isinstance(report, dict):
+        raise _BundleRejectError(report_path, "not a JSON object")
+    events = report.get("events")
+    if not isinstance(events, list) or not all(isinstance(e, dict) for e in events):
+        raise _BundleRejectError(report_path, "events is not a list of objects")
+    ids = [e.get("id") for e in events]
+    if not all(isinstance(i, int) for i in ids) or len(set(ids)) != len(ids):
+        raise _BundleRejectError(report_path, "event ids must be unique integers")
+
+    scope = report.get("scope")
+    if manifest is None and scope is None:
+        scope = {"type": "org"}  # pre-scope exports: the 1.5.0 `chain` rule
+    if not isinstance(scope, dict):
+        raise _BundleRejectError(report_path, "scope is missing")
+    if scope.get("type") not in BUNDLE_SCOPES:
+        raise _BundleRejectError(report_path, f"unknown scope type {scope.get('type')!r}")
+
+    org_id = scope.get("org_id")
+    if manifest is not None:
+        org_id = manifest["org_id"]
+        if scope != manifest["scope"]:
+            raise _BundleRejectError(report_path, "scope does not match the signed manifest")
+        if report.get("org_id", org_id) != org_id or scope.get("org_id", org_id) != org_id:
+            raise _BundleRejectError(report_path, "org_id does not match the signed manifest")
+        if manifest["counts"]["events"] != len(events):
+            raise _BundleRejectError(
+                report_path,
+                f"{len(events)} events, the signed manifest says {manifest['counts']['events']}",
+            )
+        expected_range = {"first_audit_id": min(ids), "last_audit_id": max(ids)} if ids else None
+        if manifest.get("range") != expected_range:
+            raise _BundleRejectError(
+                report_path, "event id range does not match the signed manifest"
+            )
+
+    return {
+        "files": files,
+        "manifest": manifest,
+        "roles": roles,
+        "report_path": report_path,
+        "report": report,
+        "events": events,
+        "scope": scope,
+        "org_id": org_id,
+    }
+
+
+def _bundle_anchor(ctx: dict[str, Any], keyring: _PublicKeyRing) -> tuple[int, int]:
+    """Spec section 7.1 steps 4 and 5; returns (anchored, pending)."""
+    files, roles, manifest = ctx["files"], ctx["roles"], ctx["manifest"]
+    events_by_id = {e["id"]: e for e in ctx["events"]}
+
+    if "checkpoints" not in roles:
+        if manifest is not None and (
+            manifest["counts"]["anchored"] != 0
+            or manifest["counts"]["pending"] != len(events_by_id)
+        ):
+            raise _BundleRejectError(
+                MANIFEST_PATH, "counts claim anchored events but no evidence-anchor/"
+            )
+        return 0, len(events_by_id)
+
+    cp_path, proofs_path = roles["checkpoints"], roles["proofs"]
+    checkpoints = _bundle_json(files, cp_path)
+    if not isinstance(checkpoints, list):
+        raise _BundleRejectError(cp_path, "not a JSON array")
+    signed: dict[str, dict[str, Any]] = {}
+    for entry in checkpoints:
+        root, payload = _bundle_checkpoint(entry, keyring, ctx["org_id"], cp_path)
+        signed[root] = payload
+
+    doc = _bundle_json(files, proofs_path)
+    proofs = doc.get("proofs") if isinstance(doc, dict) else None
+    pending = doc.get("pending") if isinstance(doc, dict) else None
+    if not isinstance(proofs, list) or not isinstance(pending, list):
+        raise _BundleRejectError(proofs_path, "expected an object with proofs and pending lists")
+
+    for proof in proofs:
+        if not isinstance(proof, dict) or not all(
+            isinstance(proof.get(k), int) for k in ("audit_id", "index", "tree_size")
+        ):
+            raise _BundleRejectError(proofs_path, "proof needs integer audit_id, index, tree_size")
+        audit_id = proof["audit_id"]
+        label = f"proof for event {audit_id}"
+        root = proof.get("merkle_root")
+        payload = signed.get(root) if isinstance(root, str) else None
+        if payload is None:
+            raise _BundleRejectError(proofs_path, f"{label} cites a root no checkpoint signed")
+        if proof["tree_size"] != payload["tree_size"]:
+            raise _BundleRejectError(proofs_path, f"{label}: tree_size differs from the signed one")
+        if not payload["first_audit_id"] <= audit_id <= payload["last_audit_id"]:
+            raise _BundleRejectError(
+                proofs_path, f"{label}: outside the checkpoint's signed id range"
+            )
+        leaf = _hex_bytes(proof.get("entry_hash"), proofs_path, f"{label} entry_hash")
+        path = proof.get("proof")
+        if not isinstance(path, list):
+            raise _BundleRejectError(proofs_path, f"{label}: proof is not a list")
+        siblings = [_hex_bytes(h, proofs_path, f"{label} proof hash") for h in path]
+        root_bytes = _hex_bytes(root, proofs_path, f"{label} merkle_root")
+        if not _merkle_verify_inclusion(
+            leaf, proof["index"], proof["tree_size"], siblings, root_bytes
+        ):
+            raise _BundleRejectError(
+                proofs_path, f"{label}: audit path does not reach the signed root"
+            )
+        event = events_by_id.get(audit_id)
+        if event is None:
+            raise _BundleRejectError(proofs_path, f"{label}: no exported event has that id")
+        if event.get("entry_hash") != proof["entry_hash"]:
+            raise _BundleRejectError(
+                ctx["report_path"], f"event {audit_id}: entry_hash is not the anchored one"
+            )
+
+    accounted = [p["audit_id"] for p in proofs] + list(pending)
+    if len(set(accounted)) != len(accounted):
+        raise _BundleRejectError(
+            proofs_path, "an event id appears more than once in proofs and pending"
+        )
+    if set(accounted) != set(events_by_id):
+        missing = sorted(set(events_by_id) - set(accounted), key=str)
+        extra = sorted(set(accounted) - set(events_by_id), key=str)
+        detail = f"unaccounted events {missing[:5]}" if missing else f"unknown ids {extra[:5]}"
+        raise _BundleRejectError(
+            proofs_path, f"proofs and pending do not cover the export: {detail}"
+        )
+    if manifest is not None and (
+        manifest["counts"]["anchored"] != len(proofs)
+        or manifest["counts"]["pending"] != len(pending)
+    ):
+        raise _BundleRejectError(
+            MANIFEST_PATH, "anchored/pending counts do not match the proofs file"
+        )
+    return len(proofs), len(pending)
+
+
+def _bundle_load_tombstones(ctx: dict[str, Any]) -> dict[str, Any] | None:
+    files, roles, manifest = ctx["files"], ctx["roles"], ctx["manifest"]
+    if "tombstones" not in roles:
+        if manifest is not None and manifest["counts"]["tombstoned"] != 0:
+            raise _BundleRejectError(
+                MANIFEST_PATH, "counts claim tombstones but no retention/ folder"
+            )
+        return None
+    path = roles["tombstones"]
+    doc = _bundle_json(files, path)
+    if not isinstance(doc, dict) or doc.get("format") != TOMBSTONES_FORMAT:
+        raise _BundleRejectError(path, f"not a {TOMBSTONES_FORMAT} document")
+    tombstones = doc.get("tombstones")
+    if not isinstance(tombstones, list) or not all(isinstance(t, dict) for t in tombstones):
+        raise _BundleRejectError(path, "tombstones is not a list of objects")
+    if ctx["org_id"] is not None and str(doc.get("org_id")) != str(ctx["org_id"]):
+        raise _BundleRejectError(
+            path, f"file is for org {doc.get('org_id')!r}, not {ctx['org_id']!r}"
+        )
+    if manifest is not None:
+        if doc.get("range") != manifest.get("range"):
+            raise _BundleRejectError(path, "range does not match the signed manifest")
+        if len(tombstones) != manifest["counts"]["tombstoned"]:
+            raise _BundleRejectError(path, "tombstone count does not match the signed manifest")
+    by_seq: dict[int, dict[str, Any]] = {}
+    for tomb in tombstones:
+        seq = tomb.get("org_chain_seq")
+        if not isinstance(seq, int) or seq in by_seq:
+            raise _BundleRejectError(path, "tombstone org_chain_seq values must be unique integers")
+        by_seq[seq] = tomb
+    return {
+        "path": path,
+        "by_seq": by_seq,
+        "count": len(tombstones),
+        "checkpoints": {
+            c.get("merkle_root"): c for c in doc.get("checkpoints") or [] if isinstance(c, dict)
+        },
+        "receipts": {r.get("id"): r for r in doc.get("receipts") or [] if isinstance(r, dict)},
+        "signed": {},
+    }
+
+
+def _bundle_account_gap(
+    tombs: dict[str, Any], first_missing: int, next_seq: int, keyring: _PublicKeyRing, org_id: Any
+) -> str:
+    """Spec section 7.1 step 7 for one gap; returns the last tombstone's entry_hash_org.
+
+    The retention-tombstones algorithm, with the v1 rules: the cited
+    checkpoint's signature is mandatory, and the signed tree_size and id
+    range must agree with the frozen leaves the tombstone is matched against.
+    """
+    path = tombs["path"]
+    last_org_hash = ""
+    for seq in range(first_missing, next_seq):
+        tomb = tombs["by_seq"].get(seq)
+        if tomb is None:
+            raise _BundleRejectError(
+                path, f"unaccounted deletion: sequence gap at seq {seq} has no retention tombstone"
+            )
+        root = tomb.get("merkle_root")
+        cp = tombs["checkpoints"].get(root)
+        if cp is None:
+            raise _BundleRejectError(
+                path, f"tombstone for seq {seq} cites a checkpoint the file lacks"
+            )
+        if root not in tombs["signed"]:
+            _, payload = _bundle_checkpoint(cp, keyring, org_id, path)
+            leaves = cp.get("leaves")
+            ids = cp.get("audit_log_ids")
+            if not isinstance(leaves, list) or not isinstance(ids, list) or len(leaves) != len(ids):
+                raise _BundleRejectError(
+                    path, f"checkpoint {root[:16]}: leaves and ids do not pair up"
+                )
+            leaf_bytes = [_hex_bytes(h, path, f"checkpoint {root[:16]} leaf") for h in leaves]
+            if not leaf_bytes or _merkle_root_over_leaves(leaf_bytes).hex() != root:
+                raise _BundleRejectError(
+                    path, f"checkpoint {root[:16]}: leaves do not hash to its root"
+                )
+            if len(leaves) != payload["tree_size"]:
+                raise _BundleRejectError(
+                    path, f"checkpoint {root[:16]}: leaf count is not signed tree_size"
+                )
+            tombs["signed"][root] = payload
+        payload = tombs["signed"][root]
+        audit_id = tomb.get("audit_id")
+        if not isinstance(audit_id, int) or not (
+            payload["first_audit_id"] <= audit_id <= payload["last_audit_id"]
+        ):
+            raise _BundleRejectError(
+                path, f"tombstone for seq {seq}: row outside the signed id range"
+            )
+        ids = cp["audit_log_ids"]
+        if audit_id not in ids or cp["leaves"][ids.index(audit_id)] != tomb.get("entry_hash"):
+            raise _BundleRejectError(
+                path, f"tombstone for seq {seq}: entry_hash is not the signed leaf"
+            )
+        receipt = tombs["receipts"].get(tomb.get("event_id"))
+        if (
+            receipt is None
+            or receipt.get("event_type") != "tombstone"
+            or receipt.get("audit_log_id") is None
+        ):
+            raise _BundleRejectError(
+                path, f"tombstone for seq {seq}: receipt missing or not chained"
+            )
+        org_hash = tomb.get("entry_hash_org")
+        if not isinstance(org_hash, str) or not org_hash:
+            raise _BundleRejectError(path, f"tombstone for seq {seq} carries no entry_hash_org")
+        last_org_hash = org_hash
+    return last_org_hash
+
+
+def _bundle_structure(ctx: dict[str, Any], keyring: _PublicKeyRing) -> tuple[int, bool]:
+    """Spec section 7.1 steps 6 and 7 over stored values; returns (tombstoned, checked).
+
+    `checked` is False only for a pre-v1 export that predates the per-org
+    chain, where there is no structure to check (a v1 bundle rejects).
+    """
+    events, report_path = ctx["events"], ctx["report_path"]
+    tombs = _bundle_load_tombstones(ctx)
+    tombstoned = tombs["count"] if tombs else 0
+    if not _entries_have_org_chain(events):
+        if ctx["manifest"] is not None and events:
+            raise _BundleRejectError(report_path, "events lack the per-org chain fields")
+        return tombstoned, False
+
+    ordered = sorted(events, key=lambda e: e["org_chain_seq"])
+    seqs = [e["org_chain_seq"] for e in ordered]
+    if not all(isinstance(s, int) for s in seqs) or len(set(seqs)) != len(seqs):
+        raise _BundleRejectError(report_path, "org_chain_seq values must be unique integers")
+    if tombs is not None:
+        overlap = sorted(set(tombs["by_seq"]) & set(seqs))
+        if overlap:
+            raise _BundleRejectError(
+                tombs["path"], f"seq {overlap[0]} is both tombstoned and a surviving row"
+            )
+
+    completeness = ctx["scope"]["type"] == "org"
+    for i in range(1, len(ordered)):
+        prev, entry = ordered[i - 1], ordered[i]
+        seq, expected_seq = entry["org_chain_seq"], prev["org_chain_seq"] + 1
+        expected_prev = prev["entry_hash_org"]
+        if seq != expected_seq:
+            if not completeness:
+                continue  # a sparse slice: other activity owns these seqs
+            if tombs is None:
+                raise _BundleRejectError(
+                    report_path,
+                    f"unaccounted deletion: sequence gap at seq {expected_seq} "
+                    "and the bundle carries no retention/tombstones.json",
+                )
+            expected_prev = _bundle_account_gap(tombs, expected_seq, seq, keyring, ctx["org_id"])
+        if entry.get("prev_hash_org") != expected_prev:
+            raise _BundleRejectError(
+                report_path, f"seq {seq}: prev_hash_org does not link to its predecessor"
+            )
+    return tombstoned, True
+
+
+def _bundle_tier_k(ctx: dict[str, Any], keys: list[bytes]) -> dict[str, Any]:
+    """Spec section 7.2: recompute the org chain and the report signature."""
+    events, report, report_path = ctx["events"], ctx["report"], ctx["report_path"]
+    if not _entries_have_org_chain(events):
+        return {
+            "outcome": "UNAVAILABLE",
+            "reason": "export predates the per-org chain; use `chain --global`",
+        }
+    keymap = {_key_fingerprint(k): k for k in keys}
+    verified = not_covered = 0
+    for entry in events:
+        fp = entry.get("key_fingerprint")
+        stored, prev = entry.get("entry_hash_org", ""), entry.get("prev_hash_org", "")
+        if fp and fp not in keymap:
+            not_covered += 1
+            continue
+        if fp:
+            recomputed = _compute_entry_hash(keymap[fp], entry, prev)
+            matched = hmac.compare_digest(recomputed, stored)
+        else:
+            matched, _ = _entry_hash_matches_any(keys, entry, prev, stored)
+        if not matched:
+            raise _BundleRejectError(
+                report_path,
+                f"event {entry.get('id')}: entry_hash_org does not match its content "
+                "under the supplied key",
+            )
+        verified += 1
+    if verified == 0:
+        return {
+            "outcome": "UNAVAILABLE",
+            "reason": "no key coverage: no supplied key matches any row's key epoch",
+            "entries_verified": 0,
+            "entries_not_covered": not_covered,
+        }
+
+    cv = report.get("chain_verification", report)
+    cv = cv if isinstance(cv, dict) else {}
+    chain_valid = cv.get("chain_valid", cv.get("valid"))
+    fields = (report.get("report_id"), report.get("generated_at"), report.get("report_signature"))
+    if not all(isinstance(f, str) for f in fields) or None in (
+        chain_valid,
+        cv.get("total_entries"),
+        cv.get("entries_verified"),
+    ):
+        raise _BundleRejectError(report_path, "report signature fields are missing")
+    report_id, generated_at, signature = fields
+    if not any(
+        hmac.compare_digest(
+            _compute_report_signature(
+                key,
+                report_id,
+                generated_at,
+                chain_valid,
+                cv["total_entries"],
+                cv["entries_verified"],
+            ),
+            signature,
+        )
+        for key in keys
+    ):
+        raise _BundleRejectError(
+            report_path, "report_signature does not verify under the supplied key(s)"
+        )
+    if cv["total_entries"] != len(events):
+        raise _BundleRejectError(
+            report_path, f"platform claims {cv['total_entries']} entries, {len(events)} exported"
+        )
+    if chain_valid is not True:
+        raise _BundleRejectError(
+            report_path, "the platform's own chain_verification reports invalid"
+        )
+    return {"outcome": "VERIFIED", "entries_verified": verified, "entries_not_covered": not_covered}
+
+
+def _bundle_rejected(exc: _BundleRejectError) -> dict[str, Any]:
+    return {"outcome": "REJECTED", "artifact": exc.artifact, "reason": exc.reason}
+
+
+def _print_bundle_result(path: str, ctx: dict[str, Any] | None, tiers: dict[str, Any]) -> None:
+    colour = {"VERIFIED": _green, "REJECTED": _red}
+    print()
+    print(_bold("AI Identity - Case File Bundle Verification"))
+    print("=" * 43)
+    print(f"  Bundle:   {os.path.basename(os.path.normpath(path))}")
+    if ctx is not None:
+        if ctx["manifest"] is not None:
+            print(f"  Format:   {BUNDLE_FORMAT} (manifest signature valid)")
+        else:
+            print("  Format:   pre-v1 (no manifest.json: bundle integrity unsigned)")
+        scope = ctx["scope"]["type"]
+        claim = "completeness claimed" if scope == "org" else "slice, no completeness claim"
+        print(f"  Scope:    {scope} ({claim})")
+    print()
+    for name in ("P", "K", "W"):
+        tier = tiers[name]
+        outcome = tier["outcome"]
+        if outcome == "REJECTED":
+            detail = f"{tier['artifact']}: {tier['reason']}"
+        elif name == "P" and "anchored" in tier:
+            detail = (
+                f"{tier['anchored']} anchored, {tier['pending']} pending, "
+                f"{tier['tombstoned']} tombstoned"
+            )
+            if not tier.get("structure_checked", True):
+                detail += " (no per-org chain: structure not checked)"
+        elif name == "K" and outcome == "VERIFIED":
+            total = tier["entries_verified"] + tier["entries_not_covered"]
+            detail = f"{tier['entries_verified']}/{total} rows under supplied keys"
+            if tier["entries_not_covered"]:
+                detail += f" ({tier['entries_not_covered']} from key epochs not supplied)"
+        else:
+            detail = tier.get("reason", "")
+        label = colour.get(outcome, lambda s: s)(f"{outcome:<11}")
+        print(f"  Tier {name}:   {label}  {detail}")
+    print()
+
+
+def cmd_bundle(args: argparse.Namespace) -> int:
+    """Verify a whole Case File bundle, reporting Tiers P, K and W separately."""
+    _require_cryptography("bundle")
+    if not args.pubkey and not args.jwks:
+        print(
+            "Error: Provide the signer public key via --jwks <jwks.json> or --pubkey <pem-file>;\n"
+            "Tier P verifies the manifest and checkpoint signatures with it.",
+            file=sys.stderr,
+        )
+        return 2
+    keyring = _PublicKeyRing(args)
+
+    tiers: dict[str, Any] = {
+        "P": {"outcome": "REJECTED"},
+        "K": {"outcome": "UNAVAILABLE"},
+        "W": {"outcome": "UNAVAILABLE", "reason": "not run: this release verifies offline only"},
+    }
+    ctx: dict[str, Any] | None = None
+    try:
+        ctx = _bundle_bind(_read_bundle(args.path), keyring)
+    except _BundleRejectError as exc:
+        tiers["P"] = _bundle_rejected(exc)
+        tiers["K"]["reason"] = "not run: the bundle failed Tier P before it could be bound"
+
+    if ctx is not None:
+        try:
+            anchored, pending = _bundle_anchor(ctx, keyring)
+            tombstoned, structure_checked = _bundle_structure(ctx, keyring)
+            tiers["P"] = {
+                "outcome": "VERIFIED" if ctx["manifest"] is not None else "PRE-V1",
+                "events": len(ctx["events"]),
+                "anchored": anchored,
+                "pending": pending,
+                "tombstoned": tombstoned,
+                "structure_checked": structure_checked,
+                "completeness_claimed": ctx["scope"]["type"] == "org",
+            }
+        except _BundleRejectError as exc:
+            tiers["P"] = _bundle_rejected(exc)
+
+        keys: list[bytes] = []
+        for raw in [os.environ.get("AI_IDENTITY_HMAC_KEY")] + list(args.extra_keys or []):
+            if raw and raw.encode("utf-8") not in keys:
+                keys.append(raw.encode("utf-8"))
+        if not keys:
+            tiers["K"]["reason"] = "no key supplied (set AI_IDENTITY_HMAC_KEY or pass --key)"
+        else:
+            try:
+                tiers["K"] = _bundle_tier_k(ctx, keys)
+            except _BundleRejectError as exc:
+                tiers["K"] = _bundle_rejected(exc)
+
+    outcomes = [tier["outcome"] for tier in tiers.values()]
+    if "REJECTED" in outcomes:
+        result, code = "rejected", 1
+    elif tiers["P"]["outcome"] == "VERIFIED":
+        result, code = "verified", 0
+    else:
+        result, code = "pre_v1", EXIT_NOT_VERIFIED
+
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "tool": TOOL_NAME,
+                    "version": __version__,
+                    "command": "bundle",
+                    "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "result": result,
+                    "format": BUNDLE_FORMAT if ctx and ctx["manifest"] is not None else None,
+                    "scope": ctx["scope"] if ctx else None,
+                    "tiers": tiers,
+                },
+                indent=2,
+            )
+        )
+    else:
+        _print_bundle_result(args.path, ctx, tiers)
+    return code
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="ai_identity_verify",
@@ -1747,14 +2611,17 @@ def build_parser() -> argparse.ArgumentParser:
             "--jwks keys.json\n"
             "  %(prog)s attestation envelope.json --pubkey signer.pem\n"
             "  %(prog)s attestation envelope.json --jwks keys.json\n"
+            "  %(prog)s bundle ai-identity-case-file-*.zip --jwks keys.json\n"
             "\n"
             "Environment:\n"
-            "  AI_IDENTITY_HMAC_KEY  HMAC secret key (required for report/chain)\n"
+            "  AI_IDENTITY_HMAC_KEY  HMAC secret key (required for report/chain;\n"
+            "                        optional for bundle, where it enables Tier K)\n"
             "\n"
             "Exit codes:\n"
             "  0  Verification passed\n"
             "  1  Verification failed (invalid signature or broken chain)\n"
             "  2  Usage error (missing file, bad JSON, missing env var)\n"
+            "  3  bundle only: nothing rejected, but Tier P is not VERIFIED (pre-v1)\n"
         ),
     )
     parser.add_argument(
@@ -1878,6 +2745,49 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    # bundle subcommand (Case File bundle format v1)
+    bundle_parser = subparsers.add_parser(
+        "bundle",
+        help="Verify a whole Case File bundle (ZIP or extracted directory), tier by tier",
+        description=(
+            "Verify an AI Identity Case File bundle per "
+            "docs/forensics/export-bundle-format.md and report each tier separately: "
+            "Tier P (public: manifest signature, checkpoints, inclusion proofs, org-slice "
+            "structure, tombstones) needs only --jwks or --pubkey; Tier K (key-holder: "
+            "per-row HMAC and report signature) runs when AI_IDENTITY_HMAC_KEY or --key "
+            "is supplied; Tier W (online witness) is not run by this release. Requires "
+            "the `cryptography` package."
+        ),
+    )
+    bundle_parser.add_argument(
+        "path",
+        help="Path to the Case File ZIP, or to the directory it was extracted into",
+    )
+    bundle_parser.add_argument(
+        "--jwks",
+        metavar="JSON",
+        help=(
+            "Path to a JWKS file (/.well-known/ai-identity-public-keys.json, or a copy "
+            "saved with the bundle). Envelope keyids are matched against it. "
+            "Mutually exclusive with --pubkey."
+        ),
+    )
+    bundle_parser.add_argument(
+        "--pubkey",
+        metavar="PEM",
+        help="Path to a pinned PEM ECDSA P-256 public key. Mutually exclusive with --jwks.",
+    )
+    bundle_parser.add_argument(
+        "--key",
+        dest="extra_keys",
+        action="append",
+        metavar="KEY",
+        help=(
+            "HMAC key for Tier K (repeatable), in addition to AI_IDENTITY_HMAC_KEY: "
+            "retired epoch keys go here. Without any key, Tier K is UNAVAILABLE."
+        ),
+    )
+
     # chain subcommand
     chain_parser = subparsers.add_parser(
         "chain",
@@ -1980,6 +2890,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return cmd_attestation(args)
     elif args.command == "inclusion-proof":
         return cmd_inclusion_proof(args)
+    elif args.command == "bundle":
+        return cmd_bundle(args)
     else:
         parser.print_help()
         return 2
