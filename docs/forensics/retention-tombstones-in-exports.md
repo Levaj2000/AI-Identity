@@ -122,9 +122,10 @@ at a sequence gap (expected `N`, got `M > N`):
 Without `--tombstones`, behavior is unchanged: a gap is a failure. The flag
 never weakens the check; it only supplies the receipts the check requires.
 
-Agent-scoped exports re-anchor at gaps today (other agents own the sequence
-numbers in between) and keep doing so; tombstones are consulted only in the
-org-scope walk, where completeness is claimed.
+Agent- and incident-scoped exports re-anchor at gaps (other agents or other
+activity own the sequence numbers in between; incident scope since CLI 1.6.0);
+tombstones are consulted only in the org-scope walk, where completeness is
+claimed.
 
 ## Attestation cross-check (server side)
 

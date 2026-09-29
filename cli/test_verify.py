@@ -1935,6 +1935,109 @@ class TestKeyEpochVerification(unittest.TestCase):
             os.unlink(path)
 
 
+@unittest.skipUnless(_have_cryptography(), "cryptography package not installed")
+class TestInclusionProofVerification(unittest.TestCase):
+    """`inclusion-proof` end to end: a signed checkpoint over a 4-leaf tree and
+    RFC 6962 audit paths computed independently of the CLI."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+
+        private_key = ec.generate_private_key(ec.SECP256R1())
+        cls._signer = staticmethod(_local_ecdsa_signer(private_key))
+        fd, cls._pem = tempfile.mkstemp(suffix=".pem")
+        with os.fdopen(fd, "wb") as f:
+            f.write(
+                private_key.public_key().public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo,
+                )
+            )
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        os.unlink(cls._pem)
+
+    def _export(self, schema_version: int = 1):
+        leaves = [e["entry_hash"] for e in _build_org_chain(4)]
+        root = _merkle_root(leaves)
+        checkpoints = [
+            {
+                "merkle_root": root,
+                "envelope": _checkpoint_envelope(
+                    root, 4, 1, 4, signer=self._signer, schema_version=schema_version
+                ),
+            }
+        ]
+        proofs = {
+            "proofs": [
+                {
+                    "audit_id": i + 1,
+                    "entry_hash": leaf,
+                    "index": i,
+                    "tree_size": 4,
+                    "merkle_root": root,
+                    "proof": _audit_path(i, leaves),
+                }
+                for i, leaf in enumerate(leaves)
+            ],
+            "pending": [],
+        }
+        return checkpoints, proofs
+
+    def _run(self, checkpoints, proofs):
+        cp_path, proofs_path = _write_json(checkpoints), _write_json(proofs)
+        try:
+            return _run_cmd(
+                [
+                    "--no-color",
+                    "inclusion-proof",
+                    "--checkpoints",
+                    cp_path,
+                    "--proofs",
+                    proofs_path,
+                    "--pubkey",
+                    self._pem,
+                ]
+            )
+        finally:
+            os.unlink(cp_path)
+            os.unlink(proofs_path)
+
+    def test_valid_proofs_verify(self):
+        code, out, _ = self._run(*self._export())
+        self.assertEqual(code, 0, out)
+        self.assertIn("INCLUSION VERIFIED", out)
+
+    def test_unknown_checkpoint_schema_version_rejected(self):
+        code, out, _ = self._run(*self._export(schema_version=2))
+        self.assertEqual(code, 1)
+        self.assertIn("unsupported checkpoint schema_version 2", out)
+        self.assertIn("INCLUSION NOT VERIFIED", out)
+
+    def test_tree_size_must_match_signed_checkpoint(self):
+        """For index 0 of a 4-leaf tree, the same audit path also satisfies the
+        RFC 6962 check with tree_size 3, so the unsigned field could lie and
+        still verify. It must equal the size the checkpoint signed."""
+        checkpoints, proofs = self._export()
+        proofs["proofs"] = proofs["proofs"][:1]
+        proofs["proofs"][0]["tree_size"] = 3
+        self.assertTrue(
+            cli._merkle_verify_inclusion(
+                bytes.fromhex(proofs["proofs"][0]["entry_hash"]),
+                0,
+                3,
+                [bytes.fromhex(h) for h in proofs["proofs"][0]["proof"]],
+                bytes.fromhex(proofs["proofs"][0]["merkle_root"]),
+            )
+        )
+        code, out, _ = self._run(checkpoints, proofs)
+        self.assertEqual(code, 1)
+        self.assertIn("tree_size differs from the signed checkpoint", out)
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -2023,6 +2126,58 @@ class TestAgentScopedSliceVerification(unittest.TestCase):
             os.unlink(path)
 
 
+class TestIncidentScopedSliceVerification(unittest.TestCase):
+    """Incident-scoped exports are sparse slices too (export-bundle-format.md
+    7.1 step 6): a gap is unrelated activity, not a deletion. Before 1.6.0 a
+    gap in one read as CHAIN BROKEN."""
+
+    def _report(self, entries: list[dict[str, Any]]) -> dict[str, Any]:
+        report = _agent_slice_report(entries)
+        report["scope"] = {"type": "incident", "incident_id": "inc-7", "org_id": "org-test"}
+        return report
+
+    def _sparse_slice(self) -> list[dict[str, Any]]:
+        full = _build_org_chain(8)
+        return full[0:3] + full[5:8]
+
+    def test_incident_slice_with_gap_verifies(self):
+        path = _write_json(self._report(self._sparse_slice()))
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 0)
+            self.assertIn("CHAIN INTACT", out)
+            self.assertIn("Incident slice", out)
+            self.assertIn("other activity owns those rows", out)
+            code, out, _ = _run_cmd(["--json", "chain", path])
+            self.assertEqual(code, 0)
+            details = json.loads(out)["details"]
+            self.assertEqual(details["mode"], "per-org-incident-slice")
+            self.assertEqual(details["gaps_reanchored"], 1)
+            self.assertEqual(details["entries_verified"], 6)
+        finally:
+            os.unlink(path)
+
+    def test_incident_slice_tamper_after_gap_detected(self):
+        entries = self._sparse_slice()
+        entries[4]["request_metadata"] = {"status_code": 200, "model": "tampered"}
+        path = _write_json(self._report(entries))
+        try:
+            code, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertEqual(code, 1)
+            self.assertIn("hash mismatch", out)
+        finally:
+            os.unlink(path)
+
+    def test_agent_slice_wording_unchanged(self):
+        path = _write_json(_agent_slice_report(self._sparse_slice()))
+        try:
+            _, out, _ = _run_cmd(["--no-color", "chain", path])
+            self.assertIn("Agent slice", out)
+            self.assertIn("other agents own those rows", out)
+        finally:
+            os.unlink(path)
+
+
 # --- Retention tombstones: gap accounting in the per-org walk ---
 
 
@@ -2050,16 +2205,30 @@ def _merkle_root(leaves_hex: list[str]) -> str:
     return root(hashes).hex()
 
 
+def _audit_path(index: int, leaves_hex: list[str]) -> list[str]:
+    """RFC 6962 section 2.1.1 PATH(m, D[n]), independent of the CLI's code."""
+    if len(leaves_hex) == 1:
+        return []
+    k = 1
+    while k * 2 < len(leaves_hex):
+        k *= 2
+    if index < k:
+        return [*_audit_path(index, leaves_hex[:k]), _merkle_root(leaves_hex[k:])]
+    return [*_audit_path(index - k, leaves_hex[k:]), _merkle_root(leaves_hex[:k])]
+
+
 _CHECKPOINT_PAYLOAD_TYPE = "application/vnd.ai-identity.anchor-checkpoint+json"
 _TOMBSTONES_FORMAT = "ai-identity-retention-tombstones/v1"
 _TOMB_ORG_ID = "f1e2d3c4-b5a6-4798-8877-66554433abcd"
 
 
-def _checkpoint_envelope(root: str, tree_size: int, first_id: int, last_id: int, signer=None):
+def _checkpoint_envelope(
+    root: str, tree_size: int, first_id: int, last_id: int, signer=None, schema_version: int = 1
+):
     """A checkpoint DSSE envelope over ``root``; signed when ``signer`` is given,
     otherwise a placeholder signature (structural checks only)."""
     payload = {
-        "schema_version": 1,
+        "schema_version": schema_version,
         "org_id": _TOMB_ORG_ID,
         "tree_size": tree_size,
         "merkle_root": root,
@@ -2318,6 +2487,20 @@ class TestTombstoneCheckpointSignatures(unittest.TestCase):
             code, out, _ = self._run(report, doc, "--pubkey", pem)
             self.assertEqual(code, 1)
             self.assertIn("signature invalid", out)
+        finally:
+            os.unlink(pem)
+
+    def test_unknown_checkpoint_schema_version_breaks(self):
+        report, doc = _pruned_export(signer=self._signer)
+        cp = doc["checkpoints"][0]
+        cp["envelope"] = _checkpoint_envelope(
+            cp["merkle_root"], 6, 1, 6, signer=self._signer, schema_version=2
+        )
+        pem = self._write_pem(self._pub_pem)
+        try:
+            code, out, _ = self._run(report, doc, "--pubkey", pem)
+            self.assertEqual(code, 1)
+            self.assertIn("unsupported checkpoint schema_version 2", out)
         finally:
             os.unlink(pem)
 
