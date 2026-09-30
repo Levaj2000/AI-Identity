@@ -8,6 +8,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- **Forensic capture modes are specified (draft, not implemented).** `docs/forensics/capture-modes.md` turns the "deep capture for regulated flows, summarized capture for dev/test" roadmap line into a testable design. It first states what the audit log captures today: decisions only, never bodies, prompts, completions or tool arguments, because the gateway decides without proxying. It then defines two modes, `standard` (today's capture, the default) and `deep` (opt-in, for regulated flows), under fixed rules: the mode is set at write time and recorded inside the hashed `request_metadata`; the chain commits to salted content digests while content lives in a separate store, which gives retention's `redact_after` something to delete without breaking a hash; policy fields such as `capture_mode` and `flow_tag` come from configuration, never from caller metadata; regulated flows fail closed. It proposes no summary mode, since sampling at capture would break chain completeness and retention already reduces volume with tombstones. It is explicit that deep content is what the caller reported, not what the platform observed. No verifier change is needed: every new field lives in `request_metadata`.
+
+### Changed
+- **`export-bundle-format.md` is marked implemented.** The platform now signs `manifest.json` in Case File bundles, so bundles issued from 2026-09-30 with an org in scope verify as v1; earlier bundles stay pre-v1.
+
 ## [0.6.0] - 2026-09-29
 
 ### Added

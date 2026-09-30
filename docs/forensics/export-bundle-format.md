@@ -1,11 +1,14 @@
 # AI Identity Case File bundle format (v1)
 
-**Status:** Specified. The verifier side is implemented in CLI 1.6.0: the
+**Status:** Implemented. The verifier side shipped in CLI 1.6.0: the
 `bundle` command, the standalone-command rules and the online witness check
-(section 10.2). The platform side (section 10.1) is not, so every issued
-bundle is still pre-v1 (section 8.2).
+(section 10.2). The platform side (section 10.1) shipped on 2026-09-30: the
+bundle endpoint signs `manifest.json` and embeds CLI 1.6.0, and the README and
+`verify.command` run `bundle`. An export whose scope carries no org still has
+no manifest and reads as pre-v1 (section 8.2), as do all bundles issued
+before that date.
 **Owner:** CTO
-**Last reviewed:** 2026-09-29
+**Last reviewed:** 2026-09-30
 
 "Self-contained exports" appears in product and strategy copy, but until now it
 has not been defined precisely enough to test. This document is the contract
