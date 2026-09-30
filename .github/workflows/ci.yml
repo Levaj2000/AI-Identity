@@ -74,3 +74,27 @@ jobs:
 
       - name: Run tests
         run: pytest -v
+
+  local-website-services:
+    name: Website - Local services smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Node 20
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: landing-page/package-lock.json
+
+      - name: Install website dependencies
+        working-directory: landing-page
+        run: npm ci --ignore-scripts
+
+      - name: Check mock and website routes
+        working-directory: landing-page
+        run: |
+          npm run test:local-services
+          npm run test:local-site
