@@ -124,5 +124,10 @@ End-to-end SDK calls require access to the hosted API or a separately
 provided compatible server. See `sdk/python/README.md` and
 `sdk/typescript/README.md`.
 
-Run `npm run test:local-services`, `npx tsc --noEmit`, and `npx next build`
-to check the local service contract and site.
+Run `npm run test:local-services` for the mock contract and
+`npm run test:local-site` for a credential-free website smoke test. The
+second command starts its own loopback mock and Next.js development server,
+then verifies that forensics chat and both email forms reach the mock. Stop
+any manually started mock on port 4020 first. It does not require Docker;
+MongoDB is optional in this test. Run `npx tsc --noEmit` and `npx next build`
+for the site type check and production build.
