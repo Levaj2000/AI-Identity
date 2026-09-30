@@ -1,9 +1,10 @@
 # AI Identity forensic capture modes
 
-**Status:** Draft for review, partly implemented. Section 10 items 1, 2 and
-4 are live on the platform; the rest is not. Open questions 2 and 4 are
-decided (section 11). Section 2 describes behavior before any of this
-shipped. Tracked as AI-12 (spec) and AI-66 (build), v0.6.0.
+**Status:** Implemented. Every item of section 10 is built on the
+platform. Open questions 2 and 4 are decided; 1, 3, 5 and 6 remain open
+(section 11). Where this spec left a choice open, sections 7 and 8 now record
+what was built. Section 2 describes behavior before any of this shipped.
+Tracked as AI-12 (spec) and AI-66 (build), v0.6.0.
 **Owner:** CTO
 **Last reviewed:** 2026-09-30
 
@@ -156,7 +157,7 @@ expected and shows what is absent. It is never silently recorded as
 
 ### 4.3 Why there is no `summary` mode
 
-The roadmap line asks for "summarized capture for dev/test". This draft
+The roadmap line asks for "summarized capture for dev/test". This spec
 proposes not building it as a capture mode:
 
 - Rows are already small. The sanitizer bounds `request_metadata` at 20 keys
@@ -268,9 +269,24 @@ confirm the digest in the signed chain.
   untouched. After redaction the digest still proves that content existed and
   was committed, but the content can no longer be produced or confirmed.
   Redaction is recorded as a chained retention event, like a prune.
+  - **Which rule applies.** An item is governed by the row that carries its
+    digest: the decision row for request-side items, the `content_recorded`
+    row for response-side ones. That row's rules are evaluated first-match,
+    exactly as for pruning, and the item is due once that rule's
+    `redact_after` has passed since the row was written. So a policy can
+    redact responses on a different clock from requests. An item whose
+    governing rule depends on a descriptor the row cannot be evaluated on is
+    never redacted.
+  - **Receipt.** The reaper redacts in batches, after pruning. Each batch is
+    one transaction that writes one chained `redaction_receipt` retention
+    event with `scope: "content"`. The receipt lists every item with its row
+    id, decision id, item name and digest, and the same transaction clears
+    the items. No content is gone without its receipt.
 - **Pruning a row** (the existing reaper) deletes its content records too.
 - **Legal holds** freeze content as well as rows: held content is never
-  redacted.
+  redacted. An active hold on either the row that carries an item's digest
+  or that item's decision row freezes the item. Holds are checked when items
+  are selected and again when the batch commits.
 
 ## 8. Exports
 
@@ -283,6 +299,21 @@ confirm the digest in the signed chain.
 - **Content on request.** An authorized org user can fetch a row's content
   and salts from the API and check each digest against the row in a verified
   bundle. That check needs no platform key.
+  - **Endpoint.** `GET /api/v1/audit/{audit_id}/content`. The id may name the
+    decision row or its `content_recorded` row; both return the decision's
+    items.
+  - **Response.** For each item: the item name, the id of the row that
+    carries its digest, the digest, the salt (hex) and the content. Check
+    each one as `sha256(salt || utf8(content))`, which must equal
+    `content_digests[item]` in that row's `request_metadata` (section 6.2).
+    A redacted item is listed with `redacted_at` and no content or salt.
+  - **Who may read.** Only an owner or admin of the row's org. Platform staff
+    have no bypass: captured content belongs to the customer. Anyone else
+    gets the same answer as for an id that does not exist.
+  - **Every read is evidence.** Each read writes a chained `content_accessed`
+    retention event, naming who read which decision's items, before any
+    content is returned. If that event cannot be chained, no content is
+    returned.
 - **OCSF export and sinks.** Digests and `capture_mode` map into the OCSF
   record, under `unmapped` until a native home is agreed. Content is never
   sent to a sink.
@@ -334,9 +365,11 @@ record, not the assurance of the decision fields.
    be captured deep is denied; redaction leaves the chain verifying; a held
    row's content is never redacted.
 
-Items 1, 2 and 4 are implemented. No verifier change is required for items
-1 to 7: every new field lives in `request_metadata`, which the verifier
-already recomputes.
+Items 1 to 8 are implemented (AI-66). No verifier change was required:
+every new field lives in `request_metadata`, which the verifier already
+recomputes, and redaction and content access are chained retention events,
+each anchored by an ordinary audit row that the verifier checks like any
+other.
 
 ## 11. Open questions
 
