@@ -1,7 +1,9 @@
 # AI Identity forensic capture modes
 
-**Status:** Draft for review. Nothing in this document is implemented yet
-except where section 2 describes current behavior. Tracked as AI-12 (v0.6.0).
+**Status:** Draft for review, partly implemented. Section 10 items 1, 2 and
+4 are live on the platform; the rest is not. Open questions 2 and 4 are
+decided (section 11). Section 2 describes behavior before any of this
+shipped. Tracked as AI-12 (spec) and AI-66 (build), v0.6.0.
 **Owner:** CTO
 **Last reviewed:** 2026-09-30
 
@@ -128,11 +130,29 @@ Everything `standard` records, plus:
   7), keyed by row id and item.
 
 Because the gateway never sees content (section 2), a `deep` row needs the
-caller to submit it: the SDK or proxy integration sends the content, or its
-digests, with the enforce call or in a follow-up tied to the decision's
-correlation id. A decision whose content never arrives stays a `deep` row
-with its digests absent, and the row says so (section 6.1). It is never
-silently recorded as `standard`.
+caller to submit it (decided, section 11 item 2). The caller sends content,
+never digests: the platform salts and digests every item itself (section 6.2),
+so a digest in the chain is always the platform's own computation.
+
+The decision row is hashed when the enforce call returns, which is before the
+upstream call is made, so content reaches the chain in two places:
+
+- **Request side** (`request`, `tool_args`): sent with the enforce call. The
+  platform digests each item before it writes the decision row, so the
+  digests are inside that row's hash.
+- **Response side** (`response`, `tool_result`): sent after the upstream call
+  returns, in a follow-up that names the decision row (section 5.1). The
+  platform writes a separate chained row, `action_type: content_recorded`,
+  carrying the decision row's id and the response-side digests. The decision
+  row is never changed.
+
+Every `deep` decision row lists `content_expected`: the items its mode
+requires, fixed when the row is written. An expected item with no digest on
+the decision row, and none on a `content_recorded` row for it, is missing.
+Missing items are computed when the record is read or exported, never written
+back, so a deep decision whose content never arrives still states what it
+expected and shows what is absent. It is never silently recorded as
+`standard`.
 
 ### 4.3 Why there is no `summary` mode
 
@@ -154,20 +174,46 @@ changing this document's principles. Open question 1.
 
 ## 5. Configuration
 
-- **Org default mode**, set by an org owner or admin. Changing it is a chained
-  audit event recording the old mode, the new mode, who and when, like a
-  retention policy change. It applies to rows written after the change and
+- **Org default mode**, stored on the organization and set by an org owner
+  or admin (`PUT /api/v1/orgs/me/capture-mode`). Each change is a chained
+  `capture_mode_changed` retention-plane event recording the old mode, the new
+  mode, who and when, anchored through the org's `retention-service` agent
+  like a policy publication. It applies to rows written after the change and
   never to existing rows.
-- **Per-agent and per-flow overrides** may only raise the mode, never lower it
-  below the org default.
+- **Per-agent overrides:** `capture_mode` in the agent's configuration, on the
+  same trusted path as `flow_tag`. The effective mode is the higher of the org
+  default and the agent override, so an override can only raise the mode,
+  never lower it.
+- **Availability:** `deep` is offered on the tiers that may hold regulated
+  records (business and enterprise). Setting it elsewhere is refused.
 - **Flow tags** (`flow_tag`, `risk_tier`) are set in agent or org
   configuration and written into the row by the platform, after the sanitizer,
   as trusted fields (principle 5). This also makes the retention and hold
   selectors of AI-64 match.
 - **Regulated flows:** a flow tagged `regulated` requires `deep`, and only on
-  tiers where regulated ingestion is allowed. The existing tier check
-  (`regulated_ingestion_allowed`) is called on the capture path; a flow that
-  fails it is denied (principle 6).
+  tiers where regulated ingestion is allowed. Its effective mode is raised to
+  `deep` automatically, so the required mode is met by construction. The tier
+  check (`regulated_ingestion_allowed`) runs on the capture path: the agent
+  API refuses the tag and the gateway denies the request where it fails
+  (principle 6; implemented).
+
+### 5.1 Deep intake
+
+- **With the enforce call:** an optional JSON body,
+  `{"content": {"request": "...", "tool_args": "..."}}`. Only those two item
+  names; each value a UTF-8 string of at most 256 KiB. On a `standard`
+  decision the body is discarded unread: submitting content never raises the
+  mode and is never stored.
+- **After the upstream call:** `POST /gateway/content`, authenticated with the
+  same agent key, naming the decision row's id (returned by the enforce call
+  as `audit_id`) with `{"content": {"response": "...", "tool_result": "..."}}`.
+  Accepted only for the calling agent's own `deep` decision, only for items in
+  that row's `content_expected` not already recorded, and only within 15
+  minutes of the decision. Each accepted follow-up writes one
+  `content_recorded` row.
+- **Rejections are whole:** an oversized item (413), an unknown item name
+  (422), a late or repeated follow-up (409), or a decision that is not the
+  caller's or not `deep` (404) records nothing, not part of the request.
 
 ## 6. What the chain covers
 
@@ -182,16 +228,18 @@ recompute new rows with no change.
 |---|---|---|
 | `capture_mode` | Every row written after this ships | `standard` or `deep` |
 | `flow_tag`, `risk_tier` | When configured | Short strings from configuration (section 5) |
-| `content_digests` | `deep` rows with submitted content | Object of item name to digest (section 6.2) |
-| `content_missing` | `deep` rows where expected content never arrived | List of item names |
+| `content_expected` | `deep` decision rows | List of the item names the mode requires |
+| `content_digests` | `deep` decision and `content_recorded` rows with submitted content | Object of item name to digest (section 6.2) |
+| `content_source` | Rows carrying `content_digests` | `caller`: the content was reported, not observed (section 9) |
+| `decision_audit_id` | `content_recorded` rows | Id of the decision row the content belongs to |
 | `model`, `input_tokens`, `output_tokens` | When supplied | As supplied |
 
-The sanitizer currently drops nested objects and lists. It gains a narrow,
-typed exception for exactly these keys: `content_digests` is an object of
-known item names to 64-character lowercase hex strings, and `content_missing`
-is a list of known item names. Anything else in those keys drops the row's
-content fields and records `content_missing`, rather than letting arbitrary
-structure into the chain.
+None of these keys can come from caller metadata. The sanitizer drops them
+like any key off its allowlist, and the writer sets them afterwards from the
+platform's own computation, on the same trusted path as `capture_mode` and
+`flow_tag`. The writer checks their shape before hashing: `content_digests`
+maps known item names to 64-character lowercase hex strings, and
+`content_expected` is a list of known item names.
 
 ### 6.2 Content digests
 
@@ -210,7 +258,11 @@ confirm the digest in the signed chain.
 
 - **Separate from `audit_log`.** One record per row and item: row id, item
   name, salt, content bytes, and a `redacted_at` timestamp.
-- **Encrypted at rest** under a per-org key. Open question 4.
+- **Encrypted at rest** under a per-org key held by the platform (decided,
+  section 11 item 4): envelope encryption, with each org's data key wrapped by
+  a platform KMS key and each item encrypted with AES-256-GCM under the org's
+  data key. Customer-managed keys are a later enterprise option with their
+  own spec.
 - **Redaction.** A retention rule's `redact_after` deletes the content bytes
   and salt and sets `redacted_at`. The row, its digests and the chain are
   untouched. After redaction the digest still proves that content existed and
@@ -241,15 +293,19 @@ A verified `deep` row proves, under the tiers of
 `export-bundle-format.md` section 9:
 
 - which content items the caller submitted for that decision, and a
-  commitment to each item's exact bytes at write time
-- that the row was captured as `deep`, so the absence of content is recorded
-  (`content_missing`), never inferred from silence
+  commitment to each item's exact bytes at the time they were recorded
+- that the row was captured as `deep` and which items it expected
+  (`content_expected`), so absent content is visible, never inferred from
+  silence. In an `org`-scope export, whose completeness Tier P checks, an
+  expected item with no digest was never submitted. In an `agent` or
+  `incident` slice, its `content_recorded` row may simply lie outside the
+  slice
 
 It does not prove:
 
 - **that the submitted content is what the agent actually sent or received.**
-  The platform records what the caller reported; the gateway never observes
-  the traffic
+  The platform records what the caller reported, and every such row says so
+  (`content_source: caller`); the gateway never observes the traffic
 - that content deleted by redaction ever matched its digest, once the
   content and salt are gone
 - anything about a `standard` row's content, which was never captured
@@ -267,8 +323,9 @@ record, not the assurance of the decision fields.
    side of AI-64.
 3. Org and agent mode configuration, with changes chained (section 5).
 4. Regulated-flow enforcement on the capture path (principle 6).
-5. Deep capture intake: content or digests with the enforce call or a
-   correlated follow-up; the sanitizer's typed exception (section 6.1).
+5. Deep capture intake: request-side content with the enforce call and
+   response-side content in a `content_recorded` follow-up (section 5.1);
+   platform-computed digests on the trusted path (section 6.1).
 6. The content store, with encryption, redaction for `redact_after`, and
    prune and hold integration (section 7).
 7. Content-on-request API (section 8).
@@ -277,20 +334,23 @@ record, not the assurance of the decision fields.
    be captured deep is denied; redaction leaves the chain verifying; a held
    row's content is never redacted.
 
-No verifier change is required for items 1 to 7: every new field lives in
-`request_metadata`, which the verifier already recomputes.
+Items 1, 2 and 4 are implemented. No verifier change is required for items
+1 to 7: every new field lives in `request_metadata`, which the verifier
+already recomputes.
 
 ## 11. Open questions
 
 1. **Summary mode.** Is there a real need that retention cannot meet
    (section 4.3)? Decide after item 1 of section 10 produces numbers.
-2. **Caller-submitted content.** Is caller-reported content, clearly labelled
-   as such, useful enough for regulated customers, or does deep capture need a
-   proxying integration where the platform observes the traffic itself?
+2. **Caller-submitted content.** Decided 2026-09-30: caller-submitted
+   content, labelled `content_source: caller` on every row that carries its
+   digests (section 6.1). A proxying integration, where the platform observes
+   the traffic itself, can be added later as a separate source value.
 3. **Content in bundles.** A v2 bundle role for content, or content always
    delivered separately and matched by digest?
-4. **Key custody for the content store.** Platform-held per-org keys, or
-   customer-managed keys, and what that means for redaction and legal holds.
+4. **Key custody for the content store.** Decided 2026-09-30: platform-held
+   per-org keys to start (section 7). Customer-managed keys, and what they
+   mean for redaction and legal holds, are a later enterprise option.
 5. **Erasure requests.** Redaction removes content and salt; is a salted
    digest of erased content itself personal data? Our reading is that it is
    not, once the salt is gone, but this needs legal review before regulated
