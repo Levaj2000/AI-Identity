@@ -113,7 +113,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: FROM,
       to: TO,
       replyTo: email,
@@ -132,6 +132,7 @@ export async function POST(req: Request) {
         "Refs: Decision #45 (publication strategy), Milestones #48/#49/#50.",
       ].join("\n"),
     });
+    if (error) throw new Error(error.message);
     return NextResponse.json({ ok: true, delivered: true }, { status: 200 });
   } catch (err) {
     console.error("Resend send failed", {

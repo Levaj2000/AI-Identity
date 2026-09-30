@@ -1,6 +1,9 @@
 """Agents resource — create, list, get, update, and delete AI agents."""
 
-from ai_identity._http import HTTPClient
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from ai_identity.models.agents import (
     Agent,
     AgentCreate,
@@ -8,6 +11,9 @@ from ai_identity.models.agents import (
     AgentList,
     AgentUpdate,
 )
+
+if TYPE_CHECKING:
+    from ai_identity._http import HTTPClient
 
 BASE = "/api/v1/agents"
 
