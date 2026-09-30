@@ -115,6 +115,12 @@ ruff check . && ruff format --check .
 pytest -v
 ```
 
+### Local website dependencies
+
+The website can run with a loopback MongoDB container and local email/search
+mocks without cloud credentials. See the [local website services guide](landing-page/README.md)
+for setup, smoke checks, and the limits of the SDK and search mocks.
+
 ## Tech Stack
 
 - **Verifier**: Python 3.9+ standard library; `cryptography` for Ed25519 signature checks

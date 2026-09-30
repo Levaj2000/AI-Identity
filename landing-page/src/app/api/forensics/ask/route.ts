@@ -12,6 +12,9 @@ const PROJECT_ID = process.env.VERTEX_PROJECT_ID;
 const LOCATION = process.env.VERTEX_LOCATION ?? "us";
 const ENGINE_ID = process.env.VERTEX_ENGINE_ID ?? "forensics-agent";
 const SERVING_CONFIG = "default_serving_config";
+const LOCAL_SERVICES =
+  process.env.NODE_ENV === "development" &&
+  process.env.LOCAL_SERVICES === "1";
 
 const PREAMBLE = `You are the AI Identity Forensics Assistant.
 Answer questions ONLY using information from the provided sources about AI agent identity, forensics, audit chains, attestations, and compliance.
@@ -93,7 +96,7 @@ interface AnswerResponse {
 }
 
 export async function POST(req: NextRequest) {
-  if (!PROJECT_ID) {
+  if (!PROJECT_ID && !LOCAL_SERVICES) {
     return NextResponse.json(
       { error: "Forensics agent is not configured" },
       { status: 503 },
@@ -125,21 +128,24 @@ export async function POST(req: NextRequest) {
     process.env.VERCEL_OIDC_TOKEN ??
     null;
 
-  let accessToken: string;
-  try {
-    accessToken = await getAccessToken(vercelOidcToken);
-  } catch (err) {
-    console.error("Auth error:", err);
-    return NextResponse.json(
-      { error: "Forensics agent auth failed" },
-      { status: 503 },
-    );
+  let accessToken = "local-mock";
+  if (!LOCAL_SERVICES) {
+    try {
+      accessToken = await getAccessToken(vercelOidcToken);
+    } catch (err) {
+      console.error("Auth error:", err);
+      return NextResponse.json(
+        { error: "Forensics agent auth failed" },
+        { status: 503 },
+      );
+    }
   }
 
-  const url =
-    `https://discoveryengine.googleapis.com/v1/projects/${PROJECT_ID}` +
-    `/locations/${LOCATION}/collections/default_collection/engines/${ENGINE_ID}` +
-    `/servingConfigs/${SERVING_CONFIG}:answer`;
+  const url = LOCAL_SERVICES
+    ? "http://127.0.0.1:4020/vertex/answer"
+    : `https://discoveryengine.googleapis.com/v1/projects/${PROJECT_ID}` +
+      `/locations/${LOCATION}/collections/default_collection/engines/${ENGINE_ID}` +
+      `/servingConfigs/${SERVING_CONFIG}:answer`;
 
   const payload = {
     query: { text: query },
@@ -156,15 +162,24 @@ export async function POST(req: NextRequest) {
     safetySpec: { enable: true },
   };
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      "X-Goog-User-Project": PROJECT_ID,
-    },
-    body: JSON.stringify(payload),
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        ...(LOCAL_SERVICES ? {} : { "X-Goog-User-Project": PROJECT_ID! }),
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error("Search service unavailable:", err);
+    return NextResponse.json(
+      { error: "Search service error" },
+      { status: 502 },
+    );
+  }
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");

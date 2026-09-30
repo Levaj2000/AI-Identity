@@ -120,7 +120,7 @@ export async function POST(req: Request) {
   const serviceLabel = SERVICES.get(service) ?? service;
 
   try {
-    await resend.emails.send({
+    const { error } = await resend.emails.send({
       from: FROM,
       to: TO,
       replyTo: email,
@@ -146,6 +146,7 @@ export async function POST(req: Request) {
         `Reply directly to this email to reach the requester.`,
       ].join("\n"),
     });
+    if (error) throw new Error(error.message);
     return NextResponse.json({ ok: true, delivered: true }, { status: 200 });
   } catch (err) {
     console.error("Resend send failed (service-request)", {
