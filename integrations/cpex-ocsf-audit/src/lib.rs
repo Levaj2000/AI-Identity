@@ -118,6 +118,7 @@ pub mod host {
 
     use self::decision::PluginAction;
     use self::error::PluginViolation;
+    use self::hooks::payload::PluginPayload;
 
     /// The engine this build consumes, for logs and results docs. Not a
     /// wire value: the `cpex.*` / `cmf.*` record prefixes are pinned by
@@ -191,6 +192,36 @@ pub mod host {
                 _ => None,
             }
         }
+    }
+
+    /// The digest of the payload as the pipeline finished with it, the
+    /// `output_hash` half of `unmapped."cpex.content"`.
+    ///
+    /// Today neither seam records it: the executor captures `input_hash`
+    /// at entry (`capture_content_provenance`) and every sink hashes the
+    /// final payload for itself, which is what this does. praxis-proxy/
+    /// policy PR #84 review (2026-09-30) is moving the digest to a keyed
+    /// HMAC under an operator secret, computed by the engine at emit so
+    /// the key never reaches a sink; when that lands, `DecisionLog` grows
+    /// an `output_hash()` accessor beside `input_hash()`, and this body
+    /// becomes `decisions.output_hash().map(str::to_owned)`. Nothing else
+    /// in the crate calls `content_hash`, so that one line is the whole
+    /// swap, and the digest scheme stays the engine's: the emitter carries
+    /// both values as opaque strings, and AID-EMIT-1 pins neither.
+    ///
+    /// `None` when there is no payload or it does not opt in to
+    /// `audit_bytes`; the emitter then writes an explicit null, so the
+    /// record says "not hashed" rather than leaving the reader to guess.
+    pub fn output_hash(
+        decisions: &self::decision::DecisionLog,
+        payload: Option<&dyn self::hooks::payload::PluginPayload>,
+    ) -> Option<String> {
+        // Only read once the seam exposes the digest; until then the
+        // parameter documents where the value will come from.
+        let _ = decisions;
+        payload
+            .and_then(PluginPayload::audit_bytes)
+            .map(|b| self::hooks::payload::content_hash(&b))
     }
 }
 
