@@ -24,7 +24,7 @@ quote-style = "double"
 # The platform test suites (api, gateway, common, mandate) live in the private
 # platform repository. This repository tests the public verifier CLI.
 testpaths = ["cli"]
-pythonpath = ["cli"]
+pythonpath = ["cli", "."]
 
 [tool.mypy]
 python_version = "3.11"
