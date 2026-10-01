@@ -581,9 +581,10 @@ pub fn apply_decision(ev: &mut Value, payload: Option<&MessagePayload>, decision
 
     // Content provenance — gated on the executor having captured an
     // input hash (i.e. capture_content_provenance on). Digests only, and
-    // both are the seam's values: the output side goes through
-    // `host::output_hash`, the one place that changes when the engine
-    // starts recording it on the log (keyed, so a sink never hashes).
+    // both are the seam's values: on PPE the engine records the output
+    // digest on the log too, keyed, so this sink never hashes and never
+    // holds the key; on cpex `host::output_hash` hashes the final payload
+    // the way the engine hashed the entry one. Opaque strings either way.
     if let Some(input_hash) = decisions.input_hash() {
         let output_hash =
             crate::host::output_hash(decisions, payload.map(|p| p as &dyn PluginPayload));

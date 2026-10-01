@@ -16,6 +16,22 @@ from #82; no seam change), with this crate on base64 0.22: warning-free
 `--locked` builds and 34 tests green on each host, `emit_sample` and
 `decision_sink_demo` byte-identical to the committed vectors.
 
+**Re-verified 2026-10-01** against PR #84 head `2d717e8` ("key content
+provenance and resolve round-three review findings", the round that answered
+the 2026-09-30 review): the engine now digests the payload at entry and at
+emission under an operator key (`engine_settings.content_provenance_key`)
+and records both on the `DecisionLog`, so `output_hash()` sits beside
+`input_hash()` and the seam's public `content_hash` is gone. Digests
+self-describe as `hmac-sha256:<key_id>:<hex>`, or `sha256:<hex>` under the
+explicit `unkeyed` setting. This crate's `host::output_hash` shim (#578)
+reads the log on PPE and keeps hashing locally on cpex, which still records
+only the entry digest; `cpex.content` is unchanged on the wire. Warning-free
+`--locked` builds and 35 tests green on each host, `emit_sample` and
+`decision_sink_demo` byte-identical to the committed vectors on PPE, and on
+cpex `emit_sample` identical with the decision demo differing only by the
+documented step `detail` member. The lock moved with the pin
+(`praxis-policy-orchestration` 0.2.0 to 0.3.1, `yaml_serde` 0.10.7 added).
+
 This is the re-run `PRAXIS-PORT-PLAN.md` describes: same crate, same protocol
 as `SEAM-PORT-RESULTS.md`, retargeted at the praxis seam. The plan expected
 the dependency swap to be the only change. It was not, and the reason is

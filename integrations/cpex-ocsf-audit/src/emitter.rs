@@ -1090,41 +1090,73 @@ mod tests {
     }
 
     /// The output digest is the seam's value, routed through
-    /// `host::output_hash` so the sink stops hashing the day the engine
-    /// records it on the log. Until then it is the engine's own
-    /// `content_hash` over the payload's audit bytes, and an explicit null,
-    /// not an absent key, when there is no payload to hash.
+    /// `host::output_hash`. On PPE the engine records it on the log and the
+    /// emitter copies it verbatim, key id and all; on cpex the shim hashes
+    /// the payload's audit bytes with the engine's `content_hash`. Either
+    /// way an explicit null, not an absent key, when nothing was digested.
     #[test]
     fn output_hash_comes_from_the_host_shim() {
-        use crate::host::hooks::payload::PluginPayload as _;
-
         let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
         let mut log = finalized(
             vec![("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed)],
             Verdict::Allow,
         );
         log.set_input_hash(Some("in-hash".into()));
-
         let payload = tool_payload();
-        let expected = crate::host::hooks::payload::content_hash(
-            &payload
-                .audit_bytes()
-                .expect("MessagePayload opts in to audit bytes on both hosts"),
-        );
-        assert!(expected.starts_with("sha256:"));
-        let ev = e.build_decision(
-            Some(&payload),
-            &subject_ext(),
-            &log,
-            "2026-08-18T12:00:00.000Z",
-        );
-        assert_eq!(ev["unmapped"]["cpex.content"]["output_hash"], expected);
 
-        let ev = e.build_decision(None, &subject_ext(), &log, "2026-08-18T12:00:00.000Z");
-        assert_eq!(
-            ev["unmapped"]["cpex.content"]["output_hash"],
-            serde_json::Value::Null
-        );
+        #[cfg(feature = "ppe")]
+        {
+            log.set_output_hash(Some("hmac-sha256:k1:bbb".into()));
+            let ev = e.build_decision(
+                Some(&payload),
+                &subject_ext(),
+                &log,
+                "2026-08-18T12:00:00.000Z",
+            );
+            assert_eq!(
+                ev["unmapped"]["cpex.content"]["output_hash"], "hmac-sha256:k1:bbb",
+                "copied from the log, never recomputed"
+            );
+
+            // The engine recorded nothing: null even though a payload is
+            // present, because this sink does not hash on PPE.
+            log.set_output_hash(None);
+            let ev = e.build_decision(
+                Some(&payload),
+                &subject_ext(),
+                &log,
+                "2026-08-18T12:00:00.000Z",
+            );
+            assert_eq!(
+                ev["unmapped"]["cpex.content"]["output_hash"],
+                serde_json::Value::Null
+            );
+        }
+
+        #[cfg(feature = "cpex")]
+        {
+            use crate::host::hooks::payload::PluginPayload as _;
+
+            let expected = crate::host::hooks::payload::content_hash(
+                &payload
+                    .audit_bytes()
+                    .expect("MessagePayload opts in to audit bytes"),
+            );
+            assert!(expected.starts_with("sha256:"));
+            let ev = e.build_decision(
+                Some(&payload),
+                &subject_ext(),
+                &log,
+                "2026-08-18T12:00:00.000Z",
+            );
+            assert_eq!(ev["unmapped"]["cpex.content"]["output_hash"], expected);
+
+            let ev = e.build_decision(None, &subject_ext(), &log, "2026-08-18T12:00:00.000Z");
+            assert_eq!(
+                ev["unmapped"]["cpex.content"]["output_hash"],
+                serde_json::Value::Null
+            );
+        }
     }
 
     /// The decision facts sit INSIDE the hashed bytes: two otherwise
