@@ -45,9 +45,10 @@ Python standard library only:
 
 ```python
 import hashlib, hmac
-key = b"<provenance_key>"                   # the text on the verify line
+
+key = b"<provenance_key>"  # the text on the verify line
 label = b"praxis-policy/content-provenance/key-id"
-data = b'<audit_bytes>'                     # one verify line, verbatim
+data = b"<audit_bytes>"  # one verify line, verbatim
 key_id = hmac.new(key, label, hashlib.sha256).digest()[:8].hex()
 print(f"hmac-sha256:{key_id}:{hmac.new(key, data, hashlib.sha256).hexdigest()}")
 print(f"sha256:{hashlib.sha256(data).hexdigest()}")
