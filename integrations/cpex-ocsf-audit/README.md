@@ -190,6 +190,13 @@ Honest inventory of what's solid vs. open:
   `framework`, monotonic labels, workload identity), and the mapped objects (`ai_agent`,
   `delegation`, `message_context`). See the test module in `src/emitter.rs` and the runnable
   `examples/emit_sample.rs` / `SAMPLE-OUTPUT.md`.
+- **Content provenance vector (2026-10-01):** `examples/provenance_demo.rs` /
+  `SAMPLE-OUTPUT-PROVENANCE.md` pin the `unmapped."cpex.content"` digest form of
+  AID-EMIT-1 section 9.2: unchanged content, a redaction, a rotated key, and the
+  explicit unkeyed form. On PPE the digests come from the engine's own `ContentKey`
+  under keys resolved through its secret store; the keys and the canonical audit
+  bytes are printed so every digest recomputes offline. On cpex, which has no
+  provenance key, records 1 to 3 carry the unkeyed form instead.
 - **RESOLVED 2026-07-20 (was: needs a standards call):** `ai_operation` is an OCSF
   **profile**, not a class — the host class is now **API Activity (6003)**, agreed on the
   2026-07-18 thread (matching AOS's host-class choice and AI Identity's production
