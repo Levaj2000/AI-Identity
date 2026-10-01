@@ -3,7 +3,7 @@
 | Field         | Value                                                            |
 |---------------|------------------------------------------------------------------|
 | **Name**      | AID-EMIT-1                                                       |
-| **Version**   | 1.1.1-draft                                                      |
+| **Version**   | 1.1.2-draft                                                      |
 | **Status**    | Draft — open for conformance review                              |
 | **Date**      | 2026-10-01                                                       |
 | **License**   | Apache-2.0 (same as the reference implementation)                |
@@ -429,6 +429,17 @@ the initial conformance vectors:
   `detail` member on the denying steps of records 3 and 4 (§9.2), and the
   file shows that delta.
 
+- [`SAMPLE-OUTPUT-PROVENANCE.md`](../../integrations/cpex-ocsf-audit/SAMPLE-OUTPUT-PROVENANCE.md)
+  (`provenance_demo`), added in 1.1.2: the content digest form of section
+  9.2 in four records: unchanged content, a redaction (different digests,
+  same key id, the redacted value in neither), the same content under a
+  rotated key (a different key id), and the explicit unkeyed form. The keys,
+  the key-id label and the canonical audit bytes are printed with the
+  records, so every digest recomputes with nothing but HMAC-SHA256 and
+  SHA-256. Generated on the PPE host; on cpex records 1 to 3 carry the
+  unkeyed form, since that seam has no provenance key, and the file shows
+  that delta.
+
 A standalone validator ships at
 [`scripts/aid_emit1_validator.py`](../../scripts/aid_emit1_validator.py) —
 Python standard library only, including pure-Python ECDSA P-256 signature
@@ -470,8 +481,9 @@ rejects any vector with a flipped payload byte, a reordered record, a swapped
   are MAJOR. Additive, ignorable fields are MINOR — 1.1.0 added the optional
   step `detail` (§9.2); the pending ocsf-schema#1709 relocation of the
   signature bytes will be the next. Editorial fixes are PATCH: 1.1.1 added
-  the informative note on the content digest form (section 9.2), which changes no
-  covered byte and no vector.
+  the informative note on the content digest form (section 9.2), and 1.1.2
+  the provenance vector that exercises it (section 12); neither changes a
+  covered byte or an existing vector.
 - Records do not carry a spec-version field in v1; the emitted enum
   descriptors (`fingerprint.serialization_id`, `digital_signature.*`) are the
   wire-level self-description, and the OCSF schema version rides at

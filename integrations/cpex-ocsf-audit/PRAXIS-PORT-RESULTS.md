@@ -46,6 +46,7 @@ behind it.
 | `cargo test --locked` | **33 passed, 0 failed** (emitter 27, sign 6) | **33 passed, 0 failed** |
 | `cargo run --example emit_sample` | matches `SAMPLE-OUTPUT.md` | **byte-identical** to the cpex run |
 | `cargo run --example decision_sink_demo` | matches `SAMPLE-OUTPUT-DECISIONS.md` | **byte-identical** to the cpex run |
+| `cargo run --example provenance_demo` (added 2026-10-01) | the unkeyed `sha256:` form in every record (no provenance key on this seam) | matches `SAMPLE-OUTPUT-PROVENANCE.md`: keyed `hmac-sha256:<key_id>:<hex>` digests from the engine's own `ContentKey`, recomputed independently with Python `hmac` |
 | `cargo run --example panic_drive` (beat 06 through the engine) | deny, `plugin_panic`, `gw-1:decision`, host epoch, `stream_seq` 0 | identical after normalising `time`, span ids and the signature |
 
 So the portability claim the plan set out to test holds: the OCSF record a
