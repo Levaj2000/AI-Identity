@@ -49,16 +49,20 @@ ppe = ["dep:praxis-policy-core"]
 # Pin a rev rather than tracking `dev` for anything reproducible.
 cpex-core = { path = "../../../cpex/crates/cpex-core", optional = true }
 
-# The PR #84 head, `499ee91` (2026-09-09): `3e7734e` accepted the
-# documented `engine_settings` audit keys at load (PRAXIS-PORT-RESULTS.md
-# obs 1), `ef20d8f` made `sha2` a workspace dependency, and the rest is
-# the docs reorganisation (#82) merged in, with `docs/auditing.md` now at
-# `docs/content/auditing.md`. Nothing on the seam this crate consumes
-# changed between the two heads. A full SHA, not a branch: the PR is a
-# draft and its branch will move.
-# Bump deliberately, with the crate re-verified — the same rule as the
-# cpex pin in .github/workflows/rust.yml.
-praxis-policy-core = { git = "https://github.com/praxis-proxy/policy", rev = "5b76fa6f6cd64ff54d7237c2fe3166ba397d6999", optional = true }
+# The PR #84 head, `2d717e8` (2026-10-01, "key content provenance and
+# resolve round-three review findings"): the content provenance digest is
+# now taken by the engine, at entry and at emission, under an operator key
+# named by `engine_settings.content_provenance_key`, and both land on the
+# `DecisionLog` (`input_hash()` / `output_hash()`), so a sink reads them
+# and never holds the key. Digests self-describe as
+# `hmac-sha256:<key_id>:<hex>`, or `sha256:<hex>` under the explicit
+# `unkeyed` development setting. The seam's public `content_hash` is gone
+# with it; `host::output_hash` in lib.rs carries the split (lib.rs). A
+# full SHA, not a branch: the PR is a draft and its branch will move.
+# Bump deliberately, with the crate re-verified (PRAXIS-PORT-RESULTS.md
+# records each bump), the same rule as the cpex pin in
+# .github/workflows/rust.yml.
+praxis-policy-core = { git = "https://github.com/praxis-proxy/policy", rev = "2d717e81eb94601ac24eb8a91ac98542692b5c05", optional = true }
 
 async-trait = "0.1"
 # 0.22, not the current 0.23: praxis-proxy/policy holds base64 at 0.22
