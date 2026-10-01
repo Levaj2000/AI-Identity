@@ -3,9 +3,9 @@
 | Field         | Value                                                            |
 |---------------|------------------------------------------------------------------|
 | **Name**      | AID-EMIT-1                                                       |
-| **Version**   | 1.1.0-draft                                                      |
+| **Version**   | 1.1.1-draft                                                      |
 | **Status**    | Draft — open for conformance review                              |
-| **Date**      | 2026-09-02                                                       |
+| **Date**      | 2026-10-01                                                       |
 | **License**   | Apache-2.0 (same as the reference implementation)                |
 | **Reference implementation** | [`integrations/cpex-ocsf-audit`](../../integrations/cpex-ocsf-audit) (adapter #1) |
 | **Conformance vectors** | [`SAMPLE-OUTPUT.md`](../../integrations/cpex-ocsf-audit/SAMPLE-OUTPUT.md), [`SAMPLE-OUTPUT-DECISIONS.md`](../../integrations/cpex-ocsf-audit/SAMPLE-OUTPUT-DECISIONS.md) |
@@ -338,6 +338,33 @@ Decision records also carry, under `unmapped."cpex.decision"` /
 labels, and content provenance hashes — all inside the hashed bytes, so the
 decision facts are tamper-evident, not advisory.
 
+**Content digest form (informative, added in 1.1.1).** When the host captured
+content provenance, a decision record carries `unmapped."cpex.content"` with
+two members, `input_hash` (the payload at pipeline entry) and `output_hash`
+(the payload the caller receives, or the one refused on a deny). Both are the
+host's values, carried as opaque strings inside the hashed bytes; the emitter
+does not define the digest scheme and a verifier MUST NOT require one or
+recompute either value. The form is self-describing:
+
+- `hmac-sha256:<key_id>:<hex>`: a keyed digest under a deployment secret the
+  host holds (praxis-proxy/policy PR #84 `2d717e8` and later, where the engine
+  takes both digests and the sink never sees the key). `<key_id>` is a
+  fingerprint of the key, stable across restarts and different after a
+  rotation. Two digests are comparable only when their key ids match; a
+  reader seeing different ids knows the key changed, not the content.
+- `sha256:<hex>`: an unkeyed digest. This is what cpex PR #166 records (the
+  emitter computes the output digest there, with the same function the host
+  used at entry) and what PPE records under its explicit `unkeyed`
+  development setting. A plain digest of short or templated content is
+  guessable, which is why the keyed form exists; a reader should treat an
+  unkeyed digest of redacted content as a confirmation oracle, not a secret.
+
+Equal digests under one scheme and key mean the pipeline did not alter the
+content; different ones mean it did. `output_hash` is `null` when nothing was
+digested at emission (no payload, or one that does not opt in); a verifier
+MUST NOT read null as "unchanged". The member is absent from the committed
+vectors (section 12), which do not enable provenance.
+
 ### 9.3 Denial coverage
 
 A conforming emitter attached in decision-sink mode (§10) MUST produce a
@@ -442,7 +469,9 @@ rejects any vector with a flipped payload byte, a reordered record, a swapped
   covered-bytes rule, the canonical form, the envelope, or the vocabularies
   are MAJOR. Additive, ignorable fields are MINOR — 1.1.0 added the optional
   step `detail` (§9.2); the pending ocsf-schema#1709 relocation of the
-  signature bytes will be the next. Editorial fixes are PATCH.
+  signature bytes will be the next. Editorial fixes are PATCH: 1.1.1 added
+  the informative note on the content digest form (section 9.2), which changes no
+  covered byte and no vector.
 - Records do not carry a spec-version field in v1; the emitted enum
   descriptors (`fingerprint.serialization_id`, `digital_signature.*`) are the
   wire-level self-description, and the OCSF schema version rides at
