@@ -32,6 +32,22 @@ cpex `emit_sample` identical with the decision demo differing only by the
 documented step `detail` member. The lock moved with the pin
 (`praxis-policy-orchestration` 0.2.0 to 0.3.1, `yaml_serde` 0.10.7 added).
 
+**Re-verified 2026-10-02** against PR #84 head `0d40e94` ("address CodeRabbit
+findings on sink timing, stream density and effect states"), one commit on
+top of `2d717e8`. It changes the executor's sink wait and stream stamping,
+the effect log's unresolved states (a plugin that times out, panics or is
+cancelled mid-act now releases its key when the invocation ends), the OAuth
+delegator's effect mapping (only an IdP error response is `rejected`; a 5xx
+or an unparseable 2xx is `unknown`), the registry (a `mode: disabled` sink is
+not collected) and the docs. Nothing on the surface this crate consumes
+(`decision`, `audit`, `hooks::payload`, `config`) changed, so no source
+change here: the pin and the lock move, nothing else. Warning-free `--locked`
+builds and 35 tests green on each host; `emit_sample`, `decision_sink_demo`
+and `provenance_demo` byte-identical to the committed vectors on PPE, and on
+cpex `emit_sample` identical with the other two differing only by their
+documented host deltas (the step `detail` member; the unkeyed digest form in
+provenance records 1 to 3).
+
 This is the re-run `PRAXIS-PORT-PLAN.md` describes: same crate, same protocol
 as `SEAM-PORT-RESULTS.md`, retargeted at the praxis seam. The plan expected
 the dependency swap to be the only change. It was not, and the reason is
