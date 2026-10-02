@@ -32,6 +32,22 @@ cpex `emit_sample` identical with the decision demo differing only by the
 documented step `detail` member. The lock moved with the pin
 (`praxis-policy-orchestration` 0.2.0 to 0.3.1, `yaml_serde` 0.10.7 added).
 
+**Re-verified 2026-10-02 (second head)** against PR #84 head `7274480` ("bound
+sink callbacks"), four commits on top of `0d40e94` with main (#144,
+structured LLM request authorization) merged in. On the seam this crate
+consumes: `engine_settings.audit_timeout_milliseconds` (default 100) now
+bounds each audit sink callback, and a callback that overruns is cancelled
+and its record may be missing, so `AuditHandler::handle` is no longer a
+durability point (`audit.rs` says so); the OAuth delegator records every
+failed mint as `unknown`, a 4xx included, leaving `rejected` to a reconciler
+with an authoritative participant. `DecisionLog`, `PluginAction`, the handler
+signatures, `ContentKey` and the digest form are unchanged: the pin and the
+lock move (praxis-policy-core 0.3.1 to 0.4.0), nothing else. Warning-free
+`--locked` builds and 35 tests green on each host; all three vectors
+byte-identical on PPE, and on cpex `emit_sample` identical with the other
+two differing only by their documented host deltas. Observation 6 below
+records what the sink timeout does to stream density.
+
 **Re-verified 2026-10-02** against PR #84 head `0d40e94` ("address CodeRabbit
 findings on sink timing, stream density and effect states"), one commit on
 top of `2d717e8`. It changes the executor's sink wait and stream stamping,
@@ -159,6 +175,25 @@ with only cpex beside it still resolves.
    committed lock carries both hosts.
 5. **Nothing else broke.** The seam is additive for this consumer on PPE
    exactly as it was on cpex: no behaviour changes without configuration.
+
+6. **A sink cancelled by `audit_timeout_milliseconds` leaves a gap in its
+   stream.** *(Observed 2026-10-02 at `7274480`.)* The executor stamps
+   `stream_seq` (`stamp_decision_stream`, executor.rs) and then calls the
+   sinks (`emit_audit`), where each callback is bounded by the audit timeout
+   (100 ms by default) and a callback that overruns is skipped with an error
+   log. The sequence number was consumed before the call, so the sink's
+   consumer sees `n` then `n+2` and, by AID-EMIT-1 section 7, reads a lost
+   record. The stamping function's own comment says that burning a number on
+   a record nobody receives would show up downstream as a loss; the timeout
+   now does exactly that, from inside the engine. The verifier semantics are
+   right (the record was lost), but the loss is self-inflicted and
+   indistinguishable from a crash or tampering. Suggested upstream: either
+   name the burned sequence in the error log and the docs so an operator can
+   explain the gap, or emit a minimal tombstone record for the skipped sink,
+   or stamp per sink after a successful return. For this crate: keep
+   `handle` well inside 100 ms (ECDSA P-256 signing is sub-millisecond, the
+   file destination is a buffered write), and operators of a slow
+   destination should raise the timeout rather than accept gaps.
 
 ## Reproducing
 

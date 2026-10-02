@@ -648,8 +648,8 @@ dependencies = [
 
 [[package]]
 name = "praxis-policy-core"
-version = "0.3.1"
-source = "git+https://github.com/praxis-proxy/policy?rev=0d40e9432c10af41747dfa239f968bd915018708#0d40e9432c10af41747dfa239f968bd915018708"
+version = "0.4.0"
+source = "git+https://github.com/praxis-proxy/policy?rev=72744805d09aba9f5c29852735f41e02f887379e#72744805d09aba9f5c29852735f41e02f887379e"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -675,8 +675,8 @@ dependencies = [
 
 [[package]]
 name = "praxis-policy-orchestration"
-version = "0.3.1"
-source = "git+https://github.com/praxis-proxy/policy?rev=0d40e9432c10af41747dfa239f968bd915018708#0d40e9432c10af41747dfa239f968bd915018708"
+version = "0.4.0"
+source = "git+https://github.com/praxis-proxy/policy?rev=72744805d09aba9f5c29852735f41e02f887379e#72744805d09aba9f5c29852735f41e02f887379e"
 dependencies = [
  "futures",
  "tokio",
