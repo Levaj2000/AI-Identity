@@ -190,6 +190,12 @@ Honest inventory of what's solid vs. open:
   `framework`, monotonic labels, workload identity), and the mapped objects (`ai_agent`,
   `delegation`, `message_context`). See the test module in `src/emitter.rs` and the runnable
   `examples/emit_sample.rs` / `SAMPLE-OUTPUT.md`.
+- **Praxis in-tree port staged (2026-10-02):** [`praxis-port/`](praxis-port/README.md)
+  holds the crate adapted to praxis-proxy/policy as `reference/plugins/ocsf-audit`,
+  built on the praxis-proxy/policy#84 merge commit and verified against every PPE gate
+  (35 tests, the three vectors byte-identical), as two patches the maintainer applies
+  and pushes himself. `PRAXIS-INTREE-PLAN.md` records where the result departs from
+  the plan.
 - **Content provenance vector (2026-10-01):** `examples/provenance_demo.rs` /
   `SAMPLE-OUTPUT-PROVENANCE.md` pin the `unmapped."cpex.content"` digest form of
   AID-EMIT-1 section 9.2: unchanged content, a redaction, a rotated key, and the
