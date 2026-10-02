@@ -32,6 +32,22 @@ cpex `emit_sample` identical with the decision demo differing only by the
 documented step `detail` member. The lock moved with the pin
 (`praxis-policy-orchestration` 0.2.0 to 0.3.1, `yaml_serde` 0.10.7 added).
 
+**Re-verified 2026-10-02 (merged)** against praxis-proxy/policy main at
+`da22e0a`, the squash merge of PR #84 ("feat(audit): decision and effect
+auditing", closes praxis#11). The seam this crate consumes is now on main, and
+the pin moves from the last PR head (`7274480`, which the squash leaves
+unreachable from main) to the merge commit so the rev stays fetchable without
+the PR ref. Same tree as `7274480` for everything this crate touches: pin and
+lock move, nothing else. Warning-free `--locked` builds and 35 tests green on
+each host; all three vectors byte-identical on PPE, and on cpex `emit_sample`
+identical with the other two differing only by their documented host deltas.
+Observation 6 (the sink timeout and stream density) is unchanged on main, at
+executor.rs lines 688 and 689, and is now filed as an issue rather than a PR
+comment. The merge is the event `PRAXIS-PORT-PLAN.md`'s sequencing rule
+waited on ("cpex#166 stays canonical until #11 lands"): which host this crate
+builds by default, and what the docs call the canonical seam, is a separate
+decision recorded when it is made.
+
 **Re-verified 2026-10-02 (second head)** against PR #84 head `7274480` ("bound
 sink callbacks"), four commits on top of `0d40e94` with main (#144,
 structured LLM request authorization) merged in. On the seam this crate
