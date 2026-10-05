@@ -1,0 +1,107 @@
+From eff9a66bef4c28758a6b3d2202472686a5403a5d Mon Sep 17 00:00:00 2001
+From: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+Date: Mon, 5 Oct 2026 22:13:41 +0000
+Subject: [PATCH] fix(audit): reject signing=dsse with chain=false; declare
+ read_subject in panic_drive; doc nits
+
+Review follow-ups on the ocsf-audit reference plugin.
+
+- `signing: dsse` with `chain: false` emitted unsigned records: the
+  signature covers the chained record, so the chain wrapper returned
+  before the signer ran. Construction now refuses the pair with a config
+  error naming the fix, and a test pins it.
+- `examples/panic_drive.rs` declared three of the four read capabilities
+  the README says to declare; `read_subject` was missing, so the driven
+  record carried no actor. Added; the example's checks are unchanged.
+- SAMPLE-OUTPUT.md attributed key ordering to `serde_json::Map`; the
+  canonical form sorts keys itself and is the only ordering a verifier
+  depends on. Reworded.
+
+36 tests, clippy clean, panic_drive still lands the driven panic on
+gw-1:decision at stream_seq 0.
+
+Signed-off-by: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+---
+ reference/plugins/ocsf-audit/SAMPLE-OUTPUT.md |  8 +++---
+ .../ocsf-audit/examples/panic_drive.rs        |  1 +
+ reference/plugins/ocsf-audit/src/emitter.rs   | 26 +++++++++++++++++++
+ 3 files changed, 32 insertions(+), 3 deletions(-)
+
+diff --git a/reference/plugins/ocsf-audit/SAMPLE-OUTPUT.md b/reference/plugins/ocsf-audit/SAMPLE-OUTPUT.md
+index 16f0afa..ef3a9a7 100644
+--- a/reference/plugins/ocsf-audit/SAMPLE-OUTPUT.md
++++ b/reference/plugins/ocsf-audit/SAMPLE-OUTPUT.md
+@@ -56,9 +56,11 @@ Notes on fidelity:
+   it. The per-call `tool_call_id` rides at `api.request.uid`. `metadata.uid`
+   identifies the record itself, and is what the next record's `prev_event.uid`
+   points at.
+-- **Key ordering is alphabetical** because `serde_json::Map` is backed by a
+-  `BTreeMap` by default (the canonical hash bytes sort keys explicitly and do
+-  not rely on this).
++- **Key ordering is alphabetical** because the canonical form sorts object keys
++  (`sign::canonical_bytes`, RFC 8785 order), and that is the only ordering a
++  verifier depends on. The printed records happen to match it because
++  `serde_json::Map` is backed by a `BTreeMap` without the `preserve_order`
++  feature; the hashed bytes do not rely on that.
+ 
+ ```jsonc
+ // ===== OCSF event 1 — Invoke Tool (get_compensation) =====
+diff --git a/reference/plugins/ocsf-audit/examples/panic_drive.rs b/reference/plugins/ocsf-audit/examples/panic_drive.rs
+index 2dadbdd..41dbee3 100644
+--- a/reference/plugins/ocsf-audit/examples/panic_drive.rs
++++ b/reference/plugins/ocsf-audit/examples/panic_drive.rs
+@@ -132,6 +132,7 @@ plugins:
+     priority: 50
+     on_error: fail
+     capabilities:
++      - read_subject
+       - read_agent
+       - read_delegation
+       - read_labels
+diff --git a/reference/plugins/ocsf-audit/src/emitter.rs b/reference/plugins/ocsf-audit/src/emitter.rs
+index fd21b99..6ea5208 100644
+--- a/reference/plugins/ocsf-audit/src/emitter.rs
++++ b/reference/plugins/ocsf-audit/src/emitter.rs
+@@ -113,6 +113,20 @@ impl OcsfAuditEmitter {
+             // operators who need a stable chain set chain_uid explicitly.
+             .unwrap_or_else(|| format!("ocsf-chain-{}", cfg.name));
+ 
++        // The signature covers the chained record (`attestation_list`,
++        // AID-EMIT-1 section 4), so `chain: false` has nothing to sign and
++        // the signer would never run. Refuse the pair rather than emit
++        // unsigned records under a config that promises signatures.
++        if typed.signing == SigningMode::Dsse && !typed.chain {
++            return Err(Box::new(PluginError::Config {
++                message: format!(
++                    "plugin '{}' (praxis-policy-plugin-ocsf-audit): signing=dsse requires \
++                     chain: true; the signature is computed over the chained record",
++                    cfg.name
++                ),
++            }));
++        }
++
+         let signer: Box<dyn OcsfSigner> = match typed.signing {
+             SigningMode::None => Box::new(NoopSigner),
+             SigningMode::Dsse => {
+@@ -747,6 +761,18 @@ mod tests {
+ 
+     /// `signing: dsse` with no key must fail construction loudly, never
+     /// fall back to silently-unsigned records.
++    /// `signing: dsse` with `chain: false` has nothing to sign: the
++    /// signature covers the chained record, so the pair must fail
++    /// construction rather than emit unsigned records under a signing
++    /// policy.
++    #[test]
++    fn dsse_with_chain_off_fails_construction() {
++        let err = OcsfAuditEmitter::new(cfg(json!({ "signing": "dsse", "chain": false })))
++            .unwrap_err();
++        let msg = format!("{err}");
++        assert!(msg.contains("chain: true"), "unexpected error: {msg}");
++    }
++
+     #[test]
+     fn dsse_without_key_fails_construction() {
+         let err = OcsfAuditEmitter::new(cfg(json!({ "signing": "dsse" }))).unwrap_err();
+-- 
+2.43.0
+

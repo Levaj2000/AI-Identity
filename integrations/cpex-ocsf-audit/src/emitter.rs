@@ -103,6 +103,20 @@ impl OcsfAuditEmitter {
             // operators who need a stable chain set chain_uid explicitly.
             .unwrap_or_else(|| format!("ocsf-chain-{}", cfg.name));
 
+        // The signature covers the chained record (`attestation_list`,
+        // AID-EMIT-1 section 4), so `chain: false` has nothing to sign and
+        // the signer would never run. Refuse the pair rather than emit
+        // unsigned records under a config that promises signatures.
+        if typed.signing == SigningMode::Dsse && !typed.chain {
+            return Err(Box::new(PluginError::Config {
+                message: format!(
+                    "plugin '{}' (cpex-plugin-ocsf-audit): signing=dsse requires chain: true; \
+                     the signature is computed over the chained record",
+                    cfg.name
+                ),
+            }));
+        }
+
         let signer: Box<dyn OcsfSigner> = match typed.signing {
             SigningMode::None => Box::new(NoopSigner),
             SigningMode::Dsse => {
@@ -722,6 +736,18 @@ mod tests {
 
     /// signing=dsse with no key must fail construction loudly — never
     /// fall back to silently-unsigned records.
+    /// `signing: dsse` with `chain: false` has nothing to sign: the
+    /// signature covers the chained record, so the pair must fail
+    /// construction rather than emit unsigned records under a signing
+    /// policy.
+    #[test]
+    fn dsse_with_chain_off_fails_construction() {
+        let err = OcsfAuditEmitter::new(cfg(json!({ "signing": "dsse", "chain": false })))
+            .unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("chain: true"), "unexpected error: {msg}");
+    }
+
     #[test]
     fn dsse_without_key_fails_construction() {
         let err = OcsfAuditEmitter::new(cfg(json!({ "signing": "dsse" }))).unwrap_err();
