@@ -162,6 +162,7 @@ both pull requests live.
 |---|---|---|
 | `review/0003-review-171.patch` | praxis #171, branch `port/ocsf-audit` | Refuse `signing: dsse` with `chain: false` at construction (a test pins it); declare `read_subject` in `panic_drive`'s YAML; reword the key-ordering note in SAMPLE-OUTPUT.md. |
 | `review/0004-review-173.patch` | praxis #173, branch `spike/audit-serialization-transport` | F5 reports a stream gap as loss evidence, not a verification failure; R5 requires keyed digests where the host provides a key and names the unkeyed form as guessable. |
+| `review/0005-review-173-tail.patch` | praxis #173, after 0004 | Second round: a dense `stream_seq` from 0 shows no leading or interior gap but cannot show a trailing loss; tail completeness needs a trusted terminal sequence or checkpoint from the host. |
 
 The findings these do not address, and why, are in the pull request
 threads: `#![allow]` to `#![expect]` on the examples (the tree's own
