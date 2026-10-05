@@ -748,6 +748,16 @@ mod tests {
         assert!(msg.contains("chain: true"), "unexpected error: {msg}");
     }
 
+    /// A misspelled key must fail construction, not silently fall back:
+    /// `authorty_uid` would otherwise emit signed records with no
+    /// `authority_uid` binding and no warning.
+    #[test]
+    fn unknown_config_key_fails_construction() {
+        let err = OcsfAuditEmitter::new(cfg(json!({ "authorty_uid": "org-1" }))).unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("unknown field"), "unexpected error: {msg}");
+    }
+
     #[test]
     fn dsse_without_key_fails_construction() {
         let err = OcsfAuditEmitter::new(cfg(json!({ "signing": "dsse" }))).unwrap_err();

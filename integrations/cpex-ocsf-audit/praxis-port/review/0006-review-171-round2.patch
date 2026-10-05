@@ -1,0 +1,77 @@
+From 67bfff3325160a7dff68bb59d7b7a370e9717437 Mon Sep 17 00:00:00 2001
+From: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+Date: Mon, 5 Oct 2026 22:39:49 +0000
+Subject: [PATCH] fix(audit): reject unknown config keys; write canonical keys
+ without a clone
+
+Second review round on the ocsf-audit reference plugin.
+
+- `OcsfAuditConfig` now carries `#[serde(deny_unknown_fields)]`. Every
+  field has a serde default, so a misspelled key was silently dropped:
+  `authorty_uid` produced signed records with no `authority_uid` binding
+  and no warning. A test pins the rejection.
+- `canonical_bytes` wrote each object key through a cloned `Value` and a
+  temporary `String`, two allocations per key while the chain mutex is
+  held. It now writes the borrowed key through `serde_json::to_writer`,
+  which produces the same RFC 8785 escaping. The committed conformance
+  vectors are byte-identical.
+
+37 tests, clippy clean.
+
+Signed-off-by: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+---
+ reference/plugins/ocsf-audit/src/config.rs  |  1 +
+ reference/plugins/ocsf-audit/src/emitter.rs | 10 ++++++++++
+ reference/plugins/ocsf-audit/src/sign.rs    |  3 ++-
+ 3 files changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/reference/plugins/ocsf-audit/src/config.rs b/reference/plugins/ocsf-audit/src/config.rs
+index a1820dd..a0fd9a8 100644
+--- a/reference/plugins/ocsf-audit/src/config.rs
++++ b/reference/plugins/ocsf-audit/src/config.rs
+@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
+ 
+ /// The `config:` block of an `audit/ocsf` plugin entry.
+ #[derive(Debug, Clone, Default, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
+ pub struct OcsfAuditConfig {
+     /// Where OCSF events go. The stderr default keeps the demo flow
+     /// (`docker compose logs -f | jq`) identical to audit-logger.
+diff --git a/reference/plugins/ocsf-audit/src/emitter.rs b/reference/plugins/ocsf-audit/src/emitter.rs
+index 6ea5208..58f161a 100644
+--- a/reference/plugins/ocsf-audit/src/emitter.rs
++++ b/reference/plugins/ocsf-audit/src/emitter.rs
+@@ -773,6 +773,16 @@ mod tests {
+         assert!(msg.contains("chain: true"), "unexpected error: {msg}");
+     }
+ 
++    /// A misspelled key must fail construction, not silently fall back:
++    /// `authorty_uid` would otherwise emit signed records with no
++    /// `authority_uid` binding and no warning.
++    #[test]
++    fn unknown_config_key_fails_construction() {
++        let err = OcsfAuditEmitter::new(cfg(json!({ "authorty_uid": "org-1" }))).unwrap_err();
++        let msg = format!("{err}");
++        assert!(msg.contains("unknown field"), "unexpected error: {msg}");
++    }
++
+     #[test]
+     fn dsse_without_key_fails_construction() {
+         let err = OcsfAuditEmitter::new(cfg(json!({ "signing": "dsse" }))).unwrap_err();
+diff --git a/reference/plugins/ocsf-audit/src/sign.rs b/reference/plugins/ocsf-audit/src/sign.rs
+index bb22d3e..91d9b64 100644
+--- a/reference/plugins/ocsf-audit/src/sign.rs
++++ b/reference/plugins/ocsf-audit/src/sign.rs
+@@ -83,7 +83,8 @@ fn write_canonical(v: &Value, out: &mut Vec<u8>) {
+                 // serde_json's string form is RFC 8785 escaping (two-char
+                 // escapes for the control characters that have one, \u00XX
+                 // otherwise). `Display` on a `Value` is the compact form.
+-                out.extend_from_slice(Value::String(k.clone()).to_string().as_bytes());
++                // Writing a `&str` into a `Vec` cannot fail.
++                let _ = serde_json::to_writer(&mut *out, k);
+                 out.push(b':');
+                 write_canonical(v, out);
+             }
+-- 
+2.43.0
+

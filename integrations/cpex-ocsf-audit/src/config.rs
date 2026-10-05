@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct OcsfAuditConfig {
     /// Where OCSF events go. Stderr default keeps the demo flow
     /// (`docker compose logs -f | jq`) identical to audit-logger.

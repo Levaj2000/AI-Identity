@@ -163,16 +163,21 @@ both pull requests live.
 | `review/0003-review-171.patch` | praxis #171, branch `port/ocsf-audit` | Refuse `signing: dsse` with `chain: false` at construction (a test pins it); declare `read_subject` in `panic_drive`'s YAML; reword the key-ordering note in SAMPLE-OUTPUT.md. |
 | `review/0004-review-173.patch` | praxis #173, branch `spike/audit-serialization-transport` | F5 reports a stream gap as loss evidence, not a verification failure; R5 requires keyed digests where the host provides a key and names the unkeyed form as guessable. |
 | `review/0005-review-173-tail.patch` | praxis #173, after 0004 | Second round: a dense `stream_seq` from 0 shows no leading or interior gap but cannot show a trailing loss; tail completeness needs a trusted terminal sequence or checkpoint from the host. |
+| `review/0006-review-171-round2.patch` | praxis #171, after 0003 | Second round: `#[serde(deny_unknown_fields)]` on the config (a misspelled `authority_uid` was silently dropped), with a test; the canonicalizer writes object keys without cloning them. This crate takes both. |
+| `review/0007-review-171-vendor.patch` | praxis #171, after 0006, the maintainer's choice | Default `metadata.product` to Praxis instead of AI Identity for deployments that set neither name. Every example and vector sets both explicitly, so no vector changes. In-tree only; this crate keeps its own defaults. |
 
 The findings these do not address, and why, are in the pull request
 threads: `#![allow]` to `#![expect]` on the examples (the tree's own
 examples carry the same block; `expect` fails when a lint does not fire),
-a general RFC 8785 crate (the assertions are what make the JCS claim
-honest for the constrained value space), the dependency-pinning
+the dependency-pinning
 conventions and the docstring threshold (the maintainers' call), and the
-uid collision across restarts (confirmed; it changes the hashed bytes and
-the vectors, so it lands in this crate first with a spec patch bump, then
-the port follows).
+uid collision across restarts and the RFC 8785 finding (both confirmed:
+`cmf.mcp` and violation details are open JSON, so floats and non-ASCII
+keys can reach the canonicalizer and falsify the `serialization_id 2`
+claim in release; both change the hashed bytes and the vectors, so they
+land in this crate first with a spec bump and a validator that does full
+RFC 8785, then the port follows). The decline of the RFC 8785 finding in
+the first round was wrong and is withdrawn on the thread.
 
 The `dsse` guard and the SAMPLE-OUTPUT.md wording land in this crate in the
 same change that adds these patches. `read_subject` is a PPE capability

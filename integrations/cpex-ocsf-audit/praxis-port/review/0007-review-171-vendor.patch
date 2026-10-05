@@ -1,0 +1,52 @@
+From 32e785c7f497dff354aad2d762634d14726767e3 Mon Sep 17 00:00:00 2001
+From: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+Date: Mon, 5 Oct 2026 22:39:51 +0000
+Subject: [PATCH] fix(audit): default the OCSF product and vendor identity to
+ Praxis
+
+The defaults came from the source repository. A Praxis deployment that
+sets neither `product_name` nor `vendor_name` emitted every record with
+`metadata.product.vendor_name: "AI Identity"`, which SIEMs route and
+attribute on. The in-tree defaults now name Praxis; every example and
+all three committed conformance vectors set both values explicitly, so
+no vector changes.
+
+Signed-off-by: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+---
+ reference/plugins/ocsf-audit/src/config.rs  | 4 ++--
+ reference/plugins/ocsf-audit/src/emitter.rs | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/reference/plugins/ocsf-audit/src/config.rs b/reference/plugins/ocsf-audit/src/config.rs
+index a0fd9a8..1f7b0f6 100644
+--- a/reference/plugins/ocsf-audit/src/config.rs
++++ b/reference/plugins/ocsf-audit/src/config.rs
+@@ -95,10 +95,10 @@ pub struct OcsfAuditConfig {
+ }
+ 
+ fn default_product_name() -> String {
+-    "AI Identity OCSF Audit".to_owned()
++    "Praxis Policy Engine OCSF Audit".to_owned()
+ }
+ fn default_vendor_name() -> String {
+-    "AI Identity".to_owned()
++    "Praxis".to_owned()
+ }
+ fn default_true() -> bool {
+     true
+diff --git a/reference/plugins/ocsf-audit/src/emitter.rs b/reference/plugins/ocsf-audit/src/emitter.rs
+index 58f161a..4beb258 100644
+--- a/reference/plugins/ocsf-audit/src/emitter.rs
++++ b/reference/plugins/ocsf-audit/src/emitter.rs
+@@ -525,7 +525,7 @@ mod tests {
+         assert_eq!(ev["tool"]["name"], "get_compensation");
+         assert_eq!(ev["tool"]["namespace"], "hr");
+         assert_eq!(ev["actor"]["user"]["uid"], "alice@corp.com");
+-        assert_eq!(ev["metadata"]["product"]["vendor_name"], "AI Identity");
++        assert_eq!(ev["metadata"]["product"]["vendor_name"], "Praxis");
+     }
+ 
+     #[test]
+-- 
+2.43.0
+
