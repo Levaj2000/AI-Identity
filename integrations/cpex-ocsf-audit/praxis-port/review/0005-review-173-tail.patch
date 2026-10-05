@@ -1,0 +1,36 @@
+From 4b7ee002f35685da6f1d9b983e2b991ee82e6c0e Mon Sep 17 00:00:00 2001
+From: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+Date: Mon, 5 Oct 2026 22:32:16 +0000
+Subject: [PATCH] docs(brainstorms): audit split spike: a dense stream_seq does
+ not prove the tail was captured
+
+Review follow-up on F5: a dense sequence opening at 0 shows no leading or interior gap, but a record lost after the last exported one leaves no gap to see. F5 now says so, and names a trusted terminal sequence or checkpoint from the host as what tail completeness needs, out of scope for this document.
+
+Signed-off-by: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+---
+ ...6-10-05-audit-serialization-transport-requirements.md | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md b/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md
+index 646e7ba..ba561a6 100644
+--- a/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md
++++ b/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md
+@@ -84,9 +84,12 @@ epoch, not a gap.
+ **F5. Offline verification.** A consumer takes the exported bytes and the authority's public
+ key, strips the fields the contract excludes, canonicalizes, recomputes the fingerprint,
+ checks the signature over the DSSE PAE, walks `prev_event` back along the chain, and reads
+-`stream_seq` per `(epoch, stream_id)`. A dense sequence that opens at 0 means nothing was lost.
+-A gap, or a head above 0, is reported as evidence of loss (R8), not as a verification failure:
+-the records on either side of the gap still verify on their own. No PPE code is involved.
++`stream_seq` per `(epoch, stream_id)`. A dense sequence that opens at 0 shows no leading or
++interior gap in the exported records. It does not prove the tail was captured: a record lost
++after the last exported one leaves no gap to see, so completeness at the tail needs a trusted
++terminal sequence or checkpoint from the host, which this document does not define. A gap, or
++a head above 0, is reported as evidence of loss (R8), not as a verification failure: the
++records on either side of the gap still verify on their own. No PPE code is involved.
+ 
+ ## Requirements
+ 
+-- 
+2.43.0
+

@@ -64,8 +64,10 @@ everything offline. Notes on fidelity:
   `metadata`, which is where OCSF defines it — it was previously emitted at the event root.
   The per-call `tool_call_id` rides at `api.request.uid`. `metadata.uid` identifies the
   record itself, and is what the next record's `prev_event.uid` points at.
-- **Key ordering is alphabetical** because `serde_json::Map` is backed by a `BTreeMap` by
-  default in Rust (the canonical hash bytes sort keys explicitly and do not rely on this).
+- **Key ordering is alphabetical** because the canonical form sorts object keys
+  (`sign::canonical_bytes`, RFC 8785 order), and that is the only ordering a verifier depends
+  on. The printed records happen to match it because `serde_json::Map` is backed by a
+  `BTreeMap` without the `preserve_order` feature; the hashed bytes do not rely on that.
 
 ```jsonc
 // ===== OCSF event 1 — Invoke Tool (get_compensation) =====
