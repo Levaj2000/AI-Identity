@@ -1,0 +1,78 @@
+From 2ad53dd61cd3077949904a858458ddc02c1b294e Mon Sep 17 00:00:00 2001
+From: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+Date: Tue, 6 Oct 2026 14:50:56 +0000
+Subject: [PATCH] docs(brainstorms): audit split spike: the engine removes
+ sensitive data, the sink renders (R22)
+
+Answers the question raised on 2026-10-05 of whether headers and other
+sensitive values should be removed before they reach an audit sink or by
+the sink. R22 puts removal in the engine, before the record exists, so
+the rule is uniform across sinks and sits inside the hashed bytes; drops
+or keyed-digests rather than masks; and marks what was removed so a
+consumer can tell redacted from never present. AE10 pins it, a key
+decision records why, and an outstanding question carries the
+operator-facing shape to planning.
+
+Signed-off-by: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+---
+ ...it-serialization-transport-requirements.md | 26 +++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md b/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md
+index ba561a6..2b05743 100644
+--- a/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md
++++ b/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md
+@@ -180,6 +180,19 @@ records on either side of the gap still verify on their own. No PPE code is invo
+   and their guarantees, the three overflow policies and what each does to the stream, the
+   digest-only default and its opt-in, and how a consumer verifies a record offline.
+ 
++**Sensitive data (the engine removes, the sink renders)**
++
++- R22. Sensitive data is removed by the engine before a record is handed to any sink, never by
++  a sink or an exporter. The engine drops from every sink's view the transport secrets no sink
++  should see (`Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie`, API-key headers,
++  and an operator-supplied list), and applies the same rule to the open-ended slots (`cmf.mcp`
++  annotations and schemas, violation details), where it drops a value or replaces it with a
++  keyed digest rather than masking it, since a mask destroys evidence and is still a value a
++  sink might hash. Removal happens before the record exists, so it is inside the hashed bytes
++  and a verifier recomputes what was exported. The engine marks what it removed, inside the
++  record (the dropped names, or a count), so a consumer can tell redacted from never present.
++  A sink decides only how to render what it was given, digests by default (R5).
++
+ ## Acceptance Examples
+ 
+ - AE1. **Covers R3, R11.** Given `ocsf-audit` wired once to the stderr exporter and once to
+@@ -211,6 +224,10 @@ records on either side of the gap still verify on their own. No PPE code is invo
+ - AE9. **Covers R19, R20.** Given only the file exporter's output and the public key fetched
+   by the key identifier in the record, the standalone validator reports fingerprint, signature,
+   chain and stream checks as passing, with no PPE code on the machine.
++- AE10. **Covers R22.** Given a request carrying an `Authorization` header and a tool call
++  whose arguments contain a secret, with `audit-logger` and `ocsf-audit` both attached, neither
++  exported record contains the header value or the secret, both carry the removal marker naming
++  the header, and the `ocsf-audit` record still verifies offline.
+ 
+ ## Success Criteria
+ 
+@@ -252,6 +269,11 @@ records on either side of the gap still verify on their own. No PPE code is invo
+   transport optimization only.
+ - **Digest-only by default, for every sink.** Making this a serializer-layer rule rather than
+   an `audit-logger` fix means a third-party sink inherits the safe default.
++- **The engine redacts, the sink renders.** If each sink redacted for itself, the weakest sink
++  would set the exposure and every new sink would reinvent the list. Done once in the engine,
++  before the record exists, the rule is uniform across sinks and sits inside the hashed bytes,
++  so verification is unaffected. Dropping or keyed-digesting, never masking, keeps records
++  comparable without exposing anything.
+ 
+ ## Dependencies / Assumptions
+ 
+@@ -292,3 +314,7 @@ records on either side of the gap still verify on their own. No PPE code is invo
+ - [Affects R20][Technical] Whether the reference plugin resolves its signing key through
+   `SecretProvider` directly or through a host-provided key handle, and how the key identifier
+   in the record maps to a provider reference.
++- [Affects R22][Technical] The operator-facing shape of the removal list (a fixed set plus an
++  allowlist or denylist of header names and JSON paths), where the removal marker lives (a
++  typed slot or `unmapped`), and whether the open-ended slots are filtered by path or by a
++  value-level rule such as digesting every string above a length.
+-- 
+2.43.0
+
