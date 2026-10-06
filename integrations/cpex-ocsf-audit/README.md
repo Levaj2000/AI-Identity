@@ -220,8 +220,10 @@ Honest inventory of what's solid vs. open:
   the claimed authority cannot be swapped post-hoc. Verifier rule as running code:
   `sign::signing_input` reconstructs the covered bytes from an emitted event (strip
   `fingerprint`/`signatures` + the post-hash `unmapped.signature_b64`/`signature_key_id`
-  extras, which await a schema home via
-  [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/pull/1709)); then the
+  extras in this OCSF 1.9.0 wire format; later
+  [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/pull/1709) added
+  `digital_signature.value` for bytes, not a generic JWKS `kid` field);
+  then the
   fingerprint recomputes and the signature verifies over `sign::dsse_pae` of those bytes —
   exercised end-to-end by the `signed_event_verifies_offline` test and printed as the
   `// verify` lines of `cargo run --example emit_sample`. This closes the *identity* half

@@ -106,9 +106,9 @@ def ocsf_to_otel(event: dict) -> dict:
             attrs["audit.sequence.previous_hash"] = prev["fingerprint"]["value"]
             attrs["audit.sequence.previous_record_id"] = prev["uid"]
 
-        # The signature bytes ride unmapped on the OCSF side (digital_signature
-        # has no bytes field — ocsf-schema#1709); on the OTel side they ARE the
-        # integrity proof.
+        # In this OCSF 1.9.0 fixture signature bytes ride unmapped; the later
+        # digital_signature.value field (#1709) is not used. On the OTel side
+        # they carry the origin-shape proof (README section 2.1).
         if unmapped.get("signature_b64"):
             attrs["audit.integrity.value"] = unmapped["signature_b64"]
             attrs["audit.integrity.signer"] = "producer"
