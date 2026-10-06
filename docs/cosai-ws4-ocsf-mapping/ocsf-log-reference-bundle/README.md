@@ -148,7 +148,7 @@ Field notes:
   - `fingerprint` / `prev_event.fingerprint` — the chain hash rides **fingerprint objects**, `algorithm_id` **99 (Other)** with `algorithm: "HMAC-SHA-256"`. Deliberate: the chain hash is *keyed* HMAC, and claiming plain `SHA-256` (`algorithm_id` 3) would misstate the construction. This is exactly the kind of honesty the fingerprint `algorithm` sibling exists for;
   - `chain_uid` — the org chain identifier;
   - `signatures[]` — required by the final schema. One ECDSA-P256-SHA256 signature per event, computed over `bytes.fromhex(fingerprint.value)` at export time (`created_time` is the export timestamp, not the event timestamp — the signature attests the record as downloaded). Same message convention as our Evidence Anchor Merkle leaves, so one public key + one message rule covers both.
-- **`unmapped.signature_b64` / `unmapped.signature_key_id`** — the actual signature bytes (base64 DER) and the KMS key resource that made them. They ride `unmapped` because OCSF's `digital_signature` object **has no field for signature bytes or key id** — a live gap worth raising (see table below). `signature_key_id` matches a `kid` in the public JWKS, which is how a third party verifies without trusting us operationally.
+- **`unmapped.signature_b64` / `unmapped.signature_key_id`**: the actual signature bytes (base64 DER) and the KMS key resource that made them. This **1.9.0** export uses `unmapped`: that schema has no signature-bytes field, while the later [#1709](https://github.com/ocsf/ocsf-schema/pull/1709) added `digital_signature.value` for raw Base64 bytes but no generic key-id field. `digital_signature.certificate` is an X.509-style certificate object, not a bare JWKS `kid`. `signature_key_id` matches a `kid` in the public JWKS, which is how a third party verifies without trusting us operationally.
 - **`unmapped` (rest)** — producer facts with **no OCSF home today**: `org_chain_seq`, `policy_version`, `cost_estimate_usd`. These are exactly the signals the alignment work needs to give a first-class home.
 
 ### Verify it yourself (no secrets needed)
@@ -162,7 +162,8 @@ python3 regenerate.py production-ocsf-full-export.ocsf.ndjson --bundle-dir /tmp/
 
 ## Where this maps to the CMF↔OCSF gaps we discussed
 
-This export is the evidence behind the gap list — every gap below is something the gateway *already emits or decides* but OCSF has nowhere clean to put:
+This export is the evidence behind the gap list for OCSF 1.9.0. Some gaps
+have since changed in newer schema revisions; each row notes the distinction:
 
 | Gap (from the 2026-06-16 sync) | Where it shows up here |
 |---|---|
@@ -172,7 +173,7 @@ This export is the evidence behind the gap list — every gap below is something
 | **Correlation ID / delegation path** | `metadata.correlation_uid` exists (not populated in this demo slice); delegation lineage is the bigger open mapping. |
 | **Completion `stop_reason`** | absent from OCSF; would attach to the inference events (seq 17/18/22). |
 | **Policy version / decision provenance** | currently in `unmapped.policy_version` — candidate for a real field. |
-| **Signature bytes / key id** *(new since #1661 final)* | `digital_signature` describes a signature but can't carry it: no bytes field, no key-id field. Producers that actually sign (like this export) are forced into `unmapped.signature_b64` / `unmapped.signature_key_id`. |
+| **Signature bytes / key id** *(new since #1661 final)* | This OCSF **1.9.0** export uses `unmapped.signature_b64` / `unmapped.signature_key_id`: 1.9.0 had neither field. After 1.9.0, #1709 added `digital_signature.value` for raw Base64 signature bytes, but no generic JWKS `kid` field. The key-id gap remains; changing this fixture requires a schema-version and signing-rule review. |
 
 *(Resolved since the last bundle: gateway latency — OCSF base `duration` is its native home; we now map it there.)*
 
@@ -184,7 +185,7 @@ This export is the evidence behind the gap list — every gap below is something
 - **Signatures are export-time.** `signatures[0].created_time` stamps when the export was generated, not when the event occurred; event time is `time`, and the write-time integrity is the chain hash.
 - **Demo data.** Throwaway org; volumes/agent names are synthetic.
 - **`correlation_uid` / delegation** are present in the schema path but not exercised in this slice.
-- **Genesis sentinel.** The chain's first event (seq 1) carries the literal string `GENESIS` in `prev_event.fingerprint.value` — the stored chain-start sentinel passed through verbatim. Strictly, a fingerprint object's `value` should be a hash; we're flagging this openly rather than editing the export. The likely producer fix is to omit `prev_event` on the genesis row (it has no predecessor to point at, and the schema marks `prev_event` absent on a chain's first event) — and it's a useful WG data point: sentinel values inside `fingerprint` are an anti-pattern the spec text could warn about.
+- **Genesis by omission.** The current full export's first event (seq 1) omits `prev_event`; it has no predecessor. Earlier bundles carried a literal `GENESIS` value inside `prev_event.fingerprint`, an anti-pattern: a fingerprint value should be a hash, not a sentinel.
 
 ---
 

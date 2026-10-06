@@ -16,6 +16,70 @@ from #82; no seam change), with this crate on base64 0.22: warning-free
 `--locked` builds and 34 tests green on each host, `emit_sample` and
 `decision_sink_demo` byte-identical to the committed vectors.
 
+**Re-verified 2026-10-01** against PR #84 head `2d717e8` ("key content
+provenance and resolve round-three review findings", the round that answered
+the 2026-09-30 review): the engine now digests the payload at entry and at
+emission under an operator key (`engine_settings.content_provenance_key`)
+and records both on the `DecisionLog`, so `output_hash()` sits beside
+`input_hash()` and the seam's public `content_hash` is gone. Digests
+self-describe as `hmac-sha256:<key_id>:<hex>`, or `sha256:<hex>` under the
+explicit `unkeyed` setting. This crate's `host::output_hash` shim (#578)
+reads the log on PPE and keeps hashing locally on cpex, which still records
+only the entry digest; `cpex.content` is unchanged on the wire. Warning-free
+`--locked` builds and 35 tests green on each host, `emit_sample` and
+`decision_sink_demo` byte-identical to the committed vectors on PPE, and on
+cpex `emit_sample` identical with the decision demo differing only by the
+documented step `detail` member. The lock moved with the pin
+(`praxis-policy-orchestration` 0.2.0 to 0.3.1, `yaml_serde` 0.10.7 added).
+
+**Re-verified 2026-10-02 (merged)** against praxis-proxy/policy main at
+`da22e0a`, the squash merge of PR #84 ("feat(audit): decision and effect
+auditing", closes praxis#11). The seam this crate consumes is now on main, and
+the pin moves from the last PR head (`7274480`, which the squash leaves
+unreachable from main) to the merge commit so the rev stays fetchable without
+the PR ref. Same tree as `7274480` for everything this crate touches: pin and
+lock move, nothing else. Warning-free `--locked` builds and 35 tests green on
+each host; all three vectors byte-identical on PPE, and on cpex `emit_sample`
+identical with the other two differing only by their documented host deltas.
+Observation 6 (the sink timeout and stream density) is unchanged on main, at
+executor.rs lines 688 and 689, and is now filed as an issue rather than a PR
+comment. The merge is the event `PRAXIS-PORT-PLAN.md`'s sequencing rule
+waited on ("cpex#166 stays canonical until #11 lands"): which host this crate
+builds by default, and what the docs call the canonical seam, is a separate
+decision recorded when it is made.
+
+**Re-verified 2026-10-02 (second head)** against PR #84 head `7274480` ("bound
+sink callbacks"), four commits on top of `0d40e94` with main (#144,
+structured LLM request authorization) merged in. On the seam this crate
+consumes: `engine_settings.audit_timeout_milliseconds` (default 100) now
+bounds each audit sink callback, and a callback that overruns is cancelled
+and its record may be missing, so `AuditHandler::handle` is no longer a
+durability point (`audit.rs` says so); the OAuth delegator records every
+failed mint as `unknown`, a 4xx included, leaving `rejected` to a reconciler
+with an authoritative participant. `DecisionLog`, `PluginAction`, the handler
+signatures, `ContentKey` and the digest form are unchanged: the pin and the
+lock move (praxis-policy-core 0.3.1 to 0.4.0), nothing else. Warning-free
+`--locked` builds and 35 tests green on each host; all three vectors
+byte-identical on PPE, and on cpex `emit_sample` identical with the other
+two differing only by their documented host deltas. Observation 6 below
+records what the sink timeout does to stream density.
+
+**Re-verified 2026-10-02** against PR #84 head `0d40e94` ("address CodeRabbit
+findings on sink timing, stream density and effect states"), one commit on
+top of `2d717e8`. It changes the executor's sink wait and stream stamping,
+the effect log's unresolved states (a plugin that times out, panics or is
+cancelled mid-act now releases its key when the invocation ends), the OAuth
+delegator's effect mapping (only an IdP error response is `rejected`; a 5xx
+or an unparseable 2xx is `unknown`), the registry (a `mode: disabled` sink is
+not collected) and the docs. Nothing on the surface this crate consumes
+(`decision`, `audit`, `hooks::payload`, `config`) changed, so no source
+change here: the pin and the lock move, nothing else. Warning-free `--locked`
+builds and 35 tests green on each host; `emit_sample`, `decision_sink_demo`
+and `provenance_demo` byte-identical to the committed vectors on PPE, and on
+cpex `emit_sample` identical with the other two differing only by their
+documented host deltas (the step `detail` member; the unkeyed digest form in
+provenance records 1 to 3).
+
 This is the re-run `PRAXIS-PORT-PLAN.md` describes: same crate, same protocol
 as `SEAM-PORT-RESULTS.md`, retargeted at the praxis seam. The plan expected
 the dependency swap to be the only change. It was not, and the reason is
@@ -30,6 +94,7 @@ behind it.
 | `cargo test --locked` | **33 passed, 0 failed** (emitter 27, sign 6) | **33 passed, 0 failed** |
 | `cargo run --example emit_sample` | matches `SAMPLE-OUTPUT.md` | **byte-identical** to the cpex run |
 | `cargo run --example decision_sink_demo` | matches `SAMPLE-OUTPUT-DECISIONS.md` | **byte-identical** to the cpex run |
+| `cargo run --example provenance_demo` (added 2026-10-01) | the unkeyed `sha256:` form in every record (no provenance key on this seam) | matches `SAMPLE-OUTPUT-PROVENANCE.md`: keyed `hmac-sha256:<key_id>:<hex>` digests from the engine's own `ContentKey`, recomputed independently with Python `hmac` |
 | `cargo run --example panic_drive` (beat 06 through the engine) | deny, `plugin_panic`, `gw-1:decision`, host epoch, `stream_seq` 0 | identical after normalising `time`, span ids and the signature |
 
 So the portability claim the plan set out to test holds: the OCSF record a
@@ -126,6 +191,25 @@ with only cpex beside it still resolves.
    committed lock carries both hosts.
 5. **Nothing else broke.** The seam is additive for this consumer on PPE
    exactly as it was on cpex: no behaviour changes without configuration.
+
+6. **A sink cancelled by `audit_timeout_milliseconds` leaves a gap in its
+   stream.** *(Observed 2026-10-02 at `7274480`.)* The executor stamps
+   `stream_seq` (`stamp_decision_stream`, executor.rs) and then calls the
+   sinks (`emit_audit`), where each callback is bounded by the audit timeout
+   (100 ms by default) and a callback that overruns is skipped with an error
+   log. The sequence number was consumed before the call, so the sink's
+   consumer sees `n` then `n+2` and, by AID-EMIT-1 section 7, reads a lost
+   record. The stamping function's own comment says that burning a number on
+   a record nobody receives would show up downstream as a loss; the timeout
+   now does exactly that, from inside the engine. The verifier semantics are
+   right (the record was lost), but the loss is self-inflicted and
+   indistinguishable from a crash or tampering. Suggested upstream: either
+   name the burned sequence in the error log and the docs so an operator can
+   explain the gap, or emit a minimal tombstone record for the skipped sink,
+   or stamp per sink after a successful return. For this crate: keep
+   `handle` well inside 100 ms (ECDSA P-256 signing is sub-millisecond, the
+   file destination is a buffered write), and operators of a slow
+   destination should raise the timeout rather than accept gaps.
 
 ## Reproducing
 

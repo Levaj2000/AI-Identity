@@ -103,6 +103,20 @@ impl OcsfAuditEmitter {
             // operators who need a stable chain set chain_uid explicitly.
             .unwrap_or_else(|| format!("ocsf-chain-{}", cfg.name));
 
+        // The signature covers the chained record (`attestation_list`,
+        // AID-EMIT-1 section 4), so `chain: false` has nothing to sign and
+        // the signer would never run. Refuse the pair rather than emit
+        // unsigned records under a config that promises signatures.
+        if typed.signing == SigningMode::Dsse && !typed.chain {
+            return Err(Box::new(PluginError::Config {
+                message: format!(
+                    "plugin '{}' (cpex-plugin-ocsf-audit): signing=dsse requires chain: true; \
+                     the signature is computed over the chained record",
+                    cfg.name
+                ),
+            }));
+        }
+
         let signer: Box<dyn OcsfSigner> = match typed.signing {
             SigningMode::None => Box::new(NoopSigner),
             SigningMode::Dsse => {
@@ -722,6 +736,28 @@ mod tests {
 
     /// signing=dsse with no key must fail construction loudly — never
     /// fall back to silently-unsigned records.
+    /// `signing: dsse` with `chain: false` has nothing to sign: the
+    /// signature covers the chained record, so the pair must fail
+    /// construction rather than emit unsigned records under a signing
+    /// policy.
+    #[test]
+    fn dsse_with_chain_off_fails_construction() {
+        let err = OcsfAuditEmitter::new(cfg(json!({ "signing": "dsse", "chain": false })))
+            .unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("chain: true"), "unexpected error: {msg}");
+    }
+
+    /// A misspelled key must fail construction, not silently fall back:
+    /// `authorty_uid` would otherwise emit signed records with no
+    /// `authority_uid` binding and no warning.
+    #[test]
+    fn unknown_config_key_fails_construction() {
+        let err = OcsfAuditEmitter::new(cfg(json!({ "authorty_uid": "org-1" }))).unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("unknown field"), "unexpected error: {msg}");
+    }
+
     #[test]
     fn dsse_without_key_fails_construction() {
         let err = OcsfAuditEmitter::new(cfg(json!({ "signing": "dsse" }))).unwrap_err();
@@ -1090,41 +1126,73 @@ mod tests {
     }
 
     /// The output digest is the seam's value, routed through
-    /// `host::output_hash` so the sink stops hashing the day the engine
-    /// records it on the log. Until then it is the engine's own
-    /// `content_hash` over the payload's audit bytes, and an explicit null,
-    /// not an absent key, when there is no payload to hash.
+    /// `host::output_hash`. On PPE the engine records it on the log and the
+    /// emitter copies it verbatim, key id and all; on cpex the shim hashes
+    /// the payload's audit bytes with the engine's `content_hash`. Either
+    /// way an explicit null, not an absent key, when nothing was digested.
     #[test]
     fn output_hash_comes_from_the_host_shim() {
-        use crate::host::hooks::payload::PluginPayload as _;
-
         let e = OcsfAuditEmitter::new(sink_cfg(json!({ "chain": false }))).unwrap();
         let mut log = finalized(
             vec![("cedar-pdp", PluginMode::Sequential, PluginAction::Allowed)],
             Verdict::Allow,
         );
         log.set_input_hash(Some("in-hash".into()));
-
         let payload = tool_payload();
-        let expected = crate::host::hooks::payload::content_hash(
-            &payload
-                .audit_bytes()
-                .expect("MessagePayload opts in to audit bytes on both hosts"),
-        );
-        assert!(expected.starts_with("sha256:"));
-        let ev = e.build_decision(
-            Some(&payload),
-            &subject_ext(),
-            &log,
-            "2026-08-18T12:00:00.000Z",
-        );
-        assert_eq!(ev["unmapped"]["cpex.content"]["output_hash"], expected);
 
-        let ev = e.build_decision(None, &subject_ext(), &log, "2026-08-18T12:00:00.000Z");
-        assert_eq!(
-            ev["unmapped"]["cpex.content"]["output_hash"],
-            serde_json::Value::Null
-        );
+        #[cfg(feature = "ppe")]
+        {
+            log.set_output_hash(Some("hmac-sha256:k1:bbb".into()));
+            let ev = e.build_decision(
+                Some(&payload),
+                &subject_ext(),
+                &log,
+                "2026-08-18T12:00:00.000Z",
+            );
+            assert_eq!(
+                ev["unmapped"]["cpex.content"]["output_hash"], "hmac-sha256:k1:bbb",
+                "copied from the log, never recomputed"
+            );
+
+            // The engine recorded nothing: null even though a payload is
+            // present, because this sink does not hash on PPE.
+            log.set_output_hash(None);
+            let ev = e.build_decision(
+                Some(&payload),
+                &subject_ext(),
+                &log,
+                "2026-08-18T12:00:00.000Z",
+            );
+            assert_eq!(
+                ev["unmapped"]["cpex.content"]["output_hash"],
+                serde_json::Value::Null
+            );
+        }
+
+        #[cfg(feature = "cpex")]
+        {
+            use crate::host::hooks::payload::PluginPayload as _;
+
+            let expected = crate::host::hooks::payload::content_hash(
+                &payload
+                    .audit_bytes()
+                    .expect("MessagePayload opts in to audit bytes"),
+            );
+            assert!(expected.starts_with("sha256:"));
+            let ev = e.build_decision(
+                Some(&payload),
+                &subject_ext(),
+                &log,
+                "2026-08-18T12:00:00.000Z",
+            );
+            assert_eq!(ev["unmapped"]["cpex.content"]["output_hash"], expected);
+
+            let ev = e.build_decision(None, &subject_ext(), &log, "2026-08-18T12:00:00.000Z");
+            assert_eq!(
+                ev["unmapped"]["cpex.content"]["output_hash"],
+                serde_json::Value::Null
+            );
+        }
     }
 
     /// The decision facts sit INSIDE the hashed bytes: two otherwise

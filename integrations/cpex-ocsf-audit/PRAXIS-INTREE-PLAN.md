@@ -1,9 +1,11 @@
 # Praxis in-tree plan: `praxis-policy-plugin-ocsf-audit` under `reference/plugins/`
 
 **Date:** 2026-09-08
-**Status:** plan. Gated on praxis-proxy/policy PR #84 merging to `main`.
-Nothing here starts before that; the sequencing rule in
-`PRAXIS-PORT-PLAN.md` still holds.
+**Status:** prepared, 2026-10-02. praxis-proxy/policy#84 merged to `main` as
+`da22e0a`; the port is built and verified on that commit and staged as two
+patches under [`praxis-port/`](praxis-port/README.md) for the maintainer to
+apply and push. See "Prepared" at the end for where the result departs from
+the plan below.
 **Tracks:** praxis-proxy/policy issue #12 (feat: tamper evident OCSF
 auditing, milestone 0.3.0).
 
@@ -330,3 +332,56 @@ reflow. Plan a day, verified against the acceptance list, not an hour.
 - Where the AID-EMIT-1 spec is linked from the in-tree README: this repo's
   `docs/specs/aid-emit-1.md` pinned to a commit, since PPE has no spec
   directory for it.
+
+## Prepared (2026-10-02)
+
+Built on praxis `main` at `da22e0a`, the praxis-proxy/policy#84 merge
+commit, from this directory at AI-Identity `395d64e` (35 tests, AID-EMIT-1
+1.1.2, pin `da22e0a`). Two commits: a verbatim import and the adaptation,
+exported as `praxis-port/0001-import.patch` and `0002-adapt.patch` with the
+pull request body beside them. Every gate in "Acceptance" passed on the
+pinned toolchain: `make lint`, `make test`, `make doc`, `cargo deny check`,
+`cargo check --workspace --all-targets` with and without `--all-features`,
+35 tests, the three conformance vectors byte-identical, `panic_drive` on
+`gw-1:decision` at `stream_seq` 0 with `plugin_panic`. `typos` and
+`markdownlint` are clean on the added and touched files. Both landing shapes
+from "History" were dry-run on fresh checkouts and produce the same tree;
+the filtered history is 28 commits and 16 files.
+
+Where the result departs from the sections above:
+
+- **Scope grew by one vector.** `examples/provenance_demo.rs` and
+  `SAMPLE-OUTPUT-PROVENANCE.md` (#586) postdate the plan and are carried;
+  35 tests, not 34.
+- **`base64` is `0.23`, not `0.22`.** At `da22e0a` the builtins declare
+  `0.23` directly and the lock already carries both majors (`jsonwebtoken`
+  still needs `0.22`), so the plan's reason for `0.22` no longer holds and
+  the port follows the builtins. The crate here stays on `0.22` until the
+  in-tree copy lands; nothing hashed depends on it.
+- **`provenance_demo` resolves its keys through the `file` backend.** The
+  `env` backend needed `std::env::set_var`, which edition 2024 makes
+  `unsafe` and the workspace forbids. The example writes the two demo keys
+  to a scratch directory, resolves them, and removes it. Same digests, same
+  vector.
+- **`ocsf::apply_decision` lost its payload parameter.** Only the removed
+  cpex path of `host::output_hash` used it; the PPE path reads
+  `DecisionLog::output_hash`. The in-tree signature is
+  `apply_decision(ev, decisions)`.
+- **Assert messages were not needed in tests.** `missing_assert_message`
+  does not fire inside `#[cfg(test)]`; the five example sites got messages
+  and the examples carry the same crate-level allow block the PPE examples
+  use. Test modules carry the scoped allows `audit-logger` uses.
+- **`tokio-util` is gone.** It served the cpex executor path only.
+- **`typos.toml` gains two entries**: an ignore pattern for the W3C
+  trace-context span id the vectors stamp (`00f067aa0ba9...`, which the
+  tokenizer splits into "ba") and `cose`.
+- **Nothing else in `deny.toml` or `clippy.toml` changed.** `p256` brings
+  the RustCrypto 0.14 line (`der`, `spki`, `pkcs8`, `signature`,
+  `pem-rfc7468`) beside the 0.13 line already in the lock;
+  `bans.multiple-versions` is `warn`, and `cargo deny check` passes.
+  `doc-valid-idents` needed no additions: the doc comments use backticks.
+- **Markdown.** The crate README is rewritten for the tree (present tense,
+  PPE commands, 80 columns); the three sample-output files keep their
+  output blocks byte for byte under new prose. `docs/content/auditing.md`
+  gains a second sink block; the root README says three reference plugins.
+

@@ -48,9 +48,11 @@ everything offline. Notes on fidelity:
   RFC 6979, which is why this output is byte-identical across runs). `signatures[]`
   carries the `digital_signature` descriptor — `algorithm_id` 3 = ECDSA,
   `serialization_id` 5 = DSSE, enum ids verified against ocsf-schema main 2026-07-31 —
-  and the raw bytes + JWKS `kid` ride in `unmapped.signature_b64` /
-  `unmapped.signature_key_id` pending
-  [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/pull/1709). The demo key is
+  and the raw bytes + JWKS `kid` remain in `unmapped.signature_b64` /
+  `unmapped.signature_key_id` for this OCSF 1.9.0 vector. After 1.9.0,
+  [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/pull/1709) added
+  optional `digital_signature.value` for bytes, but not a generic key-id
+  field; this vector has not migrated. The demo key is
   generated at runtime from a fixed scalar (no key material in the repo); the `// verify`
   lines at the bottom are the example itself re-deriving everything from the emitted JSON
   and the public key alone.
@@ -64,8 +66,10 @@ everything offline. Notes on fidelity:
   `metadata`, which is where OCSF defines it — it was previously emitted at the event root.
   The per-call `tool_call_id` rides at `api.request.uid`. `metadata.uid` identifies the
   record itself, and is what the next record's `prev_event.uid` points at.
-- **Key ordering is alphabetical** because `serde_json::Map` is backed by a `BTreeMap` by
-  default in Rust (the canonical hash bytes sort keys explicitly and do not rely on this).
+- **Key ordering is alphabetical** because the canonical form sorts object keys
+  (`sign::canonical_bytes`, RFC 8785 order), and that is the only ordering a verifier depends
+  on. The printed records happen to match it because `serde_json::Map` is backed by a
+  `BTreeMap` without the `preserve_order` feature; the hashed bytes do not rely on that.
 
 ```jsonc
 // ===== OCSF event 1 — Invoke Tool (get_compensation) =====

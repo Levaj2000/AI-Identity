@@ -1,0 +1,49 @@
+From a3d9218767236a3ab04260dfee923063f43c7141 Mon Sep 17 00:00:00 2001
+From: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+Date: Mon, 5 Oct 2026 22:59:13 +0000
+Subject: [PATCH] build(audit): three-component pins for p256 and base64;
+ base64 from the workspace
+
+Review follow-up on the ocsf-audit reference plugin. `p256` in
+`[workspace.dependencies]` moves from "0.14" to the locked "0.14.0";
+`base64` is declared once in `[workspace.dependencies]` at the locked
+"0.23.1" and the plugin takes it with `workspace = true`. The lock is
+unchanged. The builtins that still declare base64 locally are left as
+they are; that swap is theirs to make.
+
+Signed-off-by: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+---
+ Cargo.toml                              | 3 ++-
+ reference/plugins/ocsf-audit/Cargo.toml | 2 +-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/Cargo.toml b/Cargo.toml
+index d3bc061..8ce5725 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -126,7 +126,8 @@ hmac = "0.13"
+ # ECDSA P-256 for the OCSF audit sink's DSSE signatures. RustCrypto's `ecdsa`
+ # signs per RFC 6979, so the same key and bytes always give the same
+ # signature, which is what keeps the signed conformance vectors reproducible.
+-p256 = { version = "0.14", features = ["ecdsa", "pem", "pkcs8"] }
++base64 = "0.23.1"
++p256 = { version = "0.14.0", features = ["ecdsa", "pem", "pkcs8"] }
+ 
+ # Internal crates. Single source of truth for each one's path and version
+ # requirement; members depend on these with `{ workspace = true }` so a version
+diff --git a/reference/plugins/ocsf-audit/Cargo.toml b/reference/plugins/ocsf-audit/Cargo.toml
+index 57c17ca..f57877c 100644
+--- a/reference/plugins/ocsf-audit/Cargo.toml
++++ b/reference/plugins/ocsf-audit/Cargo.toml
+@@ -35,7 +35,7 @@ praxis-policy-core = { workspace = true }
+ async-trait = { workspace = true }
+ # Same major the builtins declare. Only `Engine::{encode,decode}` on the
+ # standard alphabet is used, for the DSSE signature bytes.
+-base64      = "0.23"
++base64      = { workspace = true }
+ chrono      = { workspace = true }
+ p256        = { workspace = true }
+ serde       = { workspace = true }
+-- 
+2.43.0
+

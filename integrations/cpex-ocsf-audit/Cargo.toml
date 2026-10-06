@@ -49,16 +49,20 @@ ppe = ["dep:praxis-policy-core"]
 # Pin a rev rather than tracking `dev` for anything reproducible.
 cpex-core = { path = "../../../cpex/crates/cpex-core", optional = true }
 
-# The PR #84 head, `499ee91` (2026-09-09): `3e7734e` accepted the
-# documented `engine_settings` audit keys at load (PRAXIS-PORT-RESULTS.md
-# obs 1), `ef20d8f` made `sha2` a workspace dependency, and the rest is
-# the docs reorganisation (#82) merged in, with `docs/auditing.md` now at
-# `docs/content/auditing.md`. Nothing on the seam this crate consumes
-# changed between the two heads. A full SHA, not a branch: the PR is a
-# draft and its branch will move.
-# Bump deliberately, with the crate re-verified — the same rule as the
-# cpex pin in .github/workflows/rust.yml.
-praxis-policy-core = { git = "https://github.com/praxis-proxy/policy", rev = "5b76fa6f6cd64ff54d7237c2fe3166ba397d6999", optional = true }
+# praxis-proxy/policy main at `da22e0a` (2026-10-02): the squash merge of
+# PR #84, "feat(audit): decision and effect auditing", which closes
+# praxis#11. The audit seam this crate consumes is now on main rather
+# than a PR branch: DecisionLog with input_hash() / output_hash() under
+# the keyed content provenance digest (`hmac-sha256:<key_id>:<hex>`),
+# the audit handler contract, the effect log, and
+# `engine_settings.audit_timeout_milliseconds` bounding each sink call.
+# Pinned to the merge commit rather than the last PR head (`7274480`,
+# which the squash leaves unreachable from main) so the rev stays
+# fetchable without the PR ref. A full SHA, not a branch: main moves.
+# Bump deliberately, with the crate re-verified (PRAXIS-PORT-RESULTS.md
+# records each bump), the same rule as the cpex pin in
+# .github/workflows/rust.yml.
+praxis-policy-core = { git = "https://github.com/praxis-proxy/policy", rev = "da22e0aff86de0bb20c5fae3406f73c40576b078", optional = true }
 
 async-trait = "0.1"
 # 0.22, not the current 0.23: praxis-proxy/policy holds base64 at 0.22

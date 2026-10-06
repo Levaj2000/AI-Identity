@@ -190,6 +190,19 @@ Honest inventory of what's solid vs. open:
   `framework`, monotonic labels, workload identity), and the mapped objects (`ai_agent`,
   `delegation`, `message_context`). See the test module in `src/emitter.rs` and the runnable
   `examples/emit_sample.rs` / `SAMPLE-OUTPUT.md`.
+- **Praxis in-tree port staged (2026-10-02):** [`praxis-port/`](praxis-port/README.md)
+  holds the crate adapted to praxis-proxy/policy as `reference/plugins/ocsf-audit`,
+  built on the praxis-proxy/policy#84 merge commit and verified against every PPE gate
+  (35 tests, the three vectors byte-identical), as two patches the maintainer applies
+  and pushes himself. `PRAXIS-INTREE-PLAN.md` records where the result departs from
+  the plan.
+- **Content provenance vector (2026-10-01):** `examples/provenance_demo.rs` /
+  `SAMPLE-OUTPUT-PROVENANCE.md` pin the `unmapped."cpex.content"` digest form of
+  AID-EMIT-1 section 9.2: unchanged content, a redaction, a rotated key, and the
+  explicit unkeyed form. On PPE the digests come from the engine's own `ContentKey`
+  under keys resolved through its secret store; the keys and the canonical audit
+  bytes are printed so every digest recomputes offline. On cpex, which has no
+  provenance key, records 1 to 3 carry the unkeyed form instead.
 - **RESOLVED 2026-07-20 (was: needs a standards call):** `ai_operation` is an OCSF
   **profile**, not a class — the host class is now **API Activity (6003)**, agreed on the
   2026-07-18 thread (matching AOS's host-class choice and AI Identity's production
@@ -207,8 +220,10 @@ Honest inventory of what's solid vs. open:
   the claimed authority cannot be swapped post-hoc. Verifier rule as running code:
   `sign::signing_input` reconstructs the covered bytes from an emitted event (strip
   `fingerprint`/`signatures` + the post-hash `unmapped.signature_b64`/`signature_key_id`
-  extras, which await a schema home via
-  [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/pull/1709)); then the
+  extras in this OCSF 1.9.0 wire format; later
+  [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/pull/1709) added
+  `digital_signature.value` for bytes, not a generic JWKS `kid` field);
+  then the
   fingerprint recomputes and the signature verifies over `sign::dsse_pae` of those bytes —
   exercised end-to-end by the `signed_event_verifies_offline` test and printed as the
   `// verify` lines of `cargo run --example emit_sample`. This closes the *identity* half

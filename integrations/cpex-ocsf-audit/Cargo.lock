@@ -576,6 +576,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
 
 [[package]]
+name = "libyaml-rs"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e126dda6f34391ab7b444f9922055facc83c07a910da3eb16f1e4d9c45dc777"
+
+[[package]]
 name = "log"
 version = "0.4.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -642,8 +648,8 @@ dependencies = [
 
 [[package]]
 name = "praxis-policy-core"
-version = "0.2.0"
-source = "git+https://github.com/praxis-proxy/policy?rev=5b76fa6f6cd64ff54d7237c2fe3166ba397d6999#5b76fa6f6cd64ff54d7237c2fe3166ba397d6999"
+version = "0.4.0"
+source = "git+https://github.com/praxis-proxy/policy?rev=da22e0aff86de0bb20c5fae3406f73c40576b078#da22e0aff86de0bb20c5fae3406f73c40576b078"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -651,11 +657,11 @@ dependencies = [
  "chrono",
  "futures",
  "hashbrown",
+ "hmac",
  "http",
  "praxis-policy-orchestration",
  "serde",
  "serde_json",
- "serde_yaml",
  "sha2 0.11.0",
  "thiserror",
  "tokio",
@@ -663,13 +669,14 @@ dependencies = [
  "tracing",
  "uuid",
  "wildmatch",
+ "yaml_serde",
  "zeroize",
 ]
 
 [[package]]
 name = "praxis-policy-orchestration"
-version = "0.2.0"
-source = "git+https://github.com/praxis-proxy/policy?rev=5b76fa6f6cd64ff54d7237c2fe3166ba397d6999#5b76fa6f6cd64ff54d7237c2fe3166ba397d6999"
+version = "0.4.0"
+source = "git+https://github.com/praxis-proxy/policy?rev=da22e0aff86de0bb20c5fae3406f73c40576b078#da22e0aff86de0bb20c5fae3406f73c40576b078"
 dependencies = [
  "futures",
  "tokio",
@@ -1157,6 +1164,19 @@ dependencies = [
  "ff",
  "group",
  "hybrid-array",
+]
+
+[[package]]
+name = "yaml_serde"
+version = "0.10.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33b729a08a9a6be689bbad3e2bf8015926db54b6622cc89c3a5f7dc174b9e918"
+dependencies = [
+ "indexmap",
+ "itoa",
+ "libyaml-rs",
+ "ryu",
+ "serde",
 ]
 
 [[package]]
