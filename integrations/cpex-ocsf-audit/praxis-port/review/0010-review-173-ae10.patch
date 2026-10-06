@@ -1,0 +1,58 @@
+From aa08d6fd7b65fe2e2c48ab4df7776bf559e43a44 Mon Sep 17 00:00:00 2001
+From: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+Date: Tue, 6 Oct 2026 15:23:28 +0000
+Subject: [PATCH] docs(brainstorms): audit split spike: AE10 exercises R22 with
+ the raw-argument opt-in on
+
+With R5 making raw arguments digest-only by default, AE10 as written
+could pass without engine-side removal ever running: the digest would
+hide the secret. AE10 now enables the per-sink raw-argument opt-in on
+both sinks so the absence of the secret is R22's doing, covers R5 and
+R22, and the success criteria require AE1 through AE10. R22 states that
+the opt-in renders what survived removal and cannot restore it.
+
+Signed-off-by: Jeff Leva <120221487+Levaj2000@users.noreply.github.com>
+---
+ ...5-audit-serialization-transport-requirements.md | 14 ++++++++------
+ 1 file changed, 8 insertions(+), 6 deletions(-)
+
+diff --git a/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md b/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md
+index 2b05743..c26fd47 100644
+--- a/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md
++++ b/docs/brainstorms/2026-10-05-audit-serialization-transport-requirements.md
+@@ -191,7 +191,8 @@ records on either side of the gap still verify on their own. No PPE code is invo
+   sink might hash. Removal happens before the record exists, so it is inside the hashed bytes
+   and a verifier recomputes what was exported. The engine marks what it removed, inside the
+   record (the dropped names, or a count), so a consumer can tell redacted from never present.
+-  A sink decides only how to render what it was given, digests by default (R5).
++  A sink decides only how to render what it was given, digests by default (R5); the per-sink
++  raw-argument opt-in of R5 renders what survived R22 and cannot restore what it removed.
+ 
+ ## Acceptance Examples
+ 
+@@ -224,16 +225,17 @@ records on either side of the gap still verify on their own. No PPE code is invo
+ - AE9. **Covers R19, R20.** Given only the file exporter's output and the public key fetched
+   by the key identifier in the record, the standalone validator reports fingerprint, signature,
+   chain and stream checks as passing, with no PPE code on the machine.
+-- AE10. **Covers R22.** Given a request carrying an `Authorization` header and a tool call
+-  whose arguments contain a secret, with `audit-logger` and `ocsf-audit` both attached, neither
+-  exported record contains the header value or the secret, both carry the removal marker naming
+-  the header, and the `ocsf-audit` record still verifies offline.
++- AE10. **Covers R5, R22.** Given a request carrying an `Authorization` header and a tool call
++  whose arguments contain a secret, with `audit-logger` and `ocsf-audit` both attached and both
++  set to the raw-argument opt-in (so the digest default of R5 is not what hides the secret),
++  neither exported record contains the header value or the secret, both carry the removal
++  marker naming the header, and the `ocsf-audit` record still verifies offline.
+ 
+ ## Success Criteria
+ 
+ - `audit-logger` and `ocsf-audit` both run as serializers behind the same exporter trait, and
+   neither emits a record that differs from what it emitted before the split.
+-- The queued path exists, is off by default, and every one of AE1 through AE9 is a named
++- The queued path exists, is off by default, and every one of AE1 through AE10 is a named
+   test or benchmark in the tree.
+ - A consumer holding exported bytes from any built-in exporter can verify an `ocsf-audit`
+   record offline against the published contract without reading PPE source.
+-- 
+2.43.0
+
