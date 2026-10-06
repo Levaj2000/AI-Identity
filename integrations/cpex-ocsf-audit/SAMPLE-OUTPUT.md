@@ -48,9 +48,11 @@ everything offline. Notes on fidelity:
   RFC 6979, which is why this output is byte-identical across runs). `signatures[]`
   carries the `digital_signature` descriptor — `algorithm_id` 3 = ECDSA,
   `serialization_id` 5 = DSSE, enum ids verified against ocsf-schema main 2026-07-31 —
-  and the raw bytes + JWKS `kid` ride in `unmapped.signature_b64` /
-  `unmapped.signature_key_id` pending
-  [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/pull/1709). The demo key is
+  and the raw bytes + JWKS `kid` remain in `unmapped.signature_b64` /
+  `unmapped.signature_key_id` for this OCSF 1.9.0 vector. After 1.9.0,
+  [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/pull/1709) added
+  optional `digital_signature.value` for bytes, but not a generic key-id
+  field; this vector has not migrated. The demo key is
   generated at runtime from a fixed scalar (no key material in the repo); the `// verify`
   lines at the bottom are the example itself re-deriving everything from the emitted JSON
   and the public key alone.

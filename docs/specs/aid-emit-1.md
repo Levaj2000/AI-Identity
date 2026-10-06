@@ -100,6 +100,8 @@ Out of scope, by design:
 ## 3. Record model
 
 A record is an **OCSF API Activity (class_uid 6003)** event.
+The reference emitter and conformance vectors set `metadata.version` to
+`1.9.0`; later OCSF schema additions do not silently change this wire format.
 
 - `metadata.profiles` MUST declare `"ai_operation"` and `"security_control"`,
   and MUST additionally declare `"record_integrity"` when chaining is enabled.
@@ -138,9 +140,9 @@ follows from the record as emitted:
    `uid`, `chain_uid`, `authority_uid`, and `prev_event` **remain present**:
    the record's chain position and claimed authority are inside the hashed
    input.
-2. Remove `unmapped.signature_b64` and `unmapped.signature_key_id` (signature
-   bytes awaiting a schema home, see §5). If this leaves `unmapped` empty,
-   remove `unmapped` itself.
+2. Remove `unmapped.signature_b64` and `unmapped.signature_key_id` (the
+   signature and JWKS key-id locations in this 1.9.0 wire format, see section 5).
+   If this leaves `unmapped` empty, remove `unmapped` itself.
 3. Serialize canonically per RFC 8785 (JCS): object keys sorted, compact
    output, array order preserved.
 
@@ -199,11 +201,16 @@ identity-bound); when present it MUST be:
     "serialization_id": 5, "serialization": "DSSE" }
   ```
 
-- The signature bytes ride at `unmapped.signature_b64` and the key identifier
-  (the JWKS `kid`) at `unmapped.signature_key_id`, **outside the hashed
-  bytes** (§4 step 2). This placement is transitional pending
-  [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/pull/1709); a future
-  minor version will move both to their schema home when it lands.
+- In this 1.9.0 wire format, signature bytes ride at
+  `unmapped.signature_b64` and the key identifier (the JWKS `kid`) at
+  `unmapped.signature_key_id`, **outside the hashed bytes** (section 4, step 2).
+  [ocsf-schema#1709](https://github.com/ocsf/ocsf-schema/pull/1709)
+  subsequently added optional `digital_signature.value` for standard-Base64
+  raw signature bytes, but did not add a generic key-id field.
+  `digital_signature.certificate` describes an X.509-style certificate
+  (including issuer and serial number), not a bare JWKS `kid`. Moving the
+  bytes to `value` requires a deliberate schema-version and format update;
+  it does not happen in this version, and the `kid` still needs a home.
 
 Because the signed bytes include the attestation entry's `chain_uid`,
 `authority_uid`, and `prev_event`, the signature commits to the record's chain
@@ -412,6 +419,10 @@ this document, a verifier:
 The reference implementation ships this rule as running code
 (`sign::signing_input`, exercised by the `signed_event_verifies_offline` test
 and printed as the `// verify` lines of `cargo run --example emit_sample`).
+Even if a verifier knows the post-1.9.0 `digital_signature.value` field,
+the v1 procedure still reads `unmapped.signature_b64` and
+`unmapped.signature_key_id`; changing their placement requires a new
+signing-input rule, validator, and conformance vectors.
 
 ## 12. Conformance and test vectors
 
@@ -479,11 +490,12 @@ rejects any vector with a flipped payload byte, a reordered record, a swapped
 - The spec version is `MAJOR.MINOR.PATCH`. Wire-visible changes to the
   covered-bytes rule, the canonical form, the envelope, or the vocabularies
   are MAJOR. Additive, ignorable fields are MINOR — 1.1.0 added the optional
-  step `detail` (§9.2); the pending ocsf-schema#1709 relocation of the
-  signature bytes will be the next. Editorial fixes are PATCH: 1.1.1 added
-  the informative note on the content digest form (section 9.2), and 1.1.2
-  the provenance vector that exercises it (section 12); neither changes a
-  covered byte or an existing vector.
+  step `detail` (section 9.2). A future move of signature bytes to
+  `digital_signature.value` needs its own format/version decision and
+  conformance updates; #1709's merge does not migrate v1. Editorial fixes
+  are PATCH: 1.1.1 added the informative note on the content digest form
+  (section 9.2), and 1.1.2 the provenance vector that exercises it
+  (section 12); neither changes a covered byte or an existing vector.
 - Records do not carry a spec-version field in v1; the emitted enum
   descriptors (`fingerprint.serialization_id`, `digital_signature.*`) are the
   wire-level self-description, and the OCSF schema version rides at
@@ -499,7 +511,9 @@ rejects any vector with a flipped payload byte, a reordered record, a swapped
 
 - OCSF schema — API Activity (6003), `ai_operation` / `security_control` /
   `record_integrity` profiles; attestation shape per ocsf-schema #1661
-  (merged); signature-bytes home pending #1709.
+  (merged in 1.9.0); optional signature-bytes field added after 1.9.0 by
+  [#1709](https://github.com/ocsf/ocsf-schema/pull/1709), with no generic
+  key-id field.
 - RFC 8785 — JSON Canonicalization Scheme (JCS).
 - DSSE — Dead Simple Signing Envelope, v1 PAE.
 - RFC 6979 — Deterministic ECDSA.

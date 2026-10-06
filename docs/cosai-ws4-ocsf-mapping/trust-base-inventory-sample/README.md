@@ -167,9 +167,11 @@ inside `fingerprint` are an anti-pattern).
   real-export counterpart (for the activity chain).
 - **Unsigned by choice.** Events carry `fingerprint` without `signatures`
   (the schema's `at_least_one` constraint holds). Per-event ECDSA signing is
-  demonstrated with production keys in `../ocsf-log-reference-bundle/`; the
-  signature-bytes/key-id gap ([#1709](https://github.com/ocsf/ocsf-schema/pull/1709))
-  applies to this class the same way.
+  demonstrated with production keys in `../ocsf-log-reference-bundle/`.
+  OCSF 1.9.0 had no signature-bytes field; later
+  [#1709](https://github.com/ocsf/ocsf-schema/pull/1709) added
+  `digital_signature.value` for bytes, but no generic JWKS key-id field.
+  This unsigned sample uses neither field.
 - **Hosted-model nuance.** `declared_configuration.ai_model` carries the
   pinned `ai_model` tuple, not a weights digest — for an API-served model
   there are no local artifact bytes to hash, and inventing a digest would
