@@ -11,6 +11,26 @@ gateway, mandate service, dashboard, deployment) lives in a private repository.
 Do not add platform code here, and do not reach for platform modules that no
 longer exist in this tree: if a task needs them, it belongs in the platform repo.
 
+## Current-Stage and Pricing Claims Describe the Platform Repo
+
+The `/about` and `/product` "Current Stage" lists, and the `/pricing` tier table
+that must agree with them, assert what the private platform repo ships. This repo
+can verify only the subset that lives here: the offline verifier CLI, the SDKs
+under `sdk/`, the CPEX plugin, the published docs, and the workflows. Before
+editing that copy, reconcile each claim against the platform repo's routes,
+feature flags, or changelog, and never infer status from this repo's silence.
+
+Two drift patterns to check when touching it, both found in the 2026-10 sweep: a
+capability sold on `/pricing` that the roadmap still lists as future (SSO/SCIM,
+Terraform provider, VPC deployment), and a capability described sitewide that the
+roadmap defers (anomaly detection, which had shipped as deny-cluster alerting and
+stayed future-only on both roadmaps). The rule that resolves both: every claim
+belongs in exactly one of the two columns, and the wording must match the scope
+that actually shipped, not the scope that was planned.
+
+The per-claim reconciliation table is `private/claims-reconciliation.md`
+(gitignored): a lookup for whoever edits this copy, not a source of record.
+
 ## Working as a Delegated / Offload Agent
 
 Tasks are often delegated here to run autonomously. Own the task end-to-end to the same bar as a clean handoff: a root-cause fix, tests, a fully green suite, and a tight diff.

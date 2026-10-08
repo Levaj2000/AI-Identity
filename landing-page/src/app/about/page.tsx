@@ -448,7 +448,7 @@ export default function About() {
                   "Terraform provider",
                   "Native SDK adapters for AutoGen and OpenAI Agents SDK",
                   "Agent-to-agent auth (mTLS / token exchange)",
-                  "Advanced anomaly detection beyond shadow-agent heuristics",
+                  "Advanced anomaly detection beyond deny-cluster alerting and shadow-agent heuristics",
                   "Remaining 5th audit-logging phase",
                   "Dedicated SIEM connectors (Splunk, Datadog) on top of webhook sink",
                   "SOC 2 Type II external audit + ISO 27001 certification",
