@@ -47,7 +47,7 @@ const standardsTrack = [
     role: "Event envelope",
     detail:
       "The spec's event envelope graduated upstream: the attestation object and record_integrity profile shipped in OCSF 1.9.0 (contributed via ocsf-schema#1661).",
-    href: "https://github.com/ocsf/ocsf-schema/releases/tag/v1.9.0",
+    href: "https://github.com/ocsf/ocsf-schema/releases/tag/1.9.0",
   },
   {
     name: "OpenTelemetry GenAI semconv",
@@ -133,7 +133,7 @@ export default function SpecContent() {
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <a
-              href="https://github.com/ocsf/ocsf-schema/releases/tag/v1.9.0"
+              href="https://github.com/ocsf/ocsf-schema/releases/tag/1.9.0"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-6 py-3 bg-[rgb(166,218,255)] text-[rgb(4,7,13)] font-semibold rounded-xl hover:bg-[rgb(166,218,255)]/80 transition-colors"
@@ -185,7 +185,7 @@ export default function SpecContent() {
                 detail: (
                   <>
                     Released in the{" "}
-                    <a href="https://github.com/ocsf/ocsf-schema/releases/tag/v1.9.0" target="_blank" rel="noopener noreferrer" className="text-[rgb(166,218,255)] hover:underline">OCSF 1.9.0 release</a>
+                    <a href="https://github.com/ocsf/ocsf-schema/releases/tag/1.9.0" target="_blank" rel="noopener noreferrer" className="text-[rgb(166,218,255)] hover:underline">OCSF 1.9.0 release</a>
                     . The OCSF schema is now the normative home.
                   </>
                 ),
@@ -408,7 +408,7 @@ export default function SpecContent() {
           <p className="mt-8 text-xs text-[rgba(213,219,230,0.45)]">
             Shipped in{" "}
             <a
-              href="https://github.com/ocsf/ocsf-schema/releases/tag/v1.9.0"
+              href="https://github.com/ocsf/ocsf-schema/releases/tag/1.9.0"
               target="_blank"
               rel="noopener noreferrer"
               className="text-[rgb(166,218,255)] hover:underline"
