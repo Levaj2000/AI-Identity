@@ -123,6 +123,37 @@ export default function Integrations() {
         </div>
       </section>
 
+      {/* OCSF audit plugin */}
+      <section className="pb-20 px-6 md:px-12">
+        <div className="max-w-[900px] mx-auto">
+          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-6 md:p-8">
+            <h2 className="text-2xl font-bold text-white mb-3">OCSF Audit Plugin</h2>
+            <p className="text-sm text-gray-400 leading-relaxed mb-5">
+              This repository includes a CPEX audit plugin that emits OCSF AI Operation events,
+              with optional hash-chain protection and DSSE signing. The Praxis Policy Engine
+              reference-plugin port is prepared as patches here, with upstream work tracked in{" "}
+              <a
+                href="https://github.com/praxis-proxy/policy/issues/12"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[rgb(166,218,255)] hover:underline"
+              >
+                PPE Epic #12
+              </a>
+              .
+            </p>
+            <a
+              href="https://github.com/Levaj2000/AI-Identity/tree/main/integrations/cpex-ocsf-audit"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-[rgb(166,218,255)] hover:underline"
+            >
+              View plugin source
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="pb-24 px-6 md:px-12">
         <div className="max-w-[800px] mx-auto">
