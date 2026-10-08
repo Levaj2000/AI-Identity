@@ -510,7 +510,7 @@ export default function ProductPage() {
                   "Terraform provider",
                   "Native SDK adapters (AutoGen, OpenAI Agents SDK)",
                   "Agent-to-agent auth (mTLS / token exchange)",
-                  "Advanced anomaly detection beyond shadow-agent heuristics",
+                  "Advanced anomaly detection beyond deny-cluster alerting and shadow-agent heuristics",
                   "5th audit-logging phase (remaining observability hooks)",
                   "Dedicated SIEM connectors (Splunk, Datadog) on top of webhook sink",
                 ],

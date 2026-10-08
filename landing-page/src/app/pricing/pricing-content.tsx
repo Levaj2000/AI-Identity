@@ -77,6 +77,7 @@ const tiers = [
       "Priority support + dedicated hours",
       "Forensic audit chain (2-year retention)",
       "Signed session attestations + offline chain verification CLI",
+      "Deny-cluster anomaly alerting",
       "100 upstream credentials",
       "Custom policies",
       "Team roles & permissions",
@@ -99,7 +100,7 @@ const tiers = [
       "Dedicated support + SLA",
       "Forensic audit chain (unlimited retention)",
       "Forensic evidence export with chain-of-custody certificates",
-      "Shadow agent detection",
+      "Shadow agent detection + deny-cluster anomaly alerting",
       "Unlimited credentials",
       "Team roles & agent assignments",
       "Human-in-the-loop review",
@@ -142,6 +143,7 @@ const comparisonGroups: ComparisonGroup[] = [
       { feature: "Audit retention", free: "30 days", pro: "90 days", business: "1 year", businessPlus: "2 years", enterprise: "Unlimited" },
       { feature: "Signed session attestations (DSSE + ECDSA P-256)", free: false, pro: true, business: true, businessPlus: true, enterprise: true },
       { feature: "Offline chain verification CLI", free: false, pro: false, business: true, businessPlus: true, enterprise: true },
+      { feature: "Deny-cluster anomaly alerting", free: false, pro: false, business: false, businessPlus: true, enterprise: true },
       { feature: "Shadow agent detection", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
       { feature: "Forensic evidence export + chain-of-custody", free: false, pro: false, business: false, businessPlus: false, enterprise: true },
     ],
@@ -204,7 +206,7 @@ const faqs = [
   },
   {
     q: "When should I pick Business+ over Business or Enterprise?",
-    a: "Business+ is for teams that have outgrown Business (more than 200 agents or 500K requests/mo). It adds a 99.5% uptime SLA, 2-year audit retention, and dedicated support hours on top of Business. If you need compliance evidence export, chain-of-custody certificates, or human-in-the-loop review, go straight to Enterprise.",
+    a: "Business+ is for teams that have outgrown Business (more than 200 agents or 500K requests/mo). It adds deny-cluster anomaly alerting, a 99.5% uptime SLA, 2-year audit retention, and dedicated support hours on top of Business. If you need compliance evidence export, chain-of-custody certificates, or human-in-the-loop review, go straight to Enterprise.",
   },
   {
     q: "How does Enterprise pricing work?",

@@ -54,6 +54,25 @@ export const softwareApplicationSchema = {
       description: "Up to 200 agents — advanced requirements",
       priceValidUntil: "2027-12-31",
     },
+    {
+      "@type": "Offer",
+      name: "Business+",
+      price: "599",
+      priceCurrency: "USD",
+      description: "Up to 500 agents, for high-volume teams",
+      priceValidUntil: "2027-12-31",
+    },
+    {
+      "@type": "Offer",
+      name: "Enterprise",
+      priceCurrency: "USD",
+      description: "Custom pricing, unlimited agents and requests",
+      priceSpecification: {
+        "@type": "PriceSpecification",
+        minPrice: "1500",
+        priceCurrency: "USD",
+      },
+    },
   ],
   featureList: [
     "Per-agent API keys with scoped permissions",
@@ -63,6 +82,7 @@ export const softwareApplicationSchema = {
     "SOC 2 Type II alignment",
     "Chain-of-thought forensic replay",
     "Human-in-the-loop approval gates",
+    "Deny-cluster anomaly alerting",
     "Zero-trust gateway architecture",
   ],
 };
