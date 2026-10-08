@@ -63,7 +63,6 @@ export const softwareApplicationSchema = {
     "SOC 2 Type II alignment",
     "Chain-of-thought forensic replay",
     "Human-in-the-loop approval gates",
-    "Real-time anomaly detection",
     "Zero-trust gateway architecture",
   ],
 };
