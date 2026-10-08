@@ -190,8 +190,10 @@ Honest inventory of what's solid vs. open:
   `framework`, monotonic labels, workload identity), and the mapped objects (`ai_agent`,
   `delegation`, `message_context`). See the test module in `src/emitter.rs` and the runnable
   `examples/emit_sample.rs` / `SAMPLE-OUTPUT.md`.
-- **Praxis in-tree port staged (2026-10-02):** [`praxis-port/`](praxis-port/README.md)
-  holds the crate adapted to praxis-proxy/policy as `reference/plugins/ocsf-audit`,
+- **Praxis in-tree port staged (2026-10-02; upstream work tracked in
+  [Epic #12](https://github.com/praxis-proxy/policy/issues/12)):**
+  [`praxis-port/`](praxis-port/README.md) holds the crate adapted to
+  praxis-proxy/policy as `reference/plugins/ocsf-audit`,
   built on the praxis-proxy/policy#84 merge commit and verified against every PPE gate
   (35 tests, the three vectors byte-identical), as two patches the maintainer applies
   and pushes himself. `PRAXIS-INTREE-PLAN.md` records where the result departs from
