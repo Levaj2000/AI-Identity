@@ -68,16 +68,18 @@ aid_emit/
 ```python
 from aid_emit import Emitter, EmitterConfig, PemSigner
 
-emitter = Emitter(EmitterConfig(
-    chain_uid="edge-litellm-poc-0",
-    authority_uid="org-f3576cf6",
-    product_name="AI Identity OCSF Audit (LiteLLM)",
-    spool_dir="/var/lib/aid-emit",
-    signer=PemSigner.from_file(
-        "/mnt/secrets/AID_EDGE_SIGNING_KEY",
-        key_id="edge-litellm-poc-0-2026-10",
-    ),
-))
+emitter = Emitter(
+    EmitterConfig(
+        chain_uid="edge-litellm-poc-0",
+        authority_uid="org-f3576cf6",
+        product_name="AI Identity OCSF Audit (LiteLLM)",
+        spool_dir="/var/lib/aid-emit",
+        signer=PemSigner.from_file(
+            "/mnt/secrets/AID_EDGE_SIGNING_KEY",
+            key_id="edge-litellm-poc-0-2026-10",
+        ),
+    )
+)
 
 record = emitter.emit(event, stream_id="litellm/decision")
 ```
