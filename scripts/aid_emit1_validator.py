@@ -33,7 +33,10 @@ What it checks, by spec section:
   must be dense per `(epoch, stream_id)` and start at 0 (a higher first
   value is warned as `W-STREAM-HEAD`) — a gap is **surfaced as a
   finding, never repaired** (warning by default, error with
-  ``--strict-gaps``); a decrease is an ordering error.
+  ``--strict-gaps``); a decrease is an ordering error. Stream stamps are
+  read from `unmapped."aid.stream"` (AI Identity's vocabulary), else
+  `unmapped."cpex.stream"` (the CPEX host family's); a record carrying
+  both is warned as `W-STREAM-VOCAB`.
 
 Non-6003 records (e.g. proposed-class drafts using the same
 `record_integrity` carrier) get the integrity/chain checks with the
@@ -77,6 +80,12 @@ from dataclasses import dataclass, field  # noqa: E402 — after the version gat
 SPEC = "AID-EMIT-1 v1.0.0-draft (docs/specs/aid-emit-1.md)"
 DSSE_PAYLOAD_TYPE = b"application/vnd.ocsf.event+json"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
+
+# Where a record's stream stamps live, by vocabulary, in lookup order:
+# "aid.stream" is AI Identity's own (emitters that target the platform and
+# OCSF rather than a gateway), "cpex.stream" is the CPEX host family's. The
+# member structure is identical; only the key differs.
+STREAM_STAMP_KEYS = ("aid.stream", "cpex.stream")
 
 # ---------------------------------------------------------------------------
 # Canonicalization (§4)
@@ -496,7 +505,17 @@ def check_chains(
                     )
         heads[chain] = (uid, fp)
 
-        stream = (ev.get("unmapped") or {}).get("cpex.stream")
+        unmapped = ev.get("unmapped")
+        unmapped = unmapped if isinstance(unmapped, dict) else {}
+        stamp_keys = [k for k in STREAM_STAMP_KEYS if isinstance(unmapped.get(k), dict)]
+        if len(stamp_keys) > 1:
+            out.warn(
+                "W-STREAM-VOCAB",
+                idx,
+                f"stream stamps in both {' and '.join(stamp_keys)}; read from {stamp_keys[0]}: "
+                "a conforming emitter uses one vocabulary",
+            )
+        stream = unmapped[stamp_keys[0]] if stamp_keys else None
         if isinstance(stream, dict) and stream.get("stream_seq") is not None:
             key = (chain, stream.get("epoch"), stream.get("stream_id"))
             streams.setdefault(key, []).append((stream["stream_seq"], idx))
