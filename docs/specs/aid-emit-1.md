@@ -3,9 +3,9 @@
 | Field         | Value                                                            |
 |---------------|------------------------------------------------------------------|
 | **Name**      | AID-EMIT-1                                                       |
-| **Version**   | 1.1.2-draft                                                      |
+| **Version**   | 1.2.0-draft                                                      |
 | **Status**    | Draft — open for conformance review                              |
-| **Date**      | 2026-10-01                                                       |
+| **Date**      | 2026-10-12                                                       |
 | **License**   | Apache-2.0 (same as the reference implementation)                |
 | **Reference implementation** | [`integrations/cpex-ocsf-audit`](../../integrations/cpex-ocsf-audit) (adapter #1) |
 | **Conformance vectors** | [`SAMPLE-OUTPUT.md`](../../integrations/cpex-ocsf-audit/SAMPLE-OUTPUT.md), [`SAMPLE-OUTPUT-DECISIONS.md`](../../integrations/cpex-ocsf-audit/SAMPLE-OUTPUT-DECISIONS.md) |
@@ -71,7 +71,50 @@ Praxis adopts as its policy engine, and its Common Message Format), not a
 deployment of any particular gateway. Version 1 pins these strings as wire
 names: hosts embedding the same core MUST NOT rename them, because consumers
 and SIEM queries key on them. A future host with a genuinely different message
-format would motivate AID-EMIT-2, not a silent rename.
+format uses the `aid` vocabulary (section 1.2), added in 1.2.0 for exactly
+this case, never a silent rename of these strings.
+
+### 1.2 Vocabularies
+
+A **vocabulary** names the `unmapped` members that carry this format's own
+facts, the ones OCSF has no native field for. Two are defined:
+
+- **`cpex`**: the names in section 1.1, for hosts in the CPEX family.
+- **`aid`** (added in 1.2.0): AI Identity's own names, for emitters that target
+  the AI Identity platform and OCSF rather than a particular gateway, for
+  example an emitter inside an LLM proxy.
+
+| Fact | `cpex` vocabulary | `aid` vocabulary |
+|---|---|---|
+| Stream stamps (section 7) | `unmapped."cpex.stream"` | `unmapped."aid.stream"` |
+| Decision steps and verdict (section 9) | `unmapped."cpex.decision"` | `unmapped."aid.decision"` |
+| Invocation span (section 9) | `unmapped."cpex.span"` | `unmapped."aid.span"` |
+| Content provenance (section 9.2) | `unmapped."cpex.content"` | `unmapped."aid.content"` |
+| Settlement join key (section 8) | `unmapped."cmf.request.request_id"` | `unmapped."aid.request_id"` |
+| Host gap fields (section 3) | `unmapped."cmf.*"` | `unmapped."aid.<host>.*"`, e.g. `aid.litellm.deployment` |
+
+Rules:
+
+1. A member has the same structure and semantics in both vocabularies.
+   Wherever this document names a `cpex.*` or `cmf.*` member, the rule applies
+   unchanged to its `aid` counterpart.
+2. An emitter MUST use one vocabulary per record. A verifier reads `aid`
+   members first and falls back to `cpex` / `cmf`. A record carrying stream
+   stamps under both is not rejected, but a verifier SHOULD surface it as a
+   finding: two sets of stamps let a SIEM and a verifier read different
+   sequences.
+3. Under the `aid` vocabulary, a fact with a native OCSF home MUST be emitted
+   there and MUST NOT be repeated under `unmapped`; the vocabulary names only
+   facts OCSF has no field for. This rule does not change the `cpex` names.
+4. A vocabulary changes no covered-bytes rule. `aid` members sit inside the
+   hashed bytes exactly as their `cpex` counterparts do (section 4), and the
+   `aid.*` strings are wire names under the same stability rule as section 1.1.
+5. Records carry no vocabulary marker; the members present identify it. This
+   matches section 13, where the wire-level descriptors, not a version field,
+   are the self-description.
+6. The host registration contract (section 10) describes the CPEX seam. An
+   emitter in another host conforms as an Emitter (section 12) and documents
+   how it attaches, including whether it sees denied requests (section 9.3).
 
 ## 2. Scope and non-goals
 
@@ -244,7 +287,8 @@ or fork the chain off the same predecessor.
 ## 7. Stream stamps
 
 When the host seam provides completeness/ordering stamps, decision records
-MUST carry them at `unmapped."cpex.stream"`, **inside the hashed bytes**:
+MUST carry them at `unmapped."cpex.stream"` (`unmapped."aid.stream"` under the
+`aid` vocabulary, section 1.2), **inside the hashed bytes**:
 
 ```json
 "cpex.stream": {
@@ -274,17 +318,23 @@ MUST carry them at `unmapped."cpex.stream"`, **inside the hashed bytes**:
 ## 8. Join key
 
 Records for requests carrying a per-request id MUST emit it at
-`unmapped."cmf.request.request_id"`, inside the hashed bytes.
+`unmapped."cmf.request.request_id"` (`unmapped."aid.request_id"` under the `aid`
+vocabulary), inside the hashed bytes.
 
 This is the reconciliation key between a record stream and externally issued
 settlement artifacts: a signed draw receipt naming `correlation_id` reconciles
 against the OCSF stream via
-`receipt.correlation_id == event.unmapped."cmf.request.request_id"`. It is
+`receipt.correlation_id == event.unmapped."cmf.request.request_id"` (or
+`event.unmapped."aid.request_id"`). It is
 deliberately NOT `metadata.correlation_uid` (reserved for the run-stable id) —
 a per-request id correlates nothing across events. A token's `revocation_id`
 needs no event field; the receipt names it, and the join key connects the two.
 
 ## 9. Decision records
+
+Under the `aid` vocabulary (section 1.2), every `cpex.decision`, `cpex.span`
+and `cpex.content` member named in this section is `aid.decision`, `aid.span`
+and `aid.content`, with the same structure and the same requirements.
 
 A decision record renders the executor's finalized `DecisionLog` — the ruling
 and every step that produced it. The distinctions below are the point of the
@@ -451,6 +501,11 @@ the initial conformance vectors:
   unkeyed form, since that seam has no provenance key, and the file shows
   that delta.
 
+**Vocabulary vectors.** 1.2.0 adds no vector: the committed vectors use the
+`cpex` vocabulary. An `aid` vector, the dispatch records above re-emitted
+under `aid`, is planned with the second, Python emitter. The validator
+already reads both vocabularies (section 1.2).
+
 A standalone validator ships at
 [`scripts/aid_emit1_validator.py`](../../scripts/aid_emit1_validator.py) —
 Python standard library only, including pure-Python ECDSA P-256 signature
@@ -496,6 +551,10 @@ rejects any vector with a flipped payload byte, a reordered record, a swapped
   are PATCH: 1.1.1 added the informative note on the content digest form
   (section 9.2), and 1.1.2 the provenance vector that exercises it
   (section 12); neither changes a covered byte or an existing vector.
+- 1.2.0 is MINOR: it adds the `aid` vocabulary (section 1.2). Existing
+  records, vectors and the covered-bytes rule are unchanged. A verifier
+  written for 1.1 still verifies `cpex` records, and needs only the name map
+  to read `aid` stream stamps.
 - Records do not carry a spec-version field in v1; the emitted enum
   descriptors (`fingerprint.serialization_id`, `digital_signature.*`) are the
   wire-level self-description, and the OCSF schema version rides at
