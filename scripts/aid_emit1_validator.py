@@ -18,10 +18,11 @@ What it checks, by spec section:
 - **§4/§11 fingerprint** — reconstructs the covered bytes (strip
   `attestation_list[0].fingerprint` / `.signatures`, strip
   `unmapped.signature_b64` / `signature_key_id`, drop `unmapped` if emptied;
-  canonicalize) and recomputes SHA-256. The §4 value-space constraints are
-  enforced: a record claiming `serialization_id` 2 (JCS) with non-ASCII keys
-  or non-integer numbers is a conformance failure — the claim, not just the
-  bytes, must be honest.
+  canonicalize per RFC 8785: keys in UTF-16 code-unit order, floats in the
+  ES6 form, integers as their exact digits) and recomputes SHA-256. Since
+  1.2.0 the §4 value space is the whole of RFC 8785, so no key or number
+  is rejected; a non-finite number, which JSON cannot carry, is
+  `E-JCS-NUMBER`.
 - **§5/§11 signature** — with ``--key``, verifies the DER ECDSA-P256
   signature at `unmapped.signature_b64` over the DSSE PAE of the same
   covered bytes, and checks the `digital_signature` descriptor enums
@@ -34,9 +35,9 @@ What it checks, by spec section:
   value is warned as `W-STREAM-HEAD`) — a gap is **surfaced as a
   finding, never repaired** (warning by default, error with
   ``--strict-gaps``); a decrease is an ordering error. Stream stamps are
-  read from `unmapped."aid.stream"` (AI Identity's vocabulary), else
-  `unmapped."cpex.stream"` (the CPEX host family's); a record carrying
-  both is warned as `W-STREAM-VOCAB`.
+  read from `unmapped."aid.stream"`, else from the retired pre-1.2.0 name
+  `unmapped."cpex.stream"` (warned as `W-VOCAB-RETIRED`, §1.1); a record
+  carrying both is warned as `W-STREAM-VOCAB`.
 
 Non-6003 records (e.g. proposed-class drafts using the same
 `record_integrity` carrier) get the integrity/chain checks with the
@@ -62,8 +63,10 @@ import argparse
 import base64
 import binascii
 import copy
+import decimal
 import hashlib
 import json
+import math
 import re
 import sys
 
@@ -77,14 +80,13 @@ if sys.version_info < (3, 10):  # noqa: UP036 — the check is the point
 
 from dataclasses import dataclass, field  # noqa: E402 — after the version gate
 
-SPEC = "AID-EMIT-1 v1.0.0-draft (docs/specs/aid-emit-1.md)"
+SPEC = "AID-EMIT-1 v1.2.0-draft (docs/specs/aid-emit-1.md)"
 DSSE_PAYLOAD_TYPE = b"application/vnd.ocsf.event+json"
 HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
-# Where a record's stream stamps live, by vocabulary, in lookup order:
-# "aid.stream" is AI Identity's own (emitters that target the platform and
-# OCSF rather than a gateway), "cpex.stream" is the CPEX host family's. The
-# member structure is identical; only the key differs.
+# Where a record's stream stamps live, in lookup order: "aid.stream" is the
+# 1.2.0 name; "cpex.stream" is the retired pre-1.2.0 name, accepted for
+# records from pre-release builds (spec section 1.1). Same structure, one key.
 STREAM_STAMP_KEYS = ("aid.stream", "cpex.stream")
 
 # ---------------------------------------------------------------------------
@@ -92,30 +94,76 @@ STREAM_STAMP_KEYS = ("aid.stream", "cpex.stream")
 # ---------------------------------------------------------------------------
 
 
-def value_space_violations(node, path="$"):
-    """Yield §4 value-space violations: non-ASCII keys, non-integer numbers."""
+def _es6_number(f: float) -> str:
+    """ES6 Number::toString, the float form RFC 8785 section 3.2.2.3 mandates.
+
+    ``repr`` gives the shortest round-trip digits with ties to even, which is
+    the digit choice ES6 makes; the rest is the placement rule on the digit
+    count ``k`` and the decimal point position ``n``.
+    """
+    if not math.isfinite(f):
+        raise ValueError(f"non-finite number {f!r} has no JSON form")
+    if f == 0:
+        return "0"
+    sign = "-" if f < 0 else ""
+    digits_tuple, exponent = decimal.Decimal(repr(abs(f))).as_tuple()[1:]
+    digits = "".join(map(str, digits_tuple)).rstrip("0") or "0"
+    n = len(digits_tuple) + exponent
+    k = len(digits)
+    if k <= n <= 21:
+        return sign + digits + "0" * (n - k)
+    if 0 < n <= 21:
+        return sign + digits[:n] + "." + digits[n:]
+    if -6 < n <= 0:
+        return sign + "0." + "0" * (-n) + digits
+    e = n - 1
+    mantissa = digits[0] + ("." + digits[1:] if k > 1 else "")
+    return f"{sign}{mantissa}e{'+' if e >= 0 else '-'}{abs(e)}"
+
+
+def _jcs(node, out: list) -> None:
+    """Append the RFC 8785 serialization of ``node`` to ``out``."""
     if isinstance(node, dict):
-        for k, v in node.items():
-            if not k.isascii():
-                yield f"non-ASCII key at {path}: {k!r}"
-            yield from value_space_violations(v, f"{path}.{k}")
+        out.append("{")
+        first = True
+        # Section 3.2.3: property names sort as UTF-16 code unit sequences.
+        for k in sorted(node, key=lambda key: key.encode("utf-16-be")):
+            if not first:
+                out.append(",")
+            first = False
+            out.append(json.dumps(k, ensure_ascii=False))
+            out.append(":")
+            _jcs(node[k], out)
+        out.append("}")
     elif isinstance(node, list):
+        out.append("[")
         for i, v in enumerate(node):
-            yield from value_space_violations(v, f"{path}[{i}]")
+            if i:
+                out.append(",")
+            _jcs(v, out)
+        out.append("]")
+    elif isinstance(node, bool):
+        out.append("true" if node else "false")
+    elif node is None:
+        out.append("null")
+    elif isinstance(node, int):
+        # Exact digits: the stream epoch exceeds 2**53 (spec section 4).
+        out.append(str(node))
     elif isinstance(node, float):
-        yield f"non-integer number at {path}: {node!r}"
+        out.append(_es6_number(node))
+    else:
+        # Strings: json.dumps escapes exactly as section 3.2.2.2 requires.
+        out.append(json.dumps(node, ensure_ascii=False))
 
 
 def canonical_bytes(obj) -> bytes:
-    """RFC 8785 canonical form for the §4-constrained value space.
+    """RFC 8785 (JCS) canonical form of ``obj``, for the whole value space.
 
-    For ASCII keys (byte order == UTF-16 code-unit order) and integer
-    numbers, sorted-keys compact JSON is byte-identical to full JCS — the
-    same equivalence the reference emitter relies on.
+    Raises ``ValueError`` for a non-finite number, which JSON cannot carry.
     """
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
-        "utf-8"
-    )
+    out: list = []
+    _jcs(obj, out)
+    return "".join(out).encode("utf-8")
 
 
 def covered_bytes(event: dict) -> bytes:
@@ -381,17 +429,12 @@ def check_record(ev: dict, idx: int, out: Findings, pubkey=None) -> str | None:
                 "W-FP-SER99", idx, "serialization_id 99 without a sibling naming the scheme (§4)"
             )
 
-        violations = list(value_space_violations(ev))
-        if violations and ser == 2:
-            for v in violations[:5]:
-                out.error(
-                    "E-JCS-SPACE",
-                    idx,
-                    f"serialization_id 2 claimed but value space violates §4: {v}",
-                )
-
-        recomputed = hashlib.sha256(covered_bytes(ev)).hexdigest()
-        if value and HEX64.match(value) and recomputed != value:
+        try:
+            recomputed = hashlib.sha256(covered_bytes(ev)).hexdigest()
+        except ValueError as exc:
+            out.error("E-JCS-NUMBER", idx, f"record cannot be canonicalized: {exc} (§4)")
+            recomputed = None
+        if value and HEX64.match(value) and recomputed is not None and recomputed != value:
             scheme = "JCS" if ser == 2 else f"scheme {fp.get('serialization')!r}"
             out.error(
                 "E-FP-MISMATCH",
@@ -514,6 +557,13 @@ def check_chains(
                 idx,
                 f"stream stamps in both {' and '.join(stamp_keys)}; read from {stamp_keys[0]}: "
                 "a conforming emitter uses one vocabulary",
+            )
+        if stamp_keys and stamp_keys[0] == "cpex.stream":
+            out.warn(
+                "W-VOCAB-RETIRED",
+                idx,
+                "stream stamps under the retired cpex.stream name; "
+                "1.2.0 emitters write aid.stream (§1.1)",
             )
         stream = unmapped[stamp_keys[0]] if stamp_keys else None
         if isinstance(stream, dict) and stream.get("stream_seq") is not None:
