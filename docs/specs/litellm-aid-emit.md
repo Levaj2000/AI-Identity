@@ -5,9 +5,9 @@
 | **Status** | Draft outline, design only. Nothing built. |
 | **Proposed home** | `integrations/litellm-aid-emit/`, not yet created (import `aid_litellm`) |
 | **Depends on** | `aid-emit` (see [`aid-emit-py.md`](aid-emit-py.md)); LiteLLM proxy pinned to one exact version, chosen in step 0 |
-| **Platform side** | Existing edge registration (`POST /api/v1/edges`) and `POST /api/v1/audit/ingest`. One platform change for phase 1: ingest reads stream stamps from `aid.stream` as well as `cpex.stream` |
+| **Platform side** | Existing edge registration (`POST /api/v1/edges`) and `POST /api/v1/audit/ingest`. Ingest must read `aid.stream` and canonicalize the epoch's exact digits (AID-EMIT-1 section 4) |
 | **Sequencing** | Phase 1 can be built now. Phase 3 enforces against the AI Identity mandate service directly; no dependency on Praxis or CPEX. |
-| **Vocabulary** | AI Identity and OCSF: native OCSF fields first, AI Identity `aid.*` names under `unmapped` for the gaps ([`aid-emit-py.md`](aid-emit-py.md) section 4.1) |
+| **Field names** | Native OCSF fields first; AID-EMIT-1 1.2.0 `aid.*` members under `unmapped` for the gaps, and `aid.litellm.*` for LiteLLM's own (AID-EMIT-1 section 1.2; [`aid-emit-py.md`](aid-emit-py.md) section 4.1) |
 | **Date** | 2026-10-12 |
 
 Hook names and signatures below come from LiteLLM's `CustomLogger` interface as
@@ -213,13 +213,14 @@ P2 and P3 put the `aid-mandate` step first.
 
 ## 10. Decisions
 
-- **Vocabulary (decided 2026-10-12).** This adapter targets the AI Identity
-  platform and OCSF, not CPEX or Praxis. Native OCSF fields first; facts with
-  no native home use the AI Identity `aid.*` names under `unmapped`. AID-EMIT-1
-  absorbs this as a 1.2.0 vocabulary profile (additive, MINOR) rather than a
-  new AID-EMIT-2, because the signing, chain and stream rules do not change.
-  Two consumers must accept `aid.stream` before phase 1 ships: the ingest
-  endpoint and `scripts/aid_emit1_validator.py`.
+- **Field names (decided 2026-10-12, settled by AID-EMIT-1 1.2.0).** This
+  adapter targets the AI Identity platform and OCSF, not CPEX or Praxis.
+  Native OCSF fields first; facts with no native home use the `aid.*`
+  members of AID-EMIT-1 1.2.0 section 1.2, which retired `cpex.*` for every
+  emitter, so there is no separate vocabulary to choose. LiteLLM does not
+  speak CMF, so its gap fields are `aid.litellm.*` and its join key is
+  `aid.request_id`. Both consumers read `aid.stream`: the ingest endpoint
+  and `scripts/aid_emit1_validator.py`.
 - **LiteLLM as a dependency (decided 2026-10-12).** Yes, for phase 1.
 
 ## 11. Open questions
