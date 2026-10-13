@@ -4,8 +4,8 @@
 |---|---|
 | **Status** | Draft, design only. Nothing built. |
 | **Proposed home** | `integrations/aid-emit-py/`, not yet created (distribution `aid-emit`, import `aid_emit`) |
-| **Implements** | AID-EMIT-1 1.1.2-draft, emitter conformance class (section 12), with the proposed 1.2.0 `aid` vocabulary (section 4.1) |
-| **Adapter number** | #2 (`cpex-ocsf-audit` is #1) |
+| **Implements** | AID-EMIT-1 1.2.0-draft, emitter conformance class (section 12), with the field names of its sections 1.1 and 1.2 (section 4.1 here) |
+| **Adapter number** | #2 (the Rust reference emitter is #1) |
 | **First consumer** | LiteLLM adapter, see [`litellm-aid-emit.md`](litellm-aid-emit.md) |
 | **Runtime deps** | Python >= 3.11, `cryptography` >= 44 (for `deterministic_signing`); stdlib otherwise |
 | **Date** | 2026-10-12 |
@@ -14,7 +14,8 @@
 
 ## 1. Why this exists
 
-AID-EMIT-1 has one implementation, in Rust, bound to the CPEX audit seam. Every
+AID-EMIT-1 has one implementation, the Rust reference emitter, bound to the
+audit seam of the CMF hosts it runs in (AID-EMIT-1 section 1.1). Every
 Python host (LiteLLM, the LangChain SDK, future LangGraph work) would otherwise
 re-derive the covered-bytes rule, the DSSE envelope and the chain bookkeeping by
 hand, and drift. This library is that logic, once, behind a small API.
@@ -93,37 +94,34 @@ record = emitter.emit(event, stream_id="litellm/decision")
 - `stream_id=None` emits without stream stamps. Hosts that have a decision
   stream (every adapter we plan) always pass one; the no-stamp path exists for
   the dispatch-record vector replay (section 10, T1).
-- `EmitterConfig(vocabulary="aid")` is the default; `"cpex"` exists for
-  CPEX-family hosts and for the vector replay (section 4.1).
+- Field names are fixed by AID-EMIT-1 section 1.2. There is no vocabulary
+  option (section 4.1).
 - The library never raises into the host on spool or ship problems. It raises
   `EmitterValueError` only for a malformed pre-chain event (a programmer error
   in the adapter), and the adapter MUST catch it (section 7).
 
-### 4.1 Vocabulary
+### 4.1 Field names
 
-AID-EMIT-1 1.1.2 pins its `unmapped` field names to the CPEX host family
-(section 1.1). This library targets the AI Identity platform and OCSF, not a
-particular gateway, so its default is an AI Identity vocabulary, proposed for
-AID-EMIT-1 as a 1.2.0 vocabulary profile: the signing, chain and stream rules
-are unchanged, only the names differ.
+The library writes the member names of AID-EMIT-1 1.2.0 sections 1.1 and 1.2
+and has no vocabulary option. `cpex.*` is retired there: an emitter MUST NOT
+produce it.
 
 The rule for every field: if OCSF 1.9.0 has a native home, use it, and never
-duplicate it under `unmapped`. Only facts with no native home use the
-vocabulary:
+duplicate it under `unmapped` (section 1.2, rule 3). Facts with no native home
+use the spec's members:
 
-| Fact | `aid` vocabulary (default) | `cpex` vocabulary |
+| Fact | Member | Written by |
 |---|---|---|
-| Stream stamps | `unmapped."aid.stream"` | `unmapped."cpex.stream"` |
-| Decision steps and verdict | `unmapped."aid.decision"` | `unmapped."cpex.decision"` |
-| Settlement join key | `unmapped."aid.request_id"` | `unmapped."cmf.request.request_id"` |
-| Invocation span | `unmapped."aid.span"` | `unmapped."cpex.span"` |
-| Content provenance | `unmapped."aid.content"` | `unmapped."cpex.content"` |
-| Host-specific gap fields | `unmapped."aid.<host>.*"`, e.g. `aid.litellm.deployment` | host-defined |
+| Stream stamps | `unmapped."aid.stream"` | the library (section 5) |
+| Decision steps and verdict | `unmapped."aid.decision"` | the `ocsf.py` builders |
+| Invocation span | `unmapped."aid.span"` | the adapter |
+| Entry-taint labels | `unmapped."aid.taint.input_labels"` | the adapter |
+| Content provenance | `unmapped."aid.content"` | the adapter |
+| Join key | `unmapped."aid.request_id"`, or `unmapped."cmf.request.request_id"` on a CMF host | the adapter |
+| Host gap fields | `unmapped."aid.<host>.*"`, e.g. `aid.litellm.deployment`, or `cmf.*` on a CMF host | the adapter |
 
-The structure inside each member is identical across vocabularies, so a
-verifier needs only the name map. A consumer that reads stream stamps (the AI
-Identity ingest endpoint, `scripts/aid_emit1_validator.py`) has to accept
-`aid.stream` as well as `cpex.stream` before an `aid` emitter ships.
+An adapter uses one host prefix per record (section 1.2, rule 2). LiteLLM does
+not speak CMF, so its adapter writes `aid.request_id` and `aid.litellm.*`.
 
 ## 5. The emit step (normative for this library)
 
@@ -131,19 +129,17 @@ All of the following happens under one `threading.Lock`, so allocation,
 predecessor read and chain advance are atomic (AID-EMIT-1 section 6,
 "Concurrency"):
 
-1. **Value-space check.** Reject non-ASCII keys and any `float` (section 4).
-   Also reject integers outside +/-(2^53 - 1). That is stricter than the
-   validator, which only rejects floats, and it is the safe reading of
-   "representable per RFC 8785's ES6 rules": Python serializes large ints
-   exactly, an RFC 8785 implementation in JavaScript would not.
+1. **Value-space check.** Reject only what JSON cannot carry: a non-finite
+   `float`, a non-string key, a lone surrogate, a non-JSON type. Floats,
+   non-ASCII keys and integers of any size are inside the AID-EMIT-1 1.2.0
+   value space (section 4), and the canonicalizer handles them (section 9).
 2. **Allocate.** `stream_seq = counters[stream_id]` (starts at 0 in every
    epoch), `emission_seq` (starts at 0 in every epoch), and the record ordinal.
 3. **Identity.** `metadata.uid = f"{chain_uid}-{epoch}-{ordinal:06d}"`,
    attestation uid `f"{chain_uid}-{epoch}-att-{ordinal:06d}"`. The epoch is in
    the uid on purpose; see section 11, finding 1.
-4. **Stamp.** Add `"record_integrity"` to `metadata.profiles`, set the
-   vocabulary's stream member (`unmapped."aid.stream"` by default) to
-   `{epoch, stream_id, stream_seq, emission_seq}`,
+4. **Stamp.** Add `"record_integrity"` to `metadata.profiles`, set
+   `unmapped."aid.stream"` to `{epoch, stream_id, stream_seq, emission_seq}`,
    and set `attestation_list[0]` = `{uid, chain_uid, authority_uid,
    prev_event?}`, where `prev_event` is `{uid, type_uid, fingerprint}` of the
    current head and is absent only on a true genesis record.
@@ -174,10 +170,12 @@ sort (section 3 of the spec). The `ocsf.py` builders sort everything they build.
 ## 6. Epoch, restart and the spool
 
 - **Epoch** = Unix time at process start in whole seconds, times 10^9. That is
-  the same unit as the reference host (nanoseconds), and a whole-second value
-  in nanoseconds needs about 52 significant bits, so it stays exactly
-  representable as an IEEE double, inside the RFC 8785 value space. A
-  full-precision `time.time_ns()` would not. If the computed epoch is not
+  the same unit as the reference host (nanoseconds). Section 4 of the spec
+  has verifiers parse integers exactly, but not every consumer is a
+  verifier: a SIEM pipeline that reads JSON numbers as doubles still gets
+  the true value, because a whole-second value in nanoseconds needs about 52
+  significant bits. A full-precision `time.time_ns()` would not survive
+  that. If the computed epoch is not
   greater than the last epoch recorded in `spool_dir/state.json`, use
   `last + 10^9`, so two restarts in the same second, or a clock step backward,
   still produce a strictly newer epoch.
@@ -246,10 +244,14 @@ any, is a separate component with its own fail-closed rule.
 ## 9. Dependencies and supply chain
 
 - `cryptography` is the only third-party runtime dependency. RFC 8785 is
-  implemented in-tree (about 10 lines), because for this format's value space
-  it is exactly sorted, compact `json.dumps`. This is the same equivalence the
-  reference emitter and the validator rely on; a general JCS package adds a
-  dependency for cases the format forbids.
+  implemented in-tree, ported from `scripts/aid_emit1_validator.py` (stdlib
+  only): UTF-16 key order, the ES6 number form and exact integers, as
+  AID-EMIT-1 1.2.0 section 4 requires. Sorted, compact `json.dumps` is no
+  longer enough: it sorts keys by code point and writes floats in Python's
+  form (`1.0`, `1e-07`). The `rfc8785` package is not an option either: it
+  rejects integers beyond 2^53, and every stream epoch is one (section 11,
+  finding 2). Tested against the RFC's Appendix B number vectors and byte
+  for byte against the validator.
 - Publish with trusted publishing and build provenance (PyPI attestations), so
   the evidence library has verifiable provenance itself.
 
@@ -279,10 +281,14 @@ Tests the library ships with:
 | T7 | Ingest round trip | Records posted to `POST /api/v1/audit/ingest` for a registered test edge come back all `verified`, with no anomalies except where a test deliberately loses a record. |
 
 T1 needs the uid source to be injectable, because the reference vector uids are
-`{chain_uid}-{seq:06}` without an epoch, and it runs under the `cpex`
-vocabulary, because that is what the vectors use. The library defaults are the
-epoch-scoped uid in section 5 and the `aid` vocabulary in section 4.1. T7 needs
-the ingest endpoint to read `aid.stream` (section 4.1).
+`{chain_uid}-{seq:06}` without an epoch; the library default is the
+epoch-scoped uid in section 5. The dispatch vector carries no `aid.*` or
+`cpex.*` member, so the 1.2.0 rename leaves it byte-identical (AID-EMIT-1
+section 12). Replaying the decision and provenance vectors needs their
+`aid`-named copies, which the spec places in praxis-proxy/policy; the copies
+in this repository still carry the retired names. T7 needs the ingest
+endpoint to read `aid.stream` and to parse and canonicalize the epoch's exact
+digits (spec section 4).
 
 ## 11. Findings while drafting
 
@@ -305,6 +311,10 @@ the ingest endpoint to read `aid.stream` (section 4.1).
      uid match with a different fingerprint is a collision, which is new
      evidence to verify, store and flag. Consider stating this explicitly in
      section 6 rather than leaving it to the word "identical".
-2. **The validator does not bound integer magnitude.** It flags floats only.
-   Consider a warning for integers outside +/-(2^53 - 1), with the section 4
-   wording as the reason.
+2. **Integer magnitude: settled by 1.2.0, the other way.** This draft first
+   proposed a validator warning for integers outside +/-(2^53 - 1).
+   AID-EMIT-1 1.2.0 section 4 writes integers as exact digits and has a
+   verifier parse them exactly, because the stream epoch is beyond 2^53. One
+   consequence for implementers: a verifier that canonicalizes with the
+   `rfc8785` Python package refuses every stream-stamped record, because
+   that package rejects integers beyond 2^53 (`IntegerDomainError`).
