@@ -109,6 +109,37 @@ The "Four Pillars" (Identity → Policy → Compliance → Forensics) is canonic
 
 `[tool.ruff.format] quote-style = "double"` — auto-fixers that prefer single quotes will fight the formatter. Configure your editor accordingly.
 
+## Praxis conventions (IBM)
+Follow the Praxis development conventions as the authority:
+https://github.com/praxis-proxy/praxis/blob/main/docs/developing/conventions.md
+
+In praxis-proxy/policy, also follow that repo's port of the doc,
+https://github.com/praxis-proxy/policy/blob/main/docs/dev/conventions.md, and the
+deliberate divergences listed in its AGENTS.md, which take precedence there
+(for example `mod.rs` module style and workspace lints at `allow`).
+
+Load-bearing rules (the doc is canonical; this is the short list):
+- Comments answer "why?", never "what?". Runtime narration goes in `tracing!`
+  calls, not comments. Never restate what names already convey.
+- `#![forbid(unsafe_code)]` in every crate root. Clippy `-D warnings`: zero tolerance.
+  Suppress only with `#[expect(..., reason = "...")]`, never `#[allow(...)]`.
+- Arithmetic is explicit: `checked_*` / `saturating_*` / `wrapping_*`. No `as`
+  casts (use `From`/`Into`/`TryFrom`). Never `==` on floats. Byte order always
+  explicit (`to_be_bytes`/`to_le_bytes`, never `to_ne_bytes`).
+- Exhaustive enum matching: no wildcard arms. No `HashMap`/`HashSet` iteration
+  (use `BTreeMap`/`BTreeSet` or sort first). Never hold a lock guard across `.await`.
+- No raw string indexing (`&s[n..m]`). Method-only trait imports use `as _`.
+  Module layout is `foo.rs` + `foo/` (no `foo/mod.rs`). No single-char identifiers
+  or lifetimes; name lifetimes after what they borrow (`'req`, `'conn`).
+- Struct fields are all-public or all-private; field names don't repeat the struct name.
+- Errors via `thiserror`, logging via `tracing`, workspace dependencies, full
+  semver versions (`1.2.3`, not `1.2`).
+- New capabilities ship with: unit tests, integration tests, an example config in
+  `examples/configs/`, an integration test for it, and `cargo xtask sync-example-readme --fix`.
+  Coverage floor is 96%. Prefer assertion messages over inline comments.
+- Protocol behavior: cite the RFC number and section in test names/doc comments
+  (reference-style rustdoc links to datatracker); conformance tests live in `tests/conformance/`.
+
 ## PR Workflow
 
 Per `CONTRIBUTING.md`: open an issue first, wait for a maintainer to assign it, then branch from `main`. Don't open speculative PRs without a tracked issue.
