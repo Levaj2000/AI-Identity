@@ -31,6 +31,19 @@
 name: Release Cut
 
 on:
+  # Manual trigger, the day-to-day path (gh auth is the credential):
+  #   gh workflow run release-cut.yml --repo <owner/repo> -f mode=dry-run -f version=X.Y.Z
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run, or push to open the release PR"
+        type: choice
+        options: [dry-run, push]
+        default: dry-run
+      version:
+        description: "Version to cut, N.N.N"
+        type: string
+        required: true
   repository_dispatch:
     types: [release-cut]
   push:
@@ -45,21 +58,46 @@ concurrency:
 
 jobs:
   verify-token:
-    name: Verify HMAC signature
-    if: github.event_name == 'repository_dispatch'
+    name: Validate request
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     outputs:
       mode: ${{ steps.verify.outputs.mode }}
       version: ${{ steps.verify.outputs.version }}
     steps:
-      - name: Rebuild payload and recompute HMAC
+      - name: Validate inputs (and the HMAC for repository_dispatch)
         id: verify
         env:
+          EVENT: ${{ github.event_name }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_VERSION: ${{ inputs.version }}
+          GH_ACTOR: ${{ github.actor }}
           HMAC_SECRET: ${{ secrets.RELEASE_HMAC_TOKEN }}
           CLIENT_PAYLOAD: ${{ toJson(github.event.client_payload) }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+
+          # workflow_dispatch needs write access to the repo, which is the auth
+          # check here; the HMAC only guards the repository_dispatch path.
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            MODE="$INPUT_MODE"
+            VER="$INPUT_VERSION"
+            case "$MODE" in dry-run|push) : ;; *) echo "::error::bad mode: $MODE"; exit 1 ;; esac
+            if ! [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::bad version: $VER (expected N.N.N)"; exit 1
+            fi
+            echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+            echo "version=$VER" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Manual dispatch"
+              echo "- Repo: \`${REPO}\`"
+              echo "- Mode: \`${MODE}\`"
+              echo "- Version: \`${VER}\`"
+              echo "- Actor: \`${GH_ACTOR}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
 
           if [ -z "${HMAC_SECRET:-}" ]; then
             echo "::error::RELEASE_HMAC_TOKEN is not set in this repo. The rotator has not run yet, or its GitHub App lacks the Secrets: read and write permission." >&2
