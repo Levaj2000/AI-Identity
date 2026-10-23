@@ -1,0 +1,271 @@
+# .github/workflows/release-cut.yml
+#
+# Same file in both repos: Levaj2000/ai-identity-platform and Levaj2000/AI-Identity.
+#
+# Automates the cut half of Decision #61 (hybrid train). release.yml stays the
+# publish half and still fires on the vX.Y.Z tag.
+#
+# Triggered by the Sprint & Portfolio Board "Cut Release" panel via a signed
+# repository_dispatch:
+#   event_type:     "release-cut"
+#   client_payload: { mode: "dry-run"|"push", version: "0.6.0", actor: "...", ts: <unix>, sig: "<hex>" }
+# sig is HMAC-SHA256 over "<owner/repo>|<mode>|<version>|<actor>|<ts>" keyed with
+# RELEASE_HMAC_TOKEN (rotated by the workspace).
+#
+# main requires status checks (and enforce_admins on the platform repo), so the
+# release commit cannot be pushed to main directly; AI-Identity 0.6.0 went through
+# PR #576 for the same reason. The flow is therefore:
+#   1. dispatch mode=dry-run: scripts/release.py X.Y.Z --dry-run, result in the summary.
+#   2. dispatch mode=push:    scripts/release.py X.Y.Z (no --push) commits the cut on
+#                             main locally; the commit goes to branch release/vX.Y.Z
+#                             and a PR is opened. Nothing lands on main yet.
+#   3. merge that PR:         the push to main changes pyproject.toml, the tag job sees
+#                             a released version with no tag, tags vX.Y.Z on the merged
+#                             commit, and release.yml publishes.
+#
+# Steps 2 and 3 push with RELEASE_BOT_TOKEN, not GITHUB_TOKEN: pushes and PRs made
+# with GITHUB_TOKEN do not trigger other workflows, so CI would never run on the
+# release PR and the tag would never start release.yml. It needs Contents and Pull
+# requests read/write on this repo (fine-grained PAT or GitHub App installation token).
+
+name: Release Cut
+
+on:
+  repository_dispatch:
+    types: [release-cut]
+  push:
+    branches: [main]
+    paths: [pyproject.toml]
+
+permissions: {}
+
+concurrency:
+  group: release-cut
+  cancel-in-progress: false
+
+jobs:
+  verify-token:
+    name: Verify HMAC signature
+    if: github.event_name == 'repository_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.verify.outputs.mode }}
+      version: ${{ steps.verify.outputs.version }}
+    steps:
+      - name: Rebuild payload and recompute HMAC
+        id: verify
+        env:
+          HMAC_SECRET: ${{ secrets.RELEASE_HMAC_TOKEN }}
+          CLIENT_PAYLOAD: ${{ toJson(github.event.client_payload) }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${HMAC_SECRET:-}" ]; then
+            echo "::error::RELEASE_HMAC_TOKEN is not set in this repo. The rotator has not run yet, or its GitHub App lacks the Secrets: read and write permission." >&2
+            exit 1
+          fi
+
+          MODE=$(jq -r '.mode // ""'    <<<"$CLIENT_PAYLOAD")
+          VER=$(jq  -r '.version // ""' <<<"$CLIENT_PAYLOAD")
+          ACTOR=$(jq -r '.actor // ""'  <<<"$CLIENT_PAYLOAD")
+          TS=$(jq   -r '.ts // ""'      <<<"$CLIENT_PAYLOAD")
+          CLAIMED_SIG=$(jq -r '.sig // ""' <<<"$CLIENT_PAYLOAD")
+
+          case "$MODE" in dry-run|push) : ;; *) echo "::error::bad mode: $MODE"; exit 1 ;; esac
+          if ! [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::bad version: $VER (expected N.N.N)"; exit 1
+          fi
+          if ! [[ "$TS" =~ ^[0-9]+$ ]]; then
+            echo "::error::bad ts: $TS"; exit 1
+          fi
+          if ! [[ "$ACTOR" =~ ^[A-Za-z0-9._@+-]{1,64}$ ]]; then
+            echo "::error::bad actor"; exit 1
+          fi
+
+          # Replay protection: reject payloads older than 10 min or more than 2 min ahead.
+          # A replayed push inside the window fails anyway: the tag or branch already exists.
+          NOW=$(date +%s)
+          SKEW=$(( NOW - TS ))
+          if [ "$SKEW" -gt 600 ] || [ "$SKEW" -lt -120 ]; then
+            echo "::error::timestamp skew ${SKEW}s outside allowed window (replay or clock drift)"; exit 1
+          fi
+
+          MSG="${REPO}|${MODE}|${VER}|${ACTOR}|${TS}"
+          EXPECTED_SIG=$(printf '%s' "$MSG" | openssl dgst -sha256 -hmac "$HMAC_SECRET" | awk '{print $2}')
+
+          # Constant-time compare (bash string == short-circuits)
+          python3 - "$EXPECTED_SIG" "$CLAIMED_SIG" <<'PY'
+          import hmac, sys
+          expected, claimed = sys.argv[1], sys.argv[2]
+          if not hmac.compare_digest(expected, claimed):
+              sys.exit("::error::HMAC signature does not match")
+          PY
+
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Dispatch verified"
+            echo "- Repo: \`${REPO}\`"
+            echo "- Mode: \`${MODE}\`"
+            echo "- Version: \`${VER}\`"
+            echo "- Actor: \`${ACTOR}\`"
+            echo "- Signed at: $(date -u -d "@${TS}" '+%Y-%m-%d %H:%M:%S UTC')"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  run-cut:
+    name: Run scripts/release.py
+    needs: verify-token
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      MODE: ${{ needs.verify-token.outputs.mode }}
+      VER: ${{ needs.verify-token.outputs.version }}
+    steps:
+      - name: Require the bot token for push mode
+        if: needs.verify-token.outputs.mode == 'push'
+        env:
+          BOT_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN }}
+        run: |
+          if [ -z "${BOT_TOKEN:-}" ]; then
+            echo "::error::RELEASE_BOT_TOKEN is not set. Push mode needs it to push release/v${VER} and open the PR so CI runs on it." >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: main
+          fetch-depth: 0  # release.py reads tags and changelog history
+          # Persisted for release.py's fetch/ls-remote and the release-branch push.
+          # checkout's auth header overrides credentials in a push URL, so the bot
+          # token has to be the checkout token for its pushes to start CI.
+          token: ${{ secrets.RELEASE_BOT_TOKEN || github.token }}
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      # Same installs as ci.yml in each repo, so release.py's bare pytest sees the same suite.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f api/requirements.lock ]; then
+            pip install --require-hashes -r api/requirements.lock -r gateway/requirements.lock
+            pip install --no-deps -e common/
+            pip install -r requirements-dev.txt
+          else
+            pip install -r requirements-dev.txt
+            pip install pytest httpx cryptography
+          fi
+
+      - name: Check for the dashboard suite
+        id: dash
+        run: |
+          if [ -f dashboard/package.json ]; then echo "present=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Set up Node.js
+        if: steps.dash.outputs.present == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dashboard dependencies
+        if: steps.dash.outputs.present == 'true'
+        run: npm --prefix dashboard ci
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+
+      - name: Dry-run cut
+        if: needs.verify-token.outputs.mode == 'dry-run'
+        env:
+          DATABASE_URL: "sqlite:///test.db"
+          API_KEY_SECRET: "ci-test-secret"
+        run: |
+          set -euo pipefail
+          python3 scripts/release.py "$VER" --dry-run 2>&1 | tee "$RUNNER_TEMP/release.log"
+          {
+            echo "## Dry-run result"
+            echo '```'
+            tail -n 80 "$RUNNER_TEMP/release.log"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cut and open the release PR
+        if: needs.verify-token.outputs.mode == 'push'
+        env:
+          DATABASE_URL: "sqlite:///test.db"
+          API_KEY_SECRET: "ci-test-secret"
+          GH_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          BRANCH="release/v$VER"
+          # No --push: main is protected. The local tag is discarded; the tag job
+          # tags the merged commit instead.
+          python3 scripts/release.py "$VER" 2>&1 | tee "$RUNNER_TEMP/release.log"
+          git tag -d "v$VER"
+          git push origin "HEAD:refs/heads/${BRANCH}"
+          {
+            echo "Release commit produced by \`scripts/release.py $VER\` in the Release Cut workflow."
+            echo
+            echo "Merging this PR lands the cut on main. The Release Cut workflow then tags"
+            echo "\`v$VER\` on the merged commit, which starts \`release.yml\` to publish."
+            echo
+            echo '```'
+            tail -n 60 "$RUNNER_TEMP/release.log"
+            echo '```'
+          } > "$RUNNER_TEMP/pr-body.md"
+          PR_URL=$(gh pr create --repo "$REPO" --base main --head "$BRANCH" \
+            --title "chore(release): cut $VER" --body-file "$RUNNER_TEMP/pr-body.md")
+          {
+            echo "## Release PR opened"
+            echo "- $PR_URL"
+            echo "- Merge it to tag \`v$VER\` and publish."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  tag-release:
+    name: Tag the merged cut
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_BOT_TOKEN || github.token }}
+
+      - name: Tag vX.Y.Z when pyproject names a released, untagged version
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_BOT_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          VER=$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
+          TAG="v$VER"
+          if ! [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "pyproject version $VER is not N.N.N; nothing to tag."; exit 0
+          fi
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "$TAG already exists; nothing to tag."; exit 0
+          fi
+          if ! grep -Eq "^## \[$VER\]" CHANGELOG.md; then
+            echo "CHANGELOG.md has no ## [$VER] header; not a release commit."; exit 0
+          fi
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::$TAG needs tagging but RELEASE_BOT_TOKEN is not set (a GITHUB_TOKEN tag would not start release.yml)." >&2
+            exit 1
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$TAG"
+          echo "## Tagged \`$TAG\` at \`${GITHUB_SHA:0:8}\`; release.yml publishes next." >> "$GITHUB_STEP_SUMMARY"
