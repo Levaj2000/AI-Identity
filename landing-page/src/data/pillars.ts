@@ -32,7 +32,7 @@ export const pillars: Pillar[] = [
     pillar: "Forensics",
     question: "What happened, provably?",
     capability:
-      "Hash-chained logs, incident replay, export, offline cryptographic verification.",
+      "Hash-chained logs to reconstruct every decision in order, export, offline cryptographic verification.",
   },
 ];
 

@@ -75,8 +75,8 @@ const complianceMapping = [
   { framework: "NYDFS 23 NYCRR 500", requirement: "Access privileges and audit trail", capability: "Least-privilege agent permissions with immutable activity logs" },
   { framework: "SEC AI Guidance", requirement: "Oversight of AI-driven advisory decisions", capability: "Policy-as-code enforcement with automated compliance checks" },
   { framework: "FINRA Rules 3110 & 4511", requirement: "Supervision and books-and-records for automated systems", capability: "Tamper-evident, chained record of every agent action, exportable on demand" },
-  { framework: "MiFID II", requirement: "Reconstructible records of algorithmic trading decisions", capability: "Time-sequenced audit chain with forensic replay of any decision" },
-  { framework: "GDPR Article 22", requirement: "Right to contest automated decisions", capability: "Forensic replay of any agent decision chain with full provenance" },
+  { framework: "MiFID II", requirement: "Reconstructible records of algorithmic trading decisions", capability: "Time-sequenced audit chain to reconstruct every decision in order" },
+  { framework: "GDPR Article 22", requirement: "Right to contest automated decisions", capability: "Reconstruct every decision in order" },
 ];
 
 export default function IndustryFinance() {
@@ -206,7 +206,7 @@ export default function IndustryFinance() {
               </Link>
               <Link href="/#replay-demo" className="inline-flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 transition-colors">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-                View Incident Replay Demo
+                View Demo: Reconstruct Every Decision in Order
               </Link>
             </div>
           </div>

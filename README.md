@@ -30,7 +30,7 @@ The checkpoint history is also mirrored to the [`evidence-anchor-mirror`](https:
 The record formats are not ours to define, so we contributed them upstream:
 
 - **OCSF** — the `attestation` object and `record_integrity` profile are merged into [OCSF 1.9](https://github.com/ocsf/ocsf-schema). This repo is the reference implementation that produced them; the emitter writes the merged shape.
-- **CPEX** — the OCSF audit plugin is contributed to IBM's CPEX gateway under Apache-2.0.
+- **CPEX**: the OCSF audit plugin, licensed under Apache-2.0, ships as a reference plugin in praxis-proxy/policy (the in-tree port), not in cpex#128.
 - **CoSAI WS4** — the CMF ↔ OCSF cross-map and interop material lives in [`docs/cosai-ws4-ocsf-mapping/`](docs/cosai-ws4-ocsf-mapping/).
 
 | | URL |
@@ -144,6 +144,6 @@ Bugs in the verifier, SDKs, or mapping documents go to GitHub issues. Help with 
 |---|---|
 | [`cli/`](cli/) — offline verifier (ships in every Case File bundle) + audit review CLI | MIT |
 | [`sdk/langchain/`](sdk/langchain/) — LangChain SDK ([PyPI](https://pypi.org/project/langchain-ai-identity/)) | MIT |
-| CPEX OCSF audit plugin — contributed upstream to IBM's CPEX gateway | Apache-2.0 |
+| CPEX OCSF audit plugin: ships as a reference plugin in praxis-proxy/policy (the in-tree port), not in cpex#128 | Apache-2.0 |
 
 Record formats follow open standards: our schema contributions are merged upstream in [ocsf/ocsf-schema](https://github.com/ocsf/ocsf-schema) (OCSF 1.9). See [LICENSE](LICENSE) for the full terms.

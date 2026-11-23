@@ -44,7 +44,7 @@ const steps: Step[] = [
       "Drop-in OpenAI / Anthropic / Gemini compatible base URL",
       "Deny-by-default — invalid or expired keys are rejected at the edge",
       "Policy engine enforces per-agent scope, rate limits, spending caps",
-      "Human-in-the-loop approvals for high-risk actions (configurable)",
+      "Human-in-the-loop approvals for high-risk actions (Enterprise tier, configurable)",
       "Sub-50ms p99 overhead per request",
     ],
     visual: "code-gateway",

@@ -8,7 +8,7 @@ export const organizationSchema = {
   logo: `${BASE_URL}/images/logo.png`,
   slogan: "The standard for AI Forensics",
   description:
-    "AI Identity is the AI Forensics platform for autonomous AI agents. Tamper-evident HMAC-chained audit trails, DSSE + ECDSA-P256 signed session attestations, offline verification, per-agent identity, and policy enforcement — replay any incident, prove every action.",
+    "AI Identity is the AI Forensics platform for autonomous AI agents. Tamper-evident HMAC-chained audit trails, DSSE + ECDSA-P256 signed session attestations, offline verification, per-agent identity, and policy enforcement; reconstruct every decision in order, prove every action.",
   sameAs: [
     "https://x.com/AiIdentity",
     "https://www.linkedin.com/in/jeff-leva-a7373958",
@@ -80,8 +80,8 @@ export const softwareApplicationSchema = {
     "Policy-as-code enforcement",
     "EU AI Act compliance dashboard",
     "SOC 2 Type II alignment",
-    "Chain-of-thought forensic replay",
-    "Human-in-the-loop approval gates",
+    "Reconstruct every decision in order",
+    "Human-in-the-loop approval gates (Enterprise tier)",
     "Deny-cluster anomaly alerting",
     "Zero-trust gateway architecture",
   ],
