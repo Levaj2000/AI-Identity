@@ -8,6 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **Website and README copy:** narrow home and finance replay claims, including shared pillar and structured-data copy, to ordered decision reconstruction; qualify product and structured-data approvals as Enterprise features; correct the OCSF audit plugin's Praxis reference-plugin location (AI-174).
+
 ## [0.7.0] - 2026-10-28
 
 ### Changed

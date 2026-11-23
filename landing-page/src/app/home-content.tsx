@@ -37,12 +37,12 @@ const steps = [
     num: "03",
     title: "Prove Everything",
     description:
-      "Every agent action becomes tamper-evident forensic evidence. Replay any session step-by-step. Produce cryptographically-signed timelines regulators can verify independently of the vendor.",
+      "Every agent action becomes tamper-evident forensic evidence. Reconstruct every decision in order. Produce cryptographically-signed timelines regulators can verify independently of the vendor.",
     details: [
       "HMAC-SHA256 hash-chained audit trail — alter one record and the entire chain breaks",
       "DSSE + ECDSA P-256 signed session attestations — signing keys held in KMS hardware, never leave the HSM",
       "Offline verification CLI — auditors fetch the envelope, fetch the public JWKS, and verify without touching our servers",
-      "Forensic replay: reconstruct any agent's complete decision path from policy evaluation to action",
+      "Reconstruct every decision in order",
       "Export audit-ready evidence with chain-of-custody certificates for SOC 2, EU AI Act, and GDPR",
     ],
   },
@@ -200,7 +200,7 @@ function IncidentReplayDemo() {
             <button
               onClick={() => setPlaying((p) => !p)}
               className="w-9 h-9 rounded-full bg-[rgb(166,218,255)] text-[rgb(4,7,13)] flex items-center justify-center hover:bg-[rgb(166,218,255)]/85 transition-colors shrink-0"
-              aria-label={playing ? "Pause replay" : "Play replay"}
+              aria-label={playing ? "Pause reconstruction" : "Play reconstruction"}
             >
               {playing ? (
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></svg>
@@ -211,7 +211,7 @@ function IncidentReplayDemo() {
             <button
               onClick={() => { setPlaying(false); setStep(0); }}
               className="text-xs text-[rgba(213,219,230,0.5)] hover:text-white transition-colors"
-              aria-label="Restart replay"
+              aria-label="Restart reconstruction"
             >
               ⟲ Restart
             </button>
@@ -357,7 +357,7 @@ export default function HomeContent() {
               className="text-lg md:text-xl max-w-2xl mx-auto mb-10"
               style={{ color: "rgba(213,219,230,0.7)", letterSpacing: "-0.32px" }}
             >
-              Forensic-grade audit trails for autonomous AI. Replay any incident, prove every action, and hand auditors evidence that verifies offline — no vendor trust required. Anyone can emit an audit record; what&apos;s hard is evidence that holds up under scrutiny.
+              Forensic-grade audit trails for autonomous AI. Reconstruct every decision in order, prove every action, and hand auditors evidence that verifies offline, with no vendor trust required. Anyone can emit an audit record; what&apos;s hard is evidence that holds up under scrutiny.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -377,7 +377,7 @@ export default function HomeContent() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
-                View Incident Replay Demo
+                View Demo: Reconstruct Every Decision in Order
               </a>
             </div>
 
@@ -598,16 +598,16 @@ export default function HomeContent() {
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-10">
             <div className="flex justify-center mb-4">
-              <BadgeFramerComponent.Responsive content="INCIDENT REPLAY" />
+              <BadgeFramerComponent.Responsive content="RECONSTRUCT EVERY DECISION IN ORDER" />
             </div>
             <h2 className="text-3xl md:text-[44px] font-medium text-white mb-4 leading-[1.2]">
-              Replay Any{" "}
+              Reconstruct every{" "}
               <span className="font-['Instrument_Serif'] italic text-[rgb(166,218,255)]">
-                Agent Incident
+                decision in order
               </span>
             </h2>
             <p className="text-[rgba(213,219,230,0.65)] max-w-2xl mx-auto">
-              When something goes wrong, you don&apos;t need to guess. Scrub through the exact sequence — auth, policy, tool calls, blocks — and produce signed evidence regulators can verify offline.
+              When something goes wrong, you don&apos;t need to guess. Reconstruct every decision in order and produce signed evidence regulators can verify offline.
             </p>
           </div>
 
@@ -780,7 +780,7 @@ export default function HomeContent() {
               </div>
               <h3 className="text-lg font-medium text-white mb-2">Forensic-Grade Audit Trails</h3>
               <p className="text-sm text-[rgba(213,219,230,0.55)] leading-relaxed">
-                HMAC-SHA256 hash-chained evidence for every agent action. Replay any session step-by-step. Produce tamper-evident timelines, sealed with DSSE + ECDSA-signed attestations regulators can verify independently.
+                HMAC-SHA256 hash-chained evidence for every agent action. Reconstruct every decision in order. Produce tamper-evident timelines, sealed with DSSE + ECDSA-signed attestations regulators can verify independently.
               </p>
             </div>
 
@@ -983,7 +983,7 @@ export default function HomeContent() {
                   "Tamper-evident audit chain — cryptographically verifiable",
                   "One API call to register, rotate, or revoke",
                   "Built-in compliance engine (SOC 2, EU AI Act, NIST)",
-                  "Forensic replay of any agent session",
+                  "Reconstruct every decision in order",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 mt-0.5 text-[rgb(166,218,255)]">
@@ -1009,7 +1009,6 @@ export default function HomeContent() {
                 {[
                   "Shared API keys or manual token management",
                   "Mutable logs with no tamper-evident guarantees",
-                  "No chain-of-thought capture or forensic replay",
                   "Human IAM tools retrofitted for agent workflows",
                   "Enterprise-first pricing and 6-month sales cycles",
                 ].map((item) => (
@@ -1045,7 +1044,7 @@ export default function HomeContent() {
               </span>
             </h2>
             <p className="text-[rgba(213,219,230,0.6)] max-w-xl mx-auto">
-              Replay any agent session step-by-step. Produce a tamper-evident timeline regulators can verify independently of the vendor. No other platform can make this claim.
+              Reconstruct every decision in order. Produce a tamper-evident timeline regulators can verify independently of the vendor. No other platform can make this claim.
             </p>
           </div>
 
@@ -1302,7 +1301,7 @@ export default function HomeContent() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
-              View Incident Replay Demo
+              View Demo: Reconstruct Every Decision in Order
             </a>
           </div>
 
