@@ -13,14 +13,18 @@ Each agent gets a cryptographic identity, enforceable policies, compliance-ready
 The audit records are Merkle-batched and the signed checkpoints are published, so you can confirm the evidence is real before you talk to anyone here.
 
 ```bash
-# 1. Pull a signed checkpoint from the public feed — no auth, no account
+# 1. Pull a signed checkpoint from the public feed: no auth, no account
 curl -s "https://api.ai-identity.co/evidence-anchor/checkpoints?limit=1"
 
-# 2. Verify an exported audit chain offline — zero dependencies, MIT licensed
-python3 cli/ai_identity_verify.py chain export.json
+# 2. Save the published public keys
+curl -s https://api.ai-identity.co/.well-known/ai-identity-public-keys.json -o keys.json
 
-# 3. Verify a Merkle inclusion proof against a signed checkpoint
-python3 cli/ai_identity_verify.py inclusion-proof bundle.json
+# 3. Verify an exported Case File bundle with only those keys, and confirm its
+#    checkpoints appear, identical, in the public feed (pip install cryptography)
+python3 cli/ai_identity_verify.py bundle case-file.zip --jwks keys.json --online
+
+# 4. Key holders only: verify the HMAC audit chain (stdlib only, MIT licensed)
+AI_IDENTITY_HMAC_KEY='...' python3 cli/ai_identity_verify.py chain export.json
 ```
 
 The checkpoint history is also mirrored to the [`evidence-anchor-mirror`](https://github.com/Levaj2000/AI-Identity/tree/evidence-anchor-mirror) branch of this repo every six hours, with append-only enforcement — a rewritten batch, a vanished root, or a mutated envelope fails the run rather than overwriting the record. A checkpoint that verifies offline but is absent from the public feed is the tamper signal.
@@ -65,13 +69,17 @@ Every LLM call is authenticated, policy-checked, and logged with a tamper-eviden
 
 ### Offline Forensic Verification (CLI)
 
-Auditors and incident responders can verify audit chain integrity offline — no network access or vendor trust required:
+Auditors and incident responders can verify evidence offline, with no network access:
 
 ```bash
-python3 cli/ai_identity_verify.py chain export.json
+# Public-key check of a Case File bundle: no shared secret needed
+python3 cli/ai_identity_verify.py bundle case-file.zip --jwks keys.json
+
+# HMAC chain check, for holders of the org's verify key
+AI_IDENTITY_HMAC_KEY='...' python3 cli/ai_identity_verify.py chain export.json
 ```
 
-The CLI is a single-file, zero-dependency Python script that independently verifies HMAC-SHA256 hash chains exported from AI Identity.
+The CLI is a single Python file. Chain verification is stdlib-only; the bundle, attestation and inclusion-proof checks use the `cryptography` package for ECDSA.
 
 ## What is in this repository
 
@@ -99,8 +107,8 @@ audited, and history is part of that record.
 ### Running the verifier
 
 ```bash
-python3 cli/ai_identity_verify.py chain export.json
-python3 cli/ai_identity_verify.py inclusion-proof bundle.json
+python3 cli/ai_identity_verify.py bundle case-file.zip --jwks keys.json
+AI_IDENTITY_HMAC_KEY='...' python3 cli/ai_identity_verify.py chain export.json
 ```
 
 Chain verification is stdlib-only and runs on Python 3.9+. Signature checks on
