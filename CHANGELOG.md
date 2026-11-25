@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **README verify commands:** the "Verify our claims" block told readers to run `inclusion-proof bundle.json`, which fails because that command requires `--checkpoints` and `--proofs`, and presented `chain export.json` as needing nothing when it needs the org HMAC key. The three README blocks now use the `bundle` command with the published JWKS for the public-key check (with `--online` to compare against the checkpoint feed) and show the chain check as a key-holder step.
 - **Website and README copy:** narrow home and finance replay claims, including shared pillar and structured-data copy, to ordered decision reconstruction; qualify product and structured-data approvals as Enterprise features; correct the OCSF audit plugin's Praxis reference-plugin location (AI-174).
 
 ## [0.7.0] - 2026-10-28
