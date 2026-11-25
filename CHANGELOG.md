@@ -9,6 +9,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Fixed
+- **CLI README manifest status:** `cli/README.md` still said the platform does not sign manifests and that current bundles are pre-v1. The platform has signed `manifest.json` since 2026-09-30 (per `docs/forensics/export-bundle-format.md`), and a fresh production export verifies as `ai-identity-case-file/v1` with Tier P and Tier W `VERIFIED`. The note now says current exports are v1 and names the two cases that still read as pre-v1.
 - **README verify commands:** the "Verify our claims" block told readers to run `inclusion-proof bundle.json`, which fails because that command requires `--checkpoints` and `--proofs`, and presented `chain export.json` as needing nothing when it needs the org HMAC key. The three README blocks now use the `bundle` command with the published JWKS for the public-key check (with `--online` to compare against the checkpoint feed) and show the chain check as a key-holder step.
 - **Website and README copy:** narrow home and finance replay claims, including shared pillar and structured-data copy, to ordered decision reconstruction; qualify product and structured-data approvals as Enterprise features; correct the OCSF audit plugin's Praxis reference-plugin location (AI-174).
 

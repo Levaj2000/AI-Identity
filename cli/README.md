@@ -166,8 +166,9 @@ AI Identity - Case File Bundle Verification
   `UNAVAILABLE`.
 - **Pre-v1 bundles.** A bundle without `manifest.json` reports `PRE-V1` and exits 3.
   The Tier P checks still run over its files, but nothing binds the rows to the
-  anchored hashes, so it is never `VERIFIED`. The platform does not sign manifests yet,
-  so today's bundles are pre-v1.
+  anchored hashes, so it is never `VERIFIED`. The platform has signed `manifest.json`
+  since 2026-09-30, so current exports are v1. A bundle issued before that date, or an
+  export whose scope carries no org, still reads as pre-v1.
 - **Scopes.** Only an `org` export claims completeness. `agent` and `incident` exports
   are slices: a sequence gap there is other activity, not a deletion.
 - **Machine-readable output.** `--json` gives a `result` of `verified`, `rejected` or
